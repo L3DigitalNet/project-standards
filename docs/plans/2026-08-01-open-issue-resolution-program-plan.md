@@ -4,9 +4,9 @@ title: 'Open-Issue Resolution Program Plan'
 slug: 'open-issue-resolution-program'
 size: full
 status: active
-revision: 3
-revises_revision: 2
-revision_reason: 'include the merged adr@1.4 candidate in the approved v5.15.0 boundary with its own verification task and proof'
+revision: 4
+revises_revision: 3
+revision_reason: 'owner widened the v5.15.0 boundary to the full Agent Handoff surface plus the mid-cycle control-plane unblock'
 pause_reason: ''
 source: 'GitHub open-issue inventory frozen 2026-08-01T09:21:01Z; owner-approved TODO and v5.15.0 decisions; owner-authorized format-3 migration'
 spec_ref: ''
@@ -23,7 +23,15 @@ owners:
 
 ## 1. Objective
 
-Resolve the 24 issues frozen at 2026-08-01T09:21:01Z and the three approved repository tasks through bounded, dependency-safe releases. The first release is v5.15.0: exactly CLI Documentation 1.6 plus issues #76, #77, #83, #84, #86, #87, #89, #95, #98, #105, #106, and #109. Immutable predecessor payloads, explicit publication authority, and installable evidence remain the dominant invariants.
+Resolve the 24 issues frozen at 2026-08-01T09:21:01Z, the three approved repository tasks, and the Agent Handoff surface the owner added on 2026-08-04 through bounded, dependency-safe releases. Immutable predecessor payloads, explicit publication authority, and installable evidence remain the dominant invariants.
+
+The first release is v5.15.0. Revision 4 widens it from twelve issues to the whole Agent Handoff surface plus the mid-cycle control-plane unblock:
+
+- CLI Documentation 1.6 and adr@1.4, unchanged from revision 3.
+- Issues #76, #77, #83, #84, #86, #87, #89, #95, #98, #105, #106, and #109, unchanged from revision 3.
+- Agent Handoff issues #75, #90, #91, #101, #102, and #107, moved in from the separate authority train.
+- Agent Handoff issues #122 and #124, one defect reported twice, whose shipped 1.8 hook never runs.
+- Control-plane issue #123 plus the owner's producer-role decision, which together restore this repository's own gates between release trains.
 
 ## 2. Authority and Source Map
 
@@ -33,7 +41,7 @@ Resolve the 24 issues frozen at 2026-08-01T09:21:01Z and the three approved repo
 | `external:https://github.com/L3DigitalNet/project-standards/pull/120` | current-state evidence | merged adr@1.4 candidate payload, its provider-input and example corrections, and the deferred release-boundary items | merged 2026-08-04 | REQ-907, T37 |
 | `repo:docs/TODO.md` | normative | user and agent work queue, including retirement and program execution | 2026-08-02 | §§3–6, T29–T32 |
 | `repo:docs/STATUS.md` | current-state evidence | published release and prepared-plan baseline | 2026-08-02 | §§4–5, T1, T35 |
-| `repo:meta/versioning.md` | decision | accepted release classification and immutability contract | 2026-08-02 | §§3, 5, 10, T8, T28, T30, T35–T36 |
+| `repo:meta/versioning.md` | decision | accepted release classification and immutability contract | 2026-08-02 | §§3, 5, 10, T8, T28, T30, T35–T36, T41 |
 | `repo:docs/research/2026-07-09-agent-handoff-retirement-inventory.md` | operational evidence | bounded consumer-retirement inventory and remaining targets | 2026-08-02 | T32, Appendix C |
 | `issue:L3DigitalNet/project-standards#55` | normative | accepted frozen issue outcome and issue-specific acceptance context | freeze 2026-08-01 | REQ and task owning issue #55 |
 | `issue:L3DigitalNet/project-standards#62` | normative | accepted frozen issue outcome and issue-specific acceptance context | freeze 2026-08-01 | REQ and task owning issue #62 |
@@ -59,6 +67,10 @@ Resolve the 24 issues frozen at 2026-08-01T09:21:01Z and the three approved repo
 | `issue:L3DigitalNet/project-standards#107` | normative | accepted frozen issue outcome and issue-specific acceptance context | freeze 2026-08-01 | REQ and task owning issue #107 |
 | `issue:L3DigitalNet/project-standards#108` | normative | accepted frozen issue outcome and issue-specific acceptance context | freeze 2026-08-01 | REQ and task owning issue #108 |
 | `issue:L3DigitalNet/project-standards#109` | normative | accepted frozen issue outcome and issue-specific acceptance context | freeze 2026-08-01 | REQ and task owning issue #109 |
+| `issue:L3DigitalNet/project-standards#122` | normative | accepted post-freeze issue outcome, appended under the discovered-work policy | opened 2026-08-04 | REQ-122, T38 |
+| `issue:L3DigitalNet/project-standards#124` | current-state evidence | independent second report of #122 carrying the eight-repository blast radius | opened 2026-08-04 | REQ-122, T38 |
+| `issue:L3DigitalNet/project-standards#123` | normative | accepted post-freeze issue outcome, appended under the discovered-work policy | opened 2026-08-04 | REQ-123, T39 |
+| `repo:docs/research/2026-08-04-self-dogfooding-version-skew-producer-mode.md` | informative | prior-art sweep behind the producer-role decision; records the rejected always-advancing dev-version alternative | 2026-08-04 | REQ-908, T40 |
 
 Conflict precedence: current explicit owner decisions govern release boundaries and authorization; accepted issue outcomes govern their defect or feature; repository implementation and tests establish current state only. The legacy plan grammar and identity-less checklist are superseded as execution mechanisms, while their approved issue outcomes remain preserved here.
 
@@ -67,9 +79,10 @@ Conflict precedence: current explicit owner decisions govern release boundaries 
 ### 3.1 In Scope
 
 - The frozen issues #55, #62, #75–#77, #80, #83, #84, #86–#91, #95, #98, #99, #101, #102, and #105–#109.
-- v5.15.0 as the exact owner-approved combined correction release, including the merged adr@1.4 candidate folded into its boundary on 2026-08-04.
+- Issues #122, #123, and #124, appended on 2026-08-04 under the discovered-work policy and folded into v5.15.0 by owner decision.
+- v5.15.0 as the exact owner-approved combined correction release, including the merged adr@1.4 candidate folded into its boundary on 2026-08-04 and the widened Agent Handoff surface folded in later the same day.
 - Immutable successor payloads, control-plane and tooling corrections, release qualification, issue disposition, MCP release documentation, and the two remaining Agent Handoff consumers.
-- Later Agent Handoff, deferred tooling, Project Spec conformance, and conversion trains already retained by the approved program.
+- Deferred tooling, Project Spec conformance, and conversion trains already retained by the approved program. The separate Agent Handoff authority train no longer exists; T35 qualifies its work.
 - Format-3 execution control through the repository-local bridge and identity-bearing task checkpoints.
 
 ### 3.2 Out of Scope and Deferred
@@ -94,9 +107,10 @@ Conflict precedence: current explicit owner decisions govern release boundaries 
 
 | ID | Constraint / Authorization Boundary | Source | Affected Task(s) |
 | --- | --- | --- | --- |
-| C-001 | Run `scripts/verify.sh` for intermediate product tasks and `scripts/verify.sh --full` only at final content and release qualification gates. | `repo:AGENTS.md` | T2–T20, T25, T27–T28, T30–T36 |
-| C-002 | Build and extract a fresh candidate wheel before installed-authority claims. | `repo:AGENTS.md` | T8, T25, T28, T35–T36 |
-| C-003 | Publication, pushes, protected merges, releases, and issue writes require action-and-target-specific authorization. | request | T1, T8, T25, T28–T29, T32, T35–T36 |
+| C-001 | Run `scripts/verify.sh` for intermediate product tasks and `scripts/verify.sh --full` only at final content and release qualification gates. | `repo:AGENTS.md` | T2–T20, T25, T27–T28, T30–T36, T38–T40 |
+| C-002 | Build and extract a fresh candidate wheel before installed-authority claims. | `repo:AGENTS.md` | T25, T28, T35–T36, T41 |
+| C-003 | Publication, pushes, protected merges, releases, and issue writes require action-and-target-specific authorization. | request | T1, T25, T28–T29, T32, T35–T36, T41 |
+| C-006 | Verify each task proportionally to what it changes, per `repo:docs/handoff/conventions.md` §13. Payload text and owner documentation need only the Markdown gates; catalog, digest, and projection edits need only the standards validators; engine edits need the focused tests for the modules they touch. A candidate-wheel build is a release-qualification cost under C-002, not a per-task one. | Owner decision 2026-08-04; `repo:docs/handoff/conventions.md` | all active tasks |
 | C-004 | Preserve immutable package predecessors and unrelated work; stage only task-owned changes. | request | all active tasks |
 | C-005 | One serialized format-3 executor owns the whole plan; every state transition uses `scripts/plan.py state`. | request | all active tasks |
 
@@ -129,7 +143,7 @@ The durable master validates as `plan_format: 3`; the byte-identical repository-
 | Control plane and adapters | planner/migration/TOML/JSONC current behavior | issue-specific corrections without intermediate release | `src/project_standards/control_plane/` | T9–T14 |
 | Python/Markdown/CLI tooling | released predecessors plus candidates | bounded successors and exact release activation | `standards/` families | T16–T21, T31, T33–T36 |
 | Project Spec features | accepted issues without approved child designs | approved spec/plan followed by implementation | `docs/specs/`, `docs/plans/` | T24–T28 |
-| Release and tracker truth | published 5.14 plus frozen open set | qualified releases and reconciled frozen inventory | release metadata, GitHub, handoff | T8, T28–T30, T35–T36 |
+| Release and tracker truth | published 5.14 plus frozen open set | qualified releases and reconciled frozen inventory | release metadata, GitHub, handoff | T8, T28–T30, T35–T36, T41 |
 | Execution state | byte-identical format-3 bridge, fresh identity-bound projection, and repository-static incompatibility | repository-compatible canonical bridge drives the existing projection | `scripts/plan.py`, `.project-pipeline/.../execution/` | plan authoring boundary |
 
 ### 5.2 Context / Control / Data / State Views
@@ -149,7 +163,7 @@ The control plane remains the sole package-composition and consumer-file authori
 | Compatibility / migration | migration planner and package predecessors | actionable V4/V5 transition and successor coexistence | prior payload bytes unchanged | TC-T10-001, TC-T12-001 | T10, T12 |
 | Operations / deployment | owner plus release/consumer workflows | explicit approval, proof, and recovery | no implied publication authority | TC-T32-001, TC-T35-001 | T32, T35 |
 | Documentation / owner truth | repository docs and GitHub | current install/release/tracker truth | historical releases remain factual | TC-T22-001, TC-T29-001 | T22, T29 |
-| Durable acceptance evidence | release and operational tasks | sanitized EV records | no secrets or unbounded logs | Appendix C | T1, T8, T23, T25, T28–T30, T32, T35–T36 |
+| Durable acceptance evidence | release and operational tasks | sanitized EV records | no secrets or unbounded logs | Appendix C | T1, T8, T23, T25, T28–T30, T32, T35–T36, T41 |
 
 ### 5.4 Binding Decisions
 
@@ -158,7 +172,7 @@ The control plane remains the sole package-composition and consumer-file authori
 | D-001 | v5.15.0 contains the exact twelve-issue set plus CLI Documentation 1.6. | owner-approved combined boundary avoids intermediate incompatible releases | separate control-plane/tooling releases rejected | request | T9–T14, T17–T18, T20, T23, T31, T33–T35 |
 | D-002 | Issues #88/#99 follow v5.15.0. | shared tooling scope must not leak into the approved release | inclusion in v5.15.0 rejected | request | T16, T19, T36 |
 | D-003 | Legacy task observations are replayed under format-3 checkpoints. | identity-less history cannot be credited safely | backfilled or inferred checkpoint identity rejected | request | T1, T30 |
-| D-004 | T15 and T21 remain as superseded non-executable history. | preserve permanent task IDs while replacement qualifiers own acceptance | deletion or executable no-op tasks rejected | request | T15, T21, T35–T36 |
+| D-004 | T15 and T21 remain as superseded non-executable history. | preserve permanent task IDs while replacement qualifiers own acceptance | deletion or executable no-op tasks rejected | request | T15, T21, T35–T36, T41 |
 | D-005 | T31's retained “activated and qualified by T35” acceptance phrase declares release routing, not prior completion of T35. | preserve T31 task identity while preventing a circular completion interpretation | a separate release train or T35-before-T31 ordering rejected | request | T31, T35 |
 
 ## 6. Requirements and Acceptance
@@ -172,6 +186,8 @@ The control plane remains the sole package-composition and consumer-file authori
 | REQ-101 | Make the documented pre-apply size/shape checkpoint usable or redefine it accurately. | #101 | Must | T5 | T5 | TC-T5-001 |
 | REQ-102 | Detect legacy and managed startup handlers that would inject twice. | #102 | Must | T6 | T6 | TC-T6-001 |
 | REQ-107 | Align engine and provider secret-reference policy after owner decision. | #107 | Must | T7 | T7 | TC-T7-001 |
+| REQ-122 | Spawn the Agent Handoff Claude SessionStart hook through a shell so its interpreter-selection wrapper runs. | #122; #124 | Must | T38 | T38 | TC-T38-001 |
+| REQ-123 | Restrict the catalog lineage assertion to commands that advance the catalog. | #123 | Must | T39 | T39 | TC-T39-001 |
 | REQ-076 | Converge create-only→managed transitions over absent targets in one apply. | #76 | Must | T9 | T9 | TC-T9-001 |
 | REQ-077 | Create declared empty managed artifacts instead of planning no-op. | #77 | Must | T9 | T9 | TC-T9-001 |
 | REQ-083 | Produce an actionable V4 Python Tooling migration plan. | #83 | Must | T10 | T10 | TC-T10-001 |
@@ -189,7 +205,7 @@ The control plane remains the sole package-composition and consumer-file authori
 | REQ-084 | Reproduce and fix, or evidence-dispose, the transient PyYAML failure. | #84 | Must | T23 | T23 | TC-T23-001 |
 | REQ-062 | Add an approved conformance surface for shared Project Spec boilerplate. | #62 | Should | T24 | T24, T25 | TC-T24-001, TC-T25-001 |
 | REQ-055 | Add an approved preservation-first house-format conversion path. | #55 | Should | T26 | T26, T27 | TC-T26-001, TC-T27-001 |
-| REQ-900 | Preserve immutable predecessors and qualify each release train once. | Release contract | Must | T35 | T8, T28, T35, T36 | TC-T8-001, TC-T28-001, TC-T35-001, TC-T36-001 |
+| REQ-900 | Preserve immutable predecessors and qualify each release train once. | Release contract | Must | T35 | T28, T35, T36 | TC-T28-001, TC-T35-001, TC-T36-001 |
 | REQ-901 | Leave no frozen issue open without an accepted disposition. | Owner request | Must | T29 | T29 | TC-T29-001 |
 | REQ-902 | Classify owner-designated catalog majors as MAJOR, releases with a standard-package version advance as MINOR, and releases without one as PATCH. A newly introduced package or a newly advertised version above that package's prior advertised maximum is an advance; internal and reference-only packages count, while older retained history and unadvertised payloads do not. Advertised versions are permanent and cannot be removed in any release. | `docs/TODO.md`; owner decisions 2026-08-01 | Must | T30 | T30 | TC-T30-001 |
 | REQ-903 | Replace Python Tooling 1.10's stale V1-authority statement in the already-planned compatible successor without changing 1.10. | `docs/TODO.md`; owner decision 2026-08-01 | Must | T31 | T31 | TC-T31-001 |
@@ -197,6 +213,8 @@ The control plane remains the sole package-composition and consumer-file authori
 | REQ-905 | Publish the selected twelve-issue correction set together in v5.15.0, with no intermediate control-plane or Python Tooling release. | Owner decision 2026-08-02 | Must | T35 | T35 | TC-T35-001 |
 | REQ-906 | Include the existing CLI Documentation 1.6 candidate in v5.15.0 while retaining 1.5 unchanged and selectable. | Owner decision 2026-08-02 | Must | T35 | T34, T35 | TC-T34-001, TC-T35-001 |
 | REQ-907 | Include the merged adr@1.4 candidate in v5.15.0 while retaining adr@1.3 unchanged and selectable. The deferred release-boundary advance from adr@1.3 is already compelled by REQ-900's full local and hosted gate acceptance in T35. | Owner decision 2026-08-04; `external:https://github.com/L3DigitalNet/project-standards/pull/120` | Must | T37 | T37 | TC-T37-001 |
+| REQ-908 | Declare the producing repository's role in `[project_standards]`, defaulting to `consumer`, so a `producer` repository may hold an installed catalog that differs from its committed catalog at the same tool release. Widen the header schema rather than adding a key to the existing strict `1.0` contract. | Owner decision 2026-08-04; `repo:docs/research/2026-08-04-self-dogfooding-version-skew-producer-mode.md` | Must | T40 | T40 | TC-T40-001 |
+| REQ-909 | Fold the Agent Handoff authority corrections into v5.15.0 rather than a separate train, retaining every predecessor payload unchanged. | Owner decision 2026-08-04 | Must | T41 | T41 | TC-T41-001 |
 
 ## 7. Verification and Evidence Strategy
 
@@ -230,13 +248,14 @@ A verification or operational task records the failed boundary, appends an owner
 | Task | Title | Disposition | Work Type | Phase | Depends On | Requirement(s) | Primary Proof | Parallel / Conflict |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | T1 | Close #80 from v5.14.0 evidence | active | operational | P1 | T30 | REQ-080 | TC-T1-001 | no / serialized whole-plan executor |
-| T2 | Correct enrichment pairing for #75 | active | behavior | P5 | T1, T35 | REQ-075 | TC-T2-001 | no / serialized whole-plan executor |
-| T3 | Make legacy inventory lock-aware for #90 | active | behavior | P5 | T1, T35 | REQ-090 | TC-T3-001 | no / serialized whole-plan executor |
-| T4 | Route read-only commands through locked payloads for #91 | active | behavior | P5 | T3 | REQ-091 | TC-T4-001 | no / serialized whole-plan executor |
-| T5 | Restore the pre-apply report checkpoint for #101 | active | behavior | P5 | T4 | REQ-101 | TC-T5-001 | no / serialized whole-plan executor |
-| T6 | Detect duplicate startup injection for #102 | active | behavior | P5 | T3 | REQ-102 | TC-T6-001 | no / serialized whole-plan executor |
-| T7 | Align secret-reference policy for #107 | active | behavior | P5 | T1, T35 | REQ-107 | TC-T7-001 | no / serialized whole-plan executor |
-| T8 | Qualify the Agent Handoff authority train | active | operational | P5 | T2, T3, T4, T5, T6, T7 | REQ-900 | TC-T8-001 | no / serialized whole-plan executor |
+| T2 | Correct enrichment pairing for #75 | active | behavior | P2 | T1 | REQ-075 | TC-T2-001 | no / serialized whole-plan executor |
+| T3 | Make legacy inventory lock-aware for #90 | active | behavior | P2 | T1 | REQ-090 | TC-T3-001 | no / serialized whole-plan executor |
+| T4 | Route read-only commands through locked payloads for #91 | active | behavior | P2 | T3 | REQ-091 | TC-T4-001 | no / serialized whole-plan executor |
+| T5 | Restore the pre-apply report checkpoint for #101 | active | behavior | P2 | T4 | REQ-101 | TC-T5-001 | no / serialized whole-plan executor |
+| T6 | Detect duplicate startup injection for #102 | active | behavior | P2 | T3 | REQ-102 | TC-T6-001 | no / serialized whole-plan executor |
+| T7 | Align secret-reference policy for #107 | active | behavior | P2 | T1 | REQ-107 | TC-T7-001 | no / serialized whole-plan executor |
+| T8 | Superseded Agent Handoff qualifier | superseded | operational | P2 | T2, T3, T4, T5, T6, T7 | None | None | no / serialized whole-plan executor |
+| T38 | Fix the SessionStart spawn form for #122/#124 | active | behavior | P2 | T6 | REQ-122 | TC-T38-001 | no / serialized whole-plan executor |
 | T9 | Correct absent-artifact planning for #76/#77 | active | behavior | P1 | T30 | REQ-076, REQ-077 | TC-T9-001 | no / serialized whole-plan executor |
 | T10 | Supply V4 transform evidence for #83 | active | behavior | P1 | T30 | REQ-083 | TC-T10-001 | no / serialized whole-plan executor |
 | T11 | Make successor drift actionable for #87 | active | behavior | P2 | T9 | REQ-087 | TC-T11-001 | no / serialized whole-plan executor |
@@ -244,6 +263,8 @@ A verification or operational task records the failed boundary, appends an owner
 | T13 | Coalesce TOML creates for #105 | active | behavior | P2 | T9 | REQ-105 | TC-T13-001 | no / serialized whole-plan executor |
 | T14 | Normalize JSONC deletion residue for #106 | active | behavior | P2 | T9 | REQ-106 | TC-T14-001 | no / serialized whole-plan executor |
 | T15 | Superseded control-plane qualifier | superseded | verification | P2 | T9, T10, T11, T12, T13, T14, T23 | None | None | no / serialized whole-plan executor |
+| T39 | Scope the lineage assertion to advancing commands for #123 | active | behavior | P2 | T4, T5 | REQ-123 | TC-T39-001 | no / serialized whole-plan executor |
+| T40 | Add the producer role at header schema 1.1 | active | behavior | P2 | T5, T39 | REQ-908 | TC-T40-001 | no / serialized whole-plan executor |
 | T16 | Bound Markdown formatting scope for #88 | active | behavior | P6 | T35 | REQ-088 | TC-T16-001 | no / serialized whole-plan executor |
 | T17 | Fix Python import precedence for #89 | active | behavior | P3 | T9, T10, T11, T12, T13, T14 | REQ-089 | TC-T17-001 | no / serialized whole-plan executor |
 | T18 | Bound Ruff scope for #95 | active | behavior | P3 | T9, T10, T11, T12, T13, T14 | REQ-095 | TC-T18-001 | no / serialized whole-plan executor |
@@ -257,14 +278,15 @@ A verification or operational task records the failed boundary, appends an owner
 | T26 | Specify house-format conversion for #55 | active | documentation | P8 | T25 | REQ-055 | TC-T26-001 | no / serialized whole-plan executor |
 | T27 | Implement preservation-first conversion for #55 | active | behavior | P8 | T26 | REQ-055 | TC-T27-001 | no / serialized whole-plan executor |
 | T28 | Qualify the feature release | active | operational | P8 | T27 | REQ-900 | TC-T28-001 | no / serialized whole-plan executor |
-| T29 | Reconcile the tracker and close the program | active | operational | P9 | T8, T22, T23, T24, T25, T26, T27, T28, T32 | REQ-901 | TC-T29-001 | no / serialized whole-plan executor |
+| T29 | Reconcile the tracker and close the program | active | operational | P9 | T22, T23, T24, T25, T26, T27, T28, T32 | REQ-901 | TC-T29-001 | no / serialized whole-plan executor |
 | T30 | Align catalog release-level classification | active | verification | P1 | None | REQ-902 | TC-T30-001 | no / serialized whole-plan executor |
 | T31 | Correct the Python Tooling successor's authority statement | active | behavior | P3 | T20, T30 | REQ-903 | TC-T31-001 | no / serialized whole-plan executor |
 | T32 | Finish Agent Handoff consumer retirement | active | operational | P1 | T30 | REQ-904 | TC-T32-001 | no / serialized whole-plan executor |
 | T33 | Guard Python Tooling fresh adoption for #109 | active | behavior | P3 | T20, T31 | REQ-109 | TC-T33-001 | no / serialized whole-plan executor |
 | T34 | Verify the CLI Documentation 1.6 candidate | active | brownfield-behavior | P1 | T30 | REQ-906 | TC-T34-001 | no / serialized whole-plan executor |
 | T37 | Verify the ADR 1.4 candidate | active | brownfield-behavior | P1 | T30 | REQ-907 | TC-T37-001 | no / serialized whole-plan executor |
-| T35 | Qualify and publish v5.15.0 | active | operational | P4 | T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34, T37 | REQ-900, REQ-905, REQ-906 | TC-T35-001 | no / serialized whole-plan executor |
+| T35 | Qualify and publish v5.15.0 | active | operational | P4 | T2, T3, T4, T5, T6, T7, T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34, T37, T38, T39, T40 | REQ-900, REQ-905, REQ-906 | TC-T35-001 | no / serialized whole-plan executor |
+| T41 | Close the widened v5.15.0 issue set | active | operational | P4 | T35 | REQ-909 | TC-T41-001 | no / serialized whole-plan executor |
 | T36 | Qualify deferred tooling successors | active | operational | P6 | T16, T19 | REQ-900 | TC-T36-001 | no / serialized whole-plan executor |
 
 ## 9. Implementation Tasks
@@ -511,7 +533,7 @@ A verification or operational task records the failed boundary, appends an owner
   - **T37.6 REFACTOR** — none unless candidate verification exposes duplicated contract material inside the successor.
   - **T37.7 Verify Task** — run focused tests, package/graph/schema/projection checks, Markdown gates, and `scripts/verify.sh`; create the format-3 checkpoint commit.
 
-### Phase P2: Control-Plane Corrections
+### Phase P2: Control-Plane and Agent Handoff Corrections
 
 #### T11: Make successor drift actionable for #87
 
@@ -645,6 +667,290 @@ A verification or operational task records the failed boundary, appends an owner
 - **evidence:** []
 - **recovery:** not executable; T35 owns correction and recovery
 - **acceptance:** the task remains non-executable and T35 owns its replacement acceptance
+
+#### T2: Correct enrichment pairing for #75
+
+- **disposition:** active
+- **outcome:** Attach engine coordinates only to the matching provider rule.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
+- **boundary:** internal
+- **depends_on:** [T1]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order T1 before this outcome; revision 4 removed the T35 edge because this outcome now ships inside v5.15.0 rather than after it
+- **requirements:** [REQ-075]
+- **proof:** [TC-T2-001]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#75]
+- **files:** [`src/project_standards/agent_handoff/cli.py` (modify or create; owner T2)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
+- **acceptance:** TC-T2-001 proves mixed forbidden/overlong paragraph findings keep correct rule, line, observed value, and limit regardless of order.
+- **sub-tasks:**
+  - **T2.1 RED** — add the mixed multi-paragraph FIFO-mispair fixture.
+  - **T2.2 Verify RED** — confirm semantic misattribution.
+  - **T2.3 GREEN** — match enrichment by rule identity and compatible measurement.
+  - **T2.4 Verify GREEN** — run focused and full Agent Handoff tests.
+  - **T2.5 REFACTOR** — centralize rule identity if useful.
+  - **T2.6 Verify Task** — targeted tests, Ruff, BasedPyright, `scripts/verify.sh`; create the format-3 checkpoint commit.
+
+#### T3: Make legacy inventory lock-aware for #90
+
+- **disposition:** active
+- **outcome:** Suppress legacy signatures authenticated as current by the applied lock.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
+- **boundary:** internal
+- **depends_on:** [T1]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order T1 before this outcome; revision 4 removed the T35 edge because this outcome now ships inside v5.15.0 rather than after it
+- **requirements:** [REQ-090]
+- **proof:** [TC-T3-001]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#90]
+- **files:** [`src/project_standards/agent_handoff/legacy.py` (modify or create; owner T3)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
+- **acceptance:** TC-T3-001 proves managed hook/registration evidence is clean while unowned duplicates remain visible.
+- **sub-tasks:**
+  - **T3.1 RED** — reproduce locked-current false positives.
+  - **T3.2 Verify RED** — confirm exact current signatures are misclassified.
+  - **T3.3 GREEN** — add bounded lock-provenance authentication.
+  - **T3.4 Verify GREEN** — run legacy and adversarial duplicate tests.
+  - **T3.5 REFACTOR** — separate signature detection from provenance.
+  - **T3.6 Verify Task** — targeted tests, Ruff, BasedPyright, `scripts/verify.sh`; create the format-3 checkpoint commit.
+
+#### T4: Route read-only commands through locked payloads for #91
+
+- **disposition:** active
+- **outcome:** Use the applied payload before catalog refresh.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
+- **boundary:** internal
+- **depends_on:** [T3]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order T3 before this outcome
+- **requirements:** [REQ-091]
+- **proof:** [TC-T4-001]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#91]
+- **files:** [`tests/agent_handoff/test_selected_routing.py` (modify or create; owner T4)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
+- **acceptance:** TC-T4-001 proves older V5 fixtures run `legacy-report` before reconciliation without mutation and disclose the locked basis.
+- **sub-tasks:**
+  - **T4.1 RED** — reproduce `selected command package is not reconciled`.
+  - **T4.2 Verify RED** — confirm ordinary preview remains applicable.
+  - **T4.3 GREEN** — resolve read authority from authenticated lock facts.
+  - **T4.4 Verify GREEN** — run routing, tampered-lock, and missing-payload tests.
+  - **T4.5 REFACTOR** — expose one read-authority resolver.
+  - **T4.6 Verify Task** — targeted tests, Ruff, BasedPyright, `scripts/verify.sh`; create the format-3 checkpoint commit.
+
+#### T5: Restore the pre-apply report checkpoint for #101
+
+- **disposition:** active
+- **outcome:** Make size/shape reports usable before apply or deliberately redefine the workflow.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
+- **boundary:** internal
+- **depends_on:** [T4]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order T4 before this outcome
+- **requirements:** [REQ-101]
+- **proof:** [TC-T5-001]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#101]
+- **files:** [`UPGRADING.md` (modify or create; owner T5), `src/project_standards/control_plane/command_resolution.py` (modify or create; owner T5), `tests/agent_handoff/test_selected_routing.py` (modify or create; owner T4)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
+- **acceptance:** TC-T5-001 proves the documented checkpoint provides equivalent pre-write safety and an accurate diagnostic.
+- **sub-tasks:**
+  - **T5.1 RED** — reproduce enabled-but-unlocked refusal.
+  - **T5.2 Verify RED** — confirm the state is normal and unmutated.
+  - **T5.3 GREEN** — implement the approved desired-state report or workflow correction.
+  - **T5.4 Verify GREEN** — run pre/post-apply reports and doc parity checks.
+  - **T5.5 REFACTOR** — reuse T4 authority resolution where valid.
+  - **T5.6 Verify Task** — targeted tests, documentation gates, `scripts/verify.sh`; create the format-3 checkpoint commit.
+
+#### T6: Detect duplicate startup injection for #102
+
+- **disposition:** active
+- **outcome:** Block or report legacy SessionStart handlers that remain live beside managed handlers.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
+- **boundary:** internal
+- **depends_on:** [T3]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order T3 before this outcome
+- **requirements:** [REQ-102]
+- **proof:** [TC-T6-001]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#102]
+- **files:** [`tests/agent_handoff/test_reconcile.py` (modify or create; owner T6)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
+- **acceptance:** TC-T6-001 proves matcher-less and differently matched legacy groups cannot yield a green double injection.
+- **sub-tasks:**
+  - **T6.1 RED** — reproduce both harness double-injection shapes.
+  - **T6.2 Verify RED** — confirm reconcile/validate/drift are falsely green.
+  - **T6.3 GREEN** — add shared semantic overlap detection.
+  - **T6.4 Verify GREEN** — prove unrelated handlers remain consumer-owned.
+  - **T6.5 REFACTOR** — centralize overlap semantics.
+  - **T6.6 Verify Task** — targeted tests, Ruff, BasedPyright, `scripts/verify.sh`; create the format-3 checkpoint commit.
+
+#### T7: Align secret-reference policy for #107
+
+- **disposition:** active
+- **outcome:** Apply the owner-selected uppercase-reference policy in engine and provider.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
+- **boundary:** internal
+- **depends_on:** [T1]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order T1 before this outcome; revision 4 removed the T35 edge because this outcome now ships inside v5.15.0 rather than after it
+- **requirements:** [REQ-107]
+- **proof:** [TC-T7-001]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#107]
+- **files:** [`src/project_standards/agent_handoff/policy.py` (modify or create; owner T7)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
+- **acceptance:** TC-T7-001 proves env-reference and command-substitution cases produce identical safe findings; compatibility impact is documented.
+- **sub-tasks:**
+  - **T7.1 RED** — freeze the divergence matrix and owner decision.
+  - **T7.2 Verify RED** — confirm only the named cases diverge.
+  - **T7.3 GREEN** — implement the selected policy in engine/successor.
+  - **T7.4 Verify GREEN** — run parity, redaction, and predecessor tests.
+  - **T7.5 REFACTOR** — share data only without blurring authority.
+  - **T7.6 Verify Task** — targeted/package tests and `scripts/verify.sh`; create the format-3 checkpoint commit.
+
+#### T8: Superseded Agent Handoff qualifier
+
+- **disposition:** superseded
+- **outcome:** Preserve the retired separate Agent Handoff authority release boundary.
+- **work_type:** operational
+- **checkpoint:** historical non-executable boundary retained by the revision-4 boundary widening
+- **boundary:** deployment
+- **depends_on:** [T2, T3, T4, T5, T6, T7]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order T2, T3, T4, T5, T6, T7 before this outcome
+- **requirements:** []
+- **proof:** []
+- **source_refs:** [request]
+- **files:** [`docs/plans/2026-08-01-open-issue-resolution-program-plan.md` (historical; owner T8)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** [T35]
+- **evidence:** []
+- **recovery:** not executable; T35 owns correction and recovery
+- **acceptance:** the task remains non-executable and T35 owns its replacement acceptance
+
+#### T38: Fix the SessionStart spawn form for #122/#124
+
+- **disposition:** active
+- **outcome:** Ship an Agent Handoff successor whose Claude SessionStart registration reaches a shell, so the payload's interpreter-selection wrapper runs instead of being resolved as a literal executable.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
+- **boundary:** public
+- **depends_on:** [T6]
+- **dependency_reason:** ordering-only: T6 owns startup-handler detection for the same SessionStart registration this outcome re-renders, so the two are serialized rather than exchanging a contract
+- **requirements:** [REQ-122]
+- **proof:** [TC-T38-001]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#122, issue:L3DigitalNet/project-standards#124]
+- **consumes:** [approved task inputs and the immutable 1.8 registration as the reproduction baseline]
+- **produces:** [agent-handoff successor SessionStart registration]
+- **preserves:** [1.8 payload bytes and selectability, the Codex registration, and the wrapper's interpreter selection and timeout]
+- **invariants:** [no predecessor payload byte changes; a repository carrying the 1.8 entry converges without a duplicate handler]
+- **executor_discretion:** [payload-conforming rendering mechanics and repository-conforming private helpers]
+- **files:** [`standards/agent-handoff/versions/1.9/providers/agent_handoff.py` (modify or create; owner T38)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
+- **acceptance:** TC-T38-001 proves the successor's rendered Claude entry is spawned through a shell and its Python 3.14 selection wrapper executes; a reconciled repository injects the `state.md` section at SessionStart; the 1.8 payload remains byte-identical and selectable; the Codex registration is unchanged; and a repository already carrying the 1.8 entry converges without a duplicate handler.
+- **sub-tasks:**
+  - **T38.1 RED** — assert that the 1.8 rendering pairs an `sh -c` command string with `args`, and that a harness honoring exec form cannot execute it.
+  - **T38.2 Verify RED** — confirm the failure is spawn form rather than interpreter availability, hook content, or path resolution.
+  - **T38.3 GREEN** — author the 1.9 successor from 1.8 under the Standard Bundle Authoring contract, then render its entry in a form that reaches a shell, changing nothing else about the wrapper or its timeout.
+  - **T38.4 Verify GREEN** — prove the hook runs end to end and emits the state block, and that 1.8's bytes are untouched.
+  - **T38.5 REFACTOR** — keep one shared definition of the session-start command across the Claude and Codex renderings.
+  - **T38.6 Verify Task** — run the agent-handoff provider and payload-contract tests, the package, graph, schema, and projection validators, and the Markdown gates for changed payload text; create the format-3 checkpoint commit.
+
+#### T39: Scope the lineage assertion to advancing commands for #123
+
+- **disposition:** active
+- **outcome:** Assert catalog release lineage only on commands that advance the catalog, so commands that decide nothing about lineage answer from the installed catalog.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
+- **boundary:** internal
+- **depends_on:** [T4, T5]
+- **dependency_reason:** shared surface: T4 and T5 own read-only command routing and the pre-apply report checkpoint, which this outcome re-enters; serialize to avoid conflicting edits to the same routing decision
+- **requirements:** [REQ-123]
+- **proof:** [TC-T39-001]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#123]
+- **produces:** [advancing-command lineage boundary]
+- **files:** [`src/project_standards/control_plane/cli.py` (modify or create; owner T39), `src/project_standards/control_plane/catalog_refresh.py` (modify or create; owner T39)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
+- **acceptance:** TC-T39-001 proves that with an installed catalog differing from the committed catalog at the same tool release, `validate`, `validate-frontmatter`, `validate-id`, `standards show`, `reconcile --check`, `reconcile --plan`, and every `agent-handoff` subcommand complete and report their own findings; `reconcile --apply`, `init`, and `upgrade` still refuse with the unchanged diagnostic; a refusal remains distinguishable from a clean result by exit status.
+- **sub-tasks:**
+  - **T39.1 RED** — add a fixture whose installed catalog carries a payload the committed catalog lacks at an equal tool release, and assert each non-advancing command currently refuses.
+  - **T39.2 Verify RED** — confirm the refusal originates in the lineage assertion rather than in resolution, locking, or payload integrity.
+  - **T39.3 GREEN** — move the assertion to the advancing call paths only, leaving `_validate_lineage` itself unchanged in what it asserts.
+  - **T39.4 Verify GREEN** — prove non-advancing commands report findings, advancing commands still refuse, and no severity or finding text changed.
+  - **T39.5 REFACTOR** — express the advancing/non-advancing split once at the planner-request boundary rather than per command.
+  - **T39.6 Verify Task** — run the control-plane and agent-handoff test modules this task touches, plus the package and graph validators; create the format-3 checkpoint commit.
+
+#### T40: Add the producer role at header schema 1.1
+
+- **disposition:** active
+- **outcome:** Let a producing repository declare `role = "producer"` in `[project_standards]` at header schema 1.1, permitting an installed catalog that differs from its committed catalog at the same tool release.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
+- **boundary:** public
+- **depends_on:** [T5, T39]
+- **dependency_reason:** ordering-only: T5 owns `UPGRADING.md`, so the shared artifact is serialized behind it; T39 additionally produces the advancing-command lineage boundary this outcome widens, declared through matching consumes/produces
+- **requirements:** [REQ-908]
+- **proof:** [TC-T40-001]
+- **source_refs:** [request, `repo:docs/research/2026-08-04-self-dogfooding-version-skew-producer-mode.md`]
+- **consumes:** [advancing-command lineage boundary]
+- **produces:** [project_standards role declaration at header schema 1.1]
+- **preserves:** [default consumer behavior, every other lineage rule, and predecessor configuration acceptance]
+- **invariants:** [a consumer header behaves exactly as before; role never relaxes downgrade, catalog-major, or lock-lineage rules]
+- **executor_discretion:** [schema-generation mechanics and repository-conforming private helpers]
+- **files:** [`src/project_standards/control_plane/models.py` (modify or create; owner T40), `src/project_standards/schemas/consumer-config.schema.json` (modify or create; owner T40), `UPGRADING.md` (modify or create; owner T5)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
+- **acceptance:** TC-T40-001 proves `ControlHeader` accepts `schema_version` `1.0` and `1.1`; `role` is rejected at `1.0` and optional at `1.1`, defaulting to `consumer`; a `producer` header permits installed ≠ committed bytes at an equal release on advancing commands while every other lineage rule — downgrade, catalog-major mismatch, and lock-lineage agreement — still refuses; a `consumer` header behaves exactly as before; the generated config schema and `UPGRADING.md` describe the key and its default.
+- **sub-tasks:**
+  - **T40.1 RED** — assert that a `1.0` header carrying `role` is rejected and that a producing repository cannot run an advancing command.
+  - **T40.2 Verify RED** — confirm rejection comes from the strict model's unknown-key contract, not from schema generation or lock validation.
+  - **T40.3 GREEN** — widen `ControlHeader.schema_version` to `1.0`/`1.1`, add the optional `role` gated to `1.1`, and honor it in the advancing-path assertion only.
+  - **T40.4 Verify GREEN** — prove default-`consumer` behavior is byte-identical to revision 3 and that `producer` relaxes exactly the equal-release differing-bytes case.
+  - **T40.5 REFACTOR** — keep the role readable only where lineage is asserted; do not thread it through resolution, planning, or provider input.
+  - **T40.6 Verify Task** — run the control-plane model and schema tests, `generate-package-schemas --root . --check`, and the Markdown gates for `UPGRADING.md`; create the format-3 checkpoint commit.
 
 ### Phase P3: Python Tooling Corrections
 
@@ -818,8 +1124,8 @@ A verification or operational task records the failed boundary, appends an owner
 - **work_type:** operational
 - **checkpoint:** one green commit containing EV-007 and the required ordered `Plan-*` trailers
 - **boundary:** deployment
-- **depends_on:** [T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34, T37]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34, T37 before this outcome
+- **depends_on:** [T2, T3, T4, T5, T6, T7, T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34, T37, T38, T39, T40]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order before this outcome; revision 4 added T2–T7 and T38–T40 so the published release contains the widened surface, leaving this task's acceptance target unchanged
 - **requirements:** [REQ-900, REQ-905, REQ-906]
 - **proof:** [TC-T35-001]
 - **source_refs:** [request]
@@ -831,7 +1137,7 @@ A verification or operational task records the failed boundary, appends an owner
 - **files:** [`docs/research/2026-08-01-v5-15-release-evidence.md` (modify or create; owner T35)]
 - **parallel_safe:** no
 - **conflicts_with:** []
-- **supersedes:** [T15]
+- **supersedes:** [T8, T15]
 - **superseded_by:** []
 - **evidence:** [EV-007]
 - **recovery:** stop at the last verified boundary, do not repeat an unproven external effect, retain durable evidence, and use the task-specific no-op or recovery proof
@@ -844,208 +1150,40 @@ A verification or operational task records the failed boundary, appends an owner
   - **T35.5 PROVE NO-OP OR RECOVERY** — prove repeat convergence or the declared recovery path without rewriting immutable history.
   - **T35.6 CAPTURE EVIDENCE** — run TC-T35-001; commit sanitized durable evidence and the format-3 checkpoint.
 
-### Phase P5: Agent Handoff Authority and MCP Documentation
-
-#### T2: Correct enrichment pairing for #75
+#### T41: Close the widened v5.15.0 issue set
 
 - **disposition:** active
-- **outcome:** Attach engine coordinates only to the matching provider rule.
-- **work_type:** behavior
-- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
-- **boundary:** internal
-- **depends_on:** [T1, T35]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T1, T35 before this outcome
-- **requirements:** [REQ-075]
-- **proof:** [TC-T2-001]
-- **source_refs:** [request, issue:L3DigitalNet/project-standards#75]
-- **files:** [`src/project_standards/agent_handoff/cli.py` (modify or create; owner T2)]
-- **parallel_safe:** no
-- **conflicts_with:** []
-- **supersedes:** []
-- **superseded_by:** []
-- **evidence:** [ephemeral]
-- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
-- **acceptance:** TC-T2-001 proves mixed forbidden/overlong paragraph findings keep correct rule, line, observed value, and limit regardless of order.
-- **sub-tasks:**
-  - **T2.1 RED** — add the mixed multi-paragraph FIFO-mispair fixture.
-  - **T2.2 Verify RED** — confirm semantic misattribution.
-  - **T2.3 GREEN** — match enrichment by rule identity and compatible measurement.
-  - **T2.4 Verify GREEN** — run focused and full Agent Handoff tests.
-  - **T2.5 REFACTOR** — centralize rule identity if useful.
-  - **T2.6 Verify Task** — targeted tests, Ruff, BasedPyright, `scripts/verify.sh`; create the format-3 checkpoint commit.
-
-#### T3: Make legacy inventory lock-aware for #90
-
-- **disposition:** active
-- **outcome:** Suppress legacy signatures authenticated as current by the applied lock.
-- **work_type:** behavior
-- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
-- **boundary:** internal
-- **depends_on:** [T1, T35]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T1, T35 before this outcome
-- **requirements:** [REQ-090]
-- **proof:** [TC-T3-001]
-- **source_refs:** [request, issue:L3DigitalNet/project-standards#90]
-- **files:** [`src/project_standards/agent_handoff/legacy.py` (modify or create; owner T3)]
-- **parallel_safe:** no
-- **conflicts_with:** []
-- **supersedes:** []
-- **superseded_by:** []
-- **evidence:** [ephemeral]
-- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
-- **acceptance:** TC-T3-001 proves managed hook/registration evidence is clean while unowned duplicates remain visible.
-- **sub-tasks:**
-  - **T3.1 RED** — reproduce locked-current false positives.
-  - **T3.2 Verify RED** — confirm exact current signatures are misclassified.
-  - **T3.3 GREEN** — add bounded lock-provenance authentication.
-  - **T3.4 Verify GREEN** — run legacy and adversarial duplicate tests.
-  - **T3.5 REFACTOR** — separate signature detection from provenance.
-  - **T3.6 Verify Task** — targeted tests, Ruff, BasedPyright, `scripts/verify.sh`; create the format-3 checkpoint commit.
-
-#### T4: Route read-only commands through locked payloads for #91
-
-- **disposition:** active
-- **outcome:** Use the applied payload before catalog refresh.
-- **work_type:** behavior
-- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
-- **boundary:** internal
-- **depends_on:** [T3]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T3 before this outcome
-- **requirements:** [REQ-091]
-- **proof:** [TC-T4-001]
-- **source_refs:** [request, issue:L3DigitalNet/project-standards#91]
-- **files:** [`tests/agent_handoff/test_selected_routing.py` (modify or create; owner T4)]
-- **parallel_safe:** no
-- **conflicts_with:** []
-- **supersedes:** []
-- **superseded_by:** []
-- **evidence:** [ephemeral]
-- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
-- **acceptance:** TC-T4-001 proves older V5 fixtures run `legacy-report` before reconciliation without mutation and disclose the locked basis.
-- **sub-tasks:**
-  - **T4.1 RED** — reproduce `selected command package is not reconciled`.
-  - **T4.2 Verify RED** — confirm ordinary preview remains applicable.
-  - **T4.3 GREEN** — resolve read authority from authenticated lock facts.
-  - **T4.4 Verify GREEN** — run routing, tampered-lock, and missing-payload tests.
-  - **T4.5 REFACTOR** — expose one read-authority resolver.
-  - **T4.6 Verify Task** — targeted tests, Ruff, BasedPyright, `scripts/verify.sh`; create the format-3 checkpoint commit.
-
-#### T5: Restore the pre-apply report checkpoint for #101
-
-- **disposition:** active
-- **outcome:** Make size/shape reports usable before apply or deliberately redefine the workflow.
-- **work_type:** behavior
-- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
-- **boundary:** internal
-- **depends_on:** [T4]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T4 before this outcome
-- **requirements:** [REQ-101]
-- **proof:** [TC-T5-001]
-- **source_refs:** [request, issue:L3DigitalNet/project-standards#101]
-- **files:** [`UPGRADING.md` (modify or create; owner T5), `src/project_standards/control_plane/command_resolution.py` (modify or create; owner T5), `tests/agent_handoff/test_selected_routing.py` (modify or create; owner T4)]
-- **parallel_safe:** no
-- **conflicts_with:** []
-- **supersedes:** []
-- **superseded_by:** []
-- **evidence:** [ephemeral]
-- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
-- **acceptance:** TC-T5-001 proves the documented checkpoint provides equivalent pre-write safety and an accurate diagnostic.
-- **sub-tasks:**
-  - **T5.1 RED** — reproduce enabled-but-unlocked refusal.
-  - **T5.2 Verify RED** — confirm the state is normal and unmutated.
-  - **T5.3 GREEN** — implement the approved desired-state report or workflow correction.
-  - **T5.4 Verify GREEN** — run pre/post-apply reports and doc parity checks.
-  - **T5.5 REFACTOR** — reuse T4 authority resolution where valid.
-  - **T5.6 Verify Task** — targeted tests, documentation gates, `scripts/verify.sh`; create the format-3 checkpoint commit.
-
-#### T6: Detect duplicate startup injection for #102
-
-- **disposition:** active
-- **outcome:** Block or report legacy SessionStart handlers that remain live beside managed handlers.
-- **work_type:** behavior
-- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
-- **boundary:** internal
-- **depends_on:** [T3]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T3 before this outcome
-- **requirements:** [REQ-102]
-- **proof:** [TC-T6-001]
-- **source_refs:** [request, issue:L3DigitalNet/project-standards#102]
-- **files:** [`tests/agent_handoff/test_reconcile.py` (modify or create; owner T6)]
-- **parallel_safe:** no
-- **conflicts_with:** []
-- **supersedes:** []
-- **superseded_by:** []
-- **evidence:** [ephemeral]
-- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
-- **acceptance:** TC-T6-001 proves matcher-less and differently matched legacy groups cannot yield a green double injection.
-- **sub-tasks:**
-  - **T6.1 RED** — reproduce both harness double-injection shapes.
-  - **T6.2 Verify RED** — confirm reconcile/validate/drift are falsely green.
-  - **T6.3 GREEN** — add shared semantic overlap detection.
-  - **T6.4 Verify GREEN** — prove unrelated handlers remain consumer-owned.
-  - **T6.5 REFACTOR** — centralize overlap semantics.
-  - **T6.6 Verify Task** — targeted tests, Ruff, BasedPyright, `scripts/verify.sh`; create the format-3 checkpoint commit.
-
-#### T7: Align secret-reference policy for #107
-
-- **disposition:** active
-- **outcome:** Apply the owner-selected uppercase-reference policy in engine and provider.
-- **work_type:** behavior
-- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
-- **boundary:** internal
-- **depends_on:** [T1, T35]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T1, T35 before this outcome
-- **requirements:** [REQ-107]
-- **proof:** [TC-T7-001]
-- **source_refs:** [request, issue:L3DigitalNet/project-standards#107]
-- **files:** [`src/project_standards/agent_handoff/policy.py` (modify or create; owner T7)]
-- **parallel_safe:** no
-- **conflicts_with:** []
-- **supersedes:** []
-- **superseded_by:** []
-- **evidence:** [ephemeral]
-- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
-- **acceptance:** TC-T7-001 proves env-reference and command-substitution cases produce identical safe findings; compatibility impact is documented.
-- **sub-tasks:**
-  - **T7.1 RED** — freeze the divergence matrix and owner decision.
-  - **T7.2 Verify RED** — confirm only the named cases diverge.
-  - **T7.3 GREEN** — implement the selected policy in engine/successor.
-  - **T7.4 Verify GREEN** — run parity, redaction, and predecessor tests.
-  - **T7.5 REFACTOR** — share data only without blurring authority.
-  - **T7.6 Verify Task** — targeted/package tests and `scripts/verify.sh`; create the format-3 checkpoint commit.
-
-#### T8: Qualify the Agent Handoff authority train
-
-- **disposition:** active
-- **outcome:** Publish T2–T7 in one release and close their issues.
+- **outcome:** Close or disposition the Agent Handoff and control-plane issues folded into v5.15.0 at revision 4, against the published release.
 - **work_type:** operational
-- **checkpoint:** one green commit containing EV-002 and the required ordered `Plan-*` trailers
+- **checkpoint:** one green commit containing EV-011 and the required ordered `Plan-*` trailers
 - **boundary:** deployment
-- **depends_on:** [T2, T3, T4, T5, T6, T7]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T2, T3, T4, T5, T6, T7 before this outcome
-- **requirements:** [REQ-900]
-- **proof:** [TC-T8-001]
+- **depends_on:** [T35]
+- **dependency_reason:** ordering-only: issues close with release references, so publication must precede closure
+- **requirements:** [REQ-909]
+- **proof:** [TC-T41-001]
 - **source_refs:** [request]
 - **consumes:** [approved task inputs, exact repository and external state at authorization]
-- **produces:** [t8 verified operational result]
+- **produces:** [t41 verified operational result]
 - **preserves:** [immutable history, predecessor bytes, unrelated work, and action-specific authorization]
 - **invariants:** [no external effect before authorization; failed proof cannot be reported as success]
 - **executor_discretion:** [bounded evidence-capture mechanics and repository-conforming private helpers]
-- **files:** [`docs/research/2026-08-01-agent-handoff-authority-release-evidence.md` (modify or create; owner T8)]
+- **files:** [`docs/research/2026-08-04-widened-v5-15-closure-evidence.md` (modify or create; owner T41)]
 - **parallel_safe:** no
 - **conflicts_with:** []
 - **supersedes:** []
 - **superseded_by:** []
-- **evidence:** [EV-002]
-- **recovery:** stop at the last verified boundary, do not repeat an unproven release or issue effect, retain EV-002, and prove no-op convergence or successor recovery
-- **acceptance:** TC-T8-001 proves predecessor bytes, candidate parity, full gate, hosted checks, assets, recovery decision, and six closures verify.
+- **evidence:** [EV-011]
+- **recovery:** stop at the last verified boundary, do not repeat an unproven external effect, retain durable evidence, and use the task-specific no-op or recovery proof
+- **acceptance:** TC-T41-001 proves issues #75, #90, #91, #101, #102, #107, #122, #123, and #124 close or receive an accepted disposition with release references; #124 is dispositioned against #122 rather than fixed twice; the published release contains the Agent Handoff 1.9 successor and the T2–T7 engine corrections; a `consumer` repository observes no behavior change from REQ-908.
 - **sub-tasks:**
-  - **T8.1 AUTHORIZATION** — obtain exact release, issue-write, tag, asset, and publication authorization.
-  - **T8.2 PREFLIGHT** — anchor the candidate, predecessor bytes, hosted prerequisites, recovery boundary, and EV-002 destination.
-  - **T8.3 APPLY** — perform only the authorized Agent Handoff release and issue-closure effects.
-  - **T8.4 VERIFY** — verify candidate, installed wheel, hosted checks, assets, and issue state independently.
-  - **T8.5 PROVE NO-OP OR RECOVERY** — prove repeat convergence or prepare a fully qualified successor without rewriting history.
-  - **T8.6 CAPTURE EVIDENCE** — run TC-T8-001; commit EV-002 and the format-3 checkpoint.
+  - **T41.1 AUTHORIZATION** — obtain current action-and-target-specific approval for every issue write and disposition.
+  - **T41.2 PREFLIGHT** — confirm the published release identity, the exact issue set, and the duplicate disposition for #124.
+  - **T41.3 APPLY** — perform only the authorized closures and dispositions in the declared order.
+  - **T41.4 VERIFY** — re-observe issue state and released artifact contents independently.
+  - **T41.5 PROVE NO-OP OR RECOVERY** — prove repeat convergence or the declared recovery path without rewriting immutable history.
+  - **T41.6 CAPTURE EVIDENCE** — run TC-T41-001; commit sanitized durable evidence and the format-3 checkpoint.
+
+### Phase P5: MCP Documentation
 
 #### T22: Correct MCP release docs for #108
 
@@ -1323,8 +1461,8 @@ A verification or operational task records the failed boundary, appends an owner
 - **work_type:** operational
 - **checkpoint:** one green commit containing EV-005 and the required ordered `Plan-*` trailers
 - **boundary:** operational
-- **depends_on:** [T8, T22, T23, T24, T25, T26, T27, T28, T32]
-- **dependency_reason:** ordering-only: closeout follows every frozen-issue release/disposition train, MCP documentation, PyYAML disposition, feature train, and consumer retirement
+- **depends_on:** [T22, T23, T24, T25, T26, T27, T28, T32]
+- **dependency_reason:** ordering-only: closeout follows every frozen-issue release/disposition train, MCP documentation, PyYAML disposition, feature train, and consumer retirement; revision 4 dropped the T8 edge when T35 absorbed that qualification, and T35 remains transitively upstream through T16/T19 → T36 → T24
 - **requirements:** [REQ-901]
 - **proof:** [TC-T29-001]
 - **source_refs:** [request]
@@ -1382,10 +1520,10 @@ A task-level failure stays within the open task when its approved outcome is unc
 | ID | Risk | Likelihood | Impact | Treatment / Contingency | Owner / Task |
 | --- | --- | --- | --- | --- | --- |
 | R-001 | The combined v5.15.0 train becomes unreviewable. | medium | high | keep issue-local proofs and aggregate only after every owning checkpoint | T35 |
-| R-002 | Predecessor bytes or published history drift. | low | high | successor-only edits, byte gates, and no rewrite recovery | T8, T28, T35–T36 |
+| R-002 | Predecessor bytes or published history drift. | low | high | successor-only edits, byte gates, and no rewrite recovery | T8, T28, T35–T36, T41 |
 | R-003 | Legacy evidence is mistaken for format-3 completion. | medium | high | isolate layouts and replay T30/T1 with required trailers | T1, T30 |
 | R-004 | Adapter cleanup damages consumer-owned bytes. | medium | high | layout/property matrices and byte-preservation controls | T13, T14 |
-| R-005 | External issues/releases/merges change without exact approval. | low | high | operational AUTHORIZATION stages and durable receipts | T1, T8, T25, T28–T29, T32, T35–T36 |
+| R-005 | External issues/releases/merges change without exact approval. | low | high | operational AUTHORIZATION stages and durable receipts | T1, T8, T25, T28–T29, T32, T35–T36, T41 |
 | R-006 | Deferred #88/#99 changes leak into v5.15.0. | medium | high | keep T16/T19 behind T35 and reject unexpected release content | T35, T36 |
 | R-007 | A late failure is fixed inside verification and escapes task proof. | medium | high | append correction work and rerun from ANCHOR | verification tasks |
 
@@ -1447,7 +1585,7 @@ None.
 | Artifact | Format | Owned Span / Entry | Preserved Content | Atomicity / Conflict Rule | Owner Task |
 | --- | --- | --- | --- | --- | --- |
 | consumer configuration | TOML/JSONC/Markdown | typed package-owned units only | undeclared consumer bytes and comments | plan complete edit set before atomic apply | T9–T14, T19, T33 |
-| package catalog/projection/lock | TOML/files/symlinks | qualification aggregation | predecessor files and selections | package/graph/schema/projection checks before release | T8, T28, T35–T36 |
+| package catalog/projection/lock | TOML/files/symlinks | qualification aggregation | predecessor files and selections | package/graph/schema/projection checks before release | T8, T28, T35–T36, T41 |
 | protected consumer branches | Git | reviewed Agent Handoff retirement commit/merge | unrelated branch work | exact target and authorization before mutation | T32 |
 
 ## Appendix B. Requirement-to-Proof Traceability
@@ -1461,7 +1599,9 @@ None.
 | TC-T5-001 | REQ-101 | T5 | integration regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | targeted tests, documentation gates, `scripts/verify.sh`. | the documented checkpoint provides equivalent pre-write safety and an accurate diagnostic. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
 | TC-T6-001 | REQ-102 | T6 | regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | targeted tests, Ruff, BasedPyright, `scripts/verify.sh`. | matcher-less and differently matched legacy groups cannot yield a green double injection. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
 | TC-T7-001 | REQ-107 | T7 | contract regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | targeted/package tests and `scripts/verify.sh`. | env-reference and command-substitution cases produce identical safe findings; compatibility impact is documented. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
-| TC-T8-001 | REQ-900 | T8 | operational acceptance | owner-approved release contract plus independently observed repository and external state | execute the T8 operational lifecycle and action-specific authorization gates | predecessor bytes, candidate parity, full gate, hosted checks, assets, recovery decision, and six closures verify. | missing authorization, wrong target, failed external proof, or non-idempotent repeat prevents completion | local plus authorized GitHub release scope | EV-002 |
+| TC-T38-001 | REQ-122 | T38 | contract regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | run agent-handoff provider and payload-contract tests, the package/graph/schema/projection validators, and the Markdown gates for changed payload text. | the successor's rendered Claude entry reaches a shell and its Python 3.14 selection wrapper executes; a reconciled repository injects the `state.md` section at SessionStart; 1.8 remains byte-identical and selectable; the Codex registration is unchanged; a repository already carrying the 1.8 entry converges without a duplicate handler. | the prior reproduction, a plausible hollow fix that only reformats the command string, or predecessor-byte mutation remains detectable | locked local source/candidate environment and a real harness spawn | ephemeral |
+| TC-T39-001 | REQ-123 | T39 | contract regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | run the control-plane and agent-handoff test modules this task touches plus the package and graph validators. | with an installed catalog differing from the committed catalog at an equal tool release, `validate`, `validate-frontmatter`, `validate-id`, `standards show`, `reconcile --check`, `reconcile --plan`, and every `agent-handoff` subcommand complete and report their own findings; `reconcile --apply`, `init`, and `upgrade` still refuse with the unchanged diagnostic; a refusal stays distinguishable from a clean result by exit status. | a fix that weakens or deletes the assertion instead of scoping it, or that silently downgrades a refusal to a pass, remains detectable | locked local source/candidate environment | ephemeral |
+| TC-T40-001 | REQ-908 | T40 | contract regression | owner decision, the prior-art sweep, and immutable predecessor configuration acceptance | run the control-plane model and schema tests, `generate-package-schemas --root . --check`, and the Markdown gates for `UPGRADING.md`. | `ControlHeader` accepts `schema_version` 1.0 and 1.1; `role` is rejected at 1.0 and optional at 1.1 defaulting to `consumer`; a `producer` header permits installed != committed bytes at an equal release on advancing commands while downgrade, catalog-major, and lock-lineage rules still refuse; a `consumer` header behaves exactly as before; the generated schema and `UPGRADING.md` describe the key and its default. | a role that leaks into resolution/planning, or that relaxes any rule beyond the equal-release differing-bytes case, remains detectable | locked local source/candidate environment | ephemeral |
 | TC-T9-001 | REQ-076, REQ-077 | T9 | regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | control-plane tests, Ruff, BasedPyright, `scripts/verify.sh`. | empty `py.typed`/`.gitkeep` and deleted-container policy transitions converge while verification stays fail-closed. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
 | TC-T10-001 | REQ-083 | T10 | integration regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | migration tests, Ruff, BasedPyright, `scripts/verify.sh`. | the issue fixture previews in human/JSON modes; missing evidence names package, transform, input, and safe action. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
 | TC-T11-001 | REQ-087 | T11 | regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | tests, schema checks, Ruff, BasedPyright, `scripts/verify.sh`. | safe expected/observed/option evidence is present; equivalent successor intent needs no destructive temporary restore. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
@@ -1489,19 +1629,20 @@ None.
 | TC-T37-001 | REQ-907 | T37 | characterization and regression | merged candidate payload, immutable adr@1.3 bytes, and the task acceptance boundary | run focused ADR provider and payload-contract tests, package/graph/schema/projection checks, Markdown gates, and `scripts/verify.sh`. | adr@1.3 remains byte-identical and selectable; adr@1.4's declared resource digests and aggregate identity verify; its provider-input schema selects 1.4 and `run_migrate` preserves the requested version; the MADR section provider loads and reports findings; the example's stated exclusions match its declared boundary; the deferred release-boundary items are inventoried for T35 and not advanced inside verification; package, graph, schema, projection, and Markdown checks pass. | a stale version constant, a mutated predecessor byte, or a digest that does not match its declared resource remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
 | TC-T35-001 | REQ-900, REQ-905, REQ-906 | T35 | operational acceptance | owner-approved release or operational contract plus independently observed repository and external state | execute the T35 operational lifecycle and its action-specific approval gates | prior-release reproductions fail for the expected reasons; every selected correction and accepted #84 disposition passes source, candidate-wheel, installed, migration, adapter, real-tool, and predecessor-byte proofs; CLI Documentation 1.6 and the Python Tooling successor are advertised without altering predecessors; full local and hosted gates pass; signed tags and byte-verified assets are published only after authorization; issues #76, #77, #83, #84, #86, #87, #89, #95, #98, #105, #106, and #109 close or receive the accepted disposition. | missing authorization, wrong target, failed external proof, or non-idempotent repeat prevents completion | local plus authorized GitHub/consumer scope | EV-007 |
 | TC-T36-001 | REQ-900 | T36 | operational acceptance | owner-approved release or operational contract plus independently observed repository and external state | execute the T36 operational lifecycle and its action-specific approval gates | v5.15.0 and every predecessor remain byte-identical/selectable; the bounded Prettier corpus and Ruff plugin-ownership contracts pass source/candidate/installed proofs; full and hosted gates pass; publication and both closures follow explicit authorization. | missing authorization, wrong target, failed external proof, or non-idempotent repeat prevents completion | local plus authorized GitHub/consumer scope | EV-008 |
+| TC-T41-001 | REQ-909 | T41 | operational acceptance | owner-approved release contract plus independently observed repository and external issue state | execute the T41 operational lifecycle and its action-specific approval gates | issues #75, #90, #91, #101, #102, #107, #122, #123, and #124 close or receive an accepted disposition with release references; #124 is dispositioned against #122 rather than fixed twice; the published release contains the Agent Handoff 1.9 successor and the T2–T7 engine corrections; a `consumer` repository observes no behavior change from REQ-908. | missing authorization, wrong target, failed external proof, or non-idempotent repeat prevents completion | local plus authorized GitHub scope | EV-011 |
 
 ## Appendix C. Durable Evidence
 
 | Evidence ID | Producing Task | Path | Contents / Provenance | Privacy Exclusions | Retention Reason |
 | --- | --- | --- | --- | --- | --- |
 | EV-001 | T1 | docs/research/2026-08-01-agent-handoff-1-8-closeout-evidence.md | published v5.13/v5.14 launcher probes, hosted run, assets, and issue disposition | no credentials, private harness configuration, or unbounded logs | preserve the external issue-close basis after scratch teardown |
-| EV-002 | T8 | docs/research/2026-08-01-agent-handoff-authority-release-evidence.md | release candidate, installed-wheel, hosted, artifact, and issue-closure matrix | no credentials, private consumer configuration, or raw CI logs | retain release and recovery evidence for the authority train |
 | EV-003 | T23 | docs/research/2026-08-01-pyyaml-transient-disposition.md | isolated installation matrix, versions, integrity observations, and accepted disposition | no environment secrets, cache contents, or unrelated package inventory | retain the version-bound no-reproduction or defect-cause decision |
 | EV-004 | T28 | docs/research/2026-08-01-project-spec-feature-release-evidence.md | feature release candidate, migration safety, hosted, asset, and issue-closure proof | no credentials, private consumer configuration, or raw CI logs | retain external release acceptance after scratch teardown |
 | EV-005 | T29 | docs/research/2026-08-01-open-issue-program-closeout-evidence.md | frozen-issue reconciliation, release mapping, accepted dispositions, and final status | no credentials, private issue drafts, or unbounded API responses | retain the program completion basis |
 | EV-006 | T32 | docs/research/2026-07-09-agent-handoff-retirement-inventory.md | per-consumer authoritative-branch, validation, drift, and parity outcomes | no credentials, private configuration bytes, or unrelated consumer diffs | retain the operational retirement record |
 | EV-007 | T35 | docs/research/2026-08-01-v5-15-release-evidence.md | v5.15 source, wheel, installed, migration, hosted, artifact, publication, and issue matrix | no signing secrets, tokens, private consumer configuration, or raw CI logs | retain the combined release acceptance and recovery basis |
 | EV-008 | T36 | docs/research/2026-08-01-deferred-tooling-release-evidence.md | deferred successor source, installed, hosted, artifact, publication, and issue matrix | no signing secrets, tokens, private consumer configuration, or raw CI logs | retain the post-v5.15 release acceptance basis |
+| EV-011 | T41 | docs/research/2026-08-04-widened-v5-15-closure-evidence.md | issue-closure and disposition matrix for the widened v5.15.0 surface | no credentials, private consumer configuration, or raw CI logs | retain closure evidence for the widened boundary |
 | EV-009 | T25 | docs/research/2026-08-01-project-spec-conformance-release-evidence.md | child-plan completion, candidate, hosted, artifact, publication, and issue-closure proof | no signing secrets, tokens, private consumer configuration, or raw CI logs | retain the #62 release acceptance basis |
 | EV-010 | T30 | docs/research/2026-08-01-release-level-classification-evidence.md | landed commit, owner policy, focused classification matrix, package gates, and verification summary | no credentials, private configuration, or unbounded command logs | create an identity-bearing verification checkpoint without backfilling legacy task history |
 

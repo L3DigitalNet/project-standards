@@ -68,11 +68,11 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md).
 
-  The owner-approved v5.15.0 boundary is T9–T14, T17, T18, T20, T23, T31, T33–T35, and T37. Every boundary task is `done` except T35; T1 and T32 closed independently.
+  Revision 4 widened the v5.15.0 boundary on 2026-08-04 to the whole Agent Handoff surface plus the mid-cycle control-plane unblock. It stands at 41 tasks: 17 done, 3 superseded, 20 not-started, and T35 blocked.
 
-  Revision 3 stands at 17 done, 2 superseded, 16 not-started, and T35 blocked: the owner withheld publication on 2026-08-04 to widen the v5.15.0 boundary, so a plan revision likely precedes resume.
+  Newly in the boundary: T2–T7 (issues #75, #90, #91, #101, #102, #107), T38 (#122/#124), T39 (#123), and T40 (the producer role). T8 is superseded because T35 now qualifies that work, and T41 closes the added issue set.
 
-  Remaining not-started work is post-v5.15.0: T2–T8, T16, T19, T22, T24–T29, and T36. Never credit legacy scratch state.
+  Ready work is T2, T3, T7, and T22. T35 keeps a stale blocker: the bridge has no `blocked` → `not-started` transition, so it clears only when the task genuinely starts. Never credit legacy scratch state.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
@@ -98,7 +98,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   `ControlHeader` is a strict model pinned to `schema_version = "1.0"`, so `role` is a versioned contract change requiring header schema 1.1, migration, compatibility rows, and consumer documentation. Precedent: `ConsumerLock` accepts `["1.0", "1.1"]`.
 
-  Belongs in the widened v5.15.0 boundary; the master plan requires a plan-authoring revision before T35 resumes.
+  Planned as T39 and T40 in revision 4. The rejected always-advancing dev-version alternative is recorded in `docs/research/2026-08-04-self-dogfooding-version-skew-producer-mode.md`: `ParsedToolRelease` requires canonical SemVer, so it would cost more here than the schema bump.
 
 - [ ] Complete the approved future-artifact cleanup.
 

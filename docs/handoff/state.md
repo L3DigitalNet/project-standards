@@ -2,8 +2,8 @@
 
 ## Current focus
 
-- Settle the widened v5.15.0 boundary with the owner, revise the plan to match, then resume at T35.
-- Program work outside that boundary stays not-started: T2–T8, T16, T19, T22, T24–T29, T36.
+- Revision 4 widened v5.15.0. Ready work is T2, T3, T7, and T22; the new tasks are T38, T39, and T40.
+- T35 stays blocked until its dependencies land; its blocker text predates the revision that resolved it.
 - SPEC-GSF3 durable document-reference tooling: T1 is ready for a fresh implementation session.
 
 ## Active incidents
