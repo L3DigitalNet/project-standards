@@ -47,6 +47,11 @@ on:
         required: false
         type: string
         default: ""
+      runner-labels:
+        description: "JSON array of runner labels; empty selects the GitHub-hosted runner. Private same-organization callers only."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -57,7 +62,11 @@ jobs:
     # Direct events have no reusable-workflow input and therefore keep the
     # default run behavior; an explicit typed false skips setup and linting.
     if: ${{ format('{0}', inputs.markdownlint) != 'false' }}
-    runs-on: ubuntu-latest
+    # Allocated from the CALLER's context, so a private caller's self-hosted
+    # labels select its own organization's runners and nothing is attached to
+    # this public repository. Direct events leave `inputs` empty and fall
+    # through to the hosted runner, which public repos require.
+    runs-on: ${{ inputs.runner-labels && fromJSON(inputs.runner-labels) || 'ubuntu-latest' }}
 
     steps:
       - name: Check out repository

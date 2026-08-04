@@ -28,6 +28,11 @@ on:
         required: false
         type: string
         default: ""
+      runner-labels:
+        description: "JSON array of runner labels; empty selects the GitHub-hosted runner. Private same-organization callers only."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -40,7 +45,13 @@ jobs:
     # safe comparison (SA-001): a typed boolean `false` must not coerce-compare
     # unequal to the string 'false'; format() stringifies it deterministically.
     if: ${{ format('{0}', inputs.prettier) != 'false' }}
-    runs-on: ubuntu-latest
+    # A reusable workflow's runner is allocated from the CALLER's context, so a
+    # private caller passing self-hosted labels gets its own organization's
+    # runners; nothing is ever attached to this public repository. On this
+    # repo's own push/PR runs the `inputs` context is empty, so the expression
+    # falls through to the hosted runner — which is required here, since runner
+    # groups reject public repositories.
+    runs-on: ${{ inputs.runner-labels && fromJSON(inputs.runner-labels) || 'ubuntu-latest' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
