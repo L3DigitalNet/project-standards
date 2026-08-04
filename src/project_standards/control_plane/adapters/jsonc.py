@@ -824,6 +824,39 @@ def _emptied_line_span(
     return start_of_line, line_end
 
 
+def _emptied_container_span(
+    text: str,
+    located: LocatedUnit,
+    start: int,
+    end: int,
+) -> tuple[int, int] | None:
+    """Return the interior span to clear when this removal empties its container.
+
+    Issue #106: deleting the last member of a multi-line container left `{`, a
+    newline, and `}` behind — bytes no formatter writes, so the Prettier gate
+    rewrote them on the next pass. Reflow is admissible only when the entire
+    interior is the removed unit plus whitespace and at most its own trailing
+    comma: whitespace cannot spell a comment, so that check proves no consumer
+    comment byte can fall inside the collapsed span. Anything else — a comment,
+    a sibling, any other code — leaves the container exactly as authored, which
+    keeps this a bounded special case rather than the general reserialization
+    the adapter's preservation contract forbids.
+    """
+    container = located.container
+    opening = container.opening
+    closing = container.closing
+    if opening is None or closing is None:
+        return None
+    count = len(container.members) if container.kind == "object" else len(container.elements)
+    if count != 1:
+        return None
+    if text[opening.end : start].strip():
+        return None
+    if text[end : closing.start].replace(",", "", 1).strip():
+        return None
+    return opening.end, closing.start
+
+
 def _deletion_edits(
     located: LocatedUnit,
     text: str | None = None,
@@ -844,6 +877,12 @@ def _deletion_edits(
         end = located.node.end
         comma = located.container.commas[located.index]
         previous_comma = located.container.commas[located.index - 1] if located.index > 0 else None
+    if text is not None:
+        # A container this removal empties reflows as one span, so no separator
+        # or line-consumption edit below can apply to it (issue #106).
+        emptied = _emptied_container_span(text, located, start, end)
+        if emptied is not None:
+            return [(emptied[0], emptied[1], "")]
     if prune_whitespace and text is not None:
         count = (
             len(located.container.members)

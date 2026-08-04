@@ -355,7 +355,7 @@ def test_json_family_removal_of_a_sole_member_leaves_no_whitespace_residue(
         (UnitChange(ActionKind.REMOVE, scope),),
     )
 
-    assert after == b'{\n\t"managed": {\n\t}\n}\n'
+    assert after == b'{\n\t"managed": {}\n}\n'
     assert json.loads(after) == {"managed": {}}
 
 
@@ -371,6 +371,121 @@ def test_jsonc_removal_keeps_a_line_shared_with_a_consumer_comment() -> None:
     )
 
     assert after == b'{\n\t // consumer note\n\t"other": 1\n}\n'
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+@pytest.mark.parametrize(
+    ("content", "scope", "expected"),
+    [
+        pytest.param(
+            b'{\n\t"managed": {\n\t\t"owned": true\n\t}\n}\n',
+            "key:/managed/owned",
+            b'{\n\t"managed": {}\n}\n',
+            id="object-lf",
+        ),
+        pytest.param(
+            b'{\r\n\t"managed": {\r\n\t\t"owned": true\r\n\t}\r\n}\r\n',
+            "key:/managed/owned",
+            b'{\r\n\t"managed": {}\r\n}\r\n',
+            id="object-crlf",
+        ),
+        pytest.param(
+            b'{\n\t"items": [\n\t\t"one"\n\t]\n}\n',
+            "set:/items#value=one",
+            b'{\n\t"items": []\n}\n',
+            id="array-lf",
+        ),
+        pytest.param(
+            b'{\r\n\t"items": [\r\n\t\t"one"\r\n\t]\r\n}\r\n',
+            "set:/items#value=one",
+            b'{\r\n\t"items": []\r\n}\r\n',
+            id="array-crlf",
+        ),
+        pytest.param(
+            b'{\n\t"owned": true\n}\n',
+            "key:/owned",
+            b"{}\n",
+            id="root-object",
+        ),
+    ],
+)
+def test_json_family_removal_collapses_an_emptied_multiline_container(
+    adapter: JsonAdapter | JsoncAdapter,
+    content: bytes,
+    scope: str,
+    expected: bytes,
+) -> None:
+    """Issue #106: an emptied container reflows to `{}`, not to `{`-newline-`}`."""
+    after = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert after == expected
+    assert json.loads(after) == json.loads(expected)
+    assert adapter.inspect(after, (scope,)).units == ()
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        pytest.param(
+            b'{\n\t"managed": {\n\t\t// keep me\n\t\t"owned": true\n\t}\n}\n',
+            b'{\n\t"managed": {\n\t\t// keep me\n\t}\n}\n',
+            id="comment-before",
+        ),
+        pytest.param(
+            b'{\n\t"managed": {\n\t\t"owned": true\n\t\t// keep me\n\t}\n}\n',
+            b'{\n\t"managed": {\n\t\t// keep me\n\t}\n}\n',
+            id="comment-after",
+        ),
+        pytest.param(
+            b'{\n\t"managed": {\n\t\t"owned": true // keep me\n\t}\n}\n',
+            b'{\n\t"managed": {\n\t\t // keep me\n\t}\n}\n',
+            id="comment-on-the-removed-line",
+        ),
+    ],
+)
+def test_jsonc_emptied_container_holding_comments_is_never_collapsed(
+    content: bytes,
+    expected: bytes,
+) -> None:
+    """Issue #106 boundary: reflow may never consume a consumer comment byte."""
+    adapter = JsoncAdapter()
+    scope = "key:/managed/owned"
+
+    after = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert after == expected
+    assert b"// keep me" in after
+
+
+def test_json_emptied_container_remains_a_prettier_fixed_point(tmp_path: Path) -> None:
+    """Issue #106: the collapsed container is what the format gate would write."""
+    owned = f"package-owned-value-{'x' * 70}"
+    # The consumer value is long on purpose: it keeps the OUTER object multi-line
+    # after the removal, so the oracle measures this adapter's container reflow
+    # rather than Prettier's freedom to re-wrap a document that became short.
+    keep = f"consumer-owned-value-{'y' * 70}"
+    path, before = _prettier_clean_seed(
+        tmp_path,
+        "settings.json",
+        f'{{"managed":{{"owned":"{owned}"}},"consumer":{{"keep":"{keep}"}}}}\n'.encode(),
+    )
+    adapter = JsonAdapter()
+    scope = "key:/managed/owned"
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert b'"managed": {}' in after
+    assert keep.encode() in after
+    _assert_prettier_fixed_point(tmp_path, path, after)
 
 
 def test_json_create_formats_owned_fragment_inside_compact_consumer_object() -> None:
