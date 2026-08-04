@@ -4,14 +4,14 @@ title: 'Open-Issue Resolution Program Plan'
 slug: 'open-issue-resolution-program'
 size: full
 status: active
-revision: 2
-revises_revision: 1
-revision_reason: 'correct two execution blockers and seven bounded contract advisories without changing scope or task count'
+revision: 3
+revises_revision: 2
+revision_reason: 'include the merged adr@1.4 candidate in the approved v5.15.0 boundary with its own verification task and proof'
 pause_reason: ''
 source: 'GitHub open-issue inventory frozen 2026-08-01T09:21:01Z; owner-approved TODO and v5.15.0 decisions; owner-authorized format-3 migration'
 spec_ref: ''
 created: 2026-08-01
-updated: 2026-08-02
+updated: 2026-08-04
 owners:
   - 'Chris Purcell / L3DigitalNet'
   - 'Coding agent under human review'
@@ -29,7 +29,8 @@ Resolve the 24 issues frozen at 2026-08-01T09:21:01Z and the three approved repo
 
 | Source | Source Role | Authority / Use | Version / Date | Affected Plan Surface |
 | --- | --- | --- | --- | --- |
-| request | normative | owner-approved issue boundary, prioritization, release policy, and format-3 migration | 2026-08-02 | §§1–13, T1–T36 |
+| request | normative | owner-approved issue boundary, prioritization, release policy, format-3 migration, and the 2026-08-04 decision to fold adr@1.4 into v5.15.0 | 2026-08-04 | §§1–13, T1–T37 |
+| `external:https://github.com/L3DigitalNet/project-standards/pull/120` | current-state evidence | merged adr@1.4 candidate payload, its provider-input and example corrections, and the deferred release-boundary items | merged 2026-08-04 | REQ-907, T37 |
 | `repo:docs/TODO.md` | normative | user and agent work queue, including retirement and program execution | 2026-08-02 | §§3–6, T29–T32 |
 | `repo:docs/STATUS.md` | current-state evidence | published release and prepared-plan baseline | 2026-08-02 | §§4–5, T1, T35 |
 | `repo:meta/versioning.md` | decision | accepted release classification and immutability contract | 2026-08-02 | §§3, 5, 10, T8, T28, T30, T35–T36 |
@@ -66,7 +67,7 @@ Conflict precedence: current explicit owner decisions govern release boundaries 
 ### 3.1 In Scope
 
 - The frozen issues #55, #62, #75–#77, #80, #83, #84, #86–#91, #95, #98, #99, #101, #102, and #105–#109.
-- v5.15.0 as the exact owner-approved combined correction release.
+- v5.15.0 as the exact owner-approved combined correction release, including the merged adr@1.4 candidate folded into its boundary on 2026-08-04.
 - Immutable successor payloads, control-plane and tooling corrections, release qualification, issue disposition, MCP release documentation, and the two remaining Agent Handoff consumers.
 - Later Agent Handoff, deferred tooling, Project Spec conformance, and conversion trains already retained by the approved program.
 - Format-3 execution control through the repository-local bridge and identity-bearing task checkpoints.
@@ -103,7 +104,7 @@ Conflict precedence: current explicit owner decisions govern release boundaries 
 
 ### 4.1 Current State
 
-Project Standards 5.14.0 is published. CLI Documentation 1.6 exists as an unreleased candidate, and the approved v5.15.0 issue boundary is frozen. T30 product changes and T1.1–T1.5 observations exist in Git and legacy scratch, but their commits/checklists do not carry the ordered format-3 `Plan-Id`, `Plan-Task`, `Plan-Revision`, `Plan-Definition-Digest`, `Plan-Status`, `Plan-Requirements`, and `Plan-Proofs` trailers. The byte-identical format-3 bridge and fresh execution state are present, every task is unstarted, and T30 is solely ready. Execution preflight remains blocked because the canonical bridge fails this repository's Ruff formatting, lint, and BasedPyright profiles.
+Project Standards 5.14.0 is published. CLI Documentation 1.6 and the merged adr@1.4 payload exist as unreleased candidates, and the approved v5.15.0 boundary is frozen apart from the owner's 2026-08-04 addition of adr@1.4. The adr@1.4 merge deliberately deferred its release-boundary items, so the tool release still reads 5.14.0, four root `README.md` references still name adr@1.3, and the `.standards` consumer-catalog projection is stale. T30 product changes and T1.1–T1.5 observations exist in Git and legacy scratch, but their commits/checklists do not carry the ordered format-3 `Plan-Id`, `Plan-Task`, `Plan-Revision`, `Plan-Definition-Digest`, `Plan-Status`, `Plan-Requirements`, and `Plan-Proofs` trailers. The byte-identical format-3 bridge and fresh execution state are present, every task is unstarted, and T30 is solely ready. Execution preflight remains blocked because the canonical bridge fails this repository's Ruff formatting, lint, and BasedPyright profiles.
 
 ### 4.2 Target State
 
@@ -195,6 +196,7 @@ The control plane remains the sole package-composition and consumer-file authori
 | REQ-904 | Manually converge and verify the two remaining Agent Handoff consumers, then close the retirement records. | `docs/TODO.md`; owner decision 2026-08-01 | Must | T32 | T32 | TC-T32-001 |
 | REQ-905 | Publish the selected twelve-issue correction set together in v5.15.0, with no intermediate control-plane or Python Tooling release. | Owner decision 2026-08-02 | Must | T35 | T35 | TC-T35-001 |
 | REQ-906 | Include the existing CLI Documentation 1.6 candidate in v5.15.0 while retaining 1.5 unchanged and selectable. | Owner decision 2026-08-02 | Must | T35 | T34, T35 | TC-T34-001, TC-T35-001 |
+| REQ-907 | Include the merged adr@1.4 candidate in v5.15.0 while retaining adr@1.3 unchanged and selectable. The deferred release-boundary advance from adr@1.3 is already compelled by REQ-900's full local and hosted gate acceptance in T35. | Owner decision 2026-08-04; `external:https://github.com/L3DigitalNet/project-standards/pull/120` | Must | T37 | T37 | TC-T37-001 |
 
 ## 7. Verification and Evidence Strategy
 
@@ -261,7 +263,8 @@ A verification or operational task records the failed boundary, appends an owner
 | T32 | Finish Agent Handoff consumer retirement | active | operational | P1 | T30 | REQ-904 | TC-T32-001 | no / serialized whole-plan executor |
 | T33 | Guard Python Tooling fresh adoption for #109 | active | behavior | P3 | T20, T31 | REQ-109 | TC-T33-001 | no / serialized whole-plan executor |
 | T34 | Verify the CLI Documentation 1.6 candidate | active | brownfield-behavior | P1 | T30 | REQ-906 | TC-T34-001 | no / serialized whole-plan executor |
-| T35 | Qualify and publish v5.15.0 | active | operational | P4 | T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34 | REQ-900, REQ-905, REQ-906 | TC-T35-001 | no / serialized whole-plan executor |
+| T37 | Verify the ADR 1.4 candidate | active | brownfield-behavior | P1 | T30 | REQ-907 | TC-T37-001 | no / serialized whole-plan executor |
+| T35 | Qualify and publish v5.15.0 | active | operational | P4 | T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34, T37 | REQ-900, REQ-905, REQ-906 | TC-T35-001 | no / serialized whole-plan executor |
 | T36 | Qualify deferred tooling successors | active | operational | P6 | T16, T19 | REQ-900 | TC-T36-001 | no / serialized whole-plan executor |
 
 ## 9. Implementation Tasks
@@ -477,6 +480,36 @@ A verification or operational task records the failed boundary, appends an owner
   - **T34.5 Verify GREEN** — run provider, workflow, Go, predecessor-byte, package, and projection matrices.
   - **T34.6 REFACTOR** — none unless candidate verification exposes duplicated contract material.
   - **T34.7 Verify Task** — run focused tests, package/graph/schema/projection checks, Markdown gates, and `scripts/verify.sh`; create the format-3 checkpoint commit.
+
+#### T37: Verify the ADR 1.4 candidate
+
+- **disposition:** active
+- **outcome:** Review and qualify the merged adr@1.4 candidate for inclusion in v5.15.0 without redesigning its decision-boundary contract, altering immutable adr@1.3, or overwriting unrelated in-flight work.
+- **work_type:** brownfield-behavior
+- **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
+- **boundary:** internal
+- **depends_on:** [T30]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order T30 before this outcome
+- **requirements:** [REQ-907]
+- **proof:** [TC-T37-001]
+- **source_refs:** [request, external:https://github.com/L3DigitalNet/project-standards/pull/120]
+- **files:** [`standards/adr/standard.toml` (modify or create; owner T37)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** keep the task open, restore the verified GREEN checkpoint if refactoring regresses proof, and append correction work when the approved boundary must expand
+- **acceptance:** TC-T37-001 proves adr@1.3 remains byte-identical and selectable; adr@1.4's declared resource digests and aggregate identity verify; its provider-input schema selects 1.4 and `run_migrate` preserves the requested version; the MADR section provider loads and reports findings; the example's stated exclusions match the boundary its Context and Problem Statement establishes; the deferred release-boundary items are inventoried and handed to T35 rather than advanced inside verification; package, graph, schema, projection, and Markdown checks pass; any correction stays within the candidate contract.
+- **sub-tasks:**
+  - **T37.0 CHARACTERIZE** — inventory the merged candidate, its PR review corrections, shared-file ownership, any surface the merge left unverified, and the exact deferred release-boundary items T35 must advance.
+  - **T37.1 Verify Baseline** — confirm the candidate inventory matches the current repository and that immutable adr@1.3 bytes are unchanged.
+  - **T37.2 RED** — prove adr@1.3 lacks the approved decision-boundary contract, and exercise candidate negative controls including a provider request whose declared version disagrees with the selected package.
+  - **T37.3 Verify RED** — distinguish predecessor behavior and intentional negative controls from candidate defects.
+  - **T37.4 GREEN** — preserve the merged candidate or apply only evidence-required corrections within its approved contract.
+  - **T37.5 Verify GREEN** — run provider, payload-integrity, predecessor-byte, package, and projection matrices.
+  - **T37.6 REFACTOR** — none unless candidate verification exposes duplicated contract material inside the successor.
+  - **T37.7 Verify Task** — run focused tests, package/graph/schema/projection checks, Markdown gates, and `scripts/verify.sh`; create the format-3 checkpoint commit.
 
 ### Phase P2: Control-Plane Corrections
 
@@ -785,8 +818,8 @@ A verification or operational task records the failed boundary, appends an owner
 - **work_type:** operational
 - **checkpoint:** one green commit containing EV-007 and the required ordered `Plan-*` trailers
 - **boundary:** deployment
-- **depends_on:** [T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34 before this outcome
+- **depends_on:** [T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34, T37]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34, T37 before this outcome
 - **requirements:** [REQ-900, REQ-905, REQ-906]
 - **proof:** [TC-T35-001]
 - **source_refs:** [request]
@@ -1453,6 +1486,7 @@ None.
 | TC-T32-001 | REQ-904 | T32 | operational acceptance | owner-approved release or operational contract plus independently observed repository and external state | execute the T32 operational lifecycle and its action-specific approval gates | each remaining consumer has only the standards-managed Agent Handoff document/hook pair on its authoritative branch, passes `project-standards agent-handoff validate --repo .` and `drift-check --repo .` using its selected control plane, preserves unrelated work, and has remote parity after separately authorized publication; retirement records name the verified final state. | missing authorization, wrong target, failed external proof, or non-idempotent repeat prevents completion | local plus authorized GitHub/consumer scope | EV-006 |
 | TC-T33-001 | REQ-109 | T33 | integration regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | run Python Tooling package/real-uv tests, predecessor-byte checks, package contracts, and `scripts/verify.sh`. | an absent `pyproject.toml` or missing `[project]` table produces an actionable no-write finding that names the required consumer decision and installable/non-installable routes; existing valid `[project]` metadata is preserved; the documented apply → `uv lock` flow succeeds with the lock-resolved uv version; Python Tooling 1.10 remains byte-identical. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
 | TC-T34-001 | REQ-906 | T34 | characterization and regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | run focused tests, package/graph/schema/projection checks, Markdown gates, and `scripts/verify.sh`. | 1.5 remains byte-identical/selectable; 1.6's Python, Go, and generic profiles validate; the Go workflow builds one explicit package and verifies the built command; package, graph, schema, projection, Markdown, and focused real-tool checks pass; any correction stays within the candidate contract. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
+| TC-T37-001 | REQ-907 | T37 | characterization and regression | merged candidate payload, immutable adr@1.3 bytes, and the task acceptance boundary | run focused ADR provider and payload-contract tests, package/graph/schema/projection checks, Markdown gates, and `scripts/verify.sh`. | adr@1.3 remains byte-identical and selectable; adr@1.4's declared resource digests and aggregate identity verify; its provider-input schema selects 1.4 and `run_migrate` preserves the requested version; the MADR section provider loads and reports findings; the example's stated exclusions match its declared boundary; the deferred release-boundary items are inventoried for T35 and not advanced inside verification; package, graph, schema, projection, and Markdown checks pass. | a stale version constant, a mutated predecessor byte, or a digest that does not match its declared resource remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
 | TC-T35-001 | REQ-900, REQ-905, REQ-906 | T35 | operational acceptance | owner-approved release or operational contract plus independently observed repository and external state | execute the T35 operational lifecycle and its action-specific approval gates | prior-release reproductions fail for the expected reasons; every selected correction and accepted #84 disposition passes source, candidate-wheel, installed, migration, adapter, real-tool, and predecessor-byte proofs; CLI Documentation 1.6 and the Python Tooling successor are advertised without altering predecessors; full local and hosted gates pass; signed tags and byte-verified assets are published only after authorization; issues #76, #77, #83, #84, #86, #87, #89, #95, #98, #105, #106, and #109 close or receive the accepted disposition. | missing authorization, wrong target, failed external proof, or non-idempotent repeat prevents completion | local plus authorized GitHub/consumer scope | EV-007 |
 | TC-T36-001 | REQ-900 | T36 | operational acceptance | owner-approved release or operational contract plus independently observed repository and external state | execute the T36 operational lifecycle and its action-specific approval gates | v5.15.0 and every predecessor remain byte-identical/selectable; the bounded Prettier corpus and Ruff plugin-ownership contracts pass source/candidate/installed proofs; full and hosted gates pass; publication and both closures follow explicit authorization. | missing authorization, wrong target, failed external proof, or non-idempotent repeat prevents completion | local plus authorized GitHub/consumer scope | EV-008 |
 
