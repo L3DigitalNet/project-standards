@@ -7,7 +7,12 @@ import pytest
 from pydantic import ValidationError
 
 from project_standards.control_plane.codec import parse_lock, render_lock
-from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
+from project_standards.control_plane.diagnostics import (
+    ActionKind,
+    ControlPlaneError,
+    findings_to_jsonable,
+)
+from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.models import AcceptedTrack, CentralLock, LockedUnit
 from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.planner import (
@@ -547,6 +552,108 @@ def test_create_only_and_modified_package_local_content_are_preserved(
 
     assert not modified.applicable
     assert "CP-MODIFIED-MANAGED" in {finding.code for finding in modified.findings}
+
+
+_SUCCESSOR_SCOPE = "key:/tool/ruff/src"
+_STALE_LOCK_DIGEST = digest(b'src = ["src", "tests"]\n')
+
+
+def _successor_setup(tmp_path: Path, observed: bytes | None) -> tuple[Path, InstalledPayload]:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    if observed is not None:
+        (repo / "pyproject.toml").write_bytes(observed)
+    contribution: ContributionFixture = {
+        "id": "source-roots",
+        "target": "pyproject.toml",
+        "adapter": "toml",
+        "scope": _SUCCESSOR_SCOPE,
+        "content": b'[tool.ruff]\nsrc = ["src", "tests"]\n',
+        "governing_options": ["additional_source_roots"],
+    }
+    payload = write_payload(
+        tmp_path / "successor",
+        "demo",
+        version="1.1",
+        contributions=[contribution],
+        option_properties={"additional_source_roots": {"type": "array", "default": []}},
+    )
+    return repo, payload
+
+
+def _stale_successor_lock() -> CentralLock:
+    # The 1.0-era lock baseline the consumer has since edited: its digest matches
+    # neither the observed bytes nor the successor's rendering.
+    return previous_lock(
+        locked_unit(
+            path="pyproject.toml",
+            adapter="toml",
+            scope=_SUCCESSOR_SCOPE,
+            owners=["demo"],
+            semantic_digest=_STALE_LOCK_DIGEST,
+            content_digest=_STALE_LOCK_DIGEST,
+        )
+    )
+
+
+# Issue #87, first half: a committed edit to a managed value blocks a successor
+# preview with a bare message, so the operator cannot see what the lock held,
+# what the repository holds, or which target option expresses the intent. The
+# finding must carry that evidence in content-safe form.
+def test_successor_drift_finding_carries_locked_observed_and_option_evidence(
+    tmp_path: Path,
+) -> None:
+    observed = b'[tool.ruff]\nsrc = ["src", "tests", "vendor/tooling"]\n'
+    repo, payload = _successor_setup(tmp_path, observed)
+    request = resolution_request((payload,), previous_lock=_stale_successor_lock())
+
+    plan = plan_reconciliation(PlannerRequest(repo, request, (payload,)))
+
+    assert not plan.applicable
+    finding = next(item for item in plan.findings if item.code == "CP-MODIFIED-MANAGED")
+    assert finding.path == "pyproject.toml"
+    assert finding.identity == _SUCCESSOR_SCOPE
+    assert finding.expected_digest == _STALE_LOCK_DIGEST
+    assert finding.actual == ["src", "tests", "vendor/tooling"]
+    assert finding.actual_digest is not None and finding.actual_digest.startswith("sha256:")
+    assert finding.actual_digest != finding.expected_digest
+    assert finding.governing_options == ("additional_source_roots",)
+    jsonable = next(
+        item
+        for item in findings_to_jsonable(plan.findings)
+        if item["code"] == "CP-MODIFIED-MANAGED"
+    )
+    assert jsonable["expected_digest"] == _STALE_LOCK_DIGEST
+    assert jsonable["actual"] == ["src", "tests", "vendor/tooling"]
+    assert jsonable["actual_digest"] == finding.actual_digest
+    assert jsonable["governing_options"] == ["additional_source_roots"]
+
+
+# Issue #87, second half: when the repository already holds exactly what the
+# successor renders, the old lock digest is history, not drift. Planning must
+# accept the equivalent intent instead of demanding that the consumer first
+# destroy live content by restoring the stale value.
+def test_successor_rendering_that_subsumes_observed_intent_needs_no_restore(
+    tmp_path: Path,
+) -> None:
+    repo, payload = _successor_setup(tmp_path, None)
+    fresh = plan_reconciliation(
+        PlannerRequest(repo, resolution_request((payload,)), (payload,)),
+    )
+    _materialize(repo, fresh)
+    rendered = (repo / "pyproject.toml").read_bytes()
+    rendered_digest = fresh.next_lock.artifacts[0].semantic_digest.value
+    assert rendered_digest != _STALE_LOCK_DIGEST
+    request = resolution_request((payload,), previous_lock=_stale_successor_lock())
+
+    plan = plan_reconciliation(PlannerRequest(repo, request, (payload,)))
+
+    assert plan.applicable, plan.findings
+    assert "CP-MODIFIED-MANAGED" not in {item.code for item in plan.findings}
+    _assert_no_mutating_actions(plan)
+    assert plan.units[0].kind in {ActionKind.NOOP, ActionKind.PRESERVE, ActionKind.ADOPT}
+    assert (repo / "pyproject.toml").read_bytes() == rendered
+    assert plan.next_lock.artifacts[0].semantic_digest.value == rendered_digest
 
 
 def test_reenable_latest_fails_closed_when_accepted_track_is_unavailable(

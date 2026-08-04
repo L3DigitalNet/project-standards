@@ -825,6 +825,25 @@ def _consumer_conflict_hint(group: _DesiredGroup, migration_catalog: CatalogMajo
     )
 
 
+def _published_unit_value(value: JsonValue | bytes) -> JsonValue | None:
+    """Publish a unit value only when it is JSON-representable.
+
+    5.8.0 FR-012 / SPEC-CP01 confidentiality: byte-valued units are digest-only,
+    because raw consumer or package bytes must never enter public diagnostics.
+    """
+    return None if isinstance(value, bytes) else value
+
+
+def _null_unit_values(*sides: tuple[str, JsonValue | bytes]) -> tuple[str, ...]:
+    """Name the evidence sides whose unit value is a genuine JSON null.
+
+    ``findings_to_jsonable`` drops None fields, so an explicit null would be
+    indistinguishable from an omitted (byte-valued or unknown) side without
+    this list. Only sides whose value is actually observed may be passed.
+    """
+    return tuple(name for name, value in sides if value is None)
+
+
 def _consumer_conflict_finding(
     group: _DesiredGroup,
     current: AdapterUnit,
@@ -850,18 +869,44 @@ def _consumer_conflict_finding(
         version=group.versions[0][1],
         message="pre-existing consumer unit differs from the selected package value",
         hint=_consumer_conflict_hint(group, migration_catalog),
-        expected=None if isinstance(expected_value, bytes) else expected_value,
-        actual=None if isinstance(actual_value, bytes) else actual_value,
+        expected=_published_unit_value(expected_value),
+        actual=_published_unit_value(actual_value),
         expected_digest=group.unit.semantic_digest.value,
         actual_digest=current.semantic_digest.value,
         governing_options=group.governing_options,
-        null_values=tuple(
-            name
-            for name, value in (("expected", expected_value), ("actual", actual_value))
-            if value is None
-        ),
+        null_values=_null_unit_values(("expected", expected_value), ("actual", actual_value)),
         first_difference_line=None if pointer is None else pointer[0],
         first_difference_expected=None if pointer is None else pointer[1],
+    )
+
+
+def _modified_managed_drift_finding(
+    group: _DesiredGroup,
+    current: AdapterUnit,
+    previous: LockedUnit,
+) -> ControlFinding:
+    """Explain managed drift with the same content-safe evidence as a conflict.
+
+    Issue #87: the bare message left the operator to reconstruct the mismatch
+    from Git history and the successor's adoption guide. The lock stores digests
+    only, so the locked side publishes its semantic digest as the bounded
+    structural equivalent of its value; the observed side publishes its JSON
+    value beside its digest. ``governing_options`` names the target payload's
+    option that can express the committed intent, which is the supported
+    resolution the generic hint never disclosed.
+    """
+    return _finding(
+        "CP-MODIFIED-MANAGED",
+        target=group.target.original,
+        identity=group.scope,
+        standard_id=group.owners[0],
+        version=group.versions[0][1],
+        message="managed semantic value differs from the central lock",
+        actual=_published_unit_value(current.value),
+        expected_digest=previous.semantic_digest.value,
+        actual_digest=current.semantic_digest.value,
+        governing_options=group.governing_options,
+        null_values=_null_unit_values(("actual", current.value)),
     )
 
 
@@ -1339,20 +1384,20 @@ def _classify_desired(
             version=group.versions[0][1],
             message="managed whole-file mode differs from the central lock",
         )
-    if current.semantic_digest != previous.semantic_digest:
-        return None, _finding(
-            "CP-MODIFIED-MANAGED",
-            target=group.target.original,
-            identity=group.scope,
-            standard_id=group.owners[0],
-            version=group.versions[0][1],
-            message="managed semantic value differs from the central lock",
-        )
+    # Equivalence outranks lock drift (issue #87). When the repository already
+    # holds exactly what the selected package renders, the older locked digest
+    # is history, not a conflict to adjudicate: applying would rewrite the same
+    # bytes, and blocking here forced consumers to destroy live content by
+    # restoring the stale value just so the successor could plan it back from a
+    # newly supported option. Drift that the target does NOT reproduce still
+    # fails closed below.
     if current.semantic_digest == group.unit.semantic_digest:
         if group.mode is not None and entry.mode != group.mode:
             return _unit_plan(ActionKind.UPDATE, group, current), None
         kind = ActionKind.NOOP if previous.owners == group.owners else ActionKind.PRESERVE
         return _unit_plan(kind, group, current), None
+    if current.semantic_digest != previous.semantic_digest:
+        return None, _modified_managed_drift_finding(group, current, previous)
     return _unit_plan(ActionKind.UPDATE, group, current), None
 
 
