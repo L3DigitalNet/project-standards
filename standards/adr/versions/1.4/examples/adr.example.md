@@ -63,7 +63,7 @@ Chosen option: **PostgreSQL 16**, because it satisfies the identified transactio
 
 PostgreSQL 16 is the default primary relational database for first-party, centrally operated services deployed on the shared homelab application platform when they require a networked, multi-user relational datastore and no more specific ADR governs the workload.
 
-This decision does not govern embedded application state, non-relational stores, third-party application dependencies, or workloads whose requirements fall outside the evaluated decision drivers. An out-of-scope workload does not require an exception to this ADR. An in-scope service proposing another relational engine requires a separate service-scoped decision record.
+This decision does not govern embedded or local-only state, non-relational stores such as caches, queues, search indexes, and analytical stores, third-party applications whose datastore is prescribed upstream, or workloads governed by a more specific ADR. An out-of-scope workload does not require an exception to this ADR. An in-scope service proposing another relational engine requires a separate service-scoped decision record.
 
 ### Consequences
 

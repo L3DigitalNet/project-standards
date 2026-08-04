@@ -22,7 +22,7 @@ role = "retained"
 [[packages]]
 id = "adr"
 version = "1.4"
-digest = "sha256:bf79594865f64e299cc1a6c34e06ac19340761aa808b95fb213c23259e2a860b"
+digest = "sha256:d23b7f6c66d7684f716ef2f3dd778d9be3de39e5914d91d6481997cc9d5184e3"
 role = "default"
 
 [[packages]]

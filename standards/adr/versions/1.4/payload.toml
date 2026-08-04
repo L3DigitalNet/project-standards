@@ -50,7 +50,7 @@ id = "example"
 role = "example"
 path = "examples/adr.example.md"
 media_type = "text/markdown"
-digest = "sha256:7b614629aa07c9b0a317f44e66f7c5d05445310ca76e0b2654a0c7bcc15b6ad3"
+digest = "sha256:cb99dcd7445178c12af63f258665c369cebffb6d7ebe89c36fe0e8e6d0ebef17"
 
 [[resources]]
 id = "template-bare-minimal"
@@ -85,7 +85,7 @@ id = "provider-input"
 role = "provider-resource"
 path = "schemas/provider-input.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:2616188b80452bb7ced68d89e6415c186375dcb5802a6b8cc7e54d4ee7f10432"
+digest = "sha256:30dcfd041ecbddc84b25deabab7a0b474edc71e9795264c9a62fc1c95c4b9cdd"
 
 [[resources]]
 id = "provider-findings"
