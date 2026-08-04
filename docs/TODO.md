@@ -88,9 +88,17 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   `pip-audit` reports `cryptography` 49.0.0 vulnerable (aliases GHSA-g6cj-pr64-35w5, CVE-2026-69247); the fix is 50.0.0. It is a transitive dependency, so the lock needs the advance.
 
-- [ ] Decide how `agent-handoff` commands run mid-cycle, between release trains (issue #123).
+- [ ] Restore mid-cycle control-plane access: scope the lineage assertion, then add a producer role (issue #123).
 
-  `build_planner_request` calls `plan_catalog_refresh` unconditionally, so read-only commands enforce release lineage and fail with `catalog changed but its tool release did not advance` — exactly when closeout needs them.
+  `build_planner_request` calls `plan_catalog_refresh` unconditionally, so `validate`, `drift-check`, `shape-check`, `size-report`, `legacy-report`, `standards show`, `reconcile --check`, and `reconcile --plan` all fail with `catalog changed but its tool release did not advance`.
+
+  Owner decision 2026-08-04, two parts. First, assert lineage only on catalog-advancing paths (`reconcile --apply`, `init`, `upgrade`); nothing else decides lineage, and no severity changes.
+
+  Second, add `role` to `[project_standards]`, defaulting to `"consumer"`. `"producer"` permits exactly one thing: installed catalog ≠ committed catalog at the same tool release, so advancing commands run mid-cycle.
+
+  `ControlHeader` is a strict model pinned to `schema_version = "1.0"`, so `role` is a versioned contract change requiring header schema 1.1, migration, compatibility rows, and consumer documentation. Precedent: `ConsumerLock` accepts `["1.0", "1.1"]`.
+
+  Belongs in the widened v5.15.0 boundary; the master plan requires a plan-authoring revision before T35 resumes.
 
 - [ ] Complete the approved future-artifact cleanup.
 
