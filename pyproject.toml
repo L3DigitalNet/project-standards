@@ -48,7 +48,16 @@ target-version = "py314"
 line-length = 100
 src = ["src", "tests"]
 # Vendored harness/agent-state Python must not be reformatted (byte-identical contract).
-extend-exclude = [".claude/hooks", ".codex/hooks", "docs/handoff"]
+# scripts/plan.py mirrors the plan-authoring skill bridge and scripts/check.py mirrors the
+# released python-tooling payload resource; a finding here is unfixable by construction,
+# because obeying it would break the byte-identity the copies exist to guarantee.
+extend-exclude = [
+  ".claude/hooks",
+  ".codex/hooks",
+  "docs/handoff",
+  "scripts/check.py",
+  "scripts/plan.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "C4", "PIE", "PTH", "RET", "RUF"]

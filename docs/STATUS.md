@@ -16,6 +16,6 @@
 - adr@1.4 merged from PR #120 with its release-boundary items deferred, so the tool release, four root `README.md` references, and the `.standards` projection still read 5.14.0/adr@1.3.
 - v5.15.0 implementation is prepared but no task has started: the format-3 master and fresh execution state are valid, with T30 as the sole ready task.
 - Self-hosted CI was deferred by owner decision; the reviewed future design belongs to `agent-managed-repo` governance.
-- The required byte-identical plan bridge passes its package self-test but fails this repository's Ruff formatting, lint, and BasedPyright gates.
-- Next: make the canonical bridge compatible upstream, redeploy it byte-identically, rerun repository gates, then run an independent `execute-plan` preflight for T30.
+- The required byte-identical plan bridge passes its package self-test, and Ruff now excludes it alongside `scripts/check.py` as vendored byte-identical copies; BasedPyright never covered `scripts/`.
+- Next: run an independent `execute-plan` preflight for T30, which is unblocked and remains the sole ready task.
 - T1 tracker closeout and T32 consumer retirement remain independent.
