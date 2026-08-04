@@ -135,10 +135,14 @@ class PlannerRequest:
     catalog_refresh: CatalogRefreshPlan | None = None
     retired_targets: frozenset[SafeRelativePath] = frozenset()
     retired_content: tuple[tuple[SafeRelativePath, bytes], ...] = ()
-    # Diagnostics only. Set by legacy-migration planning so conflict hints name
-    # the migration write entry point instead of ``reconcile --apply``, which is
-    # not runnable while legacy authority stands (issue #81). It changes no
-    # classification, action, or lock outcome.
+    # Set by legacy-migration planning, which stands in for "legacy authority
+    # still owns this repository". Conflict hints then name the migration write
+    # entry point instead of ``reconcile --apply``, which is not runnable while
+    # legacy authority stands (issue #81); that use changes no classification,
+    # action, or lock outcome. It additionally tells the package-configuration
+    # transform gate that adopted-legacy ownership is not applied-package
+    # evidence (issue #83, see _prepare_configuration_transform). No other
+    # planning outcome depends on it.
     migration_catalog: CatalogMajor | None = None
 
 
@@ -2195,7 +2199,20 @@ def _prepare_configuration_transform(
                 package.standard_id in record.owners
                 for record in (*lock.artifacts, *lock.create_only_absences)
             ) or any(item.standard_id == package.standard_id for item in lock.referenced_inputs)
-            if transform_declarations and has_inferred_evidence:
+            # SPEC-VAIC FR-021: inferred-only *package* evidence — a unified lock
+            # that owns units for this package but records no exact applied
+            # version — fails closed for the recovery authority to resolve.
+            # Legacy-migration planning is not that state: its previous lock is
+            # synthesized from adopted legacy units, so ownership here proves
+            # legacy authority, never a V5 applied version, and there is no
+            # recovery authority to route to. The package is freshly selected
+            # under EC-011, no package-to-package edge applies, and the legacy
+            # provider alone owns the migrated config (issue #83).
+            if (
+                transform_declarations
+                and has_inferred_evidence
+                and request.migration_catalog is None
+            ):
                 raise ControlPlaneError(
                     "configuration transform requires exact authoritative applied package evidence"
                 )

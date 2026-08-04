@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import shutil
 import socket
 from dataclasses import replace
 from pathlib import Path
@@ -75,10 +76,12 @@ from project_standards.package_contract.payload import (
 )
 from tests.control_plane.helpers import installed_distribution
 from tests.control_plane.planner_helpers import previous_lock, resolution_request, write_payload
+from tests.package_compatibility.matrix import source_distribution
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FULL_ALPHA = _ROOT / "tests/fixtures/package_contract/valid/full/standards/alpha/versions/2.0"
 _LEGACY_CORPUS = _ROOT / "tests/fixtures/package_compatibility/legacy"
+_LEGACY_BUNDLES = _ROOT / "src/project_standards/bundles"
 
 
 def _digest(character: str = "a") -> str:
@@ -1227,6 +1230,75 @@ def test_migration_preview_human_and_json_list_control_publications(
         ".standards/catalog.toml",
         ".standards/lock.toml",
     } <= targets
+
+
+def _legacy_python_tooling_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "python-tooling-consumer"
+    repo.mkdir()
+    (repo / ".project-standards.yml").write_text(
+        'standards_version: "v4"\npython_tooling:\n  version: "1.0"\n',
+        encoding="utf-8",
+    )
+    # The retained 1.0 managed artifacts are load bearing: adopting them is what
+    # gives the inferred artifact ownership evidence the transform gate inspects.
+    sources = {
+        ".python-version": _LEGACY_BUNDLES / "python-tooling/python-version",
+        ".github/workflows/check.yml": _LEGACY_BUNDLES / "python-tooling/check.yml",
+        "scripts/check.py": _LEGACY_BUNDLES / "python-tooling/check.py",
+        "AGENTS.md": _LEGACY_BUNDLES / "python-tooling/AGENTS.md",
+        "CLAUDE.md": _LEGACY_BUNDLES / "python-tooling/CLAUDE.md",
+        ".vscode/settings.json": _LEGACY_BUNDLES / "python-tooling/vscode-settings.json",
+        ".vscode/tasks.json": _LEGACY_BUNDLES / "python-tooling/vscode-tasks.json",
+        ".editorconfig": _LEGACY_BUNDLES / "_shared/editorconfig",
+        ".vscode/extensions.json": _LEGACY_BUNDLES / "_shared/vscode-extensions.json",
+    }
+    for target, source in sources.items():
+        destination = repo / target
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+    return repo
+
+
+# Issue #83: `init --catalog 5 --migrate` on a V4 python-tooling consumer. The shipped
+# target package declares configuration transforms, the legacy consumer has no previous
+# V5 lock entry, and its adopted managed artifacts are inferred ownership evidence — the
+# exact combination the planner refuses. A consumer-facing preview must still produce a
+# reviewable plan, or an actionable finding naming the package, the transform, the missing
+# input and the safe action, in both human and JSON modes; it must never die opaquely.
+def test_v4_python_tooling_preview_survives_declared_configuration_transforms(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.control_plane.cli import (
+        _emit_migration_plan,  # pyright: ignore[reportPrivateUsage]  # focused preview boundary
+    )
+
+    distribution = source_distribution(tmp_path / "distribution")
+    repo = _legacy_python_tooling_repo(tmp_path)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    human_code = _emit_migration_plan(plan, mode="migration-plan", json_mode=False)
+    human = capsys.readouterr()
+    json_code = _emit_migration_plan(plan, mode="migration-plan", json_mode=True)
+    payload = json.loads(capsys.readouterr().out)
+    assert human_code == json_code == (0 if plan.applicable else 1)
+    assert payload["applicable"] is plan.applicable
+    if plan.applicable:
+        assert "python-tooling" in {report.package.standard_id for report in plan.reports}
+        assert plan.reconciliation.targets
+        return
+    blocked = next(
+        finding
+        for finding in plan.findings
+        if finding.standard_id == "python-tooling" and "transform" in finding.message.lower()
+    )
+    combined = f"{blocked.message} {blocked.hint}".lower()
+    assert blocked.identity
+    assert blocked.hint
+    assert any(word in combined for word in ("applied", "previous", "lock"))
+    assert blocked.message in human.err
+    assert any(item["identity"] == blocked.identity for item in payload["plan"]["findings"])
 
 
 def test_apply_legacy_migration_publishes_unified_state_and_retires_legacy(
