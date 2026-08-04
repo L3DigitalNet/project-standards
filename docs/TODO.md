@@ -88,9 +88,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   `pip-audit` reports `cryptography` 49.0.0 vulnerable (aliases GHSA-g6cj-pr64-35w5, CVE-2026-69247); the fix is 50.0.0. It is a transitive dependency, so the lock needs the advance.
 
-- [ ] Decide how `agent-handoff` commands run mid-cycle, between release trains.
+- [ ] Decide how `agent-handoff` commands run mid-cycle, between release trains (issue #123).
 
-  Every subcommand routes through the catalog-refresh lineage guard, so a repo catalog carrying new payloads at an unadvanced tool release fails all of them with `catalog changed but its tool release did not advance` — exactly when closeout needs them.
+  `build_planner_request` calls `plan_catalog_refresh` unconditionally, so read-only commands enforce release lineage and fail with `catalog changed but its tool release did not advance` — exactly when closeout needs them.
 
 - [ ] Complete the approved future-artifact cleanup.
 

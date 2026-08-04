@@ -8,6 +8,6 @@
 
 ## Active incidents
 
-- All `agent-handoff` commands fail mid-cycle: the catalog carries new payloads while the tool release still reads 5.14.0.
+- `agent-handoff` commands all fail mid-cycle on the read-only catalog lineage guard; filed as issue #123.
 - `pip-audit`: `cryptography` 49.0.0 is vulnerable (PYSEC-2026-3552, fix 50.0.0); the release gate stays red until the lock advances.
-- SessionStart injected repo context without the `state.md` block on 2026-08-04; the hook renders correctly when run directly.
+- SessionStart never injects `state.md`: the 1.8 Claude hook keeps `args: []`, so its `sh -c` wrapper is spawned without a shell (#122).
