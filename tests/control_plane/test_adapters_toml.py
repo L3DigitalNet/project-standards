@@ -8,6 +8,7 @@ import pytest
 from project_standards.control_plane.adapters.base import UnitChange
 from project_standards.control_plane.adapters.toml import TomlAdapter
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
+from project_standards.package_contract.payload import JsonValue
 
 _FIXTURES = Path(__file__).parent / "fixtures/toml"
 
@@ -166,6 +167,76 @@ def test_toml_creates_a_nested_key_in_an_empty_document_without_leading_noise() 
     )
 
     assert after == b"[tool.ruff]\nline-length = 88\n"
+
+
+def _creates(*specs: tuple[str, bytes, JsonValue]) -> tuple[UnitChange, ...]:
+    return tuple(
+        UnitChange(ActionKind.CREATE, scope, content=content, value=value)
+        for scope, content, value in specs
+    )
+
+
+# Issue #105: every insertion into one inline table computes its span against the
+# ORIGINAL bytes. An empty table has no entry to append after, so each insertion
+# rewrites the same interior span; the second one lands on bytes the first
+# already replaced and renders `{ x = 1  y = 2 }`, which the post-render re-parse
+# rejects. The CREATE branch has to coalesce per container instead.
+@pytest.mark.parametrize("reverse", [False, True], ids=["declared-order", "reversed-order"])
+def test_toml_coalesces_two_creates_into_one_empty_inline_table(reverse: bool) -> None:
+    before = b'# consumer note\na = {}\nkeep = "consumer"\n'
+    adapter = TomlAdapter()
+    specs: tuple[tuple[str, bytes, JsonValue], ...] = (
+        ("key:/a/x", b"1", 1),
+        ("key:/a/y", b'"two"', "two"),
+    )
+    if reverse:
+        specs = tuple(reversed(specs))
+    scopes = tuple(scope for scope, _content, _value in specs)
+
+    after = adapter.render(adapter.inspect(before, scopes), _creates(*specs))
+
+    assert tomllib.loads(after.decode()) == {
+        "a": {"x": 1, "y": "two"},
+        "keep": "consumer",
+    }
+    assert b"# consumer note" in after
+    assert b'keep = "consumer"' in after
+
+
+def test_toml_coalesces_creates_into_one_nested_empty_inline_table() -> None:
+    before = b"a = { b = {} }\n"
+    adapter = TomlAdapter()
+    specs: tuple[tuple[str, bytes, JsonValue], ...] = (
+        ("key:/a/b/x", b"1", 1),
+        ("key:/a/b/y", b"2", 2),
+    )
+    scopes = tuple(scope for scope, _content, _value in specs)
+
+    after = adapter.render(adapter.inspect(before, scopes), _creates(*specs))
+
+    assert tomllib.loads(after.decode()) == {"a": {"b": {"x": 1, "y": 2}}}
+
+
+def test_toml_coalesces_creates_across_empty_and_populated_inline_tables() -> None:
+    before = b'[tool]\nempty = {}\nfilled = { k = 0 }\nkeep = "consumer"\n'
+    adapter = TomlAdapter()
+    specs: tuple[tuple[str, bytes, JsonValue], ...] = (
+        ("key:/tool/empty/x", b"1", 1),
+        ("key:/tool/filled/y", b"2", 2),
+        ("key:/tool/empty/z", b"3", 3),
+    )
+    scopes = tuple(scope for scope, _content, _value in specs)
+
+    after = adapter.render(adapter.inspect(before, scopes), _creates(*specs))
+
+    assert tomllib.loads(after.decode()) == {
+        "tool": {
+            "empty": {"x": 1, "z": 3},
+            "filled": {"k": 0, "y": 2},
+            "keep": "consumer",
+        }
+    }
+    assert b'keep = "consumer"' in after
 
 
 def test_toml_keyed_set_owns_one_array_table_entry_and_preserves_consumers() -> None:

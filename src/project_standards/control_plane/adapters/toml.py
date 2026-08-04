@@ -1037,6 +1037,29 @@ def _dotted_key_insertion(
     )
 
 
+def _inline_creation_edits(
+    creations: dict[tuple[int, int, bool], list[str]],
+) -> list[tuple[int, int, str]]:
+    """Compose one edit per inline container from every creation it received.
+
+    Each creation point is computed against the ORIGINAL text, so two creations
+    sharing a container may not be emitted as two edits. A populated container
+    anchors a zero-width span after its last value, which happens to compose;
+    an EMPTY container's edit replaces its whole interior, so applying that span
+    twice overwrites the first entry's separator and renders `{ x = 1  y = 2 }`,
+    which the post-render re-parse rejects (issue #105). Grouping keeps both
+    spellings — one creation still renders exactly the bytes it did before.
+
+    Assignment order is the caller's scope order, which `render` already sorted,
+    so batched output stays deterministic.
+    """
+    edits: list[tuple[int, int, str]] = []
+    for (start, end, has_entries), assignments in creations.items():
+        body = ", ".join(assignments)
+        edits.append((start, end, f", {body}" if has_entries else f" {body} "))
+    return edits
+
+
 class TomlAdapter:
     """Compose selected TOML keys and tables through bounded source splices."""
 
@@ -1073,6 +1096,9 @@ class TomlAdapter:
             raise ControlPlaneError("TOML rendering contains a duplicate change scope")
 
         edits: list[tuple[int, int, str]] = []
+        # Inline creations are grouped by their creation point rather than emitted
+        # as they are found: one container must yield one edit (issue #105).
+        inline_creations: dict[tuple[int, int, bool], list[str]] = {}
         new_keys: list[tuple[tuple[str, ...], str]] = []
         new_tables: list[tuple[str, str]] = []
         for change in sorted(changes, key=lambda item: item.scope.encode("utf-8")):
@@ -1156,13 +1182,9 @@ class TomlAdapter:
                                 fragment,
                             )
                         )
-                        edits.append(
-                            (
-                                insertion[0],
-                                insertion[1],
-                                f", {assignment}" if insertion[2] else f" {assignment} ",
-                            )
-                        )
+                        inline_creations.setdefault(
+                            (insertion[0], insertion[1], insertion[2]), []
+                        ).append(assignment)
                     elif (
                         dotted := _dotted_key_insertion(
                             text,
@@ -1223,6 +1245,7 @@ class TomlAdapter:
                     raise ControlPlaneError("TOML update scope is not independently addressable")
                 edits.extend(_replacement_edits(text, selected, fragment))
 
+        edits.extend(_inline_creation_edits(inline_creations))
         updated = apply_edits(text, edits)
         newline = preferred_newline(updated)
         new_keys = [
