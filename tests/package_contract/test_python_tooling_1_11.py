@@ -5,6 +5,7 @@ Every payload access happens inside a test behind an existence assertion: while
 during collection, so the red signal stays readable.
 """
 
+import json
 import os
 import subprocess
 import tomllib
@@ -283,3 +284,214 @@ def test_python_tooling_1_11__package_registration__succeeds_1_10_without_touchi
     assert successor.integrity.aggregate_digest.value in family
     assert roles["1.11"] == "default"
     assert roles["1.10"] == "retained"
+
+
+_RUFF_TEST_ROOT = "qa/unit"
+_DECLARED_RUFF_TARGETS = ("src", _RUFF_TEST_ROOT, _TOOLING_ROOT)
+_UNBOUNDED = ("nested/src/nested_module.py", "local_scratch.py", "scripts/undeclared.py")
+
+
+def _bounded_config(root: Path) -> JsonObject:
+    return _options(
+        root,
+        source_layout="src",
+        additional_source_roots=[_TOOLING_ROOT],
+        pytest={"test_paths": [_RUFF_TEST_ROOT]},
+    )
+
+
+def _rendered(root: Path, scope: str, adapter: AdapterKind, config: JsonObject, target: str) -> str:
+    payload = _payload(root)
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=root,
+            payload=payload,
+            standard_id="python-tooling",
+            version=payload.manifest.payload.version,
+            provider_id="render-semantic",
+            operation=ProviderOperation.RENDER,
+            effective_config=config,
+            snapshots={
+                "planned_contribution": {
+                    "id": "ruff-scope",
+                    "target": target,
+                    "adapter": adapter.value,
+                    "scope": scope,
+                }
+            },
+        )
+    )
+    assert result.effect is ProviderEffect.CONTENT
+    assert result.content is not None
+    return result.content.decode()
+
+
+_ARGV_PUNCTUATION = str.maketrans(dict.fromkeys("(){}[]\",'", " "))
+
+
+def _ruff_invocations(text: str) -> list[list[str]]:
+    """Return every rendered ruff argv, however its surface spells the command.
+
+    The same command is spelled four ways across this payload — a Python tuple
+    literal, a shell line, a Markdown code block, and a `&&`-joined VS Code task
+    — so the shared reading is "split shell conjunctions, drop the punctuation
+    each spelling adds, then take everything from `ruff` onward".
+    """
+    invocations: list[list[str]] = []
+    for line in text.splitlines():
+        for segment in line.replace("&&", "\n").splitlines():
+            words = segment.translate(_ARGV_PUNCTUATION).split()
+            if "ruff" not in words:
+                continue
+            invocations.append(words[words.index("ruff") :])
+    return invocations
+
+
+def _ruff_targets(argv: list[str]) -> list[str]:
+    return [word for word in argv[2:] if not word.startswith("-")]
+
+
+def _command_text_of(target: str, rendered: str) -> str:
+    """Reduce one rendered surface to just the shell text it declares.
+
+    A VS Code task renders its command as a JSON string beside sibling keys, so
+    scanning the raw document would read `problemMatcher` as a command argument.
+    Every other surface is already shell text or a literal argv.
+    """
+    if not target.endswith(".json"):
+        return rendered
+    document = cast("JsonObject", json.loads(rendered))
+    tasks = cast("list[JsonObject]", document["tasks"])
+    return "\n".join(str(task["command"]) for task in tasks)
+
+
+# Issue #95: BasedPyright and coverage are bounded to declared roots while Ruff
+# is handed ".", so the managed gate sweeps every discoverable Python file —
+# independent nested projects and machine-specific scripts included.
+@pytest.mark.parametrize(
+    ("scope", "adapter", "target"),
+    [
+        pytest.param("$file", AdapterKind.WHOLE_FILE, "scripts/check.py", id="check-script"),
+        pytest.param(
+            "$file",
+            AdapterKind.WHOLE_FILE,
+            ".github/workflows/check.yml",
+            id="ci-workflow",
+        ),
+        pytest.param(
+            "block:python-tooling",
+            AdapterKind.MARKDOWN_BLOCK,
+            "AGENTS.md",
+            id="agent-instructions",
+        ),
+        pytest.param(
+            "keyed-set:/tasks#label=check",
+            AdapterKind.JSONC,
+            ".vscode/tasks.json",
+            id="vscode-check-task",
+        ),
+        pytest.param(
+            "keyed-set:/tasks#label=fix",
+            AdapterKind.JSONC,
+            ".vscode/tasks.json",
+            id="vscode-fix-task",
+        ),
+    ],
+)
+def test_python_tooling_1_11__ruff_scope__names_every_declared_root_and_nothing_else(
+    scope: str,
+    adapter: AdapterKind,
+    target: str,
+) -> None:
+    _require_payload(_V111)
+    rendered = _rendered(_V111, scope, adapter, _bounded_config(_V111), target)
+
+    invocations = _ruff_invocations(_command_text_of(target, rendered))
+
+    assert invocations, f"{target} renders no ruff command"
+    for argv in invocations:
+        targets = _ruff_targets(argv)
+        assert targets == list(_DECLARED_RUFF_TARGETS), argv
+        assert "." not in argv, argv
+
+
+def _write_ruff_corpus(repo: Path, ruff_table: str) -> dict[str, bytes]:
+    """Materialize issue #95's shape and return every file's pre-run bytes."""
+    unformatted = {
+        "src/example_package/module.py": b'def greet( name ):\n    return "hi"\n',
+        f"{_RUFF_TEST_ROOT}/test_module.py": b"def test_greet( ):\n    assert True\n",
+        f"{_TOOLING_ROOT}/helper.py": b"def helper( ):\n    return 1\n",
+        # Out of every declared root: an independent uv project, a machine-local
+        # scratch file, and an undeclared script directory.
+        "nested/src/nested_module.py": b"def nested_thing( ):\n    return 2\n",
+        "local_scratch.py": b"def machine_specific( ):\n    return 3\n",
+        "scripts/undeclared.py": b"def undeclared( ):\n    return 4\n",
+    }
+    for relative, content in unformatted.items():
+        path = repo / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+    (repo / "nested/pyproject.toml").write_text(
+        '[project]\nname = "nested"\nversion = "0.1.0"\n',
+        encoding="utf-8",
+    )
+    (repo / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "example-package"\n'
+        'version = "0.1.0"\n'
+        'requires-python = ">=3.14"\n\n'
+        f"{ruff_table}",
+        encoding="utf-8",
+    )
+    return unformatted
+
+
+def _script_commands(source: str) -> list[list[str]]:
+    namespace: dict[str, object] = {}
+    exec(compile(source, "check.py", "exec"), namespace)
+    commands = cast("tuple[tuple[str, ...], ...]", namespace["COMMANDS"])
+    return [list(command) for command in commands]
+
+
+# TC-T18-001: the acceptance is about which files the managed command touches, so
+# the oracle is a real `ruff format` run driven by the rendered argv.
+def test_python_tooling_1_11__managed_ruff_format__rewrites_only_declared_roots(
+    tmp_path: Path,
+) -> None:
+    _require_payload(_V111)
+    config = _bounded_config(_V111)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    before = _write_ruff_corpus(
+        repo,
+        _rendered(_V111, "table:/tool/ruff", AdapterKind.TOML, config, "pyproject.toml"),
+    )
+    script = _rendered(_V111, "$file", AdapterKind.WHOLE_FILE, config, "scripts/check.py")
+    format_command = next(
+        command for command in _script_commands(script) if "ruff" in command and "format" in command
+    )
+
+    environment = {
+        key: value for key, value in os.environ.items() if key not in {"PYTHONPATH", "VIRTUAL_ENV"}
+    }
+    environment.update({"UV_OFFLINE": "1", "UV_PROJECT": str(_ROOT)})
+    result = subprocess.run(
+        [part for part in format_command if part != "--check"],
+        cwd=repo,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    output = result.stdout + result.stderr
+    if "cache" in output.lower() and result.returncode != 0:
+        pytest.fail(f"offline oracle is missing a locked cache entry:\n{output}")
+    for relative in _UNBOUNDED:
+        assert (repo / relative).read_bytes() == before[relative], relative
+    for relative in (
+        "src/example_package/module.py",
+        f"{_RUFF_TEST_ROOT}/test_module.py",
+        f"{_TOOLING_ROOT}/helper.py",
+    ):
+        assert (repo / relative).read_bytes() != before[relative], relative

@@ -382,11 +382,44 @@ def _coverage_commands(
     ]
 
 
-def _commands(config: Mapping[str, object]) -> list[tuple[str, ...]]:
-    commands: list[tuple[str, ...]] = [
-        ("uv", "run", "ruff", "format", "--check", "."),
-        ("uv", "run", "ruff", "check", "."),
+def _ruff_targets(config: Mapping[str, object]) -> tuple[str, ...]:
+    """Return the roots every rendered Ruff command is bounded to.
+
+    Issue #95: Ruff was the one gate handed ".", so it swept every discoverable
+    Python file — an independent nested project, a machine-local scratch script,
+    an undeclared directory — while the checker and coverage stayed inside the
+    declared roots. The file-selection scope coincides exactly with the checker
+    `include` set: the layout root, the declared collection roots, then the
+    declared additional roots, first-wins deduplicated. Unlike the import roots
+    of issue #89, collection roots belong here: tests are formatted and linted
+    even though they are never imported as a package root.
+
+    A flat layout still renders "." because there the repository root IS the
+    declared source root; bounding it further would need exclusions this
+    package does not own.
+    """
+    include, _coverage = _source_roots(config)
+    return tuple(include)
+
+
+def _ruff_commands(config: Mapping[str, object]) -> list[tuple[str, ...]]:
+    targets = _ruff_targets(config)
+    return [
+        ("uv", "run", "ruff", "format", "--check", *targets),
+        ("uv", "run", "ruff", "check", *targets),
     ]
+
+
+def _ruff_fix_commands(config: Mapping[str, object]) -> list[tuple[str, ...]]:
+    targets = _ruff_targets(config)
+    return [
+        ("uv", "run", "ruff", "format", *targets),
+        ("uv", "run", "ruff", "check", *targets, "--fix"),
+    ]
+
+
+def _commands(config: Mapping[str, object]) -> list[tuple[str, ...]]:
+    commands: list[tuple[str, ...]] = [*_ruff_commands(config)]
     checker, _mode = _checker(config)
     commands.append(("uv", "run", checker))
     commands.extend(_coverage_commands("-m", "not performance", config=config))
@@ -397,10 +430,7 @@ def _commands(config: Mapping[str, object]) -> list[tuple[str, ...]]:
 
 
 def _local_commands(config: Mapping[str, object]) -> list[tuple[str, ...]]:
-    commands: list[tuple[str, ...]] = [
-        ("uv", "run", "ruff", "format", "--check", "."),
-        ("uv", "run", "ruff", "check", "."),
-    ]
+    commands: list[tuple[str, ...]] = [*_ruff_commands(config)]
     checker, _mode = _checker(config)
     commands.append(("uv", "run", checker))
     commands.extend(_coverage_commands(config=config))
@@ -644,7 +674,7 @@ def _task(scope: str, config: Mapping[str, object]) -> dict[str, object]:
     )
     command_by_label = {
         "check": check_command,
-        "fix": "uv run ruff format . && uv run ruff check . --fix",
+        "fix": " && ".join(_command_text(command) for command in _ruff_fix_commands(config)),
         "test": "uv run pytest",
         "typecheck": f"uv run {checker}",
         "audit": _command_text(_audit_command(config)),
@@ -664,12 +694,17 @@ def _task(scope: str, config: Mapping[str, object]) -> dict[str, object]:
     return {"tasks": [task]}
 
 
+def _fix_command_text(config: Mapping[str, object]) -> str:
+    """Spell the remediation commands over the same bounded roots as the gate."""
+    return "\n".join(_command_text(command) for command in _ruff_fix_commands(config))
+
+
 def _instructions(config: Mapping[str, object]) -> str:
     checker, mode = _checker(config)
     commands = "\n".join(_command_text(command) for command in _local_commands(config))
     fix_commands = (
         "\n\nWhen the gate reports formatting or lint findings, run:\n\n"
-        "```bash\nuv run ruff format .\nuv run ruff check . --fix\n```"
+        f"```bash\n{_fix_command_text(config)}\n```"
         if _section(config, "agent_instructions").get("include_fix_commands") is True
         else ""
     )
