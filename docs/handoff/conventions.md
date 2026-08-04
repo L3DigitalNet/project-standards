@@ -74,7 +74,9 @@ scripts/verify.sh          # fast gate: concurrent lanes, then performance alone
 scripts/verify.sh --full   # legacy serial battery / release-prep cross-check
 ```
 
-**Why:** `main` must stay releasable; consumers pin to tags. The isolated, cleared wheel directory and fresh runtime extraction keep the candidate wheel that the gates import identical to the release commit being proved. Direct commands used to keep the lanes visible without a repository-specific orchestrator, but the 2026-07-31 wall-clock spike made concurrency worth 5.3× and the environment it needs (§14, per-lane basetemps, lane ordering) too easy to get wrong by hand.
+**Why:** `main` must stay releasable; consumers pin to tags. The isolated, cleared wheel directory and fresh runtime extraction keep the candidate wheel that the gates import identical to the release commit being proved.
+
+Direct commands used to keep the lanes visible without a repository-specific orchestrator, but the 2026-07-31 wall-clock spike made concurrency worth 5.3× and the environment it needs (§14, per-lane basetemps, lane ordering) too easy to get wrong by hand.
 
 **Sources:** pre-v3 `AGENTS.md`.
 
@@ -147,7 +149,9 @@ Follow the Standard Bundle Authoring 2.6 workflow when adding a family or payloa
 
 ## 8. `except A, B:` is ruff-canonical — NOT a Python-2 bug
 
-`ruff format` 0.15 rewrites a parenthesized multi-exception clause `except (A, B):` to the bare-tuple form `except A, B:` (verified empirically — it strips the parens as redundant on Python ≥3.14). Both are identical Python-3 tuple-catches — NOT the removed Py2 `except Exc, name` binding (confirmed via AST: `handler.name is None`). So `except OSError, FrontmatterParseError:` in `validate_references.py`/`validate_id.py` and `except KeyError, TypeError:` in `sync_vscode_colors.py` are **intentional and gate-canonical**: parenthesizing them fails `ruff format --check` and is auto-reverted.
+`ruff format` 0.15 rewrites a parenthesized multi-exception clause `except (A, B):` to the bare-tuple form `except A, B:` (verified empirically — it strips the parens as redundant on Python ≥3.14). Both are identical Python-3 tuple-catches — NOT the removed Py2 `except Exc, name` binding (confirmed via AST: `handler.name is None`).
+
+So `except OSError, FrontmatterParseError:` in `validate_references.py`/`validate_id.py` and `except KeyError, TypeError:` in `sync_vscode_colors.py` are **intentional and gate-canonical**: parenthesizing them fails `ruff format --check` and is auto-reverted.
 
 **Why:** reviewers (codex, manual) repeatedly mis-flag the comma form as a Python-2 syntax bug and try to "fix" it; the fix never sticks because ruff owns the style. Do not re-flag or re-fix it.
 
@@ -191,7 +195,9 @@ For YAML fences:
 
 **Applies when:** adding canonical files under `standards/{id}/versions/{version}/` or changing package-data build behavior.
 
-**Rule:** authored payload bytes exist only under the canonical version directory. `src/project_standards/payloads/{id}/{version}/` may contain relative file symlinks and directories, never regular files or directory symlinks. Regenerate with `project-standards standards sync-payload-projection --root .`; use `--check` in validation. The build must prove direct-wheel and sdist-to-wheel members are byte-identical to canonical payloads.
+**Rule:** authored payload bytes exist only under the canonical version directory. `src/project_standards/payloads/{id}/{version}/` may contain relative file symlinks and directories, never regular files or directory symlinks.
+
+Regenerate with `project-standards standards sync-payload-projection --root .`; use `--check` in validation. The build must prove direct-wheel and sdist-to-wheel members are byte-identical to canonical payloads.
 
 **Why:** `uv_build` needs package data under `src/`, while authors and release checks need one editable authority. Relative file links provide the build path without creating a second maintained payload tree.
 
@@ -280,17 +286,18 @@ Do not infer permission for Python migration, freeze, retirement, or language pr
 
 ## 16. Ownership decides Python lint scope, not byte-locking
 
-**Applies when:** vendoring a file into this repository, or triaging a Ruff finding against bytes that cannot be edited in place.
+**Applies when:** vendoring a file, or triaging a Ruff finding against uneditable bytes.
 
 **Rule:** ask who owns the standard governing the bytes, not whether the bytes are frozen.
 
-- Foreign vendored bytes are excluded in the commit that lands them. `scripts/plan.py` is the byte-identical `plan-authoring` bridge from `agent-configs`; a finding on it is unfixable here and proves nothing about these standards. It is the only `scripts/` entry in `[tool.ruff] extend-exclude`.
-- Bytes governed by a standard this repository owns stay in scope even when immutable. `standards/**` payloads and the deployed `scripts/check.py` are never excluded.
+- Foreign vendored bytes are excluded in the commit that lands them. `scripts/plan.py` is the byte-identical `plan-authoring` bridge from `agent-configs`.
+- A finding on it is unfixable here and proves nothing about these standards; it is the only `scripts/` entry in `[tool.ruff] extend-exclude`.
+- Bytes governed by a standard this repository owns stay in scope even when immutable: `standards/**` payloads and the deployed `scripts/check.py`.
 - Verify identity with `cmp -s` against the source after any tooling change.
 
-**Why:** the dogfood exists so a change to one standard cannot silently break another. A Ruff rule that flags a released payload's provider is that report, and must reach a human; suppressing it makes the repository unable to detect its own cross-standard breakage. A finding on repo-owned bytes is resolvable through the owning payload and reconcile, so it is never unfixable.
+**Why:** the dogfood exists so a change to one standard cannot silently break another. Suppressing a finding on a released payload's provider blinds the repository to its own cross-standard breakage.
 
-**Gotcha:** BasedPyright never covered `scripts/` — `[tool.basedpyright] include` is `src` and `tests`. Confirm a gate's real scope before recording it as a blocker; `docs/STATUS.md` carried a BasedPyright failure that only reproduced when the file was named explicitly, and that false blocker stalled the v5.15.0 preflight.
+**Gotcha:** BasedPyright never covered `scripts/` — `[tool.basedpyright] include` is `src` and `tests`. Confirm a gate's real scope before recording a blocker; a false one stalled the v5.15.0 preflight.
 
 **Sources:** 2026-08-04 session; `pyproject.toml`; `e1ea40a6`.
 
