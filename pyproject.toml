@@ -48,16 +48,13 @@ target-version = "py314"
 line-length = 100
 src = ["src", "tests"]
 # Vendored harness/agent-state Python must not be reformatted (byte-identical contract).
-# scripts/plan.py mirrors the plan-authoring skill bridge and scripts/check.py mirrors the
-# released python-tooling payload resource; a finding here is unfixable by construction,
-# because obeying it would break the byte-identity the copies exist to guarantee.
-extend-exclude = [
-  ".claude/hooks",
-  ".codex/hooks",
-  "docs/handoff",
-  "scripts/check.py",
-  "scripts/plan.py",
-]
+# Exclude only bytes this repository does not own. scripts/plan.py is the byte-identical
+# plan-authoring bridge from agent-configs: a finding on it is unfixable here and proves
+# nothing about whether these standards cohere. Everything governed by a standard this
+# repository owns — including standards/** payloads and the deployed scripts/check.py —
+# stays in scope, because a python-tooling rule change breaking another standard's bytes
+# is exactly the cross-standard failure the dogfood exists to surface.
+extend-exclude = [".claude/hooks", ".codex/hooks", "docs/handoff", "scripts/plan.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "C4", "PIE", "PTH", "RET", "RUF"]
