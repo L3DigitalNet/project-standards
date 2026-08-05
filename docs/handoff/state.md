@@ -2,11 +2,11 @@
 
 ## Current focus
 
-- v5.15.0 is released (tagged `5e9bb6cc`); the boundary tasks T2–T7, T22, T38–T41, and T35 are terminal with EV-007/EV-011 evidence.
-- Program tail for later sessions: T16/T19/T36 (deferred tooling successors, #88/#99) and T24–T29; SPEC-GSF3 T1 also remains ready.
-- Rollout ran on llm-wiki, homelab, and scripts with the released tool; agent-configs and dotfiles keep exact pins per owner decision.
-- Owner queue: dead `docs/adr-library/**` include, 1.12 legacy-digest residual, six PRs triaged 2026-08-05; Dependabot off (`43c400fb`).
+- v5.16.0 is released (tagged `8a2d1b9a`, EV-008): all bug issues fixed and closed, all six PRs superseded and closed; T16/T19/T36 terminal.
+- Defaults: markdown-tooling 1.13, markdown-frontmatter 1.9, python-tooling 1.12, project-spec 1.7; runner-labels on all reusable workflows.
+- Program tail: feature phase T24–T29 (#62, #55; T24 ready), deferred #116, SPEC-GSF3 T1, and the Usage Documentation Site V2 specs.
+- Owner queue: dead `docs/adr-library/**` include and the 1.12 legacy-digest residual; Dependabot off, currency owned by the payload cycle.
 
 ## Active incidents
 
-- None. v5.15.0 resolves #122/#124 (SessionStart spawn form; injection resumes next session start), #123, and PYSEC-2026-3552.
+- None. v5.16.0 resolved #114/#115/#117/#118/#119/#121/#126 plus deferred-tooling #88/#99; #108 closed as already-remedied.

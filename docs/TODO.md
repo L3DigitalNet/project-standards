@@ -68,11 +68,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md).
 
-  Revision 4 widened the v5.15.0 boundary on 2026-08-04 to the whole Agent Handoff surface plus the mid-cycle control-plane unblock. It stands at 41 tasks: 17 done, 3 superseded, 20 not-started, and T35 blocked.
+  v5.16.0 (2026-08-05, tagged `8a2d1b9a`) closed the deferred-tooling phase: T16 (#88), T19 (#99), and the T36 qualification/publication are terminal with EV-008, alongside the out-of-plan defect cycle (#108, #114, #115, #117, #118, #119, #121, #126) and the supersession of PRs #33/#110/#111/#112/#113/#125.
 
-  Newly in the boundary: T2–T7 (issues #75, #90, #91, #101, #102, #107), T38 (#122/#124), T39 (#123), and T40 (the producer role). T8 is superseded because T35 now qualifies that work, and T41 closes the added issue set.
-
-  Ready work is T2, T3, T7, and T22. T35 keeps a stale blocker: the bridge has no `blocked` → `not-started` transition, so it clears only when the task genuinely starts. Never credit legacy scratch state.
+  Remaining program work is the feature phase T24–T29 for #62 (conformance linting) and #55 (house-format conversion); T24 is dependency-ready. #116 stays deferred alongside them by owner decision (2026-08-05, defect fixes only).
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
@@ -84,11 +82,15 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   The T15 seam consolidated four private per-standard input constructions behind one fail-closed authority — correct for a shared module, but it keeps per-standard knowledge in the engine. The owner recorded payload-declared input shapes as that module's retirement path once the MCP hold lifted (freeze J-N, 2026-07-30, resolution A).
 
-- [ ] Advance `cryptography` past PYSEC-2026-3552 before the v5.15.0 release gate.
+- [x] Advance `cryptography` past PYSEC-2026-3552 before the v5.15.0 release gate.
 
-  `pip-audit` reports `cryptography` 49.0.0 vulnerable (aliases GHSA-g6cj-pr64-35w5, CVE-2026-69247); the fix is 50.0.0. It is a transitive dependency, so the lock needs the advance.
+  Resolved in v5.15.0 (`b96302b9`): cryptography 50.0.0 in the lock; `pip-audit` clean in every release battery since, including v5.16.0's.
 
-- [ ] Restore mid-cycle control-plane access: scope the lineage assertion, then add a producer role (issue #123).
+- [x] Restore mid-cycle control-plane access: scope the lineage assertion, then add a producer role (issue #123).
+
+  Resolved in v5.15.0 (T39 `affa946f` + T40): lineage asserted only on advancing paths; `role = "producer"` at header schema 1.1 is this repository's standing posture. Exercised end to end by the v5.16.0 cycle (mid-cycle validate/preview plus the release-boundary `reconcile --apply`). Original plan text follows for the record.
+
+  _(Resolved 2026-08-05; original description below.)_
 
   `build_planner_request` calls `plan_catalog_refresh` unconditionally, so `validate`, `drift-check`, `shape-check`, `size-report`, `legacy-report`, `standards show`, `reconcile --check`, and `reconcile --plan` all fail with `catalog changed but its tool release did not advance`.
 
