@@ -425,6 +425,29 @@ def test_secret_references_are_allowed(policy: HandoffPolicy, text: str) -> None
     assert check_secret_references("docs/handoff/credentials.md", text, policy) == ()
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("token: OPENBAO_ADDR\n", id="bare-uppercase-under-a-blocked-label"),
+        pytest.param("token: `echo SOMEVALUE`\n", id="bare-uppercase-as-a-command-argument"),
+    ],
+)
+def test_bare_uppercase_identifiers_are_not_references(policy: HandoffPolicy, text: str) -> None:
+    """A reference must be explicit; a bare uppercase word is literal material (#107).
+
+    The engine used to accept `[A-Z][A-Z0-9_]{2,}` as an env-var reference and the
+    payload provider never has, which left the engine's token test the looser of the
+    two and let the second line launder a value: `echo SOMEVALUE` is a command whose
+    only "named source" was an argument. Note that `address: OPENBAO_ADDR` above stays
+    clean for an unrelated reason -- `address` is not a blocked assignment label, so
+    the line is never scanned -- and is not evidence that the bare form is a reference.
+    """
+    assert [
+        finding.code
+        for finding in check_secret_references("docs/handoff/credentials.md", text, policy)
+    ] == ["AH-SECRET-LITERAL"]
+
+
 # Issue #94 (engine mirror of the agent-handoff 1.7 provider fix).
 #
 # A right-hand side that ACQUIRES a credential at runtime stores none, so it is

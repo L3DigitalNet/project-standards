@@ -674,13 +674,26 @@ _COMMAND_SUBSTITUTION = re.compile(r"\A(?:\$\((?P<paren>.*)\)|`(?P<span>.*)`)\Z"
 
 
 def _names_a_reference(value: str, policy: CredentialsPolicy) -> bool:
-    """Return whether one token or value is a credential reference under the policy."""
+    """Return whether one token or value is a credential reference under the policy.
+
+    Issue #107: the engine additionally accepted a bare `[A-Z][A-Z0-9_]{2,}` identifier
+    as an env-var reference and the payload provider never did, so this test -- the one
+    the provider treats as authoritative -- was the looser of the two in both positions
+    it is called from. Directly, `token: OPENBAO_ADDR` passed here while the provider
+    flagged it. Inside `_acquires_at_runtime`, a bare uppercase word was the only
+    "source" a command span had to name, so ``token: `echo SOMEVALUE` `` bought the
+    runtime-acquisition exemption on a command ARGUMENT rather than a reference -- the
+    one laundering shape the exemption's token boundary was written to exclude.
+    The owner resolved the divergence toward the provider: a reference must be
+    explicit. `$NAME`, `env:NAME`, and the other configured
+    `allowed_reference_prefixes`/`allowed_reference_values` forms are unchanged, so
+    naming an environment variable is still expressible; only the unmarked uppercase
+    word now reads as literal material.
+    """
     normalized = value.strip().strip("\"'`")
     if normalized in policy.allowed_reference_values:
         return True
-    if any(normalized.startswith(prefix) for prefix in policy.allowed_reference_prefixes):
-        return True
-    return re.fullmatch(r"[A-Z][A-Z0-9_]{2,}", normalized) is not None
+    return any(normalized.startswith(prefix) for prefix in policy.allowed_reference_prefixes)
 
 
 def _acquires_at_runtime(value: str, policy: CredentialsPolicy) -> bool:

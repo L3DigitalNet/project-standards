@@ -219,6 +219,13 @@ _PARITY_CASES = (
     "token: env:EXAMPLE_TOKEN",
     "-----BEGIN PRIVATE KEY-----",
     "aws_id AKIAIOSFODNN7EXAMPLE trailing",
+    # Issue #107: the two shapes the v5.12.0 matrix deliberately left out while the
+    # bare-uppercase policy was an open owner question. The engine accepted a bare
+    # uppercase identifier as a reference and the provider never did, so the first
+    # line diverged directly and the second laundered a value through the
+    # runtime-acquisition rule on the strength of the same acceptance.
+    "token: OPENBAO_ADDR",
+    "token: `echo SOMEVALUE`",
 )
 
 
