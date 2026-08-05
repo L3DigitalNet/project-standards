@@ -12,6 +12,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 _EXTERNAL_ACTIONS = {
     "actions/checkout": ("3d3c42e5aac5ba805825da76410c181273ba90b1", "v7"),
     "actions/setup-node": ("249970729cb0ef3589644e2896645e5dc5ba9c38", "v6"),
+    "actions/setup-go": ("924ae3a1cded613372ab5595356fb5720e22ba16", "v6"),
     "actions/setup-python": ("ece7cb06caefa5fff74198d8649806c4678c61a1", "v6"),
     "astral-sh/setup-uv": ("11f9893b081a58869d3b5fccaea48c9e9e46f990", "v8.3.2"),
     "DavidAnson/markdownlint-cli2-action": ("6bf21b07787794f89a243495939cd651942aeabe", "v24"),

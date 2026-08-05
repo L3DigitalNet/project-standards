@@ -25,7 +25,7 @@ from project_standards.control_plane.providers import (
     ProviderResult,
     invoke_provider,
 )
-from tests.package_compatibility.matrix import catalog_default_ids
+from tests.package_compatibility.matrix import catalog_default_ids, seed_consumer_pyproject
 from tests.wheel_helpers import extract_pure_python_wheel
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -97,6 +97,7 @@ def test_real_catalog_plans_inside_scale_and_time_boundary(
 ) -> None:
     repo = tmp_path / "real-catalog"
     repo.mkdir()
+    seed_consumer_pyproject(repo)
     defaults = catalog_default_ids()
     initialize_control_plane(repo, "5", distribution=source_payload_distribution)
     for standard_id in defaults:
@@ -120,6 +121,7 @@ def test_one_hundred_requested_and_discovery_orders_are_byte_deterministic(
 ) -> None:
     repo = tmp_path / "consumer"
     repo.mkdir()
+    seed_consumer_pyproject(repo)
     initialize_control_plane(repo, "5", distribution=source_payload_distribution)
     for standard_id in reversed(catalog_default_ids()):
         set_standard_enabled(repo, standard_id, True)

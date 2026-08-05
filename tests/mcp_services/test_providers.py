@@ -83,6 +83,7 @@ from project_standards.control_plane.providers import ProviderResult
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import (
+    JsonObject,
     PayloadAvailability,
     PayloadManifest,
     ProviderEffect,
@@ -753,6 +754,18 @@ REAL_CONSUMER_ROOT = Path(__file__).resolve().parents[2]
 #   agent-handoff providers — INCLUDING `verify` — through `agent_handoff/cli.py`.
 # * `plan-bound` — the provider has no public command at all and is
 #   authoritatively dispatched only by the executor's post-apply verification.
+# * `planner-owned` — the provider's only authoritative input is the pre-write
+#   consumer-state snapshot the reconcile planner builds for a FRESH adoption
+#   (`control_plane/planner.py::_validate_consumer_state` via
+#   `provider_inputs.consumer_state_input`, issue #109). No other caller may
+#   supply it: the planner deliberately skips an already-applied package so a
+#   repository condition the pending apply did not create cannot become a new
+#   steady-state gate failure, and the provider answers `{"findings": []}` when
+#   the input is absent precisely so generic dispatch stays correct. Serving it
+#   from the seam would make the MCP composite report findings the CLI does not
+#   — the control-plane/service divergence T14 exists to prevent — so generic
+#   dispatch IS the authority here, and the row below is what keeps that an
+#   explicit declaration rather than a silent fallback.
 #
 # `agent-handoff/verify` is the row that makes this table an oracle rather than a
 # restatement: the seam serves it under BOTH authorities (33 keys against 41), so
@@ -770,7 +783,13 @@ AUTHORITATIVE_INPUT_OWNER: dict[tuple[str, str], str] = {
     ("markdown-tooling", "verify-format"): "plan-bound",
     ("markdown-tooling", "verify-lint"): "plan-bound",
     ("python-tooling", "verify-toolchain"): "plan-bound",
+    ("python-tooling", "validate-consumer-state"): "planner-owned",
 }
+
+# The one owner class for which the composite's generic (empty) dispatch is the
+# authoritative behavior; named so both the parity oracle and TC-T14-004 read the
+# exemption from the census instead of restating a package id.
+PLANNER_OWNED = "planner-owned"
 
 
 # Generated, cached, and vendored trees a composite never reads and every other
@@ -880,7 +899,14 @@ def authoritative_direct_dispatch(
         require_reconciled=False,
     ) as selected:
         assert selected is not None, f"{standard_id} must have unified package authority"
-        if owner == "family":
+        snapshots: JsonObject
+        if owner == PLANNER_OWNED:
+            # Not a seam shape at all: the planner owns this provider's only
+            # authoritative input and supplies it on fresh adoption only, so for
+            # every other dispatcher — this composite included — the empty input
+            # is what the authority sends.
+            snapshots = {}
+        elif owner == "family":
             snapshots = provider_dispatch_input(selected, operation, provider_id=provider_id)
         else:
             snapshots = provider_dispatch_input(
@@ -2414,6 +2440,12 @@ def test_every_shipping_catalog_provider_is_seam_served() -> None:
     against this repository, whose control plane enables every consumer-role
     package in Catalog 5. The membership assertion is what makes a newly shipped
     package fail here rather than pass unnoticed.
+
+    One declared exemption: a `planner-owned` provider (see
+    `AUTHORITATIVE_INPUT_OWNER`) has no seam authority to fall back FROM — generic
+    dispatch is what its own authority does everywhere except fresh-adoption
+    planning — so serving it here would create the CLI/service divergence this
+    node exists to prevent rather than close a defect.
     """
     worker = require_service_module("provider_worker")
     seam_input = require_attribute(
@@ -2454,7 +2486,10 @@ def test_every_shipping_catalog_provider_is_seam_served() -> None:
                 ProviderOperation(operation),
                 provider_id=provider_id,
             )
-        if not built:
+        if not built and AUTHORITATIVE_INPUT_OWNER.get((standard_id, provider_id)) != PLANNER_OWNED:
+            # Fails closed on a NEW provider: an id absent from the census reads
+            # as `None`, never as the exemption, so only a reviewed declaration
+            # can take a shipping provider out of this canary.
             unserved.append((standard_id, provider_id))
     assert not unserved, (
         "these shipping providers fall back to generic dispatch and would receive the "

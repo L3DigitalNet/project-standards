@@ -48,6 +48,7 @@ from tests.control_plane.planner_helpers import resolution_request, write_payloa
 from tests.package_contract.helpers import copy_minimal_repository
 
 _ROOT = Path(__file__).resolve().parents[2]
+_RELEASED = _ROOT / "tests/fixtures/legacy_releases"
 _FAMILY = _ROOT / "standards/python-tooling"
 _PAYLOAD = _FAMILY / "versions/1.1"
 _CURRENT_PAYLOAD = _FAMILY / "versions/1.5"
@@ -422,7 +423,14 @@ def _legacy_python_tooling_repo(tmp_path: Path) -> Path:
         ".vscode/settings.json": legacy / "python-tooling/vscode-settings.json",
         ".vscode/tasks.json": legacy / "python-tooling/vscode-tasks.json",
         ".editorconfig": legacy / "_shared/editorconfig",
-        ".vscode/extensions.json": legacy / "_shared/vscode-extensions.json",
+        # Released bytes, not the current tree: `_shared/vscode-extensions.json`
+        # is byte-coupled to this repository's own `.vscode/extensions.json` by
+        # the adopt dogfood guard, so a consumer-owned recommendation added here
+        # (`golang.go`, 5.15.0) silently rewrites what "legacy" means and leaves
+        # the fixture holding bytes no v4 consumer ever received. The legacy
+        # signature census pins the released digest, so the fixture must too —
+        # the same working-tree-vs-released split `_released_v4_repo` documents.
+        ".vscode/extensions.json": _RELEASED / "v4.3.0/vscode-extensions.json",
     }
     for target, source in sources.items():
         destination = repo / target
@@ -1648,9 +1656,6 @@ def test_python_tooling_consumer_owned_migration_matches_extracted_wheel(
     )
 
     assert installed_report == source_report
-
-
-_RELEASED = _ROOT / "tests/fixtures/legacy_releases"
 
 
 def _released_v4_repo(tmp_path: Path) -> Path:

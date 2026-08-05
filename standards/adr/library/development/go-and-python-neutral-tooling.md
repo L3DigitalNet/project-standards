@@ -1,32 +1,3 @@
----
-schema_version: '1.1'
-id: 'template-orvcda-go-python-neutral-tooling'
-title: 'Go and Python Coexistence with Neutral Tooling'
-description: 'Draft ADR template for supporting Go alongside Python without creating a language preference or migration mandate.'
-doc_type: 'template'
-status: 'draft'
-created: '2026-08-01'
-updated: '2026-08-01'
-reviewed: null
-owner: 'Chris Purcell / L3DigitalNet'
-consumer: 'mix'
-tags:
-  - 'adr'
-  - 'architecture'
-  - 'go'
-  - 'python'
-  - 'tooling'
-aliases: []
-related:
-  - 'standards/adr/library/README.md'
-  - 'standards/adr/versions/1.3/templates/adr.md'
-source:
-  - 'docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md'
-confidence: 'high'
-visibility: 'internal'
-license: null
----
-
 # ADR Library: Go and Python Coexistence with Neutral Tooling
 
 ## Description

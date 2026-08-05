@@ -1,31 +1,3 @@
----
-schema_version: '1.1'
-id: 'template-kco71x-archive-archived-material-as-zip'
-title: 'Archive Archived Material as ZIP Files'
-description: 'Draft ADR template for storing archival material in ZIP files under a default `.archived/` path instead of loose archive-directory contents.'
-doc_type: 'template'
-status: 'draft'
-created: '2026-08-02'
-updated: '2026-08-02'
-reviewed: null
-owner: 'Chris Purcell / L3DigitalNet'
-consumer: 'mix'
-tags:
-  - 'adr'
-  - 'archive'
-  - 'documentation'
-  - 'repository'
-aliases: []
-related:
-  - 'standards/adr/library/README.md'
-  - 'standards/adr/versions/1.3/templates/adr.md'
-source:
-  - 'Owner requirement, 2026-08-02'
-confidence: 'high'
-visibility: 'internal'
-license: null
----
-
 # ADR Library: Archive Archived Material as ZIP Files
 
 ## Description

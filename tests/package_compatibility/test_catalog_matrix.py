@@ -36,6 +36,7 @@ from tests.package_compatibility.matrix import (
     exercise_migrated_lifecycle,
     exercise_partial_migrated_lifecycle,
     partial_legacy_config,
+    seed_consumer_pyproject,
 )
 
 pytestmark = pytest.mark.compatibility
@@ -397,6 +398,7 @@ def test_real_catalog_remains_inside_planning_scale_boundary(
 ) -> None:
     repo = tmp_path / "real-catalog"
     repo.mkdir()
+    seed_consumer_pyproject(repo)
     initialize_control_plane(repo, "5", distribution=source_payload_distribution)
     for standard_id in _DEFAULTS:
         set_standard_enabled(repo, standard_id, True)

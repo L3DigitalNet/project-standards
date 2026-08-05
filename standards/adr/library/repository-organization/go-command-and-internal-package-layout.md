@@ -1,37 +1,3 @@
----
-schema_version: '1.1'
-id: 'template-h2yvlz-go-command-and-internal-package-layout'
-title: 'Go Command and Internal Package Layout'
-description: 'Draft ADR template for Go products that build commands from `cmd/`, keep product code in `internal/`, and separate optional public packages and developer tooling.'
-doc_type: 'template'
-status: 'draft'
-created: '2026-08-02'
-updated: '2026-08-02'
-reviewed: null
-owner: 'Chris Purcell / L3DigitalNet'
-consumer: 'mix'
-tags:
-  - 'adr'
-  - 'architecture'
-  - 'go'
-  - 'packaging'
-  - 'repository'
-aliases: []
-related:
-  - 'standards/adr/library/README.md'
-  - 'standards/adr/library/repository-organization/executable-first-python-layout.md'
-  - 'standards/adr/library/development/go-and-python-neutral-tooling.md'
-  - 'standards/adr/versions/1.3/templates/adr.md'
-source:
-  - 'Owner requirement, 2026-08-02'
-  - 'https://go.dev/doc/modules/layout'
-  - 'https://pkg.go.dev/cmd/go'
-  - 'https://github.com/golang-standards/project-layout'
-confidence: 'high'
-visibility: 'internal'
-license: null
----
-
 # ADR Library: Go Command and Internal Package Layout
 
 ## Description

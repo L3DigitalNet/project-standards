@@ -1,33 +1,3 @@
----
-schema_version: '1.1'
-id: 'index-0aah3n-adr-library'
-title: 'ADR Library'
-description: 'Index of draft ADR templates being evaluated as inputs to a future versioned ADR package library.'
-doc_type: 'index'
-status: 'draft'
-created: '2026-08-01'
-updated: '2026-08-01'
-reviewed: null
-owner: 'Chris Purcell / L3DigitalNet'
-consumer: 'mix'
-tags:
-  - 'adr'
-  - 'index'
-aliases: []
-related:
-  - 'docs/TODO.md'
-  - 'standards/adr/library/development/go-and-python-neutral-tooling.md'
-  - 'standards/adr/library/repository-organization/go-command-and-internal-package-layout.md'
-  - 'standards/adr/library/repository-organization/executable-first-python-layout.md'
-  - 'standards/adr/library/git/branch-integration-and-protection.md'
-  - 'standards/adr/library/repository-organization/archive-archived-material-as-zip.md'
-  - 'standards/adr/README.md'
-source: []
-confidence: 'unknown'
-visibility: 'internal'
-license: null
----
-
 # ADR Library
 
 ## Purpose

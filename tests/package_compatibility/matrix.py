@@ -127,6 +127,16 @@ _CONSUMER_PYPROJECT = (
 )
 
 
+def seed_consumer_pyproject(repo: Path) -> None:
+    """Give a bare synthetic consumer the PEP 621 identity Python Tooling requires.
+
+    Public because the scale and determinism nodes build their consumer roots
+    directly rather than through a lifecycle exerciser, and every root that
+    enables the catalog defaults must satisfy the same fresh-adoption guard.
+    """
+    (repo / "pyproject.toml").write_bytes(_CONSUMER_PYPROJECT)
+
+
 def _write_migration_consumer_seed(repo: Path) -> None:
     """Seed the pre-migration consumer state both migrated lifecycles start from."""
     for relative in (

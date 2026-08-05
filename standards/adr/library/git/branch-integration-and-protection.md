@@ -1,29 +1,3 @@
----
-schema_version: '1.1'
-id: 'template-efnint-branch-integration-and-protection'
-title: 'Branch Integration and Protection Strategy'
-description: 'Draft ADR template for a permanent development branch, controlled main promotion, and local Git safeguards.'
-doc_type: 'template'
-status: 'draft'
-created: '2026-08-01'
-updated: '2026-08-01'
-reviewed: null
-owner: 'Chris Purcell / L3DigitalNet'
-consumer: 'mix'
-tags:
-  - 'adr'
-  - 'documentation'
-  - 'policy'
-aliases: []
-related:
-  - 'standards/adr/library/README.md'
-  - 'standards/adr/versions/1.3/templates/adr.md'
-source: []
-confidence: 'unknown'
-visibility: 'internal'
-license: null
----
-
 # ADR Library: Branch Integration and Protection Strategy
 
 ## Description

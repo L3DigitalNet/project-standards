@@ -1,36 +1,3 @@
----
-schema_version: '1.1'
-id: 'template-o3uoxu-executable-first-python-layout'
-title: 'Executable-First Python Repository Layout'
-description: 'Draft ADR template for shipping literal Python executables from `bin/` with shared code in `lib/` and internal tooling in `scripts/`.'
-doc_type: 'template'
-status: 'draft'
-created: '2026-08-02'
-updated: '2026-08-02'
-reviewed: null
-owner: 'Chris Purcell / L3DigitalNet'
-consumer: 'mix'
-tags:
-  - 'adr'
-  - 'architecture'
-  - 'packaging'
-  - 'python'
-  - 'repository'
-aliases: []
-related:
-  - 'standards/adr/library/README.md'
-  - 'standards/adr/library/repository-organization/go-command-and-internal-package-layout.md'
-  - 'standards/adr/versions/1.3/templates/adr.md'
-  - 'standards/python-tooling/versions/1.10/README.md'
-source:
-  - 'Owner requirement, 2026-08-02'
-  - 'https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html'
-  - 'https://setuptools.pypa.io/en/latest/userguide/package_discovery.html'
-confidence: 'high'
-visibility: 'internal'
-license: null
----
-
 # ADR Library: Executable-First Python Repository Layout
 
 ## Description
