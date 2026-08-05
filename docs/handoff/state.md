@@ -2,12 +2,11 @@
 
 ## Current focus
 
-- Revision 4 widened v5.15.0. Ready work is T2, T3, T7, and T22; the new tasks are T38, T39, and T40.
-- T35 stays blocked until its dependencies land; its blocker text predates the revision that resolved it.
-- SPEC-GSF3 durable document-reference tooling: T1 is ready for a fresh implementation session.
+- v5.15.0 is released (tagged `5e9bb6cc`); the boundary tasks T2–T7, T22, T38–T41, and T35 are terminal with EV-007/EV-011 evidence.
+- Program tail for later sessions: T16/T19/T36 (deferred tooling successors, #88/#99) and T24–T29; SPEC-GSF3 T1 also remains ready.
+- Rollout ran on llm-wiki, homelab, and scripts with the released tool; agent-configs and dotfiles keep exact pins per owner decision.
+- Owner queue: the failing Dependabot `setup-uv` 9.0.0 PR, the dead `docs/adr-library/**` include, and the 1.12 legacy-digest residual.
 
 ## Active incidents
 
-- `agent-handoff` commands all fail mid-cycle on the read-only catalog lineage guard; filed as issue #123.
-- `pip-audit`: `cryptography` 49.0.0 is vulnerable (PYSEC-2026-3552, fix 50.0.0); the release gate stays red until the lock advances.
-- SessionStart never injects `state.md`: the 1.8 Claude hook keeps `args: []`, so its `sh -c` wrapper is spawned without a shell (#122).
+- None. v5.15.0 resolves #122/#124 (SessionStart spawn form; injection resumes next session start), #123, and PYSEC-2026-3552.

@@ -1,6 +1,6 @@
 # Specs And Plans
 
-**Last updated:** 2026-08-04
+**Last updated:** 2026-08-05
 
 > **Housekeeping (2026-07-19):** `docs/superpowers/` was retired — design docs moved to `docs/specs/archive/`, research to `docs/research/`, the active plan to `docs/plans/`. The implemented Python Tooling checker-table plan and its four design-review audits were deleted. `standard-bundle-authoring@2.1` was authored (contract-conformant correction of 2.0's SPEC-BA02 pointer) and release 5.0.2 was prepared (PATCH under the new internal-additive classification rule).
 >
@@ -8,7 +8,7 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
-| Open-issue resolution program | `docs/plans/2026-08-01-open-issue-resolution-program-plan.md` | **active format 3 revision 4, 41 tasks — 17 done, 3 superseded, 20 not-started, T35 blocked** — revision 4 widened v5.15.0 to the whole Agent Handoff surface (T2–T7) plus T38 (#122/#124), T39 (#123), T40 (producer role), and T41 (closure). T8 is superseded; T35 keeps its revision-3 acceptance because T15 pinned it active (convention 17). Ready: T2, T3, T7, T22 |
+| Open-issue resolution program | `docs/plans/2026-08-01-open-issue-resolution-program-plan.md` | **active format 3 revision 4, 41 tasks — 29 done, 3 superseded, 9 not-started** — the v5.15.0 boundary completed 2026-08-05: T2–T7, T22, T38–T41, and T35 are terminal, the release is published (EV-007), and the widened issue set is closed (EV-011). Remaining tail: T16/T19/T36 (deferred tooling successors, #88/#99) and T24–T29 (Project Spec trains #55/#62 plus program closure). Ready: T16, T19 |
 | Durable document references optional tooling — **SPEC-GSF3** | `docs/specs/2026-07-31-durable-document-references-optional-tooling-spec.md`; `docs/plans/2026-07-31-durable-document-references-optional-tooling-plan.md` | **draft specification and active 14-task plan** — optional meta-repository main-wheel tooling; owner-approved design and Opus findings are integrated; T1 is ready for implementation in a fresh session; no implementation is claimed |
 | V5 adoption friction correction train design | `docs/specs/archive/2026-07-22-v5-adoption-friction-correction-train-design.md` | **released (5.8.0)** — python-tooling 1.8 `pytest.test_paths`, markdown-tooling 1.8 legacy byte-form acceptance, markdown-frontmatter 1.5 `workflow_ownership`, minimal-escape frontmatter serialization converged on the pinned Prettier oracle, CLI hardening, legacy-note rewording (issues #26–#31); the implementation plan was removed under the completed-plan policy |
 | V5 managed-edit fidelity correction train design | `docs/specs/archive/2026-07-22-v5-managed-edit-fidelity-correction-train-design.md` | **released (5.7.0)** — python-tooling 1.7 per-root coverage scoping and anchored TOML comment preservation (issues #24–#25); the implementation plan was removed under the completed-plan policy |
