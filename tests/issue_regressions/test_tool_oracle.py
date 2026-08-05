@@ -19,8 +19,8 @@ _ROOT = Path(__file__).resolve().parents[2]
 
 def test_installed_node_tools_match_lockfile_authority() -> None:
     assert locked_tool_versions(_ROOT) == {
-        "markdownlint-cli2": "0.23.1",
-        "prettier": "3.8.3",
+        "markdownlint-cli2": "0.23.2",
+        "prettier": "3.9.6",
     }
     assert installed_tool_versions(_ROOT) == locked_tool_versions(_ROOT)
 

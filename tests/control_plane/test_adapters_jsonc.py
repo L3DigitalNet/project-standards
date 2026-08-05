@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import cast
 
@@ -9,8 +10,10 @@ import pytest
 
 from project_standards.control_plane.adapters.base import AdapterUnit, UnitChange
 from project_standards.control_plane.adapters.jsonc import (
+    _PRETTIER_DOUBLE_WIDTH_BOUNDS,  # pyright: ignore[reportPrivateUsage]
     _PRETTIER_EMOJI_PATTERN,  # pyright: ignore[reportPrivateUsage]
     _PRETTIER_EMOJI_PATTERN_SHA256,  # pyright: ignore[reportPrivateUsage]
+    _PRETTIER_NARROW_EMOJIS,  # pyright: ignore[reportPrivateUsage]
     JsonAdapter,
     JsoncAdapter,
     _prettier_width,  # pyright: ignore[reportPrivateUsage]
@@ -26,6 +29,71 @@ from tests.issue_regressions.tool_oracle import (
 
 _FIXTURES = Path(__file__).parent / "fixtures/jsonc"
 _ROOT = Path(__file__).resolve().parents[2]
+_PRETTIER_BUNDLE = _ROOT / "node_modules/prettier/index.mjs"
+_JS_ESCAPE = re.compile(r"\\x[0-9A-Fa-f]{2}|\\u[0-9A-Fa-f]{4}|-")
+
+
+def _bundled_array(source: str, name: str) -> tuple[int, ...]:
+    """Read one `var <name> = [...]` decimal literal out of the Prettier bundle."""
+    marker = f"var {name} = ["
+    start = source.index(marker) + len(marker)
+    return tuple(int(item) for item in source[start : source.index("]", start)].split(","))
+
+
+def _bundled_double_width_bounds(source: str) -> tuple[int, ...]:
+    """Rebuild the adapter's half-open width bounds from get-east-asian-width's tables.
+
+    Prettier counts a codepoint as two columns when either the fullwidth or the
+    wide table claims it, so the two inclusive-pair tables merge into one sorted
+    half-open bounds tuple before comparison.
+    """
+    intervals: list[tuple[int, int]] = []
+    for name in ("fullwidthRanges", "wideRanges"):
+        pairs = _bundled_array(source, name)
+        intervals.extend((pairs[index], pairs[index + 1]) for index in range(0, len(pairs), 2))
+    bounds: list[int] = []
+    for start, stop in sorted(intervals):
+        if bounds and start <= bounds[-1]:
+            bounds[-1] = max(bounds[-1], stop + 1)
+            continue
+        bounds.extend((start, stop + 1))
+    return tuple(bounds)
+
+
+def _js_class_units(body: str) -> set[str]:
+    """Expand one JS character-class body of `\\xNN`/`\\uNNNN` escapes and ranges."""
+    tokens = _JS_ESCAPE.findall(body)
+    units: set[str] = set()
+    index = 0
+    while index < len(tokens):
+        first = int(tokens[index][2:], 16)
+        if tokens[index + 1 : index + 2] == ["-"]:
+            units.update(chr(code) for code in range(first, int(tokens[index + 2][2:], 16) + 1))
+            index += 3
+        else:
+            units.add(chr(first))
+            index += 1
+    return units
+
+
+def _bundled_narrow_emojis(source: str) -> frozenset[str]:
+    """Expand the narrow-emojis regexp into the UTF-16 unit strings it accepts.
+
+    The bundled test is `/^(?:<bmp class>|<lead>[<trail class>]…)$/`, so every
+    accepted string is one codepoint: a BMP unit, or a lead/trail surrogate pair
+    that the adapter must hold in the same two-unit spelling.
+    """
+    marker = "var narrowEmojiRegexp = "
+    start = source.index(marker) + len(marker)
+    literal = source[start : source.index(";\n", start)]
+    prefix, suffix = "/^(?:", ")$/"
+    assert literal.startswith(prefix) and literal.endswith(suffix), literal[:32]
+    units: set[str] = set()
+    for alternative in literal[len(prefix) : -len(suffix)].split("|"):
+        lead, _, trail = alternative.partition("[")
+        expanded = _js_class_units(trail.removesuffix("]"))
+        units.update(expanded if lead == "" else {chr(int(lead[2:], 16)) + u for u in expanded})
+    return frozenset(units)
 
 
 def _fixture_prettier_config(tmp_path: Path) -> Path:
@@ -755,6 +823,18 @@ def test_json_scalar_update_reflows_only_clean_container_layout(
         )
         == after
     )
+
+
+def test_prettier_east_asian_width_bounds_match_pinned_formatter_source() -> None:
+    source = _PRETTIER_BUNDLE.read_text(encoding="utf-8")
+
+    assert _bundled_double_width_bounds(source) == _PRETTIER_DOUBLE_WIDTH_BOUNDS
+
+
+def test_prettier_narrow_emojis_match_pinned_formatter_source() -> None:
+    source = _PRETTIER_BUNDLE.read_text(encoding="utf-8")
+
+    assert _bundled_narrow_emojis(source) == _PRETTIER_NARROW_EMOJIS
 
 
 def test_prettier_emoji_pattern_matches_pinned_formatter_source() -> None:

@@ -42,18 +42,43 @@ _MISSING = object()
 _PRETTIER_PRINT_WIDTH = 88
 
 
+def _interval(raw_interval: str) -> tuple[int, int]:
+    """Split one inclusive ``start[-stop]`` hex interval of a generated range spec."""
+    raw_start, separator, raw_stop = raw_interval.partition("-")
+    start = int(raw_start, 16)
+    return start, int(raw_stop, 16) if separator else start
+
+
 def _range_bounds(spec: str) -> tuple[int, ...]:
     bounds: list[int] = []
     for raw_interval in spec.split(","):
-        raw_start, separator, raw_stop = raw_interval.partition("-")
-        start = int(raw_start, 16)
-        stop = int(raw_stop, 16) + 1 if separator else start + 1
-        bounds.extend((start, stop))
+        start, stop = _interval(raw_interval)
+        bounds.extend((start, stop + 1))
     return tuple(bounds)
 
 
-# These generated constants pin Prettier 3.8.3's East Asian width lookup and
-# emoji-regex 10.6.0 semantics without adding formatter runtime dependencies.
+def _utf16_key(codepoint: int) -> str:
+    """Spell one codepoint in the UTF-16 code-unit space the emoji scan runs in."""
+    if codepoint < 0x10000:
+        return chr(codepoint)
+    offset = codepoint - 0x10000
+    return chr(0xD800 + (offset >> 10)) + chr(0xDC00 + (offset & 0x3FF))
+
+
+def _codepoint_units(spec: str) -> frozenset[str]:
+    units: set[str] = set()
+    for raw_interval in spec.split(","):
+        start, stop = _interval(raw_interval)
+        units.update(_utf16_key(codepoint) for codepoint in range(start, stop + 1))
+    return frozenset(units)
+
+
+# These generated constants pin Prettier 3.9.6's East Asian width lookup
+# (get-east-asian-width), its narrow-emojis table, and emoji-regex 10.6.0
+# semantics without adding formatter runtime dependencies. The Prettier 3.9.6
+# advance left the width bounds and the emoji pattern untouched but rewrote the
+# narrow-emoji table, which is why the three pins are guarded separately in
+# tests/control_plane/test_adapters_jsonc.py.
 _PRETTIER_DOUBLE_WIDTH_BOUNDS = _range_bounds(
     "1100-115f,231a-231b,2329-232a,23e9-23ec,23f0,23f3,25fd-25fe,2614-2615,2630-2637,2648-2"
     "653,267f,268a-268f,2693,26a1,26aa-26ab,26bd-26be,26c4-26c5,26ce,26d4,26ea,26f2-26f3,26"
@@ -110,8 +135,19 @@ _PRETTIER_EMOJI_PATTERN = re.compile(
         )
     ).decode("ascii")
 )
-_PRETTIER_NARROW_EMOJIS = frozenset(
-    "\xa9\xae\u203c\u2049\u2122\u2139\u2194\u2195\u2196\u2197\u2198\u2199\u21a9\u21aa\u2328\u23cf\u23f1\u23f2\u23f8\u23f9\u23fa\u25aa\u25ab\u25b6\u25c0\u25fb\u25fc\u2600\u2601\u2602\u2603\u2604\u260e\u2611\u2618\u261d\u2620\u2622\u2623\u2626\u262a\u262e\u262f\u2638\u2639\u263a\u2640\u2642\u265f\u2660\u2663\u2665\u2666\u2668\u267b\u267e\u2692\u2694\u2695\u2696\u2697\u2699\u269b\u269c\u26a0\u26a7\u26b0\u26b1\u26c8\u26cf\u26d1\u26d3\u26e9\u26f1\u26f7\u26f8\u26f9\u2702\u2708\u2709\u270c\u270d\u270f\u2712\u2714\u2716\u271d\u2721\u2733\u2734\u2744\u2747\u2763\u2764\u27a1\u2934\u2935\u2b05\u2b06\u2b07"
+# Astral entries are held as surrogate pairs because the emoji scan matches in
+# UTF-16 code-unit space, exactly like Prettier's own regexp over a JS string.
+_PRETTIER_NARROW_EMOJIS = _codepoint_units(
+    "a9,ae,203c,2049,2122,2139,2194-2199,21a9-21aa,2328,23cf,23ed-23ef,23f1-23f2,23f8-23fa,2"
+    "4c2,25aa-25ab,25b6,25c0,25fb-25fc,2600-2604,260e,2611,2618,2620,2622-2623,2626,262a,262"
+    "e-262f,2638-263a,2640,2642,265f-2660,2663,2665-2666,2668,267b,267e,2692,2694-2697,2699,"
+    "269b-269c,26a0,26a7,26b0-26b1,26c8,26cf,26d1,26d3,26e9,26f0-26f1,26f4,26f7-26f8,2702,27"
+    "08-2709,270f,2712,2714,2716,271d,2721,2733-2734,2744,2747,2763-2764,27a1,2934-2935,2b05"
+    "-2b07,1f170-1f171,1f17e-1f17f,1f321,1f324-1f32c,1f336,1f37d,1f396-1f397,1f399-1f39b,1f3"
+    "9e-1f39f,1f3cd-1f3ce,1f3d4-1f3df,1f3f3,1f3f5,1f3f7,1f43f,1f441,1f4fd,1f549-1f54a,1f56f-"
+    "1f570,1f573,1f576-1f579,1f587,1f58a-1f58d,1f5a5,1f5a8,1f5b1-1f5b2,1f5bc,1f5c2-1f5c4,1f5"
+    "d1-1f5d3,1f5dc-1f5de,1f5e1,1f5e3,1f5e8,1f5ef,1f5f3,1f5fa,1f6cb,1f6cd-1f6cf,1f6e0-1f6e5,"
+    "1f6e9,1f6f0,1f6f3"
 )
 
 type TokenKind = Literal[
