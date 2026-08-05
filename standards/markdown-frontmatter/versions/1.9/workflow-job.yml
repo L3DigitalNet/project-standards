@@ -1,0 +1,4 @@
+jobs:
+  frontmatter:
+    name: Frontmatter
+    uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v5

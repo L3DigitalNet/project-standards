@@ -1,0 +1,28 @@
+---
+schema_version: '1.1'
+id: 'note-xxxxxx-replace-with-readable-slug' # format: {doc_type}-{6-char base36 token}-{frozen slug} — see the standard's Formatting rules
+title: 'Human Title'
+description: 'One-sentence description of the note.'
+doc_type: 'note'
+status: 'draft'
+created: 'YYYY-MM-DD'
+updated: 'YYYY-MM-DD'
+reviewed: null
+owner: 'repo-maintainers'
+consumer: 'mix'
+tags: []
+aliases: []
+related: []
+source: []
+confidence: 'unknown'
+visibility: 'internal'
+license: null
+---
+
+# Human Title
+
+<!-- General-purpose working note. No fixed structure required. -->
+
+## Notes
+
+-

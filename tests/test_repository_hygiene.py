@@ -57,6 +57,7 @@ _IMMUTABLE_PROJECTION_EXCLUSIONS = frozenset(
 _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
     {
         "standards/markdown-frontmatter/versions/1.8/skills/markdown-frontmatter/scripts/new-doc-id",
+        "standards/markdown-frontmatter/versions/1.9/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/project-spec/versions/1.6/resources/tooling-notes.md",
         "standards/project-spec/versions/1.6/templates/spec-full-template.md",
         "standards/project-spec/versions/1.6/templates/spec-light-template.md",

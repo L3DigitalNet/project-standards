@@ -15,7 +15,6 @@ _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/markdown-frontmatter"
 _PREDECESSOR = _FAMILY / "versions/1.7"
 _SUCCESSOR = _FAMILY / "versions/1.8"
-_ROOT_WORKFLOW = _ROOT / ".github/workflows/validate-markdown-frontmatter.yml"
 _WORKFLOW_RESOURCE = "resources/self-host-validate-markdown-frontmatter.yml"
 _RELEASED_BASELINE = "v5.13.0"
 _CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
@@ -92,10 +91,14 @@ def test_markdown_frontmatter_1_8__predecessor__matches_the_released_baseline() 
         assert path.read_bytes() == released_bytes, relative
 
 
-def test_markdown_frontmatter_1_8__workflow_resource__matches_the_pinned_root_workflow() -> None:
-    """Self-hosted consumers receive the reviewed, SHA-pinned workflow bytes."""
+def test_markdown_frontmatter_1_8__workflow_resource__retains_the_reviewed_checkout_pin() -> None:
+    """1.8's byte-frozen resource still carries the reviewed checkout SHA pin.
+
+    1.9 supersedes this resource as the root workflow's source (runner-labels
+    input, setup-uv v9 bump); 1.8 stays advertised/retained with its own bytes
+    unchanged, so this no longer asserts equality with the live root workflow.
+    """
     workflow = (_SUCCESSOR / _WORKFLOW_RESOURCE).read_bytes()
-    assert workflow == _ROOT_WORKFLOW.read_bytes()
     text = workflow.decode("utf-8")
     assert f"uses: actions/checkout@{_CHECKOUT_SHA} # v7" in text
     assert "uses: actions/checkout@v7" not in text
