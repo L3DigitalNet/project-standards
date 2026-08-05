@@ -22,21 +22,21 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:a27e19849fc435a9796df88cda37921bffaeafee0af5dd2d3ac74700e2cf508f"
+digest = "sha256:4979d8a59dd45b374fdaeb1c76b8fe07544f831c2f47340fd01c4d0062b81299"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:b525071f98814eaa29edac6a00795f6aac340f03594ffce007095e2ffb269cc9"
+digest = "sha256:59c7eb95a0de124bea5e82f069fe4d6f4fde870cf90824b243a9f6c9a478f697"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:053e7d98192673e2b67bbce860cf00517f7b0bf94d02a9c1af7a119b5cd44f4a"
+digest = "sha256:1cd7aae97c9537af52888058fde5a588e6d069b3a36cc581bce45868509dc4d0"
 
 [[resources]]
 id = "config-schema"
@@ -92,21 +92,21 @@ id = "self-host-lint-workflow"
 role = "provider-resource"
 path = "resources/self-host-lint-markdown.yml"
 media_type = "application/yaml"
-digest = "sha256:79adf319e9e092c106218d327d7186fb8c68a2d14adbdc4d05fde10f81a1ed1d"
+digest = "sha256:d275f45dfb9afffae82f923bb823e031346e1847e40cd6b057223d084f9e8db3"
 
 [[resources]]
 id = "self-host-format-workflow"
 role = "provider-resource"
 path = "resources/self-host-format.yml"
 media_type = "application/yaml"
-digest = "sha256:b75a1ebbe0e2a3deb663049a65c2ecde5a032b52f4fc9b831d7d48391a7a2d31"
+digest = "sha256:8c4e5ab82be13d028efab376b3fd3b991cddd85560b144eadd693e3193a9aee8"
 
 [[resources]]
 id = "provider-code"
 role = "provider-resource"
 path = "providers/markdown_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:e8519c07fb17f78d1d8ee4fc962244ed083a7ce36ee7a412c9236e634c11bc8b"
+digest = "sha256:dc31152d38873fe902f1bb45268ac734ece0342766f242daa349f27b771df54d"
 
 [[resources]]
 id = "provider-input"

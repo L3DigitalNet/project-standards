@@ -24,7 +24,7 @@ Normal verification is non-mutating, and every invocation is bounded to the sele
 
 ```bash
 git ls-files -z -- ':(glob)**/*.md' ':(glob)**/*.json' ':(glob)**/*.jsonc' ':(glob)**/*.yml' ':(glob)**/*.yaml' | xargs -0 -r npx prettier --check --
-npx markdownlint-cli2 "**/*.md"
+git ls-files -z -- ':(glob)**/*.md' ':(glob,exclude).pytest_cache/**' ':(glob,exclude).ruff_cache/**' ':(glob,exclude).venv/**' ':(glob,exclude)node_modules/**' | sed -z 's|^|:|' | xargs -0 -r npx markdownlint-cli2 --no-globs
 ```
 
 When formatting repair is needed, use Prettier and then repeat both checks:
@@ -32,17 +32,18 @@ When formatting repair is needed, use Prettier and then repeat both checks:
 ```bash
 git ls-files -z -- ':(glob)**/*.md' ':(glob)**/*.json' ':(glob)**/*.jsonc' ':(glob)**/*.yml' ':(glob)**/*.yaml' | xargs -0 -r npx prettier --write --
 git ls-files -z -- ':(glob)**/*.md' ':(glob)**/*.json' ':(glob)**/*.jsonc' ':(glob)**/*.yml' ':(glob)**/*.yaml' | xargs -0 -r npx prettier --check --
-npx markdownlint-cli2 "**/*.md"
+git ls-files -z -- ':(glob)**/*.md' ':(glob,exclude).pytest_cache/**' ':(glob,exclude).ruff_cache/**' ':(glob,exclude).venv/**' ':(glob,exclude)node_modules/**' | sed -z 's|^|:|' | xargs -0 -r npx markdownlint-cli2 --no-globs
 ```
 
 The globs above are the shipped defaults. A repository substitutes its own selected `markdown_globs` and `config_globs`, which the managed instruction blocks render for it. Prettier discovers `.prettierrc.json` while traversing selected paths and honors `.gitignore` and `.prettierignore` from the working directory [S02]. `markdownlint-cli2` discovers `.markdownlint.json`, accepts CLI globs, and supports an explicit in-place repair mode without backups [S03].
 
 ### Why the local check is bounded and Git-routed
 
-A bare `.` is not a supported local invocation. It selects every language Prettier can parse rather than the declared corpus, and it reaches trees the repository has excluded — where an intentionally invalid test fixture turns a formatting check into a hard error rather than a finding. Three properties make the bounded form correct:
+Neither a bare `.` nor a bare recursive glob is a supported local invocation. `prettier --check .` selects every language Prettier can parse rather than the declared corpus, and it reaches trees the repository has excluded — where an intentionally invalid test fixture turns a formatting check into a hard error rather than a finding. `markdownlint-cli2 "**/*.md"` descends into every independent Git repository checked out beneath the working directory, so a workspace parent reports findings for thousands of documents its own adoption does not own. These properties make the bounded form correct:
 
-- **Git is the corpus authority.** `git ls-files` honors every `.gitignore` at every level plus `.git/info/exclude`, and lists nothing owned by an independent nested repository. Prettier's own selection reads only the working-directory `.gitignore` and `.prettierignore` [S02], so a nested ignore file or a local exclude is invisible to it.
-- **`:(glob)` pathspec magic is mandatory.** Under Git's default pathspec magic, `**/*.md` skips root-level files and `nested/**/*.md` matches nothing at all. `:(glob)` selects wildmatch, where a leading `**/` means "zero or more leading directories" — the reading Prettier gives the same glob.
+- **Git is the corpus authority.** `git ls-files` honors every `.gitignore` at every level plus `.git/info/exclude`, and lists nothing owned by an independent nested repository — a child repository is a single gitlink in the parent index, never its files. Prettier's own selection reads only the working-directory `.gitignore` and `.prettierignore` [S02]; `markdownlint-cli2` reads no Git ignore file at all without a runner config [S03]. Both gaps close at once.
+- **`:(glob)` pathspec magic is mandatory.** Under Git's default pathspec magic, `**/*.md` skips root-level files and `nested/**/*.md` matches nothing at all. `:(glob)` selects wildmatch, where a leading `**/` means "zero or more leading directories" — the reading both tools give the same glob. Declared exclusions travel as `:(glob,exclude)` pathspecs, which Git applies after the positive ones regardless of argument order.
+- **The markdownlint invocation needs `--no-globs` and literal paths.** Verified against the pinned `markdownlint-cli2` 0.23.2: without `--no-globs`, a consumer's `.markdownlint-cli2.*` runner config contributes its own `globs` and re-widens the run back across the child repository. Without the `sed` step that prefixes each path with `:` — the documented literal-file-path marker [S03] — every argument is parsed as a glob, and a filename beginning with `#` or `!` is read as a negation and silently dropped. A negation supplied as a trailing CLI glob does not filter a literal path, which is why the exclusions must travel through Git rather than through `markdownlint-cli2`.
 - **An empty selection is not a failure.** Prettier exits `2` when any supplied pattern matches no file, and most repositories have no JSONC file. `xargs -r` never runs the command on an empty set, and an unmatched Git pathspec is not an error. The no-Git fallback needs `--no-error-on-unmatched-pattern` to reach the same outcome: `npx prettier --check --no-error-on-unmatched-pattern -- '**/*.md' '**/*.json' '**/*.jsonc' '**/*.yml' '**/*.yaml'`.
 
 Reaching `.git/info/exclude` through `--ignore-path` was rejected: Prettier anchors an ignore file's patterns to that file's own directory, so every pattern would resolve against `.git/info/` and silently match nothing.
@@ -73,12 +74,12 @@ Keep the pair immediately outside the exceptional region and name only the neces
 markdownlint autofix is not part of normal verification. Use it only as a bounded recovery operation with a clean starting diff:
 
 ```bash
-test -z "$(git status --porcelain)" && npx markdownlint-cli2 --fix "**/*.md"
+test -z "$(git status --porcelain)" && git ls-files -z -- ':(glob)**/*.md' ':(glob,exclude).pytest_cache/**' ':(glob,exclude).ruff_cache/**' ':(glob,exclude).venv/**' ':(glob,exclude)node_modules/**' | sed -z 's|^|:|' | xargs -0 -r npx markdownlint-cli2 --no-globs --fix
 git diff --check
 git diff -- .
 git ls-files -z -- ':(glob)**/*.md' ':(glob)**/*.json' ':(glob)**/*.jsonc' ':(glob)**/*.yml' ':(glob)**/*.yaml' | xargs -0 -r npx prettier --write --
 git ls-files -z -- ':(glob)**/*.md' ':(glob)**/*.json' ':(glob)**/*.jsonc' ':(glob)**/*.yml' ':(glob)**/*.yaml' | xargs -0 -r npx prettier --check --
-npx markdownlint-cli2 "**/*.md"
+git ls-files -z -- ':(glob)**/*.md' ':(glob,exclude).pytest_cache/**' ':(glob,exclude).ruff_cache/**' ':(glob,exclude).venv/**' ':(glob,exclude)node_modules/**' | sed -z 's|^|:|' | xargs -0 -r npx markdownlint-cli2 --no-globs
 ```
 
 Review the resulting diff before accepting it. The Prettier and markdownlint commands after the diff are mandatory follow-up checks; restore or correct any unintended text change before proceeding.
@@ -94,7 +95,7 @@ Package 1.13 exclusively manages the two configs and, while the per-caller owner
 | `.github/workflows/lint-markdown.yml` | Managed Markdown lint workflow with immutable action references |
 | `.github/workflows/format.yml` | Managed Prettier workflow with immutable action references |
 
-The self-hosted workflow resources preserve the exact bytes of the package's managed root workflows. Each external action reference is pinned to its full commit SHA; the adjacent major-version comment remains human-readable only and does not select the action revision.
+Each external action reference in the self-hosted workflow resources is pinned to its full commit SHA; the adjacent major-version comment remains human-readable only and does not select the action revision. Both resources accept an optional `runner-labels` input, a JSON array selecting the caller's own runner pool. It is empty by default, so the GitHub-hosted runner stays in use, and a runner is always allocated from the caller's context — a public repository, which runner groups reject, therefore keeps the hosted runner whatever a private caller passes.
 
 The package composes smaller units into shared consumer containers:
 
@@ -152,7 +153,9 @@ The list is deliberately limited to directories a catalog-selected tool generate
 
 `markdownlint-cli2` resolves its glob list in order, so these negations trail the positive globs and a later pattern cannot re-include one of the trees. A repository that must lint one of them sets `lint_generated_exclusions = false` and declares the narrower exclusions it does want. Consumer `exclusions` remain additive: an entry that already names one of these globs is not duplicated, and every other entry is appended unchanged.
 
-Restoring parity through `markdownlint-cli2`'s `gitignore` switch was rejected. Version 0.23.1 exposes it only as a key in a `.markdownlint-cli2.*` runner config, with no CLI or action input, and this package ships the rule set `.markdownlint.json` rather than a runner config; claiming a second managed config file would take ownership of a file this standard explicitly leaves to consumers.
+Restoring parity through `markdownlint-cli2`'s `gitignore` switch was rejected. Version 0.23.2 exposes it only as a key in a `.markdownlint-cli2.*` runner config, with no CLI or action input, and this package ships the rule set `.markdownlint.json` rather than a runner config; claiming a second managed config file would take ownership of a file this standard explicitly leaves to consumers.
+
+All of this describes the **CI caller**, which expands globs in a fresh single-repository checkout where the local hazards above do not exist. The negations therefore remain required there. The local command reaches the same scope through Git instead, carrying each negation as a `:(glob,exclude)` pathspec so the two scopes stay equal even for a repository that deliberately tracks one of these directories.
 
 Self-hosted mode installs a static workflow, so its negations are fixed in the installed job rather than option-rendered. A self-hosted repository that must lint a generated tree takes `lint_workflow_ownership = "consumer-owned"`.
 
@@ -166,7 +169,7 @@ The managed format caller sends three typed inputs to `.github/workflows/format.
 
 The reusable workflow keeps `.` as its backward-compatible default. It transfers inputs through environment variables, splits them into quoted Bash arrays, and invokes pinned Prettier over `"${globs[@]}"`. Existing `.gitignore`, existing `.prettierignore`, and the repository-root temporary file for package exclusions remain separate `--ignore-path` arguments, so each pattern keeps its correct anchor and a missing terminal newline cannot merge entries. Config values never become shell source.
 
-The self-hosted formatter uses `actions/setup-node@v6` with Node 24 and explicitly disables setup-node's automatic package-manager cache because the reusable workflow has no consumer lockfile. Current self-hosted workflows use Node 24-generation actions and therefore require GitHub Actions Runner v2.327.1 or newer on self-hosted runners.
+The self-hosted formatter uses `actions/setup-node` v7.0.0 with Node 24 and explicitly disables setup-node's automatic package-manager cache because the reusable workflow has no consumer lockfile. Current self-hosted workflows use Node 24-generation actions and therefore require GitHub Actions Runner v2.327.1 or newer on self-hosted runners.
 
 The lint and format callers are separate so repositories can select either authority independently. Neither workflow is coupled to frontmatter validation.
 

@@ -99,8 +99,8 @@ def _yaml_scalar(value: str) -> str:
 # Issue #63: the format path reaches Prettier through `--ignore-path .gitignore`,
 # so generated trees never enter it, while the lint path passes bare CLI globs to
 # markdownlint-cli2, which traverses dot directories and `node_modules` (verified
-# against the pinned markdownlint-cli2 0.23.1: `**/*.md` selects `.venv/**` and
-# `.pytest_cache/**`). markdownlint-cli2 0.23.1 has no `--gitignore` flag — the
+# against the pinned markdownlint-cli2 0.23.2: `**/*.md` selects `.venv/**` and
+# `.pytest_cache/**`). markdownlint-cli2 0.23.2 has no `--gitignore` flag — the
 # `gitignore` switch is a `.markdownlint-cli2.*` runner-config key, and this
 # package deliberately ships only the rule set `.markdownlint.json` — so parity
 # is restored with negative CLI globs instead of a second managed config file.
@@ -288,6 +288,60 @@ def _shell_word(value: str) -> str:
     return "'" + value.replace("'", "'\\''") + "'"
 
 
+def _pathspec(value: str) -> str:
+    """Turn one selection entry into the equivalent Git pathspec.
+
+    A selection entry is either a positive glob or a `!`-prefixed negation, and
+    both halves must survive the translation or the tracked-file recipes would
+    silently lint or format a scope the caller workflow excludes. `exclude` magic
+    is Git's own negation, applied after the positive pathspecs regardless of
+    argument order, so the ordering `_lint_selection` guarantees for
+    markdownlint-cli2 is preserved rather than depended upon here.
+    """
+    if value.startswith("!"):
+        return f":(glob,exclude){value.removeprefix('!')}"
+    return f":(glob){value}"
+
+
+def _tracked_files(selection: Sequence[str]) -> str:
+    """Render the `git ls-files` half shared by both local recipes."""
+    pathspecs = " ".join(_shell_word(_pathspec(value)) for value in selection)
+    return f"git ls-files -z -- {pathspecs}"
+
+
+def _local_lint_command(config: Mapping[str, object]) -> str:
+    """Render the bounded local markdownlint command.
+
+    Issue #114: `markdownlint-cli2 "**/*.md"` recursively descends into
+    independent Git repositories checked out beneath the working directory, so a
+    workspace parent lints thousands of child-owned documents it does not own
+    (the report observed 18230 files against 21 tracked). Routing selection
+    through `git ls-files` fixes that at the source: a child repository is a
+    gitlink in the parent index, so none of its Markdown is ever listed.
+
+    Three details are load-bearing, each verified against the pinned
+    markdownlint-cli2 0.23.2:
+
+    * `--no-globs` is mandatory, not defensive. Without it a consumer's
+      `.markdownlint-cli2.*` runner config contributes its own `globs`, which
+      re-widens the run back across the child repository and reinstates #114.
+    * The `:` prefix marks each argument a literal file path. Without it every
+      path is parsed as a glob, and a name beginning with `#` or `!` is read as a
+      negation and silently dropped from the run.
+    * The generated-directory negations the caller workflow needs are not
+      repeated here. Nothing is expanded, and `git ls-files` never emits an
+      ignored tree; the exclusions still reach Git through `_pathspec`, which
+      keeps parity with the rendered caller scope when a consumer tracks one of
+      those directories deliberately.
+
+    `sed -z` and `xargs -0 -r` are GNU forms, matching the Prettier recipe.
+    """
+    return (
+        f"{_tracked_files(_lint_selection(config))}"
+        " | sed -z 's|^|:|' | xargs -0 -r npx markdownlint-cli2 --no-globs"
+    )
+
+
 def _local_format_commands(config: Mapping[str, object]) -> list[str]:
     """Render the two bounded local Prettier commands, normative form first.
 
@@ -320,10 +374,9 @@ def _local_format_commands(config: Mapping[str, object]) -> list[str]:
     non-zero still means "attend to this"; read the output to tell them apart.
     """
     selection = _format_selection(config)
-    tracked = " ".join(_shell_word(f":(glob){glob}") for glob in selection)
     globbed = " ".join(_shell_word(glob) for glob in selection)
     return [
-        f"git ls-files -z -- {tracked} | xargs -0 -r npx prettier --check --",
+        f"{_tracked_files(selection)} | xargs -0 -r npx prettier --check --",
         f"npx prettier --check --no-error-on-unmatched-pattern -- {globbed}",
     ]
 
@@ -383,6 +436,20 @@ def _instructions(config: Mapping[str, object]) -> str:
                 "",
                 "Never check or write with a bare `.`: it reaches undeclared languages and "
                 "Git-excluded scratch.",
+            ]
+        )
+    if config.get("lint") is True:
+        lines.extend(
+            [
+                "",
+                "Lint Markdown structure over the same Git-tracked scope:",
+                "",
+                "```bash",
+                _local_lint_command(config),
+                "```",
+                "",
+                "Never lint a bare recursive glob: it descends into any independent Git "
+                "repository checked out below this one.",
             ]
         )
     lines.extend(
