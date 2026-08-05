@@ -260,7 +260,7 @@ def test_markdown_tooling_1_11__catalog_role__retains_predecessor() -> None:
     }
 
     assert roles["1.11"] == "retained"
-    assert roles["1.12"] == "default"
+    assert roles["1.12"] == "retained"
     assert roles["1.10"] == "retained"
 
 

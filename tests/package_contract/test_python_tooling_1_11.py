@@ -289,7 +289,7 @@ def test_python_tooling_1_11__released_predecessor__keeps_its_exact_bytes() -> N
 
 
 def test_python_tooling_1_11__package_registration__succeeds_1_10_without_touching_it() -> None:
-    """The payload can be valid while nothing selects it; these rows do the selecting."""
+    """The payload stays complete, indexed, and exactly selectable after 1.12 takes the default."""
     _require_payload(_V111)
     successor = _payload(_V111)
     migrations = {migration.id for migration in successor.manifest.migrations}
@@ -308,7 +308,7 @@ def test_python_tooling_1_11__package_registration__succeeds_1_10_without_touchi
     assert migrations == expected
     assert 'version = "1.11"' in family
     assert successor.integrity.aggregate_digest.value in family
-    assert roles["1.11"] == "default"
+    assert roles["1.11"] == "retained"
     assert roles["1.10"] == "retained"
 
 

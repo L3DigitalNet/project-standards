@@ -24,6 +24,7 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
+from tests.package_contract.helpers import ruff_value
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/python-tooling"
@@ -144,7 +145,13 @@ def _gate_surfaces(root: Path, config: JsonObject) -> dict[str, object]:
             root, "key:/tool/basedpyright/extraPaths", config, "tool", "basedpyright"
         ),
         "coverage": _table(root, "table:/tool/coverage/run", config, "tool", "coverage", "run"),
-        "ruff": _table(root, "table:/tool/ruff", config, "tool", "ruff"),
+        # Recomposed from the declared key scopes rather than read from
+        # `table:/tool/ruff`: python-tooling 1.12 decomposed that monolith into
+        # eleven leaf units (issue #99), so the whole-table scope no longer exists
+        # in the payload Catalog 5 selects.
+        "ruff": ruff_value(
+            lambda scope: _render(root, scope, config), _payload(root).manifest, config
+        ),
         "targets": _ruff_gate_targets(root, config),
     }
 

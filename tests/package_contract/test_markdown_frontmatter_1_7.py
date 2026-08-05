@@ -305,7 +305,7 @@ def test_markdown_frontmatter_1_7__catalog_role__retains_predecessor() -> None:
     }
 
     assert roles["1.7"] == "retained"
-    assert roles["1.8"] == "default"
+    assert roles["1.8"] == "retained"
     assert roles["1.6"] == "retained"
 
 

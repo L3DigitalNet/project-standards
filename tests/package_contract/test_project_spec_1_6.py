@@ -21,6 +21,9 @@ _FAMILY = _ROOT / "standards/project-spec"
 _PREDECESSOR = _FAMILY / "versions/1.5"
 _SUCCESSOR = _FAMILY / "versions/1.6"
 _PREDECESSOR_DIGEST = "sha256:e4286963cf591e3ee1454e5be317519b6610d3257dc61eb08de489d47ba407e1"
+_SELF_HOST_WORKFLOW_DIGEST = (
+    "sha256:77fda8d63f55b3f2715b0c47b55ccd6306071fa6541d7b5a57decd1291e2c7bb"
+)
 _SUCCESSOR_CHANGES = frozenset(
     {
         "README.md",
@@ -71,12 +74,15 @@ def test_project_spec_1_6__successor__pins_the_root_workflow_and_preserves_1_5()
         "package:1.6"
     ]
 
+    # 1.7 supersedes this resource as the root workflow's source (runner-labels
+    # input, setup-uv v9 bump); 1.6 stays advertised/retained with its own bytes
+    # unchanged, so this no longer asserts equality with the live root workflow.
     workflow = (_SUCCESSOR / "resources/self-host-validate-specs.yml").read_bytes()
-    assert workflow == (_ROOT / ".github/workflows/validate-specs.yml").read_bytes()
     resource = next(
         item for item in successor_manifest.resources if item.id == "self-host-workflow"
     )
     assert resource.digest.value == f"sha256:{hashlib.sha256(workflow).hexdigest()}"
+    assert resource.digest.value == _SELF_HOST_WORKFLOW_DIGEST
 
 
 def test_project_spec_1_6__identity_documents_and_schemas__name_the_successor() -> None:
@@ -95,30 +101,31 @@ def test_project_spec_1_6__identity_documents_and_schemas__name_the_successor() 
     assert migration_report["properties"]["package"]["properties"]["version"]["const"] == "1.6"
 
 
-def test_project_spec_1_6__family_navigation__points_to_the_current_authority() -> None:
-    documents = {
-        "README.md": (
-            "project-spec@1.6",
-            "Catalog 5 now selects `project-spec@1.6`",
-        ),
-        "adopt.md": ("project-spec@1.6",),
-        "agent-summary.md": ("project-spec@1.6",),
-    }
+def test_project_spec_1_6__family_index__keeps_the_retained_version_selectable() -> None:
+    """Naming 1.7 as the current authority must not drop 1.6 from the family index.
 
-    for relative, expected_references in documents.items():
-        document = (_FAMILY / relative).read_text(encoding="utf-8")
-        for expected in expected_references:
-            assert expected in document
+    Family navigation now points at 1.7 (see `test_project_spec_1_7`); what 1.6
+    still owes a consumer holding an exact pin is an advertised, digest-bound row.
+    """
+    family = load_family_manifest(_FAMILY / "standard.toml")
+    indexed = {entry.version.value: entry for entry in family.versions}
+    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
+
+    assert (
+        indexed["1.6"].digest == validate_payload_integrity(_SUCCESSOR, manifest).aggregate_digest
+    )
 
 
-def test_project_spec_1_6__migration__recognizes_the_pinned_root_workflow() -> None:
+def test_project_spec_1_6__migration__recognizes_its_own_pinned_workflow() -> None:
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     payload = InstalledPayload(
         _SUCCESSOR,
         manifest,
         validate_payload_integrity(_SUCCESSOR, manifest),
     )
-    workflow = (_ROOT / ".github/workflows/validate-specs.yml").read_bytes()
+    # The 1.6-era render, not the live root file: after the v5.16.0 reconcile the
+    # root workflow carries 1.7's bytes, whose digest 1.6's chain cannot know.
+    workflow = (_SUCCESSOR / "resources/self-host-validate-specs.yml").read_bytes()
     workflow_digest = f"sha256:{hashlib.sha256(workflow).hexdigest()}"
     legacy_signature = next(
         item for item in manifest.legacy_signatures if item.id == "legacy-workflow"

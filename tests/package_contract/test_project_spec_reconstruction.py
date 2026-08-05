@@ -65,8 +65,13 @@ _V1_1_SELF_HOST_WORKFLOW_DIGEST = (
 _V1_3_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:3cd986c11ee66c6da7169ba488d029e19473ec97d9fd785be616117e83307edc"
 )
+# The generation project-spec 1.7 renders: `runner-labels` plus the setup-uv 9.0.0
+# pin. `_CURRENT_` tracks whatever the root workflow holds, so it advances with
+# every catalog default; the `_V1_X_` constants above are frozen release history
+# this 1.3-era payload's provider still classifies. The superseded 1.6 generation
+# is asserted where its own chain lives, in `test_project_spec_1_7`.
 _CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
-    "sha256:77fda8d63f55b3f2715b0c47b55ccd6306071fa6541d7b5a57decd1291e2c7bb"
+    "sha256:52e058a3de21ef4a89b4fbe3e877b000b07badbd2af5646ea0f4c82caabb2401"
 )
 
 

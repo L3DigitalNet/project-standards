@@ -410,8 +410,9 @@ def test_frontmatter_root_workflow_is_the_v5_public_endpoint() -> None:
 
     for workflow in (root, public):
         call = workflow[True]["workflow_call"]
-        assert set(call["inputs"]) == {"standards-ref"}
+        assert set(call["inputs"]) == {"standards-ref", "runner-labels"}
         assert call["inputs"]["standards-ref"]["default"] == "v5"
+        assert call["inputs"]["runner-labels"]["default"] == ""
         self_repo_steps = [
             step
             for step in workflow["jobs"]["validate"]["steps"]

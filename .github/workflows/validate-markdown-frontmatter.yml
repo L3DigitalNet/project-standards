@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: "v5"
+      runner-labels:
+        description: "JSON array of runner labels; empty selects the GitHub-hosted runner. Private same-organization callers only."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -15,15 +20,20 @@ permissions:
 jobs:
   validate:
     name: Frontmatter
-    runs-on: ubuntu-latest
+    # Allocated from the CALLER's context, so a private caller's self-hosted
+    # labels select its own organization's runners and nothing is attached to
+    # this public repository. Direct events leave `inputs` empty and fall
+    # through to the hosted runner, which public repos require.
+    runs-on: ${{ inputs.runner-labels && fromJSON(inputs.runner-labels) || 'ubuntu-latest' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: ${{ github.repository == 'L3DigitalNet/project-standards' }}
+          prune-cache: true
 
       # The standards repository must validate the event commit without requiring
       # the v5 tag that this same commit will publish.

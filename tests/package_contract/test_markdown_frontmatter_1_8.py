@@ -154,10 +154,16 @@ def test_markdown_frontmatter_1_8__family_index__matches_the_payload_digest() ->
     assert indexed["1.8"].digest == integrity.aggregate_digest
 
 
-def test_markdown_frontmatter_1_8__family_navigation__selects_the_successor() -> None:
-    """Mutable family documents identify the versioned authority without catalog edits."""
-    for relative in ("README.md", "adopt.md", "agent-summary.md"):
-        text = (_FAMILY / relative).read_text(encoding="utf-8")
-        assert "markdown-frontmatter@1.8" in text
-        assert "versions/1.8/" in text
-        assert "1.7" not in text
+def test_markdown_frontmatter_1_8__family_index__keeps_the_retained_version_selectable() -> None:
+    """Naming 1.9 as the current authority must not drop 1.8 from the family index.
+
+    Family navigation now points at 1.9 (see `test_markdown_frontmatter_1_9`);
+    what 1.8 still owes a consumer holding an exact pin is an advertised,
+    digest-bound row.
+    """
+    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
+    integrity = validate_payload_integrity(_SUCCESSOR, manifest)
+    family = load_family_manifest(_FAMILY / "standard.toml")
+    indexed = {entry.version.value: entry for entry in family.versions}
+
+    assert indexed["1.8"].digest == integrity.aggregate_digest

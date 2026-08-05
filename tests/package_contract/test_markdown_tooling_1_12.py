@@ -33,10 +33,10 @@ _SUCCESSOR_CHANGES = frozenset(
         "schemas/provider-input.schema.json",
     }
 )
-_WORKFLOWS = {
-    "resources/self-host-lint-markdown.yml": _ROOT / ".github/workflows/lint-markdown.yml",
-    "resources/self-host-format.yml": _ROOT / ".github/workflows/format.yml",
-}
+_WORKFLOWS = (
+    "resources/self-host-lint-markdown.yml",
+    "resources/self-host-format.yml",
+)
 _FULL_SHA_ACTION_REFERENCE = re.compile(r"^[^@]+@[0-9a-f]{40}(?: # v[0-9]+)?$")
 
 
@@ -45,14 +45,19 @@ def _sha256(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_markdown_tooling_1_12__root_workflows__come_from_pinned_successor_resources() -> None:
-    """The package source must exactly match its managed root workflow outputs."""
+def test_markdown_tooling_1_12__workflow_resources__stay_digest_bound_and_sha_pinned() -> None:
+    """1.12's byte-frozen workflow resources stay integrity-bound and fully SHA-pinned.
+
+    1.13 supersedes these resources as the root workflows' source (runner-labels
+    inputs, setup-node 7.0.0, the enforced prettier 3.9.6 pin); 1.12 stays
+    advertised/retained with its own bytes unchanged, so this no longer asserts
+    equality with the live root workflows.
+    """
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     resources = {resource.path.normalized.as_posix(): resource for resource in manifest.resources}
 
-    for resource_path, root_workflow in _WORKFLOWS.items():
+    for resource_path in _WORKFLOWS:
         source = _SUCCESSOR / resource_path
-        assert source.read_bytes() == root_workflow.read_bytes()
         assert resources[resource_path].digest.value == _sha256(source)
         references = [
             reference.strip().removeprefix("uses: ")
@@ -114,14 +119,16 @@ def test_markdown_tooling_1_12__successor__preserves_1_11_and_indexes_complete_p
         } <= set(migration.affected)
 
 
-def test_markdown_tooling_1_12__mutable_navigation__names_the_new_authority() -> None:
-    """Family-level readers must resolve the same current payload as the index."""
-    expected_links = {
-        _FAMILY / "README.md": "versions/1.12/README.md",
-        _FAMILY / "adopt.md": "versions/1.12/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.12/agent-summary.md",
-    }
-    for path, expected_link in expected_links.items():
-        content = path.read_text(encoding="utf-8")
-        assert expected_link in content
-        assert "versions/1.11/" not in content
+def test_markdown_tooling_1_12__family_index__keeps_the_retained_version_selectable() -> None:
+    """Naming 1.13 as the current authority must not drop 1.12 from the family index.
+
+    Family navigation now points at 1.13 (see `test_markdown_tooling_1_13`); what
+    1.12 still owes a consumer holding an exact pin is an advertised,
+    digest-bound row.
+    """
+    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
+    integrity = validate_payload_integrity(_SUCCESSOR, manifest)
+    family = load_family_manifest(_FAMILY / "standard.toml")
+    indexed = {entry.version.value: entry for entry in family.versions}
+
+    assert indexed["1.12"].digest == integrity.aggregate_digest

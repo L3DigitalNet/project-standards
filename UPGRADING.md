@@ -30,14 +30,14 @@ The v5 tool keeps a warned fallback for a repository that still has only `.proje
 
 - Upgrade on a branch with a clean, reviewed working tree.
 - Use Python 3.14 or newer.
-- Install or invoke the exact v5 release you intend to pin. For 5.15.0:
+- Install or invoke the exact v5 release you intend to pin. For 5.16.0:
 
   ```bash
-  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.15.0"
+  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.16.0"
   project-standards --version || project-standards --version
   ```
 
-  Confirm that the command reports `project-standards 5.15.0` before continuing. The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real.
+  Confirm that the command reports `project-standards 5.16.0` before continuing. The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real.
 
 - Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
 - Review the current package-specific [adoption guide](standards/README.md) for option and output changes.
@@ -270,6 +270,14 @@ role = "producer"
 `role` is optional and defaults to `consumer`, whose behavior is exactly what this section describes; a consuming repository changes nothing and keeps its `schema_version = "1.0"` header. The key requires `schema_version = "1.1"`, and a `1.0` header that carries it is rejected.
 
 The declaration widens one rule, in one window: a catalog-publishing command — `init`, `upgrade`, and `reconcile --apply` — accepts an installed catalog that differs from the committed one while the tool release is unchanged, and reports the release classification instead of refusing over it. Everything else is unchanged. An older installed release, a catalog-major mismatch, a central lock that disagrees with the committed catalog lineage, and the package release policy once the release has advanced all still refuse. The role is a local declaration rather than desired state, so writing it does not itself change `.standards/lock.toml`.
+
+### What the 5.16.0 defaults rewrite on refresh
+
+Refreshing onto the 5.16.0 catalog changes bytes in two managed surfaces. Both are expected diffs, not drift; review them once and commit them with the refresh.
+
+**Ruff ownership moves to leaf keys (Python Tooling 1.11 → 1.12).** Through 1.11 the package owned `[tool.ruff]` as one whole table, so any plugin sub-table you added — `[tool.ruff.lint.flake8-bugbear]`, `[tool.ruff.lint.extend-per-file-ignores]`, and the rest — conflicted with the package and no option could express keeping it. From 1.12 the package owns only the eleven Ruff keys it renders; every undeclared `[tool.ruff.*]` sub-table is consumer-owned by construction and survives reconciliation unchanged. Two consequences are visible in the first apply. The three additive Ruff lists (`extend_include`, `extend_select`, `extend_ignore`) now render their keys unconditionally, as empty arrays when the option is empty, because each is a separately owned key and an empty array is inert in Ruff; through 1.11 an empty list emitted no key at all. Coverage `omit` is unchanged and still emits nothing when empty. The 1.11→1.12 migration also relocks the whole-table predecessor, so the transition does not raise `CP-LOCK-INCONSISTENT`.
+
+**The documented Markdown verification commands become corpus-bounded (Markdown Tooling 1.12 → 1.13).** The managed instruction block and the versioned prose now render the local Prettier and markdownlint recipes from the same `markdown_globs` + `config_globs` selection the CI caller uses, rather than a broad glob. The normative form selects tracked files through `git ls-files` with `:(glob)` pathspec magic — the only form that excludes `.git/info/exclude` scratch files — with a bounded-glob fallback for contexts without Git. The selection narrows; nothing that was previously checked in CI stops being checked. If you own the block through `instructions_ownership = "consumer-owned"`, copy the new recipe across by hand.
 
 ### Comments inside managed TOML regions
 

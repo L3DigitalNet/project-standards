@@ -155,6 +155,12 @@ role = "retained"
 id = "markdown-frontmatter"
 version = "1.8"
 digest = "sha256:79410e07c98f8f9fcc69e1c31b8b2971134c8d19b855fe81008c296fb6850470"
+role = "retained"
+
+[[packages]]
+id = "markdown-frontmatter"
+version = "1.9"
+digest = "sha256:5f08a86214605fb25db4bc48f78ccb68bae52a707506e0adf28117d3ae1d76a5"
 role = "default"
 
 [[packages]]
@@ -221,6 +227,12 @@ role = "retained"
 id = "markdown-tooling"
 version = "1.12"
 digest = "sha256:105d742c188f78cd908cd715a396722912d031114ea1e5e6445d1dc879a1e7b8"
+role = "retained"
+
+[[packages]]
+id = "markdown-tooling"
+version = "1.13"
+digest = "sha256:271cfbb5e5abde80439cb1f90b9d2eb55720fd52bff3d78f51057efa72aabfba"
 role = "default"
 
 [[packages]]
@@ -257,6 +269,12 @@ role = "retained"
 id = "project-spec"
 version = "1.6"
 digest = "sha256:0f3bc8952fe4ef58e7619fecf1476ebd863a6cbb4eddf93bdbdea758f835be4c"
+role = "retained"
+
+[[packages]]
+id = "project-spec"
+version = "1.7"
+digest = "sha256:2d012e3de7699dc44bdf4ee8605cf350caca3ba05b0c490b8ff795ce5014df8f"
 role = "default"
 
 [[packages]]
@@ -335,6 +353,12 @@ role = "retained"
 id = "python-tooling"
 version = "1.11"
 digest = "sha256:8d288645905cbf8954f246e3631d8636353ac590d62eacc70e68ae75e1057fb2"
+role = "retained"
+
+[[packages]]
+id = "python-tooling"
+version = "1.12"
+digest = "sha256:7595019e39b209fb700817b0563aa2e5db50d368c3c5042eeb714e234076de5f"
 role = "default"
 
 [[packages]]

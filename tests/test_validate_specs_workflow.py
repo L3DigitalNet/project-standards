@@ -17,7 +17,7 @@ _SELF_HOST_WF = (
 def test_workflow_exposes_workflow_call_with_ref_and_strict_lint() -> None:
     data = yaml.safe_load(_WF.read_text(encoding="utf-8"))
     call = data[True]["workflow_call"]
-    assert set(call["inputs"]) == {"standards-ref", "strict-lint"}
+    assert set(call["inputs"]) == {"standards-ref", "strict-lint", "runner-labels"}
     assert call["inputs"]["standards-ref"]["default"] == "v5"
     assert call["inputs"]["strict-lint"]["default"] is True
 

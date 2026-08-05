@@ -13,7 +13,6 @@ disturb. A hollow fix that widened 1.11 instead of authoring 1.12 breaks them.
 import os
 import subprocess
 import tomllib
-from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import cast
@@ -45,6 +44,12 @@ from project_standards.package_contract.payload import (
     load_payload_manifest,
 )
 from tests.control_plane.planner_helpers import previous_lock, resolution_request
+from tests.package_contract.helpers import (
+    ruff_declarations,
+    ruff_source,
+    ruff_value,
+    selects_ruff,
+)
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/python-tooling"
@@ -186,60 +191,19 @@ def _render_script(root: Path, **overrides: JsonValue) -> str:
     )
 
 
-def _selects_ruff(scope: str) -> bool:
-    pointer = scope.split(":", 1)[1]
-    return pointer == "/tool/ruff" or pointer.startswith("/tool/ruff/")
-
-
+# The composition helpers are shared with `test_python_tooling.py`, which must
+# recompose the same table now that 1.12 is the catalog default; these wrappers
+# bind this module's own renderer and payload root to them.
 def _ruff_declarations(root: Path, config: JsonObject) -> list[ContributionDeclaration]:
-    return [
-        declaration
-        for declaration in _payload(root).manifest.contributions
-        if declaration.target.original == "pyproject.toml"
-        and declaration.adapter is AdapterKind.TOML
-        and _selects_ruff(declaration.scope)
-        and declaration.materializes(config)
-    ]
-
-
-def _compose_toml(fragments: Sequence[str]) -> str:
-    """Fold rendered fragments into one document, merging repeated table headers.
-
-    Each key-scope fragment carries its own `[tool.ruff]` header, so plain
-    concatenation would redefine the table and fail the parser. Grouping by
-    header is also what makes the two payloads comparable at all: the 1.11
-    monolith and the 1.12 unit set reduce to the same document shape.
-    """
-    grouped: dict[str, list[str]] = {}
-    for fragment in fragments:
-        header = ""
-        for line in fragment.splitlines():
-            if not line.strip():
-                continue
-            if line.startswith("["):
-                header = line
-                grouped.setdefault(header, [])
-                continue
-            grouped.setdefault(header, []).append(line)
-    sections: list[str] = []
-    for header, lines in grouped.items():
-        body = "".join(f"{line}\n" for line in lines)
-        sections.append(f"{header}\n{body}\n" if header else body)
-    return "".join(sections)
+    return ruff_declarations(_payload(root).manifest, config)
 
 
 def _ruff_source(root: Path, config: JsonObject) -> str:
-    return _compose_toml(
-        [
-            _render(root, declaration.scope, config)
-            for declaration in _ruff_declarations(root, config)
-        ]
-    )
+    return ruff_source(lambda scope: _render(root, scope, config), _payload(root).manifest, config)
 
 
 def _ruff_value(root: Path, config: JsonObject) -> JsonObject:
-    document = tomllib.loads(_ruff_source(root, config))
-    return cast("JsonObject", cast("JsonObject", document["tool"])["ruff"])
+    return ruff_value(lambda scope: _render(root, scope, config), _payload(root).manifest, config)
 
 
 def _without_empty_additive(value: JsonObject) -> JsonObject:
@@ -423,7 +387,7 @@ def test_python_tooling_1_12__plugin_subtable__survives_fresh_adoption(tmp_path:
     assert not [
         finding
         for finding in plan.findings
-        if finding.code == "CP-CONSUMER-CONFLICT" and _selects_ruff(finding.identity)
+        if finding.code == "CP-CONSUMER-CONFLICT" and selects_ruff(finding.identity)
     ]
 
 
@@ -1010,3 +974,60 @@ def test_python_tooling_1_12__managed_workflow__carries_the_reviewed_setup_uv_pi
         assert f"uses: {_SETUP_UV} # v9.0.0" in text
         assert "prune-cache: true" in text
         assert "setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990" not in text
+
+
+# ---------------------------------------------------------------------------
+# Catalog activation: the rows that make 1.12 the version a consumer resolves.
+# ---------------------------------------------------------------------------
+
+_PROJECTION = _ROOT / "src/project_standards/payloads/python-tooling/1.12"
+
+
+def test_python_tooling_1_12__catalog_role__selects_the_successor_as_default() -> None:
+    """Catalog 5 must actually select the successor these tests pin.
+
+    The payload can be complete and valid while the catalog still selects its
+    predecessor; only this row makes the successor the default a consumer on
+    `version = "latest"` resolves to.
+    """
+    _require_payload(_V112)
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    roles = {
+        package["version"]: package["role"]
+        for package in cast("list[dict[str, str]]", catalog["packages"])
+        if package["id"] == "python-tooling"
+    }
+
+    assert roles["1.12"] == "default"
+    assert roles["1.11"] == "retained"
+    assert roles["1.10"] == "retained"
+
+
+def test_python_tooling_1_12__payload_projection__matches_successor() -> None:
+    """The installed distribution must carry the whole payload, not a subset."""
+    _require_payload(_V112)
+    source_files = {
+        path.relative_to(_V112).as_posix(): path.read_bytes()
+        for path in _V112.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts
+    }
+    projected_links = {
+        path.relative_to(_PROJECTION).as_posix(): path
+        for path in _PROJECTION.rglob("*")
+        if path.is_symlink()
+    }
+
+    assert source_files, "the successor payload must exist before it can be projected"
+    assert projected_links.keys() == source_files.keys()
+    for relative, link in projected_links.items():
+        assert not link.readlink().is_absolute()
+        assert link.resolve(strict=True).read_bytes() == source_files[relative]
+
+
+def test_python_tooling_1_12__family_navigation__selects_the_successor() -> None:
+    """Mutable family documents identify the versioned authority without catalog edits."""
+    _require_payload(_V112)
+    for relative in ("README.md", "adopt.md", "agent-summary.md"):
+        text = (_FAMILY / relative).read_text(encoding="utf-8")
+        assert "python-tooling@1.12" in text
+        assert "versions/1.12/" in text

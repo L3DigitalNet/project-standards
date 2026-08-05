@@ -43,7 +43,7 @@ _FORMAT_WORKFLOW = _ROOT / ".github/workflows/format.yml"
 _LINT_WORKFLOW = _ROOT / ".github/workflows/lint-markdown.yml"
 
 _V18_AGGREGATE = "sha256:22ebe7b95ca82daa276746c9bf3f0688d15ce4b47314b7e4abea206df7212783"
-_FORMAT_WORKFLOW_DIGEST = "b75a1ebbe0e2a3deb663049a65c2ecde5a032b52f4fc9b831d7d48391a7a2d31"
+_FORMAT_WORKFLOW_DIGEST = "8c4e5ab82be13d028efab376b3fd3b991cddd85560b144eadd693e3193a9aee8"
 # The hosted lint workflow is not frozen forever: it is the self-hosted rendering
 # of the current default markdown-tooling payload, so an activation that changes
 # that resource changes these bytes. 1.10 (issue #63) appended the generated-tree
@@ -51,7 +51,11 @@ _FORMAT_WORKFLOW_DIGEST = "b75a1ebbe0e2a3deb663049a65c2ecde5a032b52f4fc9b831d7d4
 # repository escapes with `lint_workflow_ownership = "consumer-owned"`. The digests
 # are pinned so changes to either mutable `@v5` endpoint are always deliberate and
 # reviewed; the format endpoint changed in 5.14 only to pin `actions/checkout@v7`.
-_LINT_WORKFLOW_DIGEST = "79adf319e9e092c106218d327d7186fb8c68a2d14adbdc4d05fde10f81a1ed1d"
+# 1.13 (issues #88, #114, #119) repins both endpoints again: `runner-labels`,
+# setup-node 7.0.0, the enforced prettier 3.9.6 pin, and the bounded tracked-file
+# selection. The selection narrows rather than widens, so the parity contract
+# these digests guard is unchanged.
+_LINT_WORKFLOW_DIGEST = "d275f45dfb9afffae82f923bb823e031346e1847e40cd6b057223d084f9e8db3"
 
 
 def _payload(root: Path) -> InstalledPayload:
