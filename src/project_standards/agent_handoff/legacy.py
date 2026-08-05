@@ -7,6 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from project_standards.agent_handoff.integrations.session_start import (
+    Syntax,
+    duplicate_startup_injection,
+)
 from project_standards.agent_handoff.model import Finding
 from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
 from project_standards.control_plane.codec import parse_lock
@@ -149,6 +153,15 @@ _STARTUP_EVIDENCE_CODES = frozenset(
         "AH-LEGACY-CLAUDE-REGISTRATION",
         "AH-LEGACY-CODEX-REGISTRATION",
     }
+)
+
+# Registration containers whose SessionStart list can hold a legacy group beside
+# the managed one. Lock provenance authenticates the managed unit inside these
+# files, never the rest of the list, so they are inspected for overlap even when
+# `_STARTUP_EVIDENCE_CODES` above defers to the lock (issues #90 and #102).
+_REGISTRATION_CONTAINERS: tuple[tuple[str, Syntax], ...] = (
+    (".claude/settings.json", "jsonc"),
+    (".codex/config.toml", "toml"),
 )
 
 _CANONICAL_PREFIXES = (
@@ -326,6 +339,23 @@ def legacy_report(repository: RepositoryRoot) -> tuple[Finding, ...]:
             "AH-LEGACY-CODEX-REGISTRATION",
         }:
             legacy_hook_evidence = True
+
+    for relative, syntax in _REGISTRATION_CONTAINERS:
+        try:
+            text = _read_text(repository, relative)
+        except RepositoryBoundaryError:
+            continue
+        if text is None or not duplicate_startup_injection(text, syntax=syntax):
+            continue
+        findings.append(
+            _finding(
+                "AH-LEGACY-DUPLICATE-HOOK",
+                relative,
+                "more than one SessionStart group injects handoff startup context",
+                "Remove the unmanaged SessionStart registration; only the managed unit may inject.",
+                severity="error",
+            )
+        )
 
     try:
         old_state = _path_exists(repository, "docs/state.md")

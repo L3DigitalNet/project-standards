@@ -14,6 +14,10 @@ from project_standards.adopt.errors import AdoptError
 from project_standards.agent_handoff.integrations.links import (
     _normalized_link_occurrences,  # pyright: ignore[reportPrivateUsage]  # predecessor enrichment
 )
+from project_standards.agent_handoff.integrations.session_start import (
+    Syntax,
+    duplicate_startup_injection,
+)
 from project_standards.agent_handoff.legacy import legacy_report
 from project_standards.agent_handoff.model import (
     ChangeKind,
@@ -336,6 +340,41 @@ def _selected_shape_findings(
     return grouped
 
 
+_REGISTRATION_CONTAINERS: tuple[tuple[str, Syntax], ...] = (
+    (".claude/settings.json", "jsonc"),
+    (".codex/config.toml", "toml"),
+)
+
+
+def _duplicate_startup_findings(snapshots: JsonObject) -> list[Finding]:
+    """Refuse a green report for a repository that injects startup twice (#102).
+
+    Every selected payload answers this question per managed unit, so a legacy
+    group under a different keyed-set key is green by construction there. The
+    engine holds the whole container and is the only side that can see both
+    handlers, so the refusal lives here rather than behind a payload bump.
+    """
+    findings: list[Finding] = []
+    for path, syntax in _REGISTRATION_CONTAINERS:
+        text = _snapshot_text(snapshots, path)
+        if text is None or not duplicate_startup_injection(text, syntax=syntax):
+            continue
+        findings.append(
+            Finding(
+                code="AH-LEGACY-DUPLICATE-HOOK",
+                severity="error",
+                path=path,
+                locus="startup injection",
+                message="more than one SessionStart group injects handoff startup context",
+                guidance=(
+                    "Remove the unmanaged SessionStart registration; "
+                    "only the managed unit may inject."
+                ),
+            )
+        )
+    return findings
+
+
 def _provider_findings(
     selected: SelectedCommandPackage, operation: V2ProviderOperation
 ) -> tuple[Finding, ...]:
@@ -350,7 +389,7 @@ def _provider_findings(
         else {}
     )
     link_occurrences: dict[tuple[str, str], list[tuple[int, int]]] = {}
-    findings: list[Finding] = []
+    findings: list[Finding] = _duplicate_startup_findings(snapshots)
     for item in result.findings:
         locus = item.locus or item.identity
         message = item.message
