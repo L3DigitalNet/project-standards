@@ -299,6 +299,22 @@ def _predecessor_shape_locus(message: str) -> str:
     return "document shape"
 
 
+def _shape_candidate_compatible(message: str, candidate: Finding) -> bool:
+    """Rule-identity guard for enrichment candidates sharing one locus (#75).
+
+    Forbid-paragraph and overlong-paragraph provider prose both classify to the
+    "document paragraph" locus, but the engine discriminates the rules by
+    `limit`: the forbid rule never carries one and the length rule always does.
+    Loci whose provider prose maps to a single engine rule stay order-paired.
+    """
+    normalized = message.casefold()
+    if "paragraph not allowed in section" in normalized:
+        return candidate.limit is None
+    if "overlong paragraph" in normalized:
+        return candidate.limit is not None
+    return True
+
+
 def _selected_shape_findings(
     selected: SelectedCommandPackage,
     snapshots: JsonObject,
@@ -382,8 +398,16 @@ def _provider_findings(
         ):
             locus = _predecessor_shape_locus(item.message)
             candidates = shape_findings.get((item.path, locus), [])
-            if candidates:
-                enriched = candidates.pop(0)
+            matched = next(
+                (
+                    position
+                    for position, candidate in enumerate(candidates)
+                    if _shape_candidate_compatible(item.message, candidate)
+                ),
+                None,
+            )
+            if matched is not None:
+                enriched = candidates.pop(matched)
                 message = enriched.message
                 line = enriched.line
                 column = enriched.column

@@ -282,3 +282,105 @@ def test_agent_handoff_prerequisite_and_internal_failures_exit_three(
     )
 
     assert main(["agent-handoff", "validate", "--repo", str(tmp_path)]) == 3
+
+
+@pytest.mark.parametrize("provider_order", ["overlong-first", "forbid-first"])
+def test_agent_handoff_shape_enrichment_pairs_candidates_by_rule_identity(
+    monkeypatch: pytest.MonkeyPatch,
+    provider_order: str,
+) -> None:
+    # Issue #75: forbid-paragraph and overlong-paragraph findings share the
+    # "document paragraph" enrichment bucket, so a FIFO pop can hand a provider
+    # message the other rule's line and measurement. Pairing must follow rule
+    # identity regardless of arrival order.
+    from typing import cast
+
+    from project_standards.agent_handoff import cli as agent_handoff_cli
+    from project_standards.agent_handoff.model import Finding
+    from project_standards.control_plane.command_resolution import SelectedCommandPackage
+    from project_standards.control_plane.diagnostics import ControlFinding
+    from project_standards.control_plane.providers import ProviderResult
+    from project_standards.package_contract.payload import (
+        ProviderEffect,
+    )
+    from project_standards.package_contract.payload import (
+        ProviderOperation as V2ProviderOperation,
+    )
+
+    path = "docs/handoff/state.md"
+    forbid_candidate = Finding(
+        code="AH-SHAPE",
+        severity="error",
+        path=path,
+        locus="document paragraph",
+        message="paragraph not allowed in this document",
+        guidance="",
+        line=3,
+        column=1,
+        observed=57,
+        limit=None,
+    )
+    overlong_candidate = Finding(
+        code="AH-SHAPE",
+        severity="error",
+        path=path,
+        locus="document paragraph",
+        message="paragraph exceeds its configured character limit; max 220",
+        guidance="",
+        line=9,
+        column=1,
+        observed=300,
+        limit=220,
+    )
+
+    def provider_item(message: str) -> ControlFinding:
+        return ControlFinding(
+            code="AH-SHAPE",
+            severity="error",
+            standard_id="agent-handoff",
+            version="1.8",
+            path=path,
+            identity="shape",
+            message=message,
+            hint="",
+            locus="shape",
+        )
+
+    provider_overlong = provider_item("state.md: document contains an overlong paragraph")
+    provider_forbid = provider_item("state.md: paragraph not allowed in section 'Current focus'")
+    ordered = (
+        (provider_overlong, provider_forbid)
+        if provider_order == "overlong-first"
+        else (provider_forbid, provider_overlong)
+    )
+
+    def dispatch_stub(*_args: object) -> dict[str, object]:
+        return {}
+
+    def invoke_stub(*_args: object) -> ProviderResult:
+        return ProviderResult(effect=ProviderEffect.FINDINGS, findings=ordered)
+
+    def grouped_stub(*_args: object) -> dict[tuple[str, str], list[Finding]]:
+        return {(path, "document paragraph"): [forbid_candidate, overlong_candidate]}
+
+    monkeypatch.setattr(agent_handoff_cli, "provider_dispatch_input", dispatch_stub)
+    monkeypatch.setattr(agent_handoff_cli, "invoke_selected_provider", invoke_stub)
+    monkeypatch.setattr(agent_handoff_cli, "_selected_shape_findings", grouped_stub)
+
+    findings = agent_handoff_cli._provider_findings(  # pyright: ignore[reportPrivateUsage]
+        cast(SelectedCommandPackage, object()), V2ProviderOperation.VALIDATE
+    )
+
+    by_position = dict(zip(ordered, findings, strict=True))
+    overlong_result = by_position[provider_overlong]
+    forbid_result = by_position[provider_forbid]
+    assert (overlong_result.line, overlong_result.observed, overlong_result.limit) == (
+        9,
+        300,
+        220,
+    )
+    assert (forbid_result.line, forbid_result.observed, forbid_result.limit) == (
+        3,
+        57,
+        None,
+    )
