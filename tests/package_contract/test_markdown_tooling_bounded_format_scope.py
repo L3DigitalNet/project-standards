@@ -394,6 +394,57 @@ def test_red__rendered_lint_command__carries_the_declared_lint_exclusions() -> N
     assert "sed -z 's|^|:|'" in command
 
 
+_FORMAT_EXCLUSIONS: JsonObject = {
+    "exclusions": [
+        {"glob": "snapshots/**", "applies_to": "format", "reason": "Byte-locked."},
+        {"glob": "vendor/**", "applies_to": "lint", "reason": "Vendored."},
+        {"glob": "docs/generated/**", "applies_to": "both", "reason": "Generated."},
+    ]
+}
+
+
+def test_red__rendered_format_command__carries_the_declared_format_exclusions(
+    mixed_corpus: Path,
+) -> None:
+    """Issue #88: the local Prettier scope is the declared surface *minus* exclusions.
+
+    The block prints "Declared exclusions:" immediately above these commands, so a
+    Form B that ignored them would read as a promise the command does not keep.
+    Only the Git-routed form can subtract them -- Prettier's CLI has no negative
+    pattern -- and a `lint`-scoped exclusion must not leak into either.
+    """
+    command = _rendered_local_command(_FORMAT_EXCLUSIONS)
+    assert command is not None
+
+    assert "':(glob)**/*.md'" in command
+    assert "':(glob,exclude)snapshots/**'" in command
+    assert "':(glob,exclude)docs/generated/**'" in command
+    assert "':(glob,exclude)vendor/**'" not in command, "a lint-only exclusion must not leak"
+
+    fallback = _rendered_fallback_command(_FORMAT_EXCLUSIONS)
+    assert fallback is not None
+    assert "exclude" not in fallback
+    assert "--ignore-path" in _rendered_block(_FORMAT_EXCLUSIONS)
+
+
+def test_red__declared_format_exclusion__leaves_the_selected_set(mixed_corpus: Path) -> None:
+    """The excluded file is genuinely unchecked, not merely absent from the string."""
+    _write(mixed_corpus, "snapshots/frozen.md", _MISFORMATTED_MARKDOWN)
+    _git(mixed_corpus, "add", "-A")
+
+    baseline = _rendered_local_command({})
+    assert baseline is not None
+    assert "snapshots/frozen.md" in _reported(_bounded_outcome(mixed_corpus, baseline))
+
+    command = _rendered_local_command(_FORMAT_EXCLUSIONS)
+    assert command is not None
+    bounded = _bounded_outcome(mixed_corpus, command)
+
+    _assert_no_hard_error(bounded)
+    assert "snapshots/frozen.md" not in _reported(bounded)
+    assert _reported(bounded) == _IN_CORPUS
+
+
 @pytest.fixture
 def jsonc_free_corpus(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A conformant repository with no JSONC file -- issue #119's shape.

@@ -147,8 +147,32 @@ def _default_lint_exclusions(config: Mapping[str, object], configured: Sequence[
 
 
 def _format_selection(config: Mapping[str, object]) -> list[str]:
-    """Return Prettier's declared corpus: `markdown_globs` then `config_globs`."""
+    """Return Prettier's declared corpus: `markdown_globs` then `config_globs`.
+
+    Positives only. The managed caller workflow carries typed exclusions on a
+    separate `exclusions` input, which the reusable job turns into an
+    `--ignore-path` file, so widening this list would double-apply them there.
+    """
     return [*_globs(config, "markdown_globs"), *_globs(config, "config_globs")]
+
+
+def _format_local_selection(config: Mapping[str, object]) -> list[str]:
+    """Return Prettier's local corpus: the declared globs, then every format negation.
+
+    A locally run command has no second channel. The caller workflow can hand
+    Prettier an ignore file because it builds one; a consumer following the guide
+    would have to author one by hand, which is exactly the step issue #88 says the
+    guide must stop requiring. Folding `format`/`both` exclusions into the same
+    selection makes the local scope equal the reconciled scope — the declared
+    surface minus its typed exclusions — with no new option.
+
+    Only the Git-routed form can consume this. Prettier's CLI has no negative
+    pattern, so the fallback still needs `--ignore-path`; `_local_format_commands`
+    keeps that split explicit.
+    """
+    selection = _format_selection(config)
+    selection.extend(f"!{value}" for value in _exclusion_globs(config, "format"))
+    return selection
 
 
 def _lint_selection(config: Mapping[str, object]) -> list[str]:
@@ -372,11 +396,15 @@ def _local_format_commands(config: Mapping[str, object]) -> list[str]:
     status in 1..125 onto 123, so the normative form cannot re-emit Prettier's own
     1-means-findings / 2-means-error distinction. Zero still means clean and
     non-zero still means "attend to this"; read the output to tell them apart.
+
+    The two forms differ in one more way, and the guide has to say so: only the
+    Git-routed form applies typed `format`/`both` exclusions, because Git can
+    express negation in the same selection and Prettier's CLI cannot. A consumer
+    with declared format exclusions who falls back must add `--ignore-path`.
     """
-    selection = _format_selection(config)
-    globbed = " ".join(_shell_word(glob) for glob in selection)
+    globbed = " ".join(_shell_word(glob) for glob in _format_selection(config))
     return [
-        f"{_tracked_files(selection)} | xargs -0 -r npx prettier --check --",
+        f"{_tracked_files(_format_local_selection(config))} | xargs -0 -r npx prettier --check --",
         f"npx prettier --check --no-error-on-unmatched-pattern -- {globbed}",
     ]
 
@@ -419,6 +447,14 @@ def _instructions(config: Mapping[str, object]) -> str:
         # even though the surrounding prettier-ignore range exempts the fence from
         # Prettier, not from markdownlint.
         tracked, globbed = _local_format_commands(config)
+        fallback_caveat = (
+            "Without Git, bound the same scope by glob instead. Prettier's CLI has no "
+            "negative pattern, so this form does not apply the declared format "
+            "exclusions above; pass them through an `--ignore-path` file inside the "
+            "repository:"
+            if _exclusion_globs(config, "format")
+            else "Without Git, bound the same scope by glob instead:"
+        )
         lines.extend(
             [
                 "",
@@ -428,7 +464,7 @@ def _instructions(config: Mapping[str, object]) -> str:
                 tracked,
                 "```",
                 "",
-                "Without Git, bound the same scope by glob instead:",
+                fallback_caveat,
                 "",
                 "```bash",
                 globbed,

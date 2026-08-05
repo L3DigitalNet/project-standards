@@ -22,14 +22,14 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:4979d8a59dd45b374fdaeb1c76b8fe07544f831c2f47340fd01c4d0062b81299"
+digest = "sha256:31f6d39f05a38182bf3b022b5bc6edbaeb4481cc4720fac869796159a37a7811"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:59c7eb95a0de124bea5e82f069fe4d6f4fde870cf90824b243a9f6c9a478f697"
+digest = "sha256:f68d63bc691af24fb9113b3563e61efdeb4a5d06d555ad4e117d13e3e1c46620"
 
 [[resources]]
 id = "agent-summary"
@@ -106,7 +106,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/markdown_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:dc31152d38873fe902f1bb45268ac734ece0342766f242daa349f27b771df54d"
+digest = "sha256:e6cfff3b591d072614698c058a3cbd555677143cfc54db0e6138bf154c6e9a34"
 
 [[resources]]
 id = "provider-input"
