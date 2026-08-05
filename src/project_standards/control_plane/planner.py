@@ -2491,7 +2491,14 @@ def _validate_consumer_state(
             # published — writes nothing new here, so a repository condition it
             # did not create must not become a new steady-state gate failure.
             continue
-        snapshots = consumer_state_input(request.repo, package.standard_id)
+        # Issue #118: the resolved options travel with the request because part of
+        # the consumer state a package depends on is named BY those options — the
+        # declared source and test roots — and is unknowable from a fixed path list.
+        snapshots = consumer_state_input(
+            request.repo,
+            package.standard_id,
+            package.effective_config,
+        )
         if snapshots is None:
             continue
         for provider in payload.manifest.providers:

@@ -27,7 +27,8 @@ from __future__ import annotations
 import base64
 import os
 import posixpath
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import cast
 
@@ -89,12 +90,38 @@ _HANDOFF_OPERATIONS = frozenset(
     {ProviderOperation.VALIDATE, ProviderOperation.VERIFY, ProviderOperation.DRIFT_CHECK}
 )
 
+
+@dataclass(frozen=True, slots=True)
+class _ConsumerStateRead:
+    """Declare the repository paths one family's pre-write validation may read.
+
+    `paths` are fixed. `path_options` name resolved-option pointers whose values
+    ARE repository-relative paths, which is the part a fixed tuple cannot express:
+    issue #118's declared source and test roots come from the consumer's own
+    options, so the set differs per repository and is unknown until the package is
+    resolved. Reading them by pointer keeps the rule mechanical — this seam never
+    learns what a "source root" means, only that an option holds paths.
+    """
+
+    paths: tuple[str, ...]
+    path_options: tuple[str, ...] = ()
+
+
 # Consumer-state families read repository bytes that exist BEFORE this package
 # writes anything, so their validation is the only class that may run during
 # reconcile planning (issue #109). The paths are the consumer-authored inputs a
 # family's adoption depends on — never its own managed outputs, which do not
 # exist yet at planning time.
-_CONSUMER_STATE_PATHS: dict[str, tuple[str, ...]] = {"python-tooling": ("pyproject.toml",)}
+#
+# `src` and `tests` are listed because they are this family's own default layout
+# and collection roots: the defaults are not option values, so no pointer reaches
+# them, and issue #118 is precisely about a declared root that nothing creates.
+_CONSUMER_STATE_PATHS: dict[str, _ConsumerStateRead] = {
+    "python-tooling": _ConsumerStateRead(
+        paths=("pyproject.toml", "src", "tests"),
+        path_options=("additional_source_roots", "/pytest/test_paths"),
+    )
+}
 
 # Relocated from `agent_handoff/cli.py` with `_walk_handoff_paths`: the declared
 # handoff read set is selection, and selection is half of this seam.
@@ -519,7 +546,40 @@ def _verification_input(
     return result
 
 
-def consumer_state_input(repo: Path, standard_id: str) -> JsonObject | None:
+def _option_paths(config: Mapping[str, JsonValue], pointer: str) -> tuple[str, ...]:
+    """Return the repository-relative paths one resolved option pointer holds.
+
+    Two shapes are accepted because `additional_source_roots` accepts both: a
+    bare string, or a table whose `path` key carries the value. Anything else is
+    ignored rather than guessed at — the option schema has already rejected every
+    malformed value by the time an effective config exists here, so a shape this
+    seam does not recognize is not a path it may invent one from.
+    """
+    node: object = config
+    for segment in pointer.split("/") if pointer.startswith("/") else [pointer]:
+        if not segment:
+            continue
+        if not isinstance(node, Mapping):
+            return ()
+        node = cast("Mapping[str, object]", node).get(segment)
+    if not isinstance(node, Sequence) or isinstance(node, str | bytes):
+        return ()
+    paths: list[str] = []
+    for entry in cast("Sequence[object]", node):
+        if isinstance(entry, str):
+            paths.append(entry)
+        elif isinstance(entry, Mapping):
+            value = cast("Mapping[str, object]", entry).get("path")
+            if isinstance(value, str):
+                paths.append(value)
+    return tuple(paths)
+
+
+def consumer_state_input(
+    repo: Path,
+    standard_id: str,
+    effective_config: Mapping[str, JsonValue] | None = None,
+) -> JsonObject | None:
     """Build the pre-write consumer-state input for a family that declares one.
 
     Answered as an explicit input CLASS rather than discovered by building every
@@ -530,10 +590,19 @@ def consumer_state_input(repo: Path, standard_id: str) -> JsonObject | None:
 
     Takes a repository root and a standard id rather than a selected package: the
     reconcile planner holds neither a resolved lock nor a command-selected
-    distribution when it must decide whether a write is authorized.
+    distribution when it must decide whether a write is authorized. The resolved
+    options are passed separately and stay optional: a caller that has none still
+    gets the fixed reads (issue #109), and only the option-derived reads (issue
+    #118) go missing, so no caller silently loses the authorization check.
     """
-    paths = _CONSUMER_STATE_PATHS.get(standard_id)
-    if paths is None:
+    declared = _CONSUMER_STATE_PATHS.get(standard_id)
+    if declared is None:
         return None
-    captured = capture_command_snapshot(repo, paths)
+    paths = list(declared.paths)
+    if effective_config is not None:
+        for pointer in declared.path_options:
+            paths.extend(
+                path for path in _option_paths(effective_config, pointer) if path not in paths
+            )
+    captured = capture_command_snapshot(repo, tuple(paths))
     return {"consumer_state": {path: captured[path] for path in paths}}
