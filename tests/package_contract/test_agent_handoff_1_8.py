@@ -326,9 +326,12 @@ def test_agent_handoff_1_8__registration__is_default_and_integrity_bound() -> No
         if package["id"] == "agent-handoff"
     }
 
+    # Catalog 5 retains 1.8 after 1.9 becomes the default. The dogfood lock tracks
+    # the new default only after release-prep reconciliation, so that assertion
+    # stays in tests/agent_handoff/test_packaging.py rather than here.
     assert manifest.payload.version.value == "1.8"
     assert indexed["1.8"].digest == integrity.aggregate_digest
-    assert roles["1.8"] == "default"
+    assert roles["1.8"] == "retained"
     assert roles["1.7"] == "retained"
     assert any(migration.id == "legacy-v4-to-1-8" for migration in manifest.migrations)
     assert any(migration.to_endpoint.value == "package:1.8" for migration in manifest.migrations)
