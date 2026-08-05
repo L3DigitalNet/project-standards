@@ -81,8 +81,13 @@ jobs:
       # and bundles/ are excluded — compiling those resource mirrors breaks
       # the projection and wheel-content proofs (run 30663987887); the
       # runtime itself only ever imports the real package dirs.
+      # scripts/ joins them because several suites import scripts/*.py as
+      # modules: its first-import __pycache__ landed mid-battery, and since
+      # the digest prunes __pycache__ but still hashes its PARENT, the lone
+      # `scripts` entry moved between the proof's two samples (run
+      # 30973008922 — the only changed entry, no file entry touched).
       - name: Warm bytecode caches
-        run: uv run python -m compileall -q tests src/project_standards -x "/(payloads|bundles)/"
+        run: uv run python -m compileall -q tests src/project_standards scripts -x "/(payloads|bundles)/"
 
       - name: Reset coverage data
         run: uv run coverage erase

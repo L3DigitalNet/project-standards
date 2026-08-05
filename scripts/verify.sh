@@ -307,7 +307,15 @@ printf 'verify: PROJECT_STANDARDS_COMPATIBILITY_WHEEL=%s\n\n' "$PROJECT_STANDARD
 # tests/ plus the src package (clean-env subprocess tests import the
 # editable install from src/), EXCLUDING the payloads/bundles resource
 # mirrors whose byte-exact proofs a compile would break.
-"$VENV_BIN/python" -m compileall -q tests src/project_standards -x "/(payloads|bundles)/" ||
+# scripts/ belongs here too: several suites import scripts/*.py as modules
+# rather than running them, so on a cold checkout the first such import
+# created scripts/__pycache__ mid-battery. The digest prunes __pycache__ but
+# still hashes its PARENT, so that lone directory's size and mtime moved
+# between the proof's two samples and it reported a phantom write (hosted
+# Check 30973008922; an instrumented cold-clone battery showed `scripts` as
+# the only changed entry, with no file entry touched).
+"$VENV_BIN/python" -m compileall -q tests src/project_standards scripts \
+    -x "/(payloads|bundles)/" ||
     die "compileall failed"
 
 "$VENV_BIN/coverage" erase || die "coverage erase failed"

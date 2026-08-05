@@ -5,6 +5,7 @@ Every payload access happens inside a test behind an existence assertion: while
 during collection, so the red signal stays readable.
 """
 
+import importlib.metadata
 import json
 import os
 import subprocess
@@ -148,6 +149,19 @@ def test_python_tooling_1_11__layout_root__resolves_before_every_other_root(
     assert len(values) == len(set(values))
 
 
+def _checker_requirement() -> str:
+    """Pin the fixture's checker to the one this repository already gates with.
+
+    The fixture resolves its dev group from the registry (see `_basedpyright_output`),
+    so an unpinned requirement would silently adopt whatever basedpyright PyPI serves
+    that day and let an upstream diagnostic change break this gate for a reason that
+    has nothing to do with the 1.11 payload. Reading the version the repository's own
+    lock already installed keeps the oracle on the toolchain the gate is defined
+    against, and keeps that fact derived rather than restated here.
+    """
+    return f"basedpyright=={importlib.metadata.version('basedpyright')}"
+
+
 def _write_editable_fixture(repo: Path, checker_table: str) -> None:
     """Materialize issue #89's shape: src layout, editable install, no py.typed."""
     (repo / "src/example_package").mkdir(parents=True)
@@ -180,13 +194,15 @@ def _write_editable_fixture(repo: Path, checker_table: str) -> None:
         'requires = ["uv_build>=0.11,<0.12"]\n'
         'build-backend = "uv_build"\n\n'
         "[dependency-groups]\n"
-        'dev = ["basedpyright"]\n\n'
+        f'dev = ["{_checker_requirement()}"]\n\n'
         f"{checker_table}",
         encoding="utf-8",
     )
 
 
-def _run(repo: Path, command: list[str]) -> subprocess.CompletedProcess[str]:
+def _run(
+    repo: Path, command: list[str], *, offline: bool = True
+) -> subprocess.CompletedProcess[str]:
     # The fixture must resolve imports from its own editable environment alone:
     # this suite runs with the extracted wheel runtime on PYTHONPATH and inside
     # the repository's virtualenv, and either would enter the checker's search
@@ -194,7 +210,10 @@ def _run(repo: Path, command: list[str]) -> subprocess.CompletedProcess[str]:
     environment = {
         key: value for key, value in os.environ.items() if key not in {"PYTHONPATH", "VIRTUAL_ENV"}
     }
-    environment["UV_OFFLINE"] = "1"
+    if offline:
+        environment["UV_OFFLINE"] = "1"
+    else:
+        environment.pop("UV_OFFLINE", None)
     return subprocess.run(
         command,
         cwd=repo,
@@ -206,12 +225,19 @@ def _run(repo: Path, command: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def _basedpyright_output(repo: Path) -> str:
-    synced = _run(repo, ["uv", "sync", "--quiet"])
+    # Provisioning the sandbox is NOT the thing under test, and it cannot be done
+    # offline: this is a scratch project uv has never resolved, so satisfying its
+    # dev group needs a registry resolution whose index metadata no cache holds
+    # unless some unrelated project happened to resolve the same requirement
+    # first. That is true on a warm workstation and false on a fresh runner —
+    # which is exactly why the local battery passed while hosted Check
+    # 30973008922 failed here with "basedpyright was not found in the cache".
+    # A cached wheel does not help; uv still declines to resolve offline.
+    synced = _run(repo, ["uv", "sync", "--quiet"], offline=False)
     if synced.returncode != 0:
-        output = synced.stdout + synced.stderr
-        if "cache" in output.lower() or "offline" in output.lower():
-            pytest.fail(f"offline oracle is missing a locked cache entry:\n{output}")
-        pytest.fail(f"editable fixture could not be synced:\n{output}")
+        pytest.fail(f"editable fixture could not be synced:\n{synced.stdout + synced.stderr}")
+    # The checker run stays offline: everything it needs is installed by now, so
+    # this both keeps the oracle hermetic and proves the sync was complete.
     result = _run(repo, ["uv", "run", "basedpyright", "--verbose", "tests/test_example.py"])
     return result.stdout + result.stderr
 
