@@ -9,6 +9,7 @@ from typing import cast
 import pytest
 
 from project_standards.control_plane import cli as control_cli
+from project_standards.control_plane.catalog_refresh import CatalogAdvance
 from project_standards.control_plane.codec import (
     content_digest,
     parse_config,
@@ -856,8 +857,10 @@ def test_direct_config_upgrade__cli_check_matches_programmatic_plan(
         _allowed_majors: frozenset[MajorAuthorization],
         *,
         state: ControlPlaneState | None = None,
+        advance: CatalogAdvance = CatalogAdvance.NON_ADVANCING,
     ) -> PlannerRequest:
         assert state is None
+        assert advance is CatalogAdvance.NON_ADVANCING
         return planner
 
     monkeypatch.setattr(

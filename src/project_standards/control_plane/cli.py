@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import NoReturn, cast
 
-from project_standards.control_plane.catalog_refresh import plan_catalog_refresh
+from project_standards.control_plane.catalog_refresh import CatalogAdvance, plan_catalog_refresh
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlFinding,
@@ -115,7 +115,17 @@ def build_planner_request(
     allowed_majors: frozenset[MajorAuthorization],
     *,
     state: ControlPlaneState | None = None,
+    advance: CatalogAdvance = CatalogAdvance.NON_ADVANCING,
 ) -> PlannerRequest:
+    """Assemble the one frozen planner request every command resolves against.
+
+    This is the single seam where the advancing/non-advancing split is declared
+    (issue #123). The default is non-advancing because building a request is a
+    pure read: it resolves selections and describes the pending refresh without
+    writing anything. Only the callers that go on to publish the installed
+    catalog — the `--apply` routes below — pass `CatalogAdvance.ADVANCING`, which
+    is what makes them, and only them, refuse over release lineage.
+    """
     selected_state = state or detect_control_plane_state(
         repo, tool_release=distribution.tool_release.value
     )
@@ -147,6 +157,7 @@ def build_planner_request(
         ),
         selected_state.config,
         selected_state.lock,
+        advance=advance,
     )
     resolution = ResolutionRequest(
         desired=selected_state.config,
@@ -869,6 +880,9 @@ def run(
             exit_code=2,
         )
     mode = "apply" if cast("bool", args.apply) else "check" if cast("bool", args.check) else "plan"
+    # `--apply` is the only reconcile mode that publishes the installed catalog,
+    # so it alone asserts release lineage; previews report the pending refresh.
+    advance = CatalogAdvance.ADVANCING if cast("bool", args.apply) else CatalogAdvance.NON_ADVANCING
     try:
         selected_distribution = distribution or InstalledDistribution.current()
         state = detect_control_plane_state(
@@ -881,6 +895,7 @@ def run(
                 selected_distribution,
                 frozenset(),
                 state=state,
+                advance=advance,
             )
             return _run_managed_restore(
                 planner,
@@ -916,7 +931,12 @@ def run(
                 apply=cast("bool", args.apply),
                 json_mode=json_mode,
             )
-        planner = build_planner_request(repo, selected_distribution, allowed_majors)
+        planner = build_planner_request(
+            repo,
+            selected_distribution,
+            allowed_majors,
+            advance=advance,
+        )
         plan = plan_reconciliation(planner)
         if cast("bool", args.apply):
             if not plan.applicable:

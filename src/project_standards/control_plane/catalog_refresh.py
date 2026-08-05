@@ -9,6 +9,7 @@ owned by the planner and executor.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 
 from project_standards.control_plane.codec import render_catalog
 from project_standards.control_plane.diagnostics import ControlPlaneError
@@ -38,6 +39,25 @@ from project_standards.package_contract.release import (
 )
 
 CATALOG_REFRESH_BACKUP = ".catalog-refresh.previous.toml"
+
+
+class CatalogAdvance(StrEnum):
+    """Classify whether one invocation may publish the installed catalog.
+
+    Release lineage and package-release policy answer a single question: may this
+    installed catalog become the repository's committed catalog? Only an
+    invocation that would actually write `.standards/catalog.toml` decides that,
+    so only that invocation is entitled to refuse over it (issue #123). A
+    non-advancing invocation reads the installed catalog, reports its own
+    findings, and leaves the verdict to the advancing command that follows.
+
+    This is the extension point for widening the boundary: a future producer
+    role selects `NON_ADVANCING` for call paths that are advancing today, without
+    touching the rules themselves.
+    """
+
+    ADVANCING = "advancing"
+    NON_ADVANCING = "non-advancing"
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,9 +212,23 @@ def _validate_lineage(
     current_release = ParsedToolRelease(installed_header.release)
     if current_release.sort_key < previous_release.sort_key:
         raise ControlPlaneError("installed catalog release is older than the committed catalog")
+    return committed_bytes, installed_bytes, previous_release, current_release
+
+
+def _assert_release_advanced(
+    committed_bytes: bytes,
+    installed_bytes: bytes,
+    previous_release: ParsedToolRelease,
+    current_release: ParsedToolRelease,
+) -> None:
+    """Refuse to publish a changed catalog that no tool release accounts for.
+
+    Split out of `_validate_lineage` rather than weakened: the rule and its
+    wording are unchanged, but it is now consulted only where a catalog is
+    actually about to be published.
+    """
     if current_release.sort_key == previous_release.sort_key and installed_bytes != committed_bytes:
         raise ControlPlaneError("catalog changed but its tool release did not advance")
-    return committed_bytes, installed_bytes, previous_release, current_release
 
 
 def plan_catalog_refresh(
@@ -202,11 +236,17 @@ def plan_catalog_refresh(
     installed: ConsumerCatalog,
     desired: DesiredConfig,
     lock: CentralLock,
+    *,
+    advance: CatalogAdvance = CatalogAdvance.ADVANCING,
 ) -> CatalogRefreshPlan:
     """Validate and describe one installed same-major catalog refresh.
 
-    Invalid release lineage, incompatible catalog changes, and selections that
-    the installed snapshot cannot honor raise before any repository plan exists.
+    Structural lineage and selections that the installed snapshot cannot honor
+    always raise, because no command can answer over an incoherent state. The
+    two publication policies — that a changed catalog rides a newer tool
+    release, and that the change is a compatible one — are asserted only for
+    `CatalogAdvance.ADVANCING`; a non-advancing caller still receives the
+    computed classification and reports it rather than refusing (issue #123).
     """
     committed_bytes, installed_bytes, previous_release, current_release = _validate_lineage(
         committed,
@@ -214,6 +254,14 @@ def plan_catalog_refresh(
         desired,
         lock,
     )
+    advancing = advance is CatalogAdvance.ADVANCING
+    if advancing:
+        _assert_release_advanced(
+            committed_bytes,
+            installed_bytes,
+            previous_release,
+            current_release,
+        )
     changes = _selection_changes(installed, desired, lock)
     if installed_bytes == committed_bytes:
         classification = ReleaseClassification.PATCH
@@ -223,7 +271,7 @@ def plan_catalog_refresh(
             _release_snapshot(installed),
             ToolVersions(previous_release.value, current_release.value),
         )
-        if diff.classification in {
+        if advancing and diff.classification in {
             ReleaseClassification.MAJOR,
             ReleaseClassification.FORBIDDEN,
         }:
