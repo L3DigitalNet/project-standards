@@ -83,25 +83,27 @@ def test_live_workflow_external_actions_are_sha_pinned_with_version_comments() -
             assert match["version"] == expected_version, f"{workflow}: {action}"
 
 
-def test_dependabot_updates_actions_and_lockfile_backed_node_dependencies() -> None:
-    config = cast(
-        "dict[str, object]",
-        yaml.safe_load((_ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8")),
-    )
-    updates = cast("list[dict[str, object]]", config["updates"])
+def test_dependabot_version_updates_stay_disabled() -> None:
+    """Dependabot version updates are off by decision; re-adding the config is a regression.
 
-    assert updates == [
-        {
-            "package-ecosystem": "github-actions",
-            "directory": "/",
-            "schedule": {"interval": "weekly"},
-        },
-        {
-            "package-ecosystem": "npm",
-            "directory": "/",
-            "schedule": {"interval": "weekly"},
-        },
-    ]
+    This repository is a standards *producer*. Four root workflows are installed payload
+    resources byte-locked to published package versions, and the external action pins plus
+    the Node tool pins are reviewed gates (`_EXTERNAL_ACTIONS`, `tests/coherence/test_pins.py`).
+    Dependabot models none of that, and fails two distinct ways. Against a payload-managed
+    workflow it rewrites the *installed* file rather than the canonical payload under
+    `standards/**`, tripping CP-MODIFIED-MANAGED (#33, #110). Against the Node deps it moves a
+    version this repository documents behaviorally in shipped prose, tripping the coherence
+    pins (#112, #113). Neither is mergeable without the payload work Dependabot cannot do.
+
+    Scoping Dependabot to unmanaged paths was rejected: the ignore list would have to track
+    which workflows are payload-managed, and that set changes whenever a package claims or
+    relinquishes a path — a second source of truth that would silently rot against the lock.
+
+    Dependency currency is not abandoned, it moves to the payload cycle, where a pin bump is
+    reviewed alongside the prose that documents its behavior. Dependabot *alerts* remain
+    enabled at the repository level; they raise no pull requests and are unaffected.
+    """
+    assert not (_ROOT / ".github" / "dependabot.yml").exists()
 
 
 @pytest.mark.parametrize("relative_path", _ROOT_WORKFLOWS)
