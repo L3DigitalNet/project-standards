@@ -6,7 +6,7 @@ description: 'Approved design for an agent-maintained usage documentation site p
 doc_type: 'decision'
 status: 'active'
 created: '2026-08-02'
-updated: '2026-08-02'
+updated: '2026-08-05'
 tags:
   - 'standard'
 aliases: []
@@ -102,13 +102,13 @@ Validation keeps one authority per concern: reconciliation covers options, owner
 ## Consequential decisions
 
 | Decision | Approved choice | Consequence and reopening trigger |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | Boundary | `docs/usage/`; content and rendering authorities remain independent. | Reopen if direct rendering needs duplicated canonical content. |
 | Actors | Humans read; agents maintain docs in user-visible tasks. | Reopen if a human editorial workflow becomes real. |
 | Navigation | Curated `nav`, strict omitted-page checks, explicit `not_in_nav`. | Reopen if measured scale makes curation unmaintainable. |
 | Runtime | Package PEP 723 script plus adjacent uv lock. | Explicit uv invocation preserves portability. |
 | Configuration | Semantic co-ownership of package infrastructure and repository identity/navigation. | Prove YAML addressability; narrow ownership if needed. |
-| Feedback | Explicit `github-issues | disabled`, no inference or framework. | Reverify GitHub behavior; generalize only for a second provider. |
+| Feedback | Explicit `github-issues \| disabled`, no inference or framework. | Reverify GitHub behavior; generalize only for a second provider. |
 | Content | One create-only repository-owned landing page; no placeholders. | Reopen if another page becomes universal. |
 | CLI | Move one canonical reference into the site through a compatible CLI Documentation successor. | Inventory old links and preserve non-site defaults. |
 | Validation | Compose existing authorities, thin gap provider, generic transactions. | Reopen if an invariant lacks deterministic coverage. |
