@@ -2,15 +2,22 @@
   "$defs": {
     "ControlHeader": {
       "additionalProperties": false,
-      "description": "Consumer-owned schema and catalog-major intent.",
+      "description": "Consumer-owned schema, catalog-major intent, and repository role.",
       "properties": {
         "catalog": {
           "pattern": "^[1-9][0-9]*$",
           "title": "Catalog",
           "type": "string"
         },
+        "role": {
+          "$ref": "#/$defs/ControlRole",
+          "default": "consumer"
+        },
         "schema_version": {
-          "const": "1.0",
+          "enum": [
+            "1.0",
+            "1.1"
+          ],
           "title": "Schema Version",
           "type": "string"
         }
@@ -21,6 +28,15 @@
       ],
       "title": "ControlHeader",
       "type": "object"
+    },
+    "ControlRole": {
+      "description": "Declare which side of the catalog contract a repository is on.",
+      "enum": [
+        "consumer",
+        "producer"
+      ],
+      "title": "ControlRole",
+      "type": "string"
     },
     "DesiredPackage": {
       "additionalProperties": false,

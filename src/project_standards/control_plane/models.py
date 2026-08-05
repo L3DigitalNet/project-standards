@@ -73,11 +73,37 @@ def _sorted_mapping[T](value: dict[str, T]) -> dict[str, T]:
     return dict(sorted(value.items()))
 
 
-class ControlHeader(StrictModel):
-    """Consumer-owned schema and catalog-major intent."""
+# A consumer receives a published catalog; a producer builds the one it will
+# publish, so its installed catalog is legitimately ahead of its committed
+# catalog for a whole release train (REQ-908). The distinction is read at one
+# place only — the catalog-publication policy in `catalog_refresh` — and
+# deliberately reaches neither resolution, planning, nor provider input.
+class ControlRole(StrEnum):
+    """Declare which side of the catalog contract a repository is on."""
 
-    schema_version: Literal["1.0"]
+    CONSUMER = "consumer"
+    PRODUCER = "producer"
+
+
+class ControlHeader(StrictModel):
+    """Consumer-owned schema, catalog-major intent, and repository role."""
+
+    schema_version: Literal["1.0", "1.1"]
     catalog: CatalogMajor
+    # Excluded from serialization on purpose. `config_digest` hashes this model's
+    # dump, so a serialized role would move every existing consumer's lock digest
+    # at upgrade and make declaring a role look like a desired-state change. The
+    # role is a local statement about who owns the installed catalog, not applied
+    # state, so it stays out of every digest basis.
+    role: ControlRole = Field(default=ControlRole.CONSUMER, exclude=True)
+
+    @model_validator(mode="after")
+    def _role_requires_its_own_schema_version(self) -> ControlHeader:
+        # The default keeps 1.0 headers valid unchanged; writing the key is what
+        # 1.1 introduces, so an explicit `role = "consumer"` is gated too.
+        if self.schema_version == "1.0" and "role" in self.model_fields_set:
+            raise ValueError("role requires config schema_version 1.1")
+        return self
 
 
 class DesiredPackage(StrictModel):
@@ -109,9 +135,16 @@ class DesiredConfig(StrictModel):
         return _sorted_mapping(value)
 
 
-class CatalogHeader(ControlHeader):
+# Deliberately not derived from `ControlHeader`: the catalog header is
+# tool-owned and its schema is versioned independently of the consumer-owned
+# config header, which now carries a key — `role` — that has no meaning in a
+# published catalog. Keeping the two apart also keeps the generated
+# `consumer-catalog.schema.json` byte-stable while the config header evolves.
+class CatalogHeader(StrictModel):
     """Installed tool release and self-digest for one catalog snapshot."""
 
+    schema_version: Literal["1.0"]
+    catalog: CatalogMajor
     release: ToolRelease
     digest: Sha256Digest
 

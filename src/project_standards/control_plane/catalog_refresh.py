@@ -18,6 +18,7 @@ from project_standards.control_plane.models import (
     CatalogChannel,
     CentralLock,
     ConsumerCatalog,
+    ControlRole,
     DesiredConfig,
 )
 from project_standards.control_plane.resolution import (
@@ -51,9 +52,9 @@ class CatalogAdvance(StrEnum):
     non-advancing invocation reads the installed catalog, reports its own
     findings, and leaves the verdict to the advancing command that follows.
 
-    This is the extension point for widening the boundary: a future producer
-    role selects `NON_ADVANCING` for call paths that are advancing today, without
-    touching the rules themselves.
+    This is the extension point for widening the boundary: the producer role
+    (REQ-908) withdraws publication policy from call paths that are advancing
+    today, without touching the rules themselves.
     """
 
     ADVANCING = "advancing"
@@ -231,6 +232,33 @@ def _assert_release_advanced(
         raise ControlPlaneError("catalog changed but its tool release did not advance")
 
 
+def _asserts_publication_policy(
+    advance: CatalogAdvance,
+    role: ControlRole,
+    previous_release: ParsedToolRelease,
+    current_release: ParsedToolRelease,
+) -> bool:
+    """Decide whether this invocation must hold the catalog-publication policies.
+
+    Only an advancing invocation publishes a catalog at all (issue #123). A
+    producer repository additionally owns the window in which its installed
+    catalog is ahead of its committed one at an unchanged tool release: that skew
+    is the ordinary authoring state between two release trains, and the release
+    gate — not a repository's own reconciliation — decides when it becomes a
+    release (REQ-908). The window is exactly that equality, so a producer whose
+    release has advanced is held to the full policy like any consumer.
+
+    Structural lineage is not this function's business: downgrade, catalog-major
+    agreement, and lock lineage are asserted unconditionally in
+    `_validate_lineage` and no role reaches them.
+    """
+    if advance is not CatalogAdvance.ADVANCING:
+        return False
+    if role is not ControlRole.PRODUCER:
+        return True
+    return current_release.sort_key != previous_release.sort_key
+
+
 def plan_catalog_refresh(
     committed: ConsumerCatalog,
     installed: ConsumerCatalog,
@@ -245,8 +273,9 @@ def plan_catalog_refresh(
     always raise, because no command can answer over an incoherent state. The
     two publication policies — that a changed catalog rides a newer tool
     release, and that the change is a compatible one — are asserted only for
-    `CatalogAdvance.ADVANCING`; a non-advancing caller still receives the
-    computed classification and reports it rather than refusing (issue #123).
+    `CatalogAdvance.ADVANCING` outside a producer's equal-release window; every
+    other caller still receives the computed classification and reports it
+    rather than refusing (issue #123, REQ-908).
     """
     committed_bytes, installed_bytes, previous_release, current_release = _validate_lineage(
         committed,
@@ -254,8 +283,13 @@ def plan_catalog_refresh(
         desired,
         lock,
     )
-    advancing = advance is CatalogAdvance.ADVANCING
-    if advancing:
+    asserts_policy = _asserts_publication_policy(
+        advance,
+        desired.project_standards.role,
+        previous_release,
+        current_release,
+    )
+    if asserts_policy:
         _assert_release_advanced(
             committed_bytes,
             installed_bytes,
@@ -271,7 +305,7 @@ def plan_catalog_refresh(
             _release_snapshot(installed),
             ToolVersions(previous_release.value, current_release.value),
         )
-        if advancing and diff.classification in {
+        if asserts_policy and diff.classification in {
             ReleaseClassification.MAJOR,
             ReleaseClassification.FORBIDDEN,
         }:

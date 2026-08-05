@@ -256,6 +256,21 @@ A newer v5 tool may carry a compatible updated catalog-5 snapshot. `reconcile` p
 
 Refresh preserves exact pins, package options, accepted-major tracks, referenced extensions, and unrelated files. It refuses an unavailable pin/track, incompatible default change, older-tool downgrade, or catalog-major mismatch.
 
+### Producing repositories
+
+A repository that builds the catalog it publishes is the one exception to the equal-release rule. Between two release trains its installed catalog legitimately carries payloads its committed `.standards/catalog.toml` does not, at an unchanged tool release, and a publishing command would otherwise refuse that state. Declare the repository's side of the contract once in `.standards/config.toml`:
+
+```toml
+[project_standards]
+schema_version = "1.1"
+catalog = "5"
+role = "producer"
+```
+
+`role` is optional and defaults to `consumer`, whose behavior is exactly what this section describes; a consuming repository changes nothing and keeps its `schema_version = "1.0"` header. The key requires `schema_version = "1.1"`, and a `1.0` header that carries it is rejected.
+
+The declaration widens one rule, in one window: a catalog-publishing command — `init`, `upgrade`, and `reconcile --apply` — accepts an installed catalog that differs from the committed one while the tool release is unchanged, and reports the release classification instead of refusing over it. Everything else is unchanged. An older installed release, a catalog-major mismatch, a central lock that disagrees with the committed catalog lineage, and the package release policy once the release has advanced all still refuse. The role is a local declaration rather than desired state, so writing it does not itself change `.standards/lock.toml`.
+
 ### Comments inside managed TOML regions
 
 Consumer comments attached to a managed `pyproject.toml` unit survive a rewrite. When an apply re-renders a managed table, keyed-set entry, or key, comments found in the rewritten region — inside a multi-line array, trailing an owned line, or on their own line between owned lines — are re-emitted directly above the statement with the same key or table in the new rendering; a comment whose key no longer exists moves above the rewritten unit. Rewrites consume the old region completely, so they leave no stray blank lines, and a follow-up `reconcile --check` stays a no-op. The rendered layout of the managed unit itself (line breaks, indentation, entry order) belongs to the package, so annotate managed regions with comment lines rather than relying on a specific array layout.
