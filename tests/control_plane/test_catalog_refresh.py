@@ -508,6 +508,48 @@ def test_unavailable_selection_blocks_catalog_and_lock_writes(tmp_path: Path) ->
     assert not (repo / ".standards/.catalog-refresh.previous.toml").exists()
 
 
+def test_human_preview_shows_the_package_versions_the_refresh_advances(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Issue #126: the documented pre-apply review reads the default preview, not --json."""
+    base = installed_distribution(tmp_path)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=base)
+    extension = repo / ".standards/extensions/alpha/options.toml"
+    extension.parent.mkdir(parents=True)
+    extension.write_text("enabled = true\n", encoding="utf-8")
+    set_standard_enabled(repo, "alpha", True)
+    assert run(["--repo", str(repo), "--apply", "--json"], distribution=base) == 0
+    capsys.readouterr()
+    newer = _distribution_with_alpha_2_1(tmp_path)
+
+    assert run(["--repo", str(repo)], distribution=newer) == 1
+    lines = capsys.readouterr().out.splitlines()
+
+    summary = next(index for index, line in enumerate(lines) if "refresh catalog 5 from" in line)
+    assert lines[summary + 1].strip() == "alpha  2.0 -> 2.1"
+    assert [line for line in lines if line.startswith("  ")] == [lines[summary + 1]]
+
+
+def test_human_preview_of_a_selection_free_refresh_lists_no_advances(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    base = installed_distribution(tmp_path)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=base)
+    newer = InstalledDistribution(base.package_root, tool_release="5.0.1")
+
+    assert run(["--repo", str(repo)], distribution=newer) == 1
+    lines = capsys.readouterr().out.splitlines()
+
+    assert any("refresh catalog 5 from 5.0.0 to 5.0.1" in line for line in lines)
+    assert [line for line in lines if line.startswith("  ")] == []
+
+
 def test_real_installed_default_advancement_updates_selection_compatibly(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

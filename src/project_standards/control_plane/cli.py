@@ -8,7 +8,11 @@ import sys
 from pathlib import Path
 from typing import NoReturn, cast
 
-from project_standards.control_plane.catalog_refresh import CatalogAdvance, plan_catalog_refresh
+from project_standards.control_plane.catalog_refresh import (
+    CatalogAdvance,
+    CatalogRefreshPlan,
+    plan_catalog_refresh,
+)
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlFinding,
@@ -631,6 +635,27 @@ def run_init(
         return _emit_error(json_mode, code, str(exc), exit_code=2)
 
 
+def _catalog_refresh_advances(refresh: CatalogRefreshPlan | None) -> tuple[str, ...]:
+    """Render the resolved package versions a catalog refresh moves.
+
+    The refresh summary names only the release, but which packages advance is what
+    re-renders artifacts, so it is the decision-relevant part of the documented
+    pre-apply review. `--json` has always published these selections; the default
+    preview discarded them at the render layer (issue #126).
+    """
+    if refresh is None or not refresh.changed:
+        return ()
+    width = max((len(change.standard_id) for change in refresh.affected_selections), default=0)
+    return tuple(
+        # Indented past the action's target column so each advance reads as detail
+        # of the refresh line above it rather than as another planned action.
+        f"{'':<9}{change.standard_id:<{width}}  "
+        f"{change.previous.value if change.previous is not None else 'none'}"
+        f" -> {change.current.value}"
+        for change in refresh.affected_selections
+    )
+
+
 def _emit_plan(
     plan: ReconciliationPlan,
     previous_lock: CentralLock,
@@ -652,8 +677,14 @@ def _emit_plan(
             )
         )
     else:
+        advances = _catalog_refresh_advances(plan.catalog_refresh)
         for action in plan.actions:
             print(f"{action.kind.value:<8} {action.target}  {action.summary}")
+            # `$catalog` is the refresh action's own scope, so the advances stay
+            # attached to the summary line they explain wherever it is ordered.
+            if action.scope == "$catalog":
+                for advance in advances:
+                    print(advance)
         _emit_human_findings(plan.findings)
         _emit_human_findings(_lock_only_drift_findings(plan, previous_lock))
         if not drift and plan.applicable:

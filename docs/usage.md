@@ -144,7 +144,7 @@ Exit status: `0` plain init succeeded, migration already complete, migration app
 
 Build one complete plan from `.standards/config.toml`, the committed catalog and lock, installed package payloads, and live repository content. Planning and checking are read-only. Only `--apply` publishes a conflict-free plan, runs read-only verification providers, and replaces the central lock last.
 
-When the installed tool carries a newer compatible snapshot of the same configured catalog major, the plan includes a catalog refresh. Compatible `latest` selections may advance; exact pins, package options, accepted-major tracks, referenced extensions, and unrelated files remain unchanged. An older tool, unavailable pin/track, incompatible default change, or catalog-major mismatch refuses refresh.
+When the installed tool carries a newer compatible snapshot of the same configured catalog major, the plan includes a catalog refresh. Compatible `latest` selections may advance; exact pins, package options, accepted-major tracks, referenced extensions, and unrelated files remain unchanged. An older tool, unavailable pin/track, incompatible default change, or catalog-major mismatch refuses refresh. The default preview lists each advancing selection as `<standard> <previous> -> <current>` indented under the refresh line, the same facts `--json` reports as `catalog_refresh.affected_selections`, so the pre-apply review sees which resolved package versions move and not only the release number.
 
 ```text
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
