@@ -8,6 +8,7 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.codec import semantic_digest
@@ -44,6 +45,7 @@ from project_standards.package_contract.payload import (
     JsonValue,
     PayloadAvailability,
     ProviderOperation,
+    load_option_schema,
 )
 
 
@@ -60,12 +62,19 @@ class _CompanionAbsentError(CommandResolutionError):
 
 
 _legacy_warning_emitted = False
+_disclosed_read_bases: set[str] = set()
 
 
 def reset_legacy_authority_warning() -> None:
-    """Start one embedded top-level command's warning scope."""
+    """Start one embedded top-level command's warning scope.
+
+    Read-basis disclosures share this scope: `project-standards validate` fans
+    one command out across three validators that each resolve authority, and a
+    consumer must see one note per invocation rather than one per validator.
+    """
     global _legacy_warning_emitted
     _legacy_warning_emitted = False
+    _disclosed_read_bases.clear()
 
 
 def explicit_legacy_argument(argv: list[str]) -> Path | None:
@@ -100,6 +109,14 @@ def emit_legacy_authority_warning() -> None:
         file=sys.stderr,
     )
     _legacy_warning_emitted = True
+
+
+def _disclose_read_basis(note: str) -> None:
+    """Name the authority a read-only command resolved, at most once per scope."""
+    if note in _disclosed_read_bases:
+        return
+    print(f"note: {note}", file=sys.stderr)
+    _disclosed_read_bases.add(note)
 
 
 @dataclass(frozen=True, slots=True)
@@ -234,6 +251,71 @@ def _validate_applied_state(
         raise CommandResolutionError(f"lock payload digest disagrees with catalog: {standard_id}")
 
 
+def resolve_locked_authority(
+    state: ControlPlaneState,
+    installed: InstalledDistribution,
+    standard_id: str,
+) -> SelectedCommandPackage | None:
+    """Resolve one package from authenticated applied-lock facts, or return None.
+
+    This is the read-only authority (issue #91). Ordinary resolution replays the
+    installed catalog, so a consumer whose lock is internally consistent but
+    older than the freshly installed tool resolves a *newer* selection than the
+    lock records and every read-only command refuses as "not reconciled" —
+    exactly at the pre-change inventory the migration runbook prescribes. The
+    lock already names the payload the repository is running, so a command that
+    only reads can answer from it and leave advancing the selection to
+    reconciliation.
+
+    Authority is granted only when the lock authenticates completely: the
+    unified config digest still matches the lock, the installed distribution
+    still carries the locked version, its verified payload bytes hash to the
+    locked payload digest, and the locked options re-resolve to the locked
+    effective-config digest under that payload's own schema. Any failure returns
+    None rather than raising, so the caller falls through to ordinary resolution
+    and the existing refusal — "unified config has not been reconciled",
+    "configured package options are invalid", a payload/catalog disagreement —
+    stays the single diagnostic for that condition.
+    """
+    config = state.config
+    catalog = state.catalog
+    lock = state.lock
+    if config is None or catalog is None or lock is None:
+        return None
+    desired = config.standards.get(standard_id)
+    applied = lock.standards.get(standard_id)
+    if desired is None or applied is None:
+        return None
+    if lock.project_standards.config_digest != semantic_digest(config.model_dump(mode="json")):
+        return None
+    try:
+        installed_catalog = installed.load_catalog(
+            config.project_standards.catalog,
+            recorded_release=catalog.project_standards.release,
+        )
+    except PackageContractError:
+        return None
+    payload = installed_catalog.payload_map.get((standard_id, applied.resolved.value))
+    if payload is None or payload.integrity.aggregate_digest != applied.payload_digest:
+        return None
+    try:
+        schema = load_option_schema(payload.root, payload.manifest)
+        effective = schema.resolve_options(desired.config)
+    except PackageContractError:
+        return None
+    if semantic_digest(cast("JsonValue", effective)) != applied.effective_config_digest:
+        return None
+    return SelectedCommandPackage(
+        state.repo,
+        payload,
+        applied.resolved,
+        effective,
+        lock,
+        state,
+        installed,
+    )
+
+
 def _resolve_state(
     state: ControlPlaneState,
     installed: InstalledDistribution,
@@ -241,6 +323,7 @@ def _resolve_state(
     explicit_legacy: Path | None,
     *,
     require_reconciled: bool,
+    read_authority: bool,
 ) -> SelectedCommandPackage | None:
     if state.kind is StateKind.LEGACY_ONLY:
         emit_legacy_authority_warning()
@@ -283,6 +366,21 @@ def _resolve_state(
         raise _CompanionAbsentError(f"package is disabled in unified config: {standard_id}")
     if require_reconciled:
         _validate_applied_state(standard_id, state.config, state.catalog, state.lock)
+        if read_authority:
+            locked = resolve_locked_authority(state, installed, standard_id)
+            if locked is not None:
+                if state.catalog.project_standards.release != installed.tool_release.value:
+                    # Disclose only across a release skew. Same release means the
+                    # installed catalog projection is byte-identical to the
+                    # committed one (catalog_refresh enforces that lineage), so
+                    # the locked basis is also the current one and a note on
+                    # every ordinary command would be noise.
+                    _disclose_read_basis(
+                        f"reading the applied lock: {standard_id}@{locked.resolved.value}; "
+                        f"installed release {installed.tool_release.value} is not reconciled "
+                        "into this repository yet"
+                    )
+                return locked
     planner = build_planner_request(
         state.repo,
         installed,
@@ -338,6 +436,7 @@ def _resolve_state_for_command(
     explicit_legacy: Path | None,
     *,
     require_reconciled: bool,
+    read_authority: bool = False,
 ) -> SelectedCommandPackage | None:
     """Normalize package/config failures at every public command boundary."""
     try:
@@ -347,6 +446,7 @@ def _resolve_state_for_command(
             standard_id,
             explicit_legacy,
             require_reconciled=require_reconciled,
+            read_authority=read_authority,
         )
     except CommandResolutionError:
         raise
@@ -378,7 +478,13 @@ def resolve_enabled_companion(
     selected: SelectedCommandPackage,
     standard_id: str,
 ) -> SelectedCommandPackage | None:
-    """Resolve another enabled package from the same retained authority generation."""
+    """Resolve another enabled package from the same retained authority generation.
+
+    Companions are dispatched for validation only, so they carry the same
+    read authority as the primary: a companion that refused where the primary
+    resolved would fail the whole command for a repository the primary just
+    proved readable.
+    """
     try:
         return _resolve_state_for_command(
             selected.state,
@@ -386,6 +492,7 @@ def resolve_enabled_companion(
             standard_id,
             None,
             require_reconciled=True,
+            read_authority=True,
         )
     except _CompanionAbsentError:
         return None
@@ -401,12 +508,20 @@ def selected_command(
     explicit_legacy: Path | None = None,
     require_reconciled: bool = True,
 ) -> Generator[SelectedCommandPackage | None]:
-    """Resolve and retain one authority generation for a complete public command."""
+    """Resolve and retain one authority generation for a complete public command.
+
+    `mode` decides read authority as well as the control-plane lock: a command
+    that takes only a read lock is exactly a command that will not write, and
+    those may resolve from the applied lock (see `resolve_locked_authority`).
+    A writer keeps requiring a fully reconciled selection, because it renders
+    repository bytes and must not do so from a superseded basis.
+    """
     installed = distribution or InstalledDistribution.current()
     try:
         initial = detect_control_plane_state(repo, tool_release=installed.tool_release.value)
     except ValueError as exc:
         raise CommandConfigurationError(str(exc)) from exc
+    read_authority = mode is LockMode.READ
     if initial.kind is not StateKind.INITIALIZED:
         yield _resolve_state_for_command(
             initial,
@@ -414,6 +529,7 @@ def selected_command(
             standard_id,
             explicit_legacy,
             require_reconciled=require_reconciled,
+            read_authority=read_authority,
         )
         return
     with control_plane_lock(initial.repo, mode) as control:
@@ -428,6 +544,7 @@ def selected_command(
             standard_id,
             explicit_legacy,
             require_reconciled=require_reconciled,
+            read_authority=read_authority,
         )
 
 
@@ -467,7 +584,11 @@ def resolve_selected_package(
     *,
     explicit_legacy: Path | None = None,
 ) -> SelectedCommandPackage | None:
-    """Resolve unified command facts, or return the bounded legacy fallback state."""
+    """Resolve unified command facts, or return the bounded legacy fallback state.
+
+    Read authority by construction: this entry point takes no control-plane lock
+    and serves the validators, which only report.
+    """
     installed = distribution or InstalledDistribution.current()
     state = detect_control_plane_state(repo, tool_release=installed.tool_release.value)
     return _resolve_state_for_command(
@@ -476,4 +597,5 @@ def resolve_selected_package(
         standard_id,
         explicit_legacy,
         require_reconciled=True,
+        read_authority=True,
     )

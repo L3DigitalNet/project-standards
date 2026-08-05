@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import tomllib
 from pathlib import Path
 from typing import cast
 
@@ -85,6 +86,106 @@ def _consumer(
 def _selected_agent_handoff_version(repo: Path) -> str:
     lock = parse_lock((repo / ".standards/lock.toml").read_bytes())
     return lock.standards["agent-handoff"].resolved.value
+
+
+def _version_key(value: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in value.split("."))
+
+
+def _predecessor_catalog(text: str, standard_id: str, ceiling: str) -> str:
+    """Re-render one installed catalog projection as an older release published it.
+
+    Issues #91 and #101 are only reachable when the installed catalog advertises
+    a newer selection than the consumer's lock records, so the fixture needs two
+    genuine catalog generations rather than one catalog read twice.
+    """
+    document = tomllib.loads(text)
+    limit = _version_key(ceiling)
+    rendered = [
+        f'schema_version = "{document["schema_version"]}"',
+        f"catalog_major = {document['catalog_major']}",
+    ]
+    for entry in document["packages"]:
+        version = cast("str", entry["version"])
+        role = cast("str", entry["role"])
+        if entry["id"] == standard_id:
+            if _version_key(version) > limit:
+                continue
+            role = "default" if _version_key(version) == limit else "retained"
+        rendered.extend(
+            [
+                "",
+                "[[packages]]",
+                f'id = "{entry["id"]}"',
+                f'version = "{version}"',
+                f'digest = "{entry["digest"]}"',
+                f'role = "{role}"',
+            ]
+        )
+    return "\n".join(rendered) + "\n"
+
+
+@pytest.fixture(scope="module")
+def predecessor_distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribution:
+    """Install the tool as it stood while Agent Handoff 1.4 was the default."""
+    installed = tmp_path_factory.mktemp("agent-handoff-predecessor") / "project_standards"
+    shutil.copytree(_ROOT / "src/project_standards", installed, symlinks=False)
+    catalog = installed / "catalogs/5.toml"
+    catalog.write_text(
+        _predecessor_catalog(catalog.read_text(encoding="utf-8"), "agent-handoff", "1.4"),
+        encoding="utf-8",
+    )
+    return InstalledDistribution(installed, tool_release="5.0.0")
+
+
+@pytest.fixture(scope="module")
+def refreshed_distribution(distribution: InstalledDistribution) -> InstalledDistribution:
+    """Present the full installed catalog as the newer release a consumer installs."""
+    return InstalledDistribution(distribution.package_root, tool_release="5.1.0")
+
+
+def _control_bytes(repo: Path) -> dict[str, bytes]:
+    return {
+        path.name: path.read_bytes()
+        for path in sorted((repo / ".standards").iterdir())
+        if path.is_file()
+    }
+
+
+def test_legacy_report_before_catalog_refresh_reads_the_applied_lock(
+    tmp_path: Path,
+    predecessor_distribution: InstalledDistribution,
+    refreshed_distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """TC-T4-001 (#91): a read-only command resolves the applied lock pre-refresh.
+
+    The consumer is reconciled and consistent; only the freshly installed catalog
+    advertises a newer selection. The documented pre-change inventory must run on
+    the locked basis, disclose it, and change nothing.
+    """
+    command_resolution.reset_legacy_authority_warning()
+    repo = _consumer(tmp_path, predecessor_distribution)
+    assert _selected_agent_handoff_version(repo) == "1.4"
+    (repo / "STATUS.md").write_text("legacy\n", encoding="utf-8")
+    control = _control_bytes(repo)
+    preview = plan_reconciliation(build_planner_request(repo, refreshed_distribution, frozenset()))
+    assert preview.applicable, preview.findings
+
+    assert (
+        run(
+            ["legacy-report", "--repo", str(repo), "--json"],
+            distribution=refreshed_distribution,
+        )
+        == 0
+    )
+
+    captured = capsys.readouterr()
+    report = json.loads(captured.out)
+    assert report["standard_version"] == "1.4"
+    assert report["findings"][0]["code"] == "AH-LEGACY-ROOT-STATUS"
+    assert "agent-handoff@1.4" in captured.err
+    assert _control_bytes(repo) == control
 
 
 def test_unified_validate_uses_selected_provider(
