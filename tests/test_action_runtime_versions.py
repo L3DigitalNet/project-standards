@@ -11,15 +11,35 @@ import yaml
 _ROOT = Path(__file__).resolve().parent.parent
 _EXTERNAL_ACTIONS = {
     "actions/checkout": ("3d3c42e5aac5ba805825da76410c181273ba90b1", "v7"),
-    "actions/setup-node": ("249970729cb0ef3589644e2896645e5dc5ba9c38", "v6"),
+    "actions/setup-node": ("820762786026740c76f36085b0efc47a31fe5020", "v7.0.0"),
     "actions/setup-go": ("924ae3a1cded613372ab5595356fb5720e22ba16", "v6"),
-    "actions/setup-python": ("ece7cb06caefa5fff74198d8649806c4678c61a1", "v6"),
-    "astral-sh/setup-uv": ("11f9893b081a58869d3b5fccaea48c9e9e46f990", "v8.3.2"),
+    "actions/setup-python": ("5fda3b95a4ea91299a34e894583c3862153e4b97", "v7.0.0"),
+    "astral-sh/setup-uv": ("c771a70e6277c0a99b617c7a806ffedaca235ff9", "v9.0.0"),
     "DavidAnson/markdownlint-cli2-action": ("6bf21b07787794f89a243495939cd651942aeabe", "v24"),
+}
+# Transitional map for the v5.15.0 -> v5.16.0 window: these root workflows are
+# installed payload resources whose released bytes still carry the previous
+# reviewed pins, and CP-MODIFIED-MANAGED forbids advancing the installed copies
+# ahead of their packages. They converge to _EXTERNAL_ACTIONS when the v5.16.0
+# release-prep reconcile re-renders the managed workflows from the
+# markdown-tooling 1.13, markdown-frontmatter 1.9, and project-spec 1.7
+# payloads; delete this map and its lookups in that same change.
+_RELEASED_PAYLOAD_PINS = {
+    ("format.yml", "actions/setup-node"): ("249970729cb0ef3589644e2896645e5dc5ba9c38", "v6"),
+    ("validate-markdown-frontmatter.yml", "astral-sh/setup-uv"): (
+        "11f9893b081a58869d3b5fccaea48c9e9e46f990",
+        "v8.3.2",
+    ),
+    ("validate-specs.yml", "astral-sh/setup-uv"): (
+        "11f9893b081a58869d3b5fccaea48c9e9e46f990",
+        "v8.3.2",
+    ),
 }
 _CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
 _SETUP_NODE = "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38"
+_SETUP_NODE_CURRENT = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"
 _SETUP_UV = "astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990"
+_SETUP_UV_CURRENT = "astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9"
 _CURRENT_V2_CHECKOUT = "actions/checkout@v7"
 _CURRENT_V2_SETUP_NODE = "actions/setup-node@v6"
 _LEGACY_CLI_DIGEST = "3059b84e8730775e021b3e9ce14e819ef4bd0084fbd5ac996d811ede99e5baf8"
@@ -78,7 +98,9 @@ def test_live_workflow_external_actions_are_sha_pinned_with_version_comments() -
             if action.startswith("./"):
                 continue
 
-            expected_ref, expected_version = _EXTERNAL_ACTIONS[action]
+            expected_ref, expected_version = _RELEASED_PAYLOAD_PINS.get(
+                (workflow.name, action), _EXTERNAL_ACTIONS[action]
+            )
             assert match["ref"] == expected_ref, f"{workflow}: {action}"
             assert match["version"] == expected_version, f"{workflow}: {action}"
 
@@ -125,7 +147,11 @@ def test_live_root_workflows_use_reviewed_setup_uv_pin(relative_path: str) -> No
         if step["uses"].startswith("astral-sh/setup-uv@")
     ]
 
-    assert setup_uv == [_SETUP_UV]
+    name = relative_path.rsplit("/", 1)[-1]
+    expected = (
+        _SETUP_UV if (name, "astral-sh/setup-uv") in _RELEASED_PAYLOAD_PINS else _SETUP_UV_CURRENT
+    )
+    assert setup_uv == [expected]
 
 
 def test_live_node_workflows_use_node_24_generation_and_intended_cache_policy() -> None:
@@ -140,12 +166,14 @@ def test_live_node_workflows_use_node_24_generation_and_intended_cache_policy() 
         if step["uses"].startswith("actions/setup-node@")
     )
 
+    # format.yml stays on _SETUP_NODE until the release-prep reconcile; see
+    # _RELEASED_PAYLOAD_PINS.
     assert format_setup == {
         "name": "Set up Node",
         "uses": _SETUP_NODE,
         "with": {"node-version": "24", "package-manager-cache": False},
     }
-    assert coherence_setup["uses"] == _SETUP_NODE
+    assert coherence_setup["uses"] == _SETUP_NODE_CURRENT
     assert coherence_setup["with"] == {"node-version": "24", "cache": "npm"}
 
 
