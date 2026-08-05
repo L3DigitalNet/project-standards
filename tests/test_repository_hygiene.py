@@ -62,6 +62,10 @@ _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
         "standards/project-spec/versions/1.6/templates/spec-full-template.md",
         "standards/project-spec/versions/1.6/templates/spec-light-template.md",
         "standards/project-spec/versions/1.6/templates/spec-standard-template.md",
+        "standards/project-spec/versions/1.7/resources/tooling-notes.md",
+        "standards/project-spec/versions/1.7/templates/spec-full-template.md",
+        "standards/project-spec/versions/1.7/templates/spec-light-template.md",
+        "standards/project-spec/versions/1.7/templates/spec-standard-template.md",
     }
 )
 
