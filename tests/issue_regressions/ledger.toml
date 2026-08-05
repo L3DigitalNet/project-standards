@@ -82,11 +82,11 @@ references = [
     "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_customized_check_script_relinquishes_with_script_ownership",
     "tests/package_contract/test_markdown_tooling_reconstruction.py::test_markdown_tooling_customized_callers_relinquish_with_workflow_ownership",
 ]
-amendments = []
+amendments = [{ approved_by = "owner", date = "2026-08-04", new_digest = "sha256:7721265896a77bf2eb02f99b4f14f30d238f6ea8c63dd43432533d4c8ed445aa", new_symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_customized_check_script_relinquishes_with_script_ownership", old_digest = "sha256:dd7a65a8b2f90908e45d360a9f5c6a40c39a0347e2e916c55b86714e3621340b", old_symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_customized_check_script_relinquishes_with_script_ownership", reason = "point the v4 legacy fixture at pinned v4.3.0 vscode-extensions bytes so the live consumer-extended .vscode/extensions.json no longer rewrites legacy-adopt bytes; proof semantics unchanged (v5.15.0 qualification)", requirement = "REQ-900" }]
 
 [[issues.proofs]]
 symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_customized_check_script_relinquishes_with_script_ownership"
-digest = "sha256:dd7a65a8b2f90908e45d360a9f5c6a40c39a0347e2e916c55b86714e3621340b"
+digest = "sha256:7721265896a77bf2eb02f99b4f14f30d238f6ea8c63dd43432533d4c8ed445aa"
 
 [[issues.proofs]]
 symbol = "tests/package_contract/test_markdown_tooling_reconstruction.py::test_markdown_tooling_customized_callers_relinquish_with_workflow_ownership"
@@ -112,11 +112,11 @@ rationale = "Python Tooling migration preserves consumer checker and pytest tabl
 introduced_release = "5.4.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_v4_migration_preserves_consumer_checker_and_pytest_keys"]
-amendments = []
+amendments = [{ approved_by = "owner", date = "2026-08-04", new_digest = "sha256:876196d81428b184db060b1fe2b8dd982109ebe74eb643fc76547adb479f6528", new_symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_v4_migration_preserves_consumer_checker_and_pytest_keys", old_digest = "sha256:b918f18627fe760011a19b9285867146fb96933d2486c54757ed72bc9d081d7c", old_symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_v4_migration_preserves_consumer_checker_and_pytest_keys", reason = "point the v4 legacy fixture at pinned v4.3.0 vscode-extensions bytes so the live consumer-extended .vscode/extensions.json no longer rewrites legacy-adopt bytes; proof semantics unchanged (v5.15.0 qualification)", requirement = "REQ-900" }]
 
 [[issues.proofs]]
 symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_v4_migration_preserves_consumer_checker_and_pytest_keys"
-digest = "sha256:b918f18627fe760011a19b9285867146fb96933d2486c54757ed72bc9d081d7c"
+digest = "sha256:876196d81428b184db060b1fe2b8dd982109ebe74eb643fc76547adb479f6528"
 
 [[issues]]
 id = "GH-15"
@@ -190,11 +190,11 @@ rationale = "Additional Python source roots resolve checker, Ruff, and coverage 
 introduced_release = "5.6.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_successor_resolves_issue_20_conflicts_end_to_end"]
-amendments = []
+amendments = [{ approved_by = "owner", date = "2026-08-04", new_digest = "sha256:79ee1ff91d738f33e951a555ae60dea0a80583790b5d36f6fb5b42bc00514826", new_symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_successor_resolves_issue_20_conflicts_end_to_end", old_digest = "sha256:c3a11325ec3409eabbce2eef6efcbdf9bb30754e1e3b832b5905d5f4c34e742a", old_symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_successor_resolves_issue_20_conflicts_end_to_end", reason = "point the v4 legacy fixture at pinned v4.3.0 vscode-extensions bytes so the live consumer-extended .vscode/extensions.json no longer rewrites legacy-adopt bytes; proof semantics unchanged (v5.15.0 qualification)", requirement = "REQ-900" }]
 
 [[issues.proofs]]
 symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_successor_resolves_issue_20_conflicts_end_to_end"
-digest = "sha256:c3a11325ec3409eabbce2eef6efcbdf9bb30754e1e3b832b5905d5f4c34e742a"
+digest = "sha256:79ee1ff91d738f33e951a555ae60dea0a80583790b5d36f6fb5b42bc00514826"
 
 [[issues]]
 id = "GH-21"
@@ -242,11 +242,11 @@ rationale = "Python Tooling coverage scope follows each declared source root."
 introduced_release = "5.7.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_17_resolves_issue_24_end_to_end"]
-amendments = []
+amendments = [{ approved_by = "owner", date = "2026-08-04", new_digest = "sha256:3007097d63fbe1eeaed1b477dadc79fb42ef649115b5e8babb89e8a3fe30f028", new_symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_17_resolves_issue_24_end_to_end", old_digest = "sha256:8107504f6c760a0db9a4ab0c8c53fab3ad17157488540f8f4912307835ad9f82", old_symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_17_resolves_issue_24_end_to_end", reason = "point the v4 legacy fixture at pinned v4.3.0 vscode-extensions bytes so the live consumer-extended .vscode/extensions.json no longer rewrites legacy-adopt bytes; proof semantics unchanged (v5.15.0 qualification)", requirement = "REQ-900" }]
 
 [[issues.proofs]]
 symbol = "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_17_resolves_issue_24_end_to_end"
-digest = "sha256:8107504f6c760a0db9a4ab0c8c53fab3ad17157488540f8f4912307835ad9f82"
+digest = "sha256:3007097d63fbe1eeaed1b477dadc79fb42ef649115b5e8babb89e8a3fe30f028"
 
 [[issues]]
 id = "GH-25"
