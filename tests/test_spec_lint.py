@@ -69,6 +69,25 @@ def test_valid_light_is_clean() -> None:
     assert _codes("valid_light.md") == set()
 
 
+def test_unrecognizable_document_is_gated_instead_of_reported_clean() -> None:
+    """Issue #121: a one-line file validate rejects must not lint silent-clean."""
+    doc = parse_document("example.md", "# Example Spec\n")
+
+    findings = lint_document(doc, load_registry())
+
+    assert [finding.code for finding in findings] == ["SL-STRUCTURE"]
+    assert findings[0].severity == "warning"
+    assert "spec validate" in findings[0].message
+
+
+def test_structural_gate_does_not_suppress_authoring_findings() -> None:
+    doc = parse_document("example.md", "# Example Spec\n<replace me>\n")
+
+    codes = [finding.code for finding in lint_document(doc, load_registry())]
+
+    assert codes == ["SL-STRUCTURE", "SL-PLACEHOLDER"]
+
+
 def test_approved_standard_should_requirement_not_flagged() -> None:
     doc = parse_document(
         "approved_standard_traceability.md",

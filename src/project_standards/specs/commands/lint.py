@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import re
 
+from project_standards.specs.commands.validate import (
+    _check_frontmatter,  # pyright: ignore[reportPrivateUsage]
+)
 from project_standards.specs.document import section_slice
 from project_standards.specs.model import (
     Finding,
@@ -86,6 +89,16 @@ def _w(code: str, message: str, line: int | None = None, locus: str | None = Non
 def lint_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
     """Return advisory findings; callers decide whether warnings are strict."""
     out: list[Finding] = []
+    # Authoring quality presupposes a recognizable specification: the traceability
+    # rule keys off `status` and the profile's tier sections, and a clean
+    # placeholder scan says nothing about a file that is not a spec at all. Without
+    # this gate, `lint --strict` reported OK on a one-line document that validate
+    # rejects with 28 findings (issue #121). Validate's own frontmatter check
+    # decides recognizability, so that rule stays defined in one place; lint
+    # reports the single gating fact and leaves the structural findings to
+    # `spec validate` rather than restating them.
+    if _check_frontmatter(doc, reg):
+        out.append(_w("SL-STRUCTURE", "not a valid specification; run spec validate"))
     structural_body = _masked_structural_view(doc.body)
     for i, line in enumerate(structural_body.splitlines(), start=1):
         if _placeholder_angles(line):

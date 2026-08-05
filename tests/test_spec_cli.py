@@ -116,6 +116,26 @@ def test_lint_json_shape(capsys: pytest.CaptureFixture[str]) -> None:
     assert data[0]["findings"] and data[0]["findings"][0]["severity"] == "warning"
 
 
+def test_strict_lint_refuses_ok_for_a_document_validate_rejects(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Issue #121: `lint --strict` reported OK and exit 0 for a one-line document."""
+    spec = tmp_path / "example.md"
+    spec.write_text("# Example Spec\n", encoding="utf-8")
+
+    assert main(["spec", "validate", str(spec)]) == 1
+    capsys.readouterr()
+
+    assert main(["spec", "lint", "--strict", str(spec)]) == 1
+    human = capsys.readouterr().out
+    assert human.startswith("WARN")
+    assert "[SL-STRUCTURE]" in human
+    assert "run spec validate" in human
+
+    assert main(["spec", "lint", str(spec)]) == 0
+
+
 @pytest.mark.parametrize(
     ("verb", "code", "expected_line"),
     [("lint", "SL-PLACEHOLDER", 7), ("validate", "SV-SECTION", 8)],
