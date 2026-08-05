@@ -9,6 +9,8 @@ from typing import Literal
 
 from project_standards.agent_handoff.model import Finding
 from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
+from project_standards.control_plane.codec import parse_lock
+from project_standards.control_plane.diagnostics import ControlPlaneError
 
 
 @dataclass(frozen=True)
@@ -136,6 +138,19 @@ _TEXT_SIGNATURES = (
     ),
 )
 
+# Signature codes describing startup hook and registration evidence. Only these
+# defer to lock provenance (issue #90): the applied lock authenticating a unit at
+# the same path proves the evidence is the current managed integration, while
+# engine-reference prose scanning and every unowned path keeps its finding.
+_STARTUP_EVIDENCE_CODES = frozenset(
+    {
+        "AH-LEGACY-CLAUDE-HOOK",
+        "AH-LEGACY-CODEX-HOOK",
+        "AH-LEGACY-CLAUDE-REGISTRATION",
+        "AH-LEGACY-CODEX-REGISTRATION",
+    }
+)
+
 _CANONICAL_PREFIXES = (
     ".agents/agent-handoff/",
     ".agents/hooks/agent-handoff/",
@@ -185,6 +200,28 @@ def _read_text(repository: RepositoryRoot, relative: str) -> str | None:
         return ""
 
 
+def _lock_authenticated_paths(repository: RepositoryRoot) -> frozenset[str]:
+    """Paths the applied central lock records as agent-handoff managed units.
+
+    Provenance, not drift: the lock naming a managed unit at a path is what
+    authenticates hook and registration evidence there as current (issue #90).
+    Byte-level divergence inside a managed unit is reconciliation's authority
+    (`reconcile --check`), so this report does not recompute digests. An
+    absent, unreadable, or non-canonical lock authenticates nothing.
+    """
+    try:
+        raw = repository.read_bytes(".standards/lock.toml")
+    except RepositoryBoundaryError, OSError:
+        return frozenset()
+    try:
+        lock = parse_lock(raw)
+    except ControlPlaneError:
+        return frozenset()
+    return frozenset(
+        unit.path.original for unit in lock.artifacts if "agent-handoff" in unit.owners
+    )
+
+
 def _unknown_candidates(repository: RepositoryRoot) -> tuple[str, ...]:
     candidates: set[str] = set()
     for entry in repository.path.iterdir():
@@ -222,8 +259,12 @@ def legacy_report(repository: RepositoryRoot) -> tuple[Finding, ...]:
     findings: list[Finding] = []
     recognized: set[str] = set()
     legacy_hook_evidence = False
+    authenticated = _lock_authenticated_paths(repository)
 
     for signature in _PATH_SIGNATURES:
+        if signature.code in _STARTUP_EVIDENCE_CODES and signature.path in authenticated:
+            recognized.add(signature.path)
+            continue
         try:
             if not _path_exists(repository, signature.path):
                 continue
@@ -251,6 +292,9 @@ def legacy_report(repository: RepositoryRoot) -> tuple[Finding, ...]:
             legacy_hook_evidence = True
 
     for signature in _TEXT_SIGNATURES:
+        if signature.code in _STARTUP_EVIDENCE_CODES and signature.path in authenticated:
+            recognized.add(signature.path)
+            continue
         try:
             text = _read_text(repository, signature.path)
         except RepositoryBoundaryError:
@@ -314,7 +358,7 @@ def legacy_report(repository: RepositoryRoot) -> tuple[Finding, ...]:
         )
 
     for relative in _unknown_candidates(repository):
-        if relative in recognized or relative in _KNOWN_PATHS:
+        if relative in recognized or relative in _KNOWN_PATHS or relative in authenticated:
             continue
         if _is_canonical_path(relative):
             continue

@@ -10,6 +10,7 @@ from project_standards.agent_handoff.model import Harness, StartupMode
 from project_standards.agent_handoff.paths import RepositoryRoot
 from project_standards.agent_handoff.planning import apply_adoption, plan_adoption
 from project_standards.cli import main
+from project_standards.control_plane.distribution import InstalledDistribution
 
 
 def _snapshot(root: Path) -> dict[str, tuple[str, bytes | str]]:
@@ -176,3 +177,77 @@ def test_packaged_legacy_provider_emits_structured_report(
     payload = json.loads(capsys.readouterr().out)
     assert payload["findings"][0]["code"] == "AH-LEGACY-ROOT-STATUS"
     assert payload["summary"]["warnings"] == 1
+
+
+@pytest.fixture(scope="module")
+def distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribution:
+    import shutil
+
+    root = Path(__file__).resolve().parents[2]
+    installed = tmp_path_factory.mktemp("legacy-lock-dist") / "project_standards"
+    shutil.copytree(root / "src/project_standards", installed, symlinks=False)
+    return InstalledDistribution(installed, tool_release="5.0.0")
+
+
+def _reconciled_consumer(tmp_path: Path, distribution: InstalledDistribution) -> Path:
+    from project_standards.control_plane.bootstrap import initialize_control_plane
+    from project_standards.control_plane.cli import build_planner_request
+    from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
+    from project_standards.control_plane.planner import plan_reconciliation
+
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    config = repo / ".standards/config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + '\n[standards.agent-handoff]\nenabled = true\nversion = "latest"\n\n'
+        + '[standards.agent-handoff.config]\ncontract_version = "1.1"\n'
+        + 'startup = "automatic"\nharnesses = ["claude-code", "codex"]\n',
+        encoding="utf-8",
+    )
+    request = build_planner_request(repo, distribution, frozenset())
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+    assert apply_reconciliation(ApplyRequest(request, plan)).success
+    return repo
+
+
+def test_locked_registration_container_is_not_legacy_evidence(
+    tmp_path: Path, distribution: InstalledDistribution
+) -> None:
+    # Issue #90: the applied lock owns the SessionStart keyed set inside
+    # .codex/config.toml. A stale hook-path string in the consumer-owned
+    # remainder of that managed container must not become registration
+    # evidence, and must not cascade into a duplicate-hook error against
+    # the current shared hook.
+    repo = _reconciled_consumer(tmp_path, distribution)
+    config = repo / ".codex/config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + "\n# retired wrapper reference: .codex/hooks/session_start.py\n",
+        encoding="utf-8",
+    )
+
+    findings = _report_read_only(repo)
+
+    assert not any(finding.code == "AH-LEGACY-CODEX-REGISTRATION" for finding in findings)
+    assert not any(finding.code == "AH-LEGACY-DUPLICATE-HOOK" for finding in findings)
+
+
+def test_unowned_duplicate_hook_stays_visible_beside_locked_units(
+    tmp_path: Path, distribution: InstalledDistribution
+) -> None:
+    # Negative control for TC-T3-001: lock provenance suppresses only managed
+    # evidence. A real unowned per-harness hook file still reports, and still
+    # raises the duplicate-injection error against the managed shared hook.
+    repo = _reconciled_consumer(tmp_path, distribution)
+    stray = repo / ".claude/hooks/session_start.py"
+    stray.parent.mkdir(parents=True)
+    stray.write_text("legacy\n", encoding="utf-8")
+
+    findings = _report_read_only(repo)
+
+    assert any(finding.code == "AH-LEGACY-CLAUDE-HOOK" for finding in findings)
+    duplicate = next(finding for finding in findings if finding.code == "AH-LEGACY-DUPLICATE-HOOK")
+    assert duplicate.severity == "error"
