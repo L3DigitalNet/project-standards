@@ -134,6 +134,35 @@ def prettier_differences(
     return tuple(line.strip() for line in outcome.stdout.splitlines() if line.strip())
 
 
+def prettier_check(
+    repo: Path,
+    cwd: Path,
+    patterns: tuple[str, ...],
+    *,
+    config_path: Path | None = None,
+    ignore_path: Path | None = None,
+    extra_args: tuple[str, ...] = (),
+) -> ToolOutcome:
+    """Return the raw Prettier outcome for a selection, without gating the exit code.
+
+    ``prettier_differences`` rejects any status outside {0, 1}. Issue #88's first
+    reproduction *is* a status-2 run: the unbounded ``prettier --check .`` reaches
+    an unparseable file inside a Git-excluded scratch tree, so the failure mode
+    under test is unreachable through that helper.
+    """
+    args = [
+        str(_binary(repo, "prettier")),
+        "--config",
+        str(config_path or repo / ".prettierrc.json"),
+        "--list-different",
+        *extra_args,
+    ]
+    if ignore_path is not None:
+        args.extend(("--ignore-path", str(ignore_path)))
+    args.extend(patterns)
+    return _run(args, cwd=cwd)
+
+
 def format_with_prettier(
     repo: Path,
     cwd: Path,
