@@ -139,7 +139,14 @@ def _options(root: Path, **overrides: JsonValue) -> JsonObject:
     return load_option_schema(root, payload.manifest).resolve_options(overrides)
 
 
-def _render(root: Path, scope: str, config: JsonObject) -> str:
+def _render_unit(
+    root: Path,
+    scope: str,
+    config: JsonObject,
+    *,
+    target: str = "pyproject.toml",
+    adapter: AdapterKind = AdapterKind.TOML,
+) -> str:
     payload = _payload(root)
     result = invoke_provider(
         ProviderInvocation(
@@ -152,9 +159,9 @@ def _render(root: Path, scope: str, config: JsonObject) -> str:
             effective_config=config,
             snapshots={
                 "planned_contribution": {
-                    "id": "ruff-unit",
-                    "target": "pyproject.toml",
-                    "adapter": AdapterKind.TOML.value,
+                    "id": "unit-under-test",
+                    "target": target,
+                    "adapter": adapter.value,
                     "scope": scope,
                 }
             },
@@ -163,6 +170,20 @@ def _render(root: Path, scope: str, config: JsonObject) -> str:
     assert result.effect is ProviderEffect.CONTENT
     assert result.content is not None
     return result.content.decode()
+
+
+def _render(root: Path, scope: str, config: JsonObject) -> str:
+    return _render_unit(root, scope, config)
+
+
+def _render_script(root: Path, **overrides: JsonValue) -> str:
+    return _render_unit(
+        root,
+        "$file",
+        _options(root, **overrides),
+        target="scripts/check.py",
+        adapter=AdapterKind.WHOLE_FILE,
+    )
 
 
 def _selects_ruff(scope: str) -> bool:
@@ -657,3 +678,335 @@ def test_python_tooling_1_12__upgrade_from_1_11__relocks_without_lock_inconsiste
     assert {
         f"contribution:{declaration.id}" for declaration in _ruff_declarations(_V112, config)
     } <= set(edge.affected)
+
+
+# ---------------------------------------------------------------------------
+# Issue #115: the generated gate script must pass the formatter it invokes first.
+# ---------------------------------------------------------------------------
+
+# The report's minimal repro: four extra roots at the guide's default line length
+# push the single-line argv past 100 columns. Nine roots is the real upgrading
+# consumer it was observed on (rendered lines of 275 and 263 columns).
+_FOUR_EXTRA_ROOTS: list[JsonValue] = ["tool_a", "tool_b", "tool_c", "tool_d"]
+_NINE_EXTRA_ROOTS = [f"tool_{index}" for index in range(9)]
+# `ruff.line_length` accepts 79 through 120, and the script must be stable across
+# the whole declared range rather than at the default alone: issue #115's original
+# 1.10 report rendered the argv as a bare "." — root count could not have been its
+# trigger, so a low line length was the only remaining mechanism.
+_LINE_LENGTHS = (79, 100, 120)
+
+
+def _format_check(source: str, path: Path, line_length: int) -> subprocess.CompletedProcess[str]:
+    """Ask the real formatter whether the rendered bytes are already its output."""
+    path.write_text(source, encoding="utf-8")
+    environment = {
+        key: value for key, value in os.environ.items() if key not in {"PYTHONPATH", "VIRTUAL_ENV"}
+    }
+    environment.update({"UV_OFFLINE": "1", "UV_PROJECT": str(_ROOT)})
+    return subprocess.run(
+        [
+            "uv",
+            "run",
+            "ruff",
+            "format",
+            "--check",
+            "--isolated",
+            "--line-length",
+            str(line_length),
+            str(path),
+        ],
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+@pytest.mark.parametrize("line_length", _LINE_LENGTHS)
+@pytest.mark.parametrize(
+    ("label", "roots"),
+    [
+        ("defaults", cast("JsonValue", [])),
+        ("four-extra-roots", cast("JsonValue", _FOUR_EXTRA_ROOTS)),
+        ("nine-extra-roots", cast("JsonValue", _NINE_EXTRA_ROOTS)),
+    ],
+)
+def test_python_tooling_1_12__generated_gate_script__is_a_ruff_format_fixed_point(
+    tmp_path: Path,
+    label: str,
+    roots: JsonValue,
+    line_length: int,
+) -> None:
+    """TC-#115: the managed script is the formatter's own output at every shape.
+
+    Rendering, not the consumer, has to hold this invariant: the script is a
+    digest-locked managed file, so reformatting it locally trips
+    CP-MODIFIED-MANAGED and the only other escape is surrendering the canonical
+    implementation to `script_ownership = "consumer-owned"`.
+    """
+    _require_payload(_V112)
+    source = _render_script(_V112, additional_source_roots=roots)
+
+    result = _format_check(source, tmp_path / "check.py", line_length)
+
+    assert result.returncode == 0, f"{label}@{line_length}: {result.stdout + result.stderr}"
+
+
+# 1.11's four-root rendering is 103 columns, so the predecessor defect is line
+# length dependent by construction: it fires at the guide's default 100 and at the
+# schema floor 79, and NOT at 120, where the same bytes happen to fit. That is the
+# whole shape of the bug — a fixed point that holds until one more declared root
+# or one lower line length — so the control asserts both halves rather than
+# pretending the predecessor is unconditionally broken.
+@pytest.mark.parametrize(
+    ("line_length", "expected"),
+    [(79, 1), (100, 1), (120, 0)],
+)
+def test_python_tooling_1_12__predecessor_gate_script__fails_where_the_report_measured_it(
+    tmp_path: Path,
+    line_length: int,
+    expected: int,
+) -> None:
+    """CONTROL: 1.11 reproduces issue #115 at the reported shape and stays immutable."""
+    _require_payload(_V111)
+    source = _render_script(_V111, additional_source_roots=_FOUR_EXTRA_ROOTS)
+
+    result = _format_check(source, tmp_path / "check.py", line_length)
+
+    assert result.returncode == expected, result.stdout + result.stderr
+
+
+def test_python_tooling_1_12__gate_script_argv__keeps_every_declared_root(tmp_path: Path) -> None:
+    """The wrapped rendering must not have changed which roots the gate covers.
+
+    A formatter-stable script that dropped or reordered a root would pass the
+    fixed-point rows above while silently narrowing the issue #95 scope, so the
+    argv is read back out of the rendered module rather than trusted.
+    """
+    _require_payload(_V112)
+    source = _render_script(_V112, additional_source_roots=_FOUR_EXTRA_ROOTS)
+    namespace: dict[str, object] = {}
+    exec(compile(source, str(tmp_path / "check.py"), "exec"), namespace)
+
+    commands = cast("tuple[tuple[str, ...], ...]", namespace["COMMANDS"])
+    formatting = next(command for command in commands if "ruff" in command and "format" in command)
+
+    assert list(formatting) == [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "src",
+        "tests",
+        *_FOUR_EXTRA_ROOTS,
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Issue #117: type-checker exclusion is consumer-owned, and must be documented.
+# ---------------------------------------------------------------------------
+
+# The reporter's exact repository shape: version-locked release mirrors, one of
+# them covered by a published SHA256SUMS manifest, so reformatting or "fixing" the
+# file would invalidate checksum verification. Ruff already honors the exclusion;
+# the type checker has to be told separately, by the consumer.
+_CHECKER_EXCLUDE = '[tool.basedpyright]\nexclude = [".venv", "data", "vendored/frozen-tool"]\n'
+_CHECKER_EXCLUDE_VALUE = [".venv", "data", "vendored/frozen-tool"]
+
+
+def _basedpyright_exclude(repo: Path) -> JsonValue:
+    document = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
+    tool = cast("JsonObject", document["tool"])
+    return cast("JsonObject", tool["basedpyright"])["exclude"]
+
+
+def test_python_tooling_1_12__checker_exclude__is_undeclared_and_stays_consumer_owned(
+    tmp_path: Path,
+) -> None:
+    """TC-#117: `exclude` survives adoption and a second reconcile without drift.
+
+    Same contract as the Ruff plugin sub-table, reached from the other side: the
+    package renders six checker keys and `exclude` is not one of them, so the
+    consumer's value is preserved rather than adjudicated. The report's remedy was
+    documentation, not an option — this row is what makes that documentation true.
+    """
+    _require_payload(_V112)
+    declared = {
+        declaration.scope
+        for declaration in _payload(_V112).manifest.contributions
+        if declaration.scope.startswith("key:/tool/basedpyright/")
+    }
+    assert "key:/tool/basedpyright/exclude" not in declared
+
+    repo = tmp_path / "consumer"
+    _write_consumer(repo, ruff_table=_CHECKER_EXCLUDE, plugin=False)
+    payload = _payload(_V112)
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    control = repo / ".standards"
+    control.mkdir()
+    (control / "lock.toml").write_bytes(render_lock(request.resolution.previous_lock))
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+
+    assert apply_reconciliation(ApplyRequest(request, plan)).success
+
+    text = (repo / "pyproject.toml").read_text(encoding="utf-8")
+    assert _basedpyright_exclude(repo) == _CHECKER_EXCLUDE_VALUE
+    second_request = PlannerRequest(
+        repo,
+        resolution_request((payload,), previous_lock=plan.next_lock),
+        (payload,),
+    )
+    second = plan_reconciliation(second_request)
+    result = apply_reconciliation(ApplyRequest(second_request, second))
+    assert second.applicable, second.findings
+    assert result.success
+    assert result.applied_action_ids == ()
+    assert (repo / "pyproject.toml").read_text(encoding="utf-8") == text
+
+
+def test_python_tooling_1_12__checker_exclude__is_documented_as_the_supported_escape() -> None:
+    """TC-#117: the guide must name `exclude` and say why Ruff's list does not flow.
+
+    The reporter's cost was not the fix, which is one key; it was an
+    apply-then-diagnose cycle plus an inference about ownership boundaries that
+    the guide never stated. Undocumented-but-safe is the defect.
+    """
+    _require_payload(_V112)
+    adopt = (_V112 / "adopt.md").read_text(encoding="utf-8")
+    readme = (_V112 / "README.md").read_text(encoding="utf-8")
+
+    assert "[tool.basedpyright]\nexclude" in adopt
+    assert "consumer-owned" in adopt
+    for text in (adopt, readme):
+        assert "extend_exclude" in text
+        assert "does not" in text or "deliberately" in text
+
+
+# ---------------------------------------------------------------------------
+# Issue #118: declared roots that nothing creates are reported before the gate.
+# ---------------------------------------------------------------------------
+
+_ROOT_FINDING = "PT-DECLARED-ROOT-MISSING"
+
+
+def _root_findings(plan: ReconciliationPlan) -> list[str]:
+    return [finding.path for finding in plan.findings if finding.code == _ROOT_FINDING]
+
+
+def test_python_tooling_1_12__declared_roots__are_reported_before_the_gate_runs(
+    tmp_path: Path,
+) -> None:
+    """TC-#118: fresh adoption names every declared root the repository lacks.
+
+    `pytest.test_paths` has a one-entry minimum, so every adoption declares a
+    collection root whether or not the repository has tests yet — the ordinary
+    state of a repository adopting the standard early, and exactly the case the
+    fresh-adoption route exists for.
+    """
+    _require_payload(_V112)
+    repo = tmp_path / "consumer"
+    _write_consumer(repo, plugin=False)
+    payload = _payload(_V112)
+
+    plan = _plan(repo, payload)
+
+    findings = [finding for finding in plan.findings if finding.code == _ROOT_FINDING]
+    assert sorted(finding.path for finding in findings) == ["src", "tests"]
+    for finding in findings:
+        # Reported, never blocking: a declaration may legitimately precede the
+        # code it describes, and refusing the reconcile would be the worse defect.
+        assert finding.severity == "warning"
+        assert finding.path in finding.message
+        assert "pytest.test_paths" in finding.hint
+    assert plan.applicable, plan.findings
+
+
+def test_python_tooling_1_12__declared_roots__name_the_consumer_declared_paths(
+    tmp_path: Path,
+) -> None:
+    """The finding follows the options, not the defaults, and clears when created."""
+    _require_payload(_V112)
+    repo = tmp_path / "consumer"
+    _write_consumer(repo, plugin=False)
+    (repo / "components/a").mkdir(parents=True)
+    payload = _payload(_V112)
+    config: JsonObject = {
+        "source_layout": "explicit",
+        "additional_source_roots": ["components/a", {"path": "components/b", "coverage": False}],
+        "pytest": {"test_paths": ["qa/unit"]},
+    }
+    request = PlannerRequest(
+        repo,
+        resolution_request((payload,), configs={"python-tooling": config}),
+        (payload,),
+    )
+
+    plan = plan_reconciliation(request)
+
+    # `components/a` exists, so it is absent from the report; `src` and `tests`
+    # are the package defaults this consumer did not declare and must not appear.
+    assert sorted(_root_findings(plan)) == ["components/b", "qa/unit"]
+
+
+def test_python_tooling_1_12__declared_roots__clear_once_created(tmp_path: Path) -> None:
+    """Creating the directory clears the finding, and reconcile stays idempotent."""
+    _require_payload(_V112)
+    repo = tmp_path / "consumer"
+    _write_consumer(repo, plugin=False)
+    payload = _payload(_V112)
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    control = repo / ".standards"
+    control.mkdir()
+    (control / "lock.toml").write_bytes(render_lock(request.resolution.previous_lock))
+    plan = plan_reconciliation(request)
+    assert sorted(_root_findings(plan)) == ["src", "tests"]
+    assert apply_reconciliation(ApplyRequest(request, plan)).success
+
+    (repo / "src").mkdir()
+    (repo / "tests").mkdir()
+
+    second_request = PlannerRequest(
+        repo,
+        resolution_request((payload,), previous_lock=plan.next_lock),
+        (payload,),
+    )
+    second = plan_reconciliation(second_request)
+    result = apply_reconciliation(ApplyRequest(second_request, second))
+    assert _root_findings(second) == []
+    assert second.applicable
+    assert result.success
+    assert result.applied_action_ids == ()
+
+
+# ---------------------------------------------------------------------------
+# Reviewed action pins: the managed CI workflow tracks the repository's own.
+# ---------------------------------------------------------------------------
+
+_SETUP_UV = "astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9"
+
+
+def test_python_tooling_1_12__managed_workflow__carries_the_reviewed_setup_uv_pin() -> None:
+    """The rendered workflow and its byte-locked default source advance together.
+
+    A pin that moved in only one of the two would either fail the payload's own
+    default-bytes assertion or ship a consumer workflow the repository no longer
+    reviews. `prune-cache` is asserted because v9 stopped pruning before saving,
+    so the v8 cache behavior has to be requested by name rather than inherited.
+    """
+    _require_payload(_V112)
+    rendered = _render_unit(
+        _V112,
+        "$file",
+        _options(_V112),
+        target=".github/workflows/check.yml",
+        adapter=AdapterKind.WHOLE_FILE,
+    )
+    resource = (_V112 / "resources/check.yml").read_text(encoding="utf-8")
+
+    assert rendered == resource
+    for text in (rendered, resource):
+        assert f"uses: {_SETUP_UV} # v9.0.0" in text
+        assert "prune-cache: true" in text
+        assert "setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990" not in text

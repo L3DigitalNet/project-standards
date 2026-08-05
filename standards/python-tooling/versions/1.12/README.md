@@ -44,6 +44,8 @@ The type-checker choice fans out to dependency declarations, both Pyright-family
 
 Ruff `extend_include`, `extend_select`, and `extend_ignore`, plus coverage `omit`, are closed additive lists. The three Ruff lists render their keys unconditionally, as empty arrays when the option is empty, because each is a separately owned key; an empty array is inert in Ruff. Coverage `omit` still emits no key when empty. Explicit `extend_ignore` entries may suppress baseline-selected rules when that is reviewed repository intent.
 
+`ruff.extend_exclude` scopes Ruff alone and deliberately does not flow into the type checker. The two tools do not share an exclusion contract: BasedPyright and Pyright carry their own default `exclude` list, so a package-rendered `exclude` key would have to be rendered unconditionally — key-level units cannot appear only when an option is non-empty — and an unconditional empty list would silently replace those defaults for every consumer. Type-checker exclusion is therefore consumer-owned: write `exclude` directly in `[tool.basedpyright]` (or `[tool.pyright]`). It is an undeclared key, so reconciliation preserves it and reports no drift, exactly as it does for `extraPaths` before 1.11 and for pytest `pythonpath`.
+
 ## Build backends
 
 Use `uv_build` for pure-Python packages unless project constraints require another backend. The selected backend owns the complete `[build-system]` table. `build_backend = "none"` declares a deliberately non-installable repository and omits that table without removing any development tooling. See [Build Backend Guidance](build-backend.md).

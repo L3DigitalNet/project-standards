@@ -253,15 +253,24 @@ def _dependency_name(requirement: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
-# RUFF OWNERSHIP INVARIANT (issue #99), declared once for the value table, the
-# unit renderer, and the payload scopes that mirror them: this package owns
-# exactly the leaf keys `_ruff_values` names and nothing else under `[tool.ruff]`.
-# Every undeclared sub-table — `flake8-bugbear`, `isort`, `pydocstyle`,
-# `extend-per-file-ignores`, any future plugin — is therefore consumer-owned by
-# construction, not by an allow-list this package would have to keep growing.
-# Through 1.11 `[tool.ruff]` was a single owned unit, so the compared value was
-# the whole subtree and one such sub-table blocked adoption outright, with none
-# of the nine governing options able to express it.
+# KEY OWNERSHIP INVARIANT (issues #99 and #117), declared once for every value
+# table below, the unit renderers, and the payload scopes that mirror them: this
+# package owns exactly the leaf keys it names and nothing else inside the tables
+# it contributes to. Every undeclared key or sub-table is therefore consumer-owned
+# by construction, not by an allow-list this package would have to keep growing —
+# `[tool.ruff.lint.flake8-bugbear]`, `isort`, `extend-per-file-ignores` and any
+# future Ruff plugin (#99); `exclude` and any other checker setting in
+# `[tool.basedpyright]`/`[tool.pyright]` (#117); `pythonpath` in
+# `[tool.pytest.ini_options]`. Through 1.11 `[tool.ruff]` alone broke that rule by
+# owning a whole table, so the compared value was the entire subtree and one
+# consumer sub-table blocked adoption outright, with none of the nine governing
+# options able to express it.
+#
+# The invariant is also why `ruff.extend_exclude` does not feed the checker
+# (#117): a rendered `exclude` key would have to exist unconditionally — a
+# contribution cannot render nothing, and materialization predicates cannot test
+# emptiness — so an empty option would replace the checker's own default excludes
+# for every consumer. Leaving the key undeclared hands that decision back.
 #
 # Rejected alternative: a bounded typed option per plugin (`ruff.flake8_bugbear.*`
 # or a generic sub-table passthrough). It re-runs this defect for the next plugin
@@ -552,10 +561,16 @@ def _workflow(config: Mapping[str, object]) -> str:
         "      - uses: actions/setup-python@v6",
         "        with:",
         '          python-version-file: ".python-version"',
-        "      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2",
+        # SHA-pinned because setup-uv publishes no moving major or minor tag from
+        # v8.0.0 on, so `@v9` does not resolve. `prune-cache: true` is explicit
+        # rather than inherited: v9 stopped pruning before saving the cache, so
+        # the v8 cache behavior this workflow was measured under has to be asked
+        # for by name.
+        "      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0",
         "        with:",
         '          version: "0.11.6"',
         "          enable-cache: true",
+        "          prune-cache: true",
         "      - name: Sync dependencies",
         "        run: uv sync --locked --all-groups",
     ]
@@ -587,11 +602,29 @@ def _annotation_future_import(config: Mapping[str, object]) -> str:
     return "from __future__ import annotations\n\n"
 
 
+def _command_literal(command: Sequence[str]) -> str:
+    """Render one gate command as an argv literal Ruff's formatter cannot rewrite.
+
+    Issue #115: the predecessor emitted each command on a single line, so line
+    length grew with the declared root count (#95 renders every root as its own
+    argv element). Past `ruff.line_length` the formatter would split the line,
+    and the package's own generated script failed the `ruff format --check` stage
+    that the same script invokes first — with no consumer fix, because editing
+    the managed bytes trips CP-MODIFIED-MANAGED.
+
+    One element per line with a magic trailing comma is the formatter's own
+    output for an exploded collection, and Ruff never rejoins a collection that
+    carries one. That makes the rendering a fixed point at ANY root count and any
+    `line_length`, rather than one that holds until a consumer declares a root
+    too many. Hoisting the roots into a shared module constant (the report's
+    other suggestion) would shorten these lines but not bound them: the
+    non-Ruff commands can exceed a low `line_length` on their own.
+    """
+    return "    (\n" + "".join(f"        {json.dumps(part)},\n" for part in command) + "    ),"
+
+
 def _script(config: Mapping[str, object]) -> str:
-    command_lines = "\n".join(
-        "    (" + ", ".join(json.dumps(part) for part in command) + "),"
-        for command in _local_commands(config)
-    )
+    command_lines = "\n".join(_command_literal(command) for command in _local_commands(config))
     return f'''"""Run the selected Python verification gate and stop at the first failure."""
 
 {_annotation_future_import(config)}import subprocess
@@ -637,7 +670,14 @@ def main(argv: Sequence[str]) -> int:
         None,
     )
     if unrecognized is not None:
-        print(f"scripts/check.py: error: unrecognized argument: {{unrecognized}}", file=sys.stderr)
+        # Pre-split with a magic trailing comma: `ruff.line_length` accepts values
+        # down to 79, and this call is 97 columns joined. Issue #115's original
+        # 1.10 report had no per-root argv at all, so a low line_length was the
+        # only way its managed script could fail its own formatter stage.
+        print(
+            f"scripts/check.py: error: unrecognized argument: {{unrecognized}}",
+            file=sys.stderr,
+        )
         print(USAGE, end="", file=sys.stderr)
         return 2
     if arguments:
@@ -966,30 +1006,78 @@ def run_validate(
         # fail an already-adopted consumer for a condition it did not create.
         return {"findings": []}
     state = cast("Mapping[str, object]", observed_state)
+    return {
+        "findings": [*_metadata_findings(config, state), *_declared_root_findings(config, state)]
+    }
+
+
+def _declared_root_findings(
+    config: Mapping[str, object],
+    state: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Report each declared root the repository does not actually have.
+
+    Issue #118: every adoption declares at least one collection root, because
+    `pytest.test_paths` has a minimum of one entry, and the declared roots are
+    rendered straight into the checker `include` and the bounded Ruff commands.
+    Nothing creates them. A fresh adoption that has not written its first test
+    therefore reconciled clean and then failed its own one-command gate on
+    `File or directory "/repo/tests" does not exist.` — a message that names
+    neither this package nor the option that produced the path.
+
+    Reported, never repaired, and never blocking: creating a directory is not
+    this package's authority, the declaration may legitimately precede the code
+    it describes, and turning a normal early-adoption state into a refused
+    reconcile would be a worse defect than the one being fixed. Absence of a
+    captured fact is silence, not a fault — a caller that offered no state for a
+    path is not evidence the path is missing.
+    """
+    findings: list[dict[str, object]] = []
+    roots, _coverage = _source_roots(config)
+    for root in roots:
+        if root == ".":
+            # The flat layout root IS the repository, which necessarily exists.
+            continue
+        observed = state.get(root)
+        if not isinstance(observed, Mapping):
+            continue
+        kind = cast("Mapping[str, object]", observed).get("kind")
+        if kind == "directory":
+            continue
+        findings.append(
+            {
+                "code": "PT-DECLARED-ROOT-MISSING",
+                "severity": "warning",
+                "path": root,
+                "identity": "$directory",
+                "message": (
+                    f"declared source or test root {root!r} does not exist, "
+                    "so the managed gate will fail on it before any check runs"
+                ),
+                "hint": (
+                    "create the directory (an empty placeholder is enough) or drop it from "
+                    "pytest.test_paths, additional_source_roots, or source_layout"
+                ),
+                "line": None,
+                "locus": None,
+            }
+        )
+    return findings
+
+
+def _metadata_findings(
+    config: Mapping[str, object],
+    state: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Refuse an installable adoption with no consumer-owned project identity."""
     if config.get("build_backend") == "none":
-        return {"findings": []}
+        return []
     observed = state.get("pyproject.toml")
     metadata: Mapping[str, object] = (
         cast("Mapping[str, object]", observed) if isinstance(observed, Mapping) else {}
     )
     if metadata.get("kind") != "regular":
-        return {
-            "findings": [
-                {
-                    "code": "PT-PROJECT-METADATA",
-                    "severity": "error",
-                    "path": "pyproject.toml",
-                    "identity": "table:/project",
-                    "message": (
-                        "installable adoption requires a consumer-owned [project] table "
-                        "and this repository has no pyproject.toml"
-                    ),
-                    "hint": _PROJECT_METADATA_HINT,
-                    "line": None,
-                    "locus": None,
-                }
-            ]
-        }
+        return [_metadata_finding("this repository has no pyproject.toml")]
     content = metadata.get("content_base64")
     if not isinstance(content, str):
         raise ValueError("consumer_state pyproject.toml carries no content")
@@ -998,23 +1086,22 @@ def run_validate(
     except UnicodeDecodeError, ValueError:
         raise ValueError("consumer pyproject.toml is not valid UTF-8 TOML") from None
     if isinstance(document.get("project"), Mapping):
-        return {"findings": []}
+        return []
+    return [_metadata_finding("this pyproject.toml declares none")]
+
+
+def _metadata_finding(observation: str) -> dict[str, object]:
     return {
-        "findings": [
-            {
-                "code": "PT-PROJECT-METADATA",
-                "severity": "error",
-                "path": "pyproject.toml",
-                "identity": "table:/project",
-                "message": (
-                    "installable adoption requires a consumer-owned [project] table "
-                    "and this pyproject.toml declares none"
-                ),
-                "hint": _PROJECT_METADATA_HINT,
-                "line": None,
-                "locus": None,
-            }
-        ]
+        "code": "PT-PROJECT-METADATA",
+        "severity": "error",
+        "path": "pyproject.toml",
+        "identity": "table:/project",
+        "message": (
+            f"installable adoption requires a consumer-owned [project] table and {observation}"
+        ),
+        "hint": _PROJECT_METADATA_HINT,
+        "line": None,
+        "locus": None,
     }
 
 

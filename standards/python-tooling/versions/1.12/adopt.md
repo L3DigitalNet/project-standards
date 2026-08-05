@@ -81,6 +81,25 @@ Set `coverage.parallel = true` to collect parallel data and combine it before re
 
 The Ruff `extend_include`, `extend_select`, and `extend_ignore` lists render their native tool keys always, as empty arrays when the option is empty; each is a separately owned key, and an empty array is inert in Ruff. The coverage `omit` list still emits its key only when nonempty. `build_backend = "none"` declares a deliberately non-installable repository and omits only `[build-system]`. Fresh adoption leaves performance CI off; set `ci.performance = true` only when the repository has matching performance tests.
 
+### Declared roots must exist before the gate runs
+
+Every declared source and test root is rendered into the checker `include` and the bounded Ruff commands, and nothing creates the directories. `pytest.test_paths` requires at least one entry, so a repository adopting the standard before it has written its first test still declares `tests/`. BasedPyright then exits non-zero on `File or directory "/repo/tests" does not exist.` with zero findings, and the gate stops before pytest.
+
+`reconcile --check` reports each missing root as a `PT-DECLARED-ROOT-MISSING` warning naming the path. The warning does not block the reconcile; create the directory (an empty placeholder is enough — `.gitkeep` is the convention used for `docs/handoff/bugs/`), or drop the root from `pytest.test_paths`, `additional_source_roots`, or `source_layout`. Reconciliation never creates the directory itself: repository structure is consumer authority, and a declaration may legitimately precede the code it describes.
+
+### Vendored or generated code and the type checker
+
+`ruff.extend_exclude` scopes Ruff only. It does not reach BasedPyright or Pyright, and that is deliberate: both checkers ship their own default `exclude` list, a key-level unit has to render whether or not its option is empty, and an unconditional empty `exclude` would replace those defaults for every consumer.
+
+Exclude such paths from the type checker by writing the key yourself:
+
+```toml
+[tool.basedpyright]
+exclude = [".venv", "data", "vendored/frozen-tool"]
+```
+
+`exclude` is not declared by this package, so it is consumer-owned: reconciliation preserves it, `reconcile --check` keeps reporting `ok: true` with no findings, and it never becomes managed drift. The same holds for any other undeclared key in `[tool.basedpyright]`, `[tool.pyright]`, `[tool.pytest.ini_options]`, or `[tool.ruff]` — see the ownership rule below. Use it for version-locked release mirrors, checksum-verified vendored copies, and generated code, where reformatting or "fixing" the file is the wrong answer.
+
 The rendered `scripts/check.py` takes no arguments. `python scripts/check.py --help` prints usage and exits 0 without running a gate command, and any other argument exits 2 as a usage error, so a help probe or a typo never starts the toolchain.
 
 Preview and apply:
@@ -96,7 +115,7 @@ Commit `.standards/config.toml`, `.standards/lock.toml`, `uv.lock`, and the reco
 
 ## Existing projects
 
-Conflicting managed `pyproject.toml` keys or tables block before any write. Reconcile the consumer value with the selected package option, then rerun the preview. Keys not declared by the package remain consumer-owned, including additional BasedPyright, Pyright, and pytest settings such as `extraPaths` and `pythonpath`. Unrelated tables, editor settings, tasks, extension recommendations, and instruction blocks are preserved.
+Conflicting managed `pyproject.toml` keys or tables block before any write. Reconcile the consumer value with the selected package option, then rerun the preview. Keys not declared by the package remain consumer-owned, including additional BasedPyright, Pyright, and pytest settings such as `exclude` and `pythonpath`, and every undeclared `[tool.ruff]` sub-table such as `[tool.ruff.lint.flake8-bugbear]`. Unrelated tables, editor settings, tasks, extension recommendations, and instruction blocks are preserved.
 
 For a V4 consumer, use the migration command instead of manually deleting legacy files:
 
