@@ -224,7 +224,7 @@ Managed bytes stay formatter-stable.
 
 Use the existing bare `<!-- prettier-ignore -->` convention only for one following Markdown node, such as a byte-locked YAML fence. It does not protect a multi-node managed range.
 
-**Why:** Prettier 3.8.3 preserves the managed bytes only when the range markers are top-level and correctly separated. The adapter test runs the pinned formatter and verifies that the block digest and raw bytes remain unchanged.
+**Why:** Prettier 3.9.6 (verified at 3.8.3 originally) preserves the managed bytes only when the range markers are top-level and correctly separated. The adapter test runs the pinned formatter and verifies that the block digest and raw bytes remain unchanged.
 
 **Sources:** Prettier range-ignore documentation; SPEC-CP01 Task 13 verification fixture.
 
