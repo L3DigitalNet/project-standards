@@ -95,9 +95,9 @@ def _version_key(value: str) -> tuple[int, ...]:
 def _predecessor_catalog(text: str, standard_id: str, ceiling: str) -> str:
     """Re-render one installed catalog projection as an older release published it.
 
-    Issues #91 and #101 are only reachable when the installed catalog advertises
-    a newer selection than the consumer's lock records, so the fixture needs two
-    genuine catalog generations rather than one catalog read twice.
+    Issue #91 is only reachable when the installed catalog advertises a newer
+    selection than the consumer's lock records, so the fixture needs two genuine
+    catalog generations rather than one catalog read twice.
     """
     document = tomllib.loads(text)
     limit = _version_key(ceiling)
@@ -186,6 +186,48 @@ def test_legacy_report_before_catalog_refresh_reads_the_applied_lock(
     assert report["findings"][0]["code"] == "AH-LEGACY-ROOT-STATUS"
     assert "agent-handoff@1.4" in captured.err
     assert _control_bytes(repo) == control
+
+
+@pytest.mark.parametrize(
+    ("command", "expected_code"),
+    [("size-report", "AH-SIZE-CAP"), ("shape-check", "AH-SHAPE")],
+)
+def test_reports_between_enable_and_apply_read_the_desired_selection(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+    command: str,
+    expected_code: str,
+) -> None:
+    """TC-T5-001 (#101): the documented pre-apply checkpoint runs before the write.
+
+    The consumer has enabled Agent Handoff but not reconciled it, so the package
+    is absent from the lock — the ordinary window UPGRADING.md sends a consumer
+    into. A pre-existing knowledge document violates the byte cap; the runbook
+    exists so that violation is routed to its owner before eager state is
+    written, which requires the report to run here rather than after apply.
+    """
+    command_resolution.reset_legacy_authority_warning()
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    set_standard_enabled(repo, "agent-handoff", True)
+    state = repo / "docs/handoff/state.md"
+    state.parent.mkdir(parents=True)
+    state.write_text("# State\n\n" + "consumer knowledge " * 200 + "\n", encoding="utf-8")
+    control = _control_bytes(repo)
+    preview = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert preview.applicable, preview.findings
+
+    assert run([command, "--repo", str(repo), "--json"], distribution=distribution) == 1
+
+    captured = capsys.readouterr()
+    report = json.loads(captured.out)
+    assert any(item["code"] == expected_code for item in report["findings"])
+    assert f"agent-handoff@{report['standard_version']}" in captured.err
+    assert "reconcile --apply" in captured.err
+    assert _control_bytes(repo) == control
+    assert not (repo / ".agents").exists()
 
 
 def test_unified_validate_uses_selected_provider(

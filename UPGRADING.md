@@ -134,6 +134,10 @@ project-standards agent-handoff shape-check --repo .
 
 Running these reports under legacy authority before apply is expected. The tool emits only a factual note — `note: reading legacy .project-standards.yml authority; the V5 control plane takes over after migration` — and does not instruct you to stop; the pre-migration reports this runbook prescribes and the emitted message no longer contradict each other.
 
+The same checkpoint holds when you enable Agent Handoff on a control plane that has already migrated. Between `standards enable` and `reconcile --apply` the package is enabled but absent from `.standards/lock.toml` — the normal state of that window, not an inconsistency — and the read-only reports run there against the desired selection, naming their basis: `note: reading the not-yet-applied selection: agent-handoff@1.8; it is enabled but absent from .standards/lock.toml until project-standards reconcile --apply locks it`. They write nothing, so a hard-cap violation still surfaces before any eager state exists.
+
+A read-only command also resolves the applied lock when the installed release is newer than the one your repository has reconciled, which is what makes the pre-change inventory (`project-standards agent-handoff legacy-report --repo .`) runnable before a same-major refresh. That note names the locked package version — `note: reading the applied lock: agent-handoff@1.6; installed release 5.15.0 is not reconciled into this repository yet` — and reconciliation, not the report, advances the selection.
+
 If apply is interrupted after unified files appear beside the legacy configuration, keep both authorities. Rerun the migration entry point: it recognizes only a sanctioned migration prefix, previews the recovery, and completes it on apply.
 
 ```bash

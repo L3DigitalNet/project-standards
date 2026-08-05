@@ -364,7 +364,20 @@ def _resolve_state(
         raise _CompanionAbsentError(f"package is not present in unified config: {standard_id}")
     if not desired.enabled:
         raise _CompanionAbsentError(f"package is disabled in unified config: {standard_id}")
-    if require_reconciled:
+    # Issue #101: a read-only command may report on the desired selection while
+    # the package is enabled but has never been locked. That window is the normal
+    # state between `standards enable` and `reconcile --apply`, not a fault, and
+    # it is exactly where UPGRADING.md §2 places the size and shape checkpoint:
+    # a pre-existing hard-cap violation must be routed to its durable owner
+    # before eager state is written, so refusing here put the documented check
+    # after the write it exists to prevent. Nothing is applied; the basis is
+    # disclosed below. A package that *is* locked keeps its full reconciliation
+    # requirement, so an unreconciled config edit still cannot take effect
+    # silently over an authenticated basis.
+    desired_basis = (
+        require_reconciled and read_authority and standard_id not in state.lock.standards
+    )
+    if require_reconciled and not desired_basis:
         _validate_applied_state(standard_id, state.config, state.catalog, state.lock)
         if read_authority:
             locked = resolve_locked_authority(state, installed, standard_id)
@@ -405,7 +418,14 @@ def _resolve_state(
     )
     if payload is None:
         raise CommandResolutionError(f"selected package payload is unavailable: {standard_id}")
-    if require_reconciled:
+    if desired_basis:
+        _disclose_read_basis(
+            f"reading the not-yet-applied selection: "
+            f"{standard_id}@{selected.applied.resolved.value}; "
+            "it is enabled but absent from .standards/lock.toml until "
+            "project-standards reconcile --apply locks it"
+        )
+    if require_reconciled and not desired_basis:
         applied = state.lock.standards[standard_id]
         desired_digest = semantic_digest(state.config.model_dump(mode="json"))
         if state.lock.project_standards.config_digest != desired_digest:
