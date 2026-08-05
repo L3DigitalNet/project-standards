@@ -8,6 +8,7 @@
 		"github.vscode-github-actions",
 		"editorconfig.editorconfig",
 		"esbenp.prettier-vscode",
-		"DavidAnson.vscode-markdownlint"
+		"DavidAnson.vscode-markdownlint",
+		"golang.go"
 	]
 }

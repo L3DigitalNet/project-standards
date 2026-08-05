@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.15.0] — 2026-08-04
+
 ### Added
 
 - **CLI Documentation 1.6 makes the standard and its packaged CI profile explicitly applicable to Go CLIs.** The language-neutral profile model now maps packaged Go commands to explicit `main` package and release inventories, requires checks against a built executable rather than `go run`, covers generated command-tree, man-page, and shell-completion documentation, and records the official Go, Cobra, GoReleaser, and GitHub Actions sources behind those rules. A new `language = "go"` / `setup = "go"` workflow builds one validated package selector with the `go.mod` toolchain and smoke-checks the resulting command from an isolated temporary directory.

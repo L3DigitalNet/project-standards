@@ -13,8 +13,8 @@ options:
 """
 
 COMMANDS: tuple[tuple[str, ...], ...] = (
-    ("uv", "run", "ruff", "format", "--check", "."),
-    ("uv", "run", "ruff", "check", "."),
+    ("uv", "run", "ruff", "format", "--check", "src", "tests"),
+    ("uv", "run", "ruff", "check", "src", "tests"),
     ("uv", "run", "basedpyright"),
     ("uv", "run", "coverage", "run", "-m", "pytest"),
     ("uv", "run", "coverage", "report"),

@@ -1,6 +1,6 @@
 [project]
 name = "project-standards"
-version = "5.14.0"
+version = "5.15.0"
 description = "Reusable project standards, templates, schemas, and validation tools."
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -74,6 +74,7 @@ typeCheckingMode = "strict"
 pythonVersion = "3.14"
 pythonPlatform = "All"
 failOnWarnings = true
+extraPaths = ["src"]
 
 [tool.pytest.ini_options]
 minversion = "9.0"
