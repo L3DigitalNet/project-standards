@@ -53,7 +53,7 @@ Read-only assessment. No ADR, configuration, or payload file was modified.
 
 This report covers two passes. **Pass 1** (§1–§8) grades each active ADR individually against the 1.4 decision-boundary rubric. **Pass 2** (§9) treats the corpus as a graph and examines inter-ADR conflicts, overlapping ownership, and internal consistency. The consolidated backlog in §10 covers both.
 
-**Status.** The full §10 backlog is tracked by [issue #128](https://github.com/L3DigitalNet/project-standards/issues/128), scoped by the owner to the next release. The amendment-vocabulary gap in §6 is [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127) and is a soft prerequisite for backlog items 4, 14, and 16.
+**Status.** The full §10 backlog is tracked by [issue #128](https://github.com/L3DigitalNet/project-standards/issues/128) and the amendment-vocabulary gap in §6 by [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127). Owner decision of 2026-08-05: both are bundled into **v5.17.0** — MINOR, carrying `adr` 1.4 → 1.5. #127 ships first as `adr` 1.5 so backlog items 4, 14, and 16 can use the sanctioned amendment form directly. `adr` 1.5 must stay non-breaking to become the ordinary Catalog 5 default.
 
 ## 1. Scope and method
 
@@ -540,7 +540,11 @@ Ordered by value per unit of effort, covering both passes. None of this was appl
 | 20 | Reconcile bundle/package/family/payload terminology in ADRs 0001–0010 | S3 | 5 ADRs | Active normative sentences use a vocabulary the V1→V2 rename retired |
 | 21 | Rename ADR 0025 and 0026 files to omit the repository name | F2 | 2 files + inbound references | Cosmetic; touches the index, five frontmatter references, and inline links |
 
-**Filed:** the amendment-vocabulary gap (§6) is now [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127). Items 4, 14, and 16 all want the sanctioned form it requests, so #127 is a soft prerequisite for the cleanest version of each; interim banner notes match existing practice and need not wait.
+**Scheduled.** This backlog is [issue #128](https://github.com/L3DigitalNet/project-standards/issues/128) and the amendment-vocabulary gap (§6) is [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127). Owner decision of 2026-08-05: both ship in **v5.17.0**, a MINOR release carrying `adr` 1.4 → 1.5.
+
+Sequencing follows from that. #127 lands first as `adr` 1.5; items 4, 14, and 16 then use the sanctioned amendment form directly rather than the interim banner notes this report previously assumed; item 1 lands last so this repository's scaffold arrives as the 1.5 template. Prose touched twice accumulates two vintages of wording, which is why the ordering matters more here than it would for code.
+
+One constraint carries into #127's design: a `1.4 → 1.5` advance may become the ordinary Catalog 5 default, and both `meta/versioning.md` and ADR 0024 forbid promoting a breaking default within one catalog major. The amendment vocabulary must therefore stay additive — optional default-empty relationship fields, no new required section, no changed field meanings, `schema_version` unchanged. Anything that invalidates a currently-valid ADR is `2.0` and an opt-in candidate instead, which would block items 4, 14, and 16 for ordinary consumers until a Catalog 6 promotion.
 
 ## 11. Not assessed
 

@@ -58,9 +58,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   Remaining work is the feature phase T24–T29 for #62 (conformance linting) and #55 (house-format conversion); T24 is dependency-ready. #116 stays deferred alongside them by owner decision (2026-08-05, defect fixes only). The deferred-tooling phase closed in v5.16.0 — see `docs/handoff/deployed.md` for what shipped.
 
-- [ ] Bring the active ADR corpus into 1.4 conformance before the next release (#128).
+- [ ] Deliver the v5.17.0 ADR train: amendment vocabulary (#127) plus corpus remediation (#128).
 
-  Owner scoped all 21 backlog items in `docs/reviews/adr-conformance/2026-08-05-1941-adr-1-4-conformance-assessment.md` to the next release. Bundling the amendment vocabulary (#127) as `adr` 1.5 makes it MINOR and touches each record once; corpus-only remediation is PATCH.
+  Owner decision 2026-08-05: bundle both and target **5.17.0** (MINOR — `adr` 1.4 → 1.5 becomes the Catalog 5 default). Ship #127 as `adr` 1.5 first, then the 21 backlog items in `docs/reviews/adr-conformance/2026-08-05-1941-adr-1-4-conformance-assessment.md` §10 using the 1.5 amendment form. `adr` 1.5 must stay non-breaking or it cannot become the default within catalog major 5.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
