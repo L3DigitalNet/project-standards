@@ -30,6 +30,7 @@ related:
 | --- | --- | --- | --- |
 | 0.1 | 2026-08-06 | Claude with owner-approved design input | Initial draft from the approved github-workflow package design brief. |
 | 0.2 | 2026-08-06 | Claude with owner directive | Skill tooling is Go (design D7): the org audit ships as a committed, reproducibly built linux/amd64 `gh-workflow-audit` binary the skill invokes. Adds FR-015/FR-016, NFR-005, IR-004, C-006, WH-006, D-008, EC-006, ERR-005; reworks FR-008, AW-001, OQ-002. |
+| 0.3 | 2026-08-06 | Claude with owner directive | Standardized attention-first operator summaries (design D8): sixth reference `summary-format.md`, summary presentation added to the skill trigger boundary. Adds FR-017, AW-004, D-009; reworks FR-002/FR-004 and reference counts. |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -52,7 +53,7 @@ After successful implementation, any agent session in a consuming repository loa
 ### 2.1 In Scope
 
 - An adoptable `standards/github-workflow/` package family at payload version `1.0` under the Standard Bundle Authoring 2.6 contract.
-- A mandatory repo-local skill at `.agents/skills/github-workflow/` with a Codex companion and five on-demand reference files.
+- A mandatory repo-local skill at `.agents/skills/github-workflow/` with a Codex companion and six on-demand reference files.
 - A machine-readable organization-schema reference (`org-schema.yaml`) and a skill-driven audit over live organization state.
 - A compiled Go audit tool, `gh-workflow-audit` (linux/amd64), shipped as a managed artifact and invoked by the skill under the operator's `gh` authentication.
 - Managed markdown-block contributions to `AGENTS.md` and `CLAUDE.md` carrying the skill mandate and standing invariants.
@@ -115,7 +116,8 @@ consumer-repo/
 │       ├── org-schema.yaml            # machine-readable org baseline for the audit
 │       ├── issue-structure.md         # canonical issue body headings + five Issue Types
 │       ├── pr-standard.md             # PR content standard + draft-PR policy
-│       └── review-checklist.md        # layered review checklist (discipline only)
+│       ├── review-checklist.md        # layered review checklist (discipline only)
+│       └── summary-format.md          # attention-first operator summary layout
 │   └── bin/
 │       └── gh-workflow-audit          # compiled Go audit tool (linux/amd64)
 └── .standards/packages/github-workflow/
@@ -148,7 +150,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 
 | ID | Goal | Success Signal | Achieved By |
 | --- | --- | --- | --- |
-| G-001 | Any agent session in a consuming repository applies one consistent GitHub work discipline. | Skill loads on work-state mutation; block invariants present in every harness context. | FR-001–FR-007, FR-010 |
+| G-001 | Any agent session in a consuming repository applies one consistent GitHub work discipline. | Skill loads on work-state mutation; block invariants present in every harness context; summaries render in one layout. | FR-001–FR-007, FR-010, FR-017 |
 | G-002 | The organization schema has one versioned, auditable in-repo representation. | Skill audit compares `org-schema.yaml` to live state and reports drift without mutating. | FR-008, FR-009, FR-015, FR-016, DR-001 |
 | G-003 | The package upgrades and drift-checks like every other Catalog 5 family. | `reconcile`, `drift-check`, and `upgrade` cover all delivered artifacts. | FR-011–FR-014, C-005 |
 | G-004 | Later adoption phases remain additive. | Phase-3+ capability lands as new payload versions without breaking v1 consumers. | WH-002, WH-005, D-007 |
@@ -169,6 +171,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | Standing invariants | The block-carried subset of the operating model's invariants that bind even when the skill was never loaded: never infer readiness (design-input invariant 5); no `Execution mode` self-promotion plus the human-applied org-schema rule (invariant 6); a nontrivial PR links its governing Issue (invariant 8); terminal-state synchronization (invariants 10 and 11); durable follow-up work becomes an Issue (invariant 15). | Numbering follows the design input's invariant list (its section 34). |
 | Managed artifact | A package-delivered file the control plane owns, upgrades, and drift-checks. | Distinct from create-only seeds, which this package never uses (C-005). |
 | Audit | The read-only comparison of live organization schema to `org-schema.yaml`, executed by the packaged `gh-workflow-audit` Go tool under the operator's `gh` authentication, producing findings for human action. | Never a provider; never a mutation. |
+| Operator summary | An on-request digest of issues and/or PRs rendered in the packaged attention-first layout (`summary-format.md`). | Read-only to gather, but still a skill trigger so the layout binds. |
 
 ---
 
@@ -179,9 +182,9 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
 | FR-001 | The package shall deliver a skill at `.agents/skills/github-workflow/SKILL.md` whose instructions cover Issue Type selection, Issue Field discipline, issue body structure, PR standard, lifecycle transitions, refusal rules, and when to consult each reference file. | The skill is the mandatory behavioral core (design D1). | Skill artifact present after reconcile; instructions cover each listed area; package tests assert artifact digest. | Must |
-| FR-002 | The skill shall declare its trigger boundary: load before creating or mutating work state (issues, issue field values, PRs, lifecycle transitions, milestones) or performing triage or an org audit; plain read-only queries are exempt. | Bounds context cost while making mutation discipline unavoidable (design D1). | SKILL.md states the boundary and the read-only exemption verbatim in its trigger description. | Must |
+| FR-002 | The skill shall declare its trigger boundary: load before creating or mutating work state (issues, issue field values, PRs, lifecycle transitions, milestones), performing triage or an org audit, or presenting an operator-requested issue/PR summary; plain read-only queries remain exempt. | Bounds context cost while making mutation and reporting discipline unavoidable (design D1/D8). | SKILL.md states the boundary, the summary trigger, and the read-only exemption in its trigger description. | Must |
 | FR-003 | The package shall deliver a Codex skill companion at `.agents/skills/github-workflow/agents/openai.yaml` when `harnesses` contains `codex`. | Harness parity per the agent-handoff precedent. | Artifact present iff `codex` selected; gated by the same condition as the AGENTS.md contribution. | Must |
-| FR-004 | The package shall deliver the five reference files (`field-vocabulary.md`, `org-schema.yaml`, `issue-structure.md`, `pr-standard.md`, `review-checklist.md`) under `.agents/skills/github-workflow/references/`. | Progressive disclosure keeps SKILL.md compact (design D1/D2). | All five present after reconcile with pinned digests; SKILL.md references each by relative path. | Must |
+| FR-004 | The package shall deliver the six reference files (`field-vocabulary.md`, `org-schema.yaml`, `issue-structure.md`, `pr-standard.md`, `review-checklist.md`, `summary-format.md`) under `.agents/skills/github-workflow/references/`. | Progressive disclosure keeps SKILL.md compact (design D1/D2). | All six present after reconcile with pinned digests; SKILL.md references each by relative path. | Must |
 | FR-005 | `field-vocabulary.md` shall reproduce the operating model's seven Issue Fields with their exact value sets, the field-pinning matrix, and the fields-not-to-create list. | Agents need the authoritative vocabulary without loading the full operating model. | Content matches the design input's field definitions (sections 6–13) and fields-not-to-create list (section 29) value-for-value. | Must |
 | FR-006 | `issue-structure.md` shall reproduce the five Issue Types and the canonical issue body headings; `pr-standard.md` shall reproduce the PR content standard and draft-PR policy; `review-checklist.md` shall reproduce the layered review checklist with an explicit no-automation statement. | Reference fidelity to the operating model (design D1). | Content matches the design input sections 4, 16, and 21–23; review-checklist.md states it gates nothing. | Must |
 | FR-007 | The package shall contribute a bounded markdown block to `CLAUDE.md` when `harnesses` contains `claude-code` and to `AGENTS.md` when `harnesses` contains `codex`, containing the skill mandate, the standing invariants, and the configured organization name. | The block is the always-loaded defense (design D3). | Blocks render from config via `render-semantic`; both contain the five standing invariants enumerated in the Glossary in agent-directive phrasing; block body stays within approximately 12 content lines. | Must |
@@ -194,6 +197,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | FR-014 | The package shall ship the standard family documentation set: `README.md` (canonical standard), `adopt.md`, and `agent-summary.md` within the repository's agent-summary size limit. | Every Catalog 5 family carries these resources (C-001). | Resources present with payload digests; agent-summary byte limit enforced by existing repository tests. | Must |
 | FR-015 | The package shall deliver `gh-workflow-audit` as a managed artifact at `.agents/skills/github-workflow/bin/gh-workflow-audit` with mode `0755`, compiled for linux/amd64 from repository Go source. | Owner-directed Go tooling with zero consumer toolchain requirement (design D7). | Artifact present with pinned digest and executable mode after reconcile; binary is statically linked (`CGO_ENABLED=0`). | Must |
 | FR-016 | The audit tool shall read the baseline from `org-schema.yaml` and the organization from `policy.toml`, query live organization schema read-only under the operator's existing `gh` authentication, emit a deterministic findings report distinguishing matches, missing elements, value mismatches, and extras, and exit nonzero on unmet preconditions (missing auth, unreachable API, unsupported platform) without emitting a partial report. | The audit must be trustworthy without human re-derivation (design D7). | Offline fixture-driven tests cover every finding class and precondition failure; a recorded manual run against the live organization is implementation evidence. | Must |
+| FR-017 | `summary-format.md` shall define the attention-first operator summary layout — scope header (target, timestamp, counts); Needs-attention section (Blocked, Needs definition, terminal-sync mismatches, passed target dates); Issues table (number, Type, title, Workflow, Priority, Size or Severity, Execution mode); PRs table (number, title, governing Issue, state, CI, risk notes); discovered-follow-ups tail — and the skill shall present operator-requested issue/PR summaries in that layout. | One comparable report shape across sessions and agents (design D8). | `summary-format.md` matches the layout; SKILL.md directs its use for summary requests. | Must |
 
 ### 7.2 Non-Functional Requirements
 
@@ -250,7 +254,7 @@ flowchart LR
 | Component | Responsibility | Interfaces | Notes |
 | --- | --- | --- | --- |
 | `SKILL.md` + `openai.yaml` | Decision procedures, refusals, trigger boundary, audit procedure | Skill loading; `gh` | The only component permitted network interaction, via the operator's `gh`. |
-| `references/*` (5 files) | Authoritative vocabulary, org schema, body/PR/review structures | Read by skill on demand | Content fidelity to the operating model is a Must requirement (FR-005/006, DR-001). |
+| `references/*` (6 files) | Authoritative vocabulary, org schema, body/PR/review structures, operator summary layout | Read by skill on demand | Content fidelity to the operating model is a Must requirement (FR-005/006, DR-001); summary layout is FR-017. |
 | `bin/gh-workflow-audit` | Deterministic read-only org-schema audit | CLI; operator `gh` auth; YAML/TOML inputs | Static Go binary, linux/amd64, reproducibly built (NFR-005); the only skill component that touches the network, and only in sessions. |
 | Block contributions | Skill mandate + standing invariants in every harness context | markdown-block adapter | Harness-gated; org name rendered from config. |
 | `policy.toml` | Runtime consumer configuration for the skill | TOML read | Rendered by `render-semantic`. |
@@ -263,7 +267,7 @@ flowchart LR
 
 | ID | Decision | Rationale | Alternatives Considered | ADR |
 | --- | --- | --- | --- | --- |
-| D-001 | One mandatory skill with a mutation-boundary trigger and five on-demand reference files. | Single mandatory-skill story; progressive disclosure guards size. | Two skills (fuzzy triage/admin boundary); narrow skill + fat block (context tax). | design brief D1 |
+| D-001 | One mandatory skill with a mutation-boundary trigger and six on-demand reference files. | Single mandatory-skill story; progressive disclosure guards size. | Two skills (fuzzy triage/admin boundary); narrow skill + fat block (context tax). | design brief D1 |
 | D-002 | All artifacts managed; no create-only; no `.github/` delivery; Issue Forms deferred. | Upgradeable, drift-visible, zero bug-006 exposure; forms cannot populate fields. | Managed forms now; create-only seed form. | design brief D2 |
 | D-003 | Block carries skill mandate plus standing invariants (design-input invariants 5, 6, 8, 10, 11, 15) with config-rendered org name. | Exactly the expensive-to-violate rules survive a skipped skill load. | Pointer-only block; full inline summary. | design brief D3 |
 | D-004 | Config is exactly `organization` + `harnesses`. | Every option is permanent contract surface; GitHub-native state is not duplicated. | Area-label, type-subset, project, field-customization options. | design brief D4 |
@@ -271,6 +275,7 @@ flowchart LR
 | D-006 | Org audit is skill-driven via `gh`; providers stay offline; no scaffold/migrate. | Preserves deterministic reconcile; no legacy predecessor exists. | Network-capable audit provider. | design brief D6 |
 | D-007 | v1.0 packages operating-model phases 1–2 only; later phases arrive as additive payload versions. | The data model must prove itself in manual operation before enforcement automation. | Shipping phase-3 checks now. | design brief D0 |
 | D-008 | Skill executables are Go; the audit ships as a committed, reproducibly built linux/amd64 binary. | Deterministic, testable audit; zero consumer toolchain; ADR 0027 Go lane. | Source-shipped local build (agent-recommended, not selected); `go install` channel (network dependency, second version channel). | design brief D7 |
+| D-009 | Operator summaries follow the packaged attention-first layout; summary presentation is a skill trigger. | Summaries drive decisions — lead with what needs the human; one comparable shape across sessions. | Queue-first table-led layout (owner-rejected); ad-hoc per-session formats. | design brief D8 |
 
 ### 8.5 Design Constraints
 
@@ -333,6 +338,7 @@ Expected result:
 | AW-001 | Operator requests an org-schema audit. | Skill invokes `gh-workflow-audit`, which compares live Issue Types/Fields against `org-schema.yaml` read-only and classifies matches, missing, mismatched values, extras. | Findings report handed to the human; no mutation. |
 | AW-002 | Agent performs triage on captured issues. | Skill-guided: assign Type, recommend Priority/Size/Change risk/Severity per vocabulary; flag missing acceptance criteria as `Needs definition`. | Issues carry canonical metadata or are explicitly parked. |
 | AW-003 | Read-only query (`gh issue view`, `gh pr list`, searches). | No skill load required. | Zero added context cost for reads. |
+| AW-004 | Operator requests an issue/PR summary. | Skill loads (summary presentation is a trigger); agent gathers via read-only `gh` queries and renders per `summary-format.md`. | Attention-first summary delivered; no mutation. |
 
 ### 10.3 Edge Cases
 
@@ -453,7 +459,7 @@ The audit tool's live behavior is verified by a documented manual run against th
 
 | Requirement ID | Test / Verification Method | Status |
 | --- | --- | --- |
-| FR-001–FR-016 | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-001–FR-017 | To be completed by the implementer per Appendix B.3 | Not Started |
 | NFR-001–NFR-005 | To be completed by the implementer per Appendix B.3 | Not Started |
 | IR-001–IR-004, DR-001–DR-002 | To be completed by the implementer per Appendix B.3 | Not Started |
 
@@ -518,7 +524,7 @@ Exit: `project-standards validate` and graph/catalog checks pass with placeholde
 
 ### MS-1 — Content artifacts
 
-1. SKILL.md, openai.yaml, five references authored (FR-001–FR-006, FR-008, FR-009; DR-001).
+1. SKILL.md, openai.yaml, six references authored (FR-001–FR-006, FR-008, FR-009, FR-017; DR-001).
 2. Block contribution content and `render-semantic` rendering (FR-007, FR-010).
 3. `gh-workflow-audit` implemented under the repository Go lane, reproducible build wired, binary committed (FR-015, FR-016, NFR-005); OQ-002 resolved and recorded.
 

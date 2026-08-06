@@ -21,7 +21,7 @@ related: []
 - Operation: `create`
 - Decision owner: repository owner
 - Created and approved: `2026-08-06`
-- Revision: 1.1 — 2026-08-06 owner-directed amendment: skill tooling is Go, and the org audit ships as a packaged per-platform Go binary (D7). Initial approval 2026-08-06.
+- Revision: 1.2 — 2026-08-06 owner-directed amendment: operator issue/PR summaries follow a packaged attention-first layout shipped as a sixth reference (D8). Prior: 1.1 (same day) Go skill tooling (D7); initial approval 2026-08-06.
 - Prior design brief: none
 - Working-state source: `.project-pipeline/github-workflow-package/design-discovery/` (removed after promotion)
 - Design input: [GitHub Repository Administration Standard (preliminary)](archive/2026-08-06-github-repo-administration-preliminary-design.md)
@@ -84,7 +84,7 @@ Package `github-workflow` 1.0 delivers everything as `managed` artifacts — zer
 
 ### Skill
 
-One mandatory skill, `github-workflow`. Trigger boundary: agents must load it before creating or mutating GitHub work state — issues, issue fields, PRs, lifecycle transitions, milestones — or performing triage or an org-schema audit. Plain read-only queries (`gh issue view`, `gh pr list`) are exempt. `SKILL.md` carries the decision procedures: Issue Type selection, field discipline, refusal rules, and when to consult each reference. Reference files provide progressive disclosure:
+One mandatory skill, `github-workflow`. Trigger boundary: agents must load it before creating or mutating GitHub work state — issues, issue fields, PRs, lifecycle transitions, milestones — performing triage or an org-schema audit, or presenting an operator-requested issue/PR summary. Plain read-only queries (`gh issue view`, `gh pr list`) remain exempt. `SKILL.md` carries the decision procedures: Issue Type selection, field discipline, refusal rules, and when to consult each reference. Reference files provide progressive disclosure:
 
 | Artifact | Consumer target | Content |
 | --- | --- | --- |
@@ -95,6 +95,7 @@ One mandatory skill, `github-workflow`. Trigger boundary: agents must load it be
 | `issue-structure.md` | `.agents/skills/github-workflow/references/` | Canonical issue body headings and the five Issue Type definitions |
 | `pr-standard.md` | `.agents/skills/github-workflow/references/` | PR content standard and draft-PR policy |
 | `review-checklist.md` | `.agents/skills/github-workflow/references/` | Layered PR-review checklist — discipline only, no gating |
+| `summary-format.md` | `.agents/skills/github-workflow/references/` | Attention-first layout for operator-requested issue/PR summaries |
 | `policy.toml` | `.standards/packages/github-workflow/policy.toml` | Rendered consumer configuration for the skill to read |
 | `gh-workflow-audit` | `.agents/skills/github-workflow/bin/gh-workflow-audit` | Compiled Go audit tool (linux/amd64), mode 0755 |
 
@@ -193,12 +194,20 @@ Exactly two options:
 - Residual risk: binary bytes enter the digest-pinned payload lineage (repo growth per payload version; artifacts not reviewable by diff). Mitigation: the reproducible-build requirement makes the binary independently rebuildable and verifiable from the repository Go source.
 - Reopen when: a non-linux/amd64 consumer appears (add platforms), or payload growth becomes operationally painful (revisit source-built delivery).
 
+### D8: Standardized attention-first operator summaries
+
+- Status: `approved` (user, 2026-08-06; owner directive)
+- Decision: operator-requested issue/PR summaries follow one packaged layout, shipped as a sixth reference (`summary-format.md`): scope header (target, timestamp, counts) → Needs-attention section (Blocked, Needs definition, terminal-sync mismatches, passed target dates) → Issues table (number, Type, title, Workflow, Priority, Size or Severity, Execution mode) → PRs table (number, title, governing Issue, state, CI, risk notes) → discovered-follow-ups tail. Presenting such a summary becomes an explicit skill trigger even though gathering is read-only.
+- Alternative rejected: queue-first layout (table-led, attention as a flag column) — weaker at surfacing stuck work; the owner selected attention-first as recommended.
+- Rationale: summaries exist to drive operator decisions; leading with what needs the human matches the control-plane philosophy, and a packaged layout makes reports comparable across sessions and agents.
+- Reopen when: recurring summary needs appear that the fixed sections cannot express (e.g., milestone burn-down), warranting layout variants in a minor version.
+
 ## Complexity disposition
 
 ### Retained
 
 - Packaged Go audit binary (D7) — deterministic, testable audit output in place of fragile prose command sequences; committed per-platform delivery is the owner-selected distribution.
-- Reference-file split (five files) — guards `SKILL.md` size; progressive disclosure is an established repository pattern.
+- Reference-file split (six files) — guards `SKILL.md` size; progressive disclosure is an established repository pattern.
 - Configuration-rendered `organization` — keeps the published payload org-agnostic; a hardcoded organization would force a payload version per org change.
 - Full provider set minus `scaffold`/`migrate` — required by the Standard Bundle Authoring managed-artifact integrity contract.
 
@@ -255,7 +264,7 @@ Non-blocking:
 - Status: `approved`
 - Problem and outcome: package the GitHub Repository Administration Standard (phases 1–2) as Catalog 5 consumer package `github-workflow` with a mandatory skill.
 - Scope boundary: package contract only; org-owned repositories; no enforcement automation, coordinator, Issue Forms, or personal-account support.
-- Selected design: all-managed delivery — one skill with five reference files, compact invariant-bearing managed block, two-option config (`organization`, `harnesses`), `companions = ["agent-handoff"]`, offline provider set with the org audit skill-driven via `gh`.
+- Selected design: all-managed delivery — one skill with six reference files, compact invariant-bearing managed block, two-option config (`organization`, `harnesses`), `companions = ["agent-handoff"]`, offline provider set with the org audit skill-driven via `gh`.
 - Approved consequential decisions:
   - D0 scoping (phases 1–2, org-only, audit-only org schema, name)
   - D1 single skill, mutation-boundary trigger, references incl. review checklist
@@ -265,6 +274,7 @@ Non-blocking:
   - D5 companions agent-handoff; audit/validate/drift-check capabilities
   - D6 providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate
   - D7 skill tooling in Go; audit ships as committed linux/amd64 binary, reproducibly built
+  - D8 operator summaries follow the packaged attention-first layout (summary-format.md); summary presentation is a skill trigger
 - Agent-applied defaults:
   - org-schema resource in YAML (design-input §35 fidelity)
   - capability naming mirrors agent-handoff
