@@ -18,7 +18,7 @@ related:
 
 # Project Standards-owned frontmatter schema migration tool
 
-The recommended product is a Project Standards-owned, adapter-driven frontmatter schema migration tool. It should complement the proposed [durable document references tooling](specs/2026-07-31-durable-document-references-optional-tooling-spec.md), not extend that tool into a second responsibility.
+The recommended product is a Project Standards-owned, adapter-driven frontmatter schema migration tool. It should complement the proposed [durable document references tooling](../specs/2026-07-31-durable-document-references-optional-tooling-spec.md), not extend that tool into a second responsibility.
 
 The following is suitable as a planned-product entry and starting brief.
 

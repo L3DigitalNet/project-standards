@@ -20,7 +20,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   The current snapshot is concise; define durable formatting rules so future updates preserve that shape. _(Owner 2026-07-29: deferred past implementation-plan T12 under the MCP hold.)_
 
-- [ ] **Elevated Priority:** [frontmatter schema migration tool](feature-proposal-frontmatter-migration.md):
+- [ ] **Elevated Priority:** [frontmatter schema migration tool](feature-proposals/feature-proposal-frontmatter-migration.md):
 
   Specify the adapter-driven migration product from the linked starting brief; keep it separate from durable-reference reconciliation and automatic standards adoption.
 
