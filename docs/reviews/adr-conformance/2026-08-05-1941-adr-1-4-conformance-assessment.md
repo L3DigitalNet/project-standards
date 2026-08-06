@@ -2,7 +2,7 @@
 schema_version: '1.1'
 id: 'reference-k7p2xf-adr-1-4-conformance-assessment'
 title: 'Active ADR Conformance Assessment against ADR Standard 1.4'
-description: 'Read-only assessment of all 23 active project-standards ADRs against the decision-boundary guidance introduced by ADR Standard package 1.4.'
+description: 'Read-only assessment of all 23 active project-standards ADRs against ADR Standard package 1.4, plus a second pass on inter-ADR conflicts, overlapping ownership, and consistency.'
 doc_type: 'reference'
 status: 'active'
 created: '2026-08-05'
@@ -25,7 +25,12 @@ related:
   - 'src/project_standards/payloads/adr/1.4/templates/adr.md'
   - '.standards/config.toml'
   - '.standards/lock.toml'
+  - 'meta/versioning.md'
 source:
+  - 'src/project_standards/control_plane/providers.py'
+  - 'src/project_standards/standards_graph/validators.py'
+  - 'src/project_standards/package_contract/payload.py'
+  - 'meta/versioning.md'
   - 'src/project_standards/payloads/adr/1.4/README.md'
   - 'src/project_standards/payloads/adr/1.4/agent-summary.md'
   - 'src/project_standards/payloads/adr/1.4/payload.toml'
@@ -45,6 +50,8 @@ project:
 # Active ADR Conformance Assessment against ADR Standard 1.4
 
 Read-only assessment. No ADR, configuration, or payload file was modified.
+
+This report covers two passes. **Pass 1** (§1–§8) grades each active ADR individually against the 1.4 decision-boundary rubric. **Pass 2** (§9) treats the corpus as a graph and examines inter-ADR conflicts, overlapping ownership, and internal consistency. The consolidated backlog in §10 covers both.
 
 ## 1. Scope and method
 
@@ -99,6 +106,8 @@ The corpus is **structurally clean and semantically non-conformant**. Every mech
 The single sharpest signal: a scan for exclusion language across the active corpus returns **zero matches for every ADR numbered 0001–0013** and at least one match for every ADR numbered 0014 and above. The split is not gradual — it is exactly the boundary between the SPEC-MT01 authoring pass of 2026-07-07 and everything written afterwards.
 
 Nothing here is a validation failure. `uv run project-standards validate` will continue to exit `0`, because the ADR provider checks section presence and nothing else. That is by design, and it is why this assessment exists.
+
+The second pass (§9) reaches a complementary verdict: **no two active ADRs mandate incompatible outcomes, but five authorities are contested and five boundaries are unowned.** The recurring shape is a later ADR replacing an earlier one's mechanism or duplicating its guarantee while both records stay silent about the other. That is the same root cause the per-record grading found — an ADR that never bounded itself keeps apparent authority over ground a later decision took.
 
 ## 3. Mechanical findings
 
@@ -227,6 +236,8 @@ Two observations that are properly findings against ADR 1.4 itself, not against 
 
 **Amendment has no vocabulary.** Five active ADRs carry `> **Amended by ADR NNNN.**` banners (0014, 0015, 0016, 0018, 0019), and ADR 0026 carries three inline `Amendment (date, finding)` paragraphs. This repository has clearly needed partial amendment — a later decision narrowing or restating part of an earlier one without replacing it. ADR 1.4 defines only supersession, which is all-or-nothing. The banner convention is a sound local invention that the standard neither sanctions nor forbids. Since 1.4 tightened the supersession rule ("a new ADR supersedes an old ADR only when it replaces a decision the old ADR actually governed"), the need for a partial-amendment concept is now _stronger_, not weaker: the tightened rule pushes more changes out of supersession and into amendment, where no guidance exists.
 
+Filed as [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127). The second pass strengthened the case considerably: C2, C3, and C5 are three substantive changes to active decisions made through neither amendment nor supersession, because no sanctioned form existed for what they actually were.
+
 **Nothing mechanical enforces the new rules.** 1.4 is explicit that "this release does not infer semantic scope from prose", and the provider is unchanged from 1.3. That is a defensible design choice, but it means 1.4 has no enforcement surface at all — and the one artifact that _would_ have carried the guidance to authors, the template, cannot reach existing consumers because it is create-only (F1). As shipped, 1.4's boundary discipline reaches new consumers only, and reaches this repository not at all.
 
 A modest, prose-free check is available: the four-part outcome test could be approximated by requiring that Decision Outcome contain a sentence matching a declared governs/does-not-govern pattern. That would be a 1.5 conversation, not a fix to this corpus.
@@ -296,29 +307,245 @@ ls docs/adr-library 2>&1; grep -n 'adr-library' .standards/config.toml
 
 Link and frontmatter-path integrity were checked with a short script over `docs/adr/**`: 167 relative links resolved, zero dangling `related`/`source` paths.
 
-## 9. Remediation backlog
+Second-pass evidence:
 
-Ordered by value per unit of effort. None of this was applied.
+```bash
+# C2 — no provider registry; providers resolve from the payload manifest
+grep -n 'def invoke_provider' -A25 src/project_standards/control_plane/providers.py
+grep -rniE 'provider_registry|register_provider|PROVIDER_REGISTRY' \
+  src/project_standards/control_plane/ src/project_standards/package_contract/
 
-| # | Item | Scope | Why it ranks here |
-| --- | --- | --- | --- |
-| 1 | Replace `docs/adr/adr.template.md` with the 1.4 template and correct the lock record | 1 file + lock | Stops the defect reproducing. Every future ADR inherits boundary prompts. Requires deciding how a create-only artifact is legitimately refreshed — that decision is itself worth an ADR |
-| 2 | Move the five Cohort A requirements out of `### Consequences` into Decision Outcome | 0001, 0002, 0004, 0006, 0007 | Load-bearing rules currently sit where 1.4 says policy must not live and where readers skip |
-| 3 | Retarget `docs/adr/README.md` to the 1.4 standard | 1 line + 1 frontmatter entry | Authors following the index currently read the pre-boundary standard |
-| 4 | Correct ADR 0014's governed population and drop the dead `docs/adr-library/**` include | 0014 + `.standards/config.toml` | Already on the owner queue; 1.4 makes it a boundary defect, not just stale config |
-| 5 | Add an exclusion to ADR 0010 for the MCP URI grammar, or reconcile 0010 and 0026 | 0010 (+0026) | Closes the one live cross-ADR conflict; ADR 0026 already flagged it for owner decision |
-| 6 | Add a boundary paragraph to each Cohort A Decision Outcome | 11 ADRs | Highest total value, highest cost. Mechanical per record: state population, applicability, one exclusion |
-| 7 | Decide ADR 0012's lifecycle now that its gate has passed | 0012 | An active ADR appears to prohibit shipped work |
-| 8 | Split ADR 0024's release-classification rules from its consumer selector rules | 0024 (+ new ADR) | Two populations in one record; the clearest B9 case in Cohort C |
-| 9 | Give ADR 1.4 an amendment vocabulary | ADR package 1.5 | Six active records already amend without sanctioned form; 1.4's tighter supersession rule increases the need |
-| 10 | Rename ADR 0025 and 0026 files to omit the repository name | 2 files + inbound references | Cosmetic; touches the index, five frontmatter references, and inline links |
+# C3 — both ownership models are live
+grep -n '_validate_authorities' src/project_standards/standards_graph/validators.py
+grep -n 'class AdapterRegistry' src/project_standards/control_plane/adapters/registry.py
 
-Items 1–5 are small and independent. Item 6 is the substantive one and is best done as one deliberate pass rather than opportunistically, since the eleven records share a shape and will be more consistent if rewritten together.
+# C4 — which ADRs cite ADR 0005
+grep -ln 'adr-0005' docs/adr/*.md
 
-## 10. Not assessed
+# O1, O2 — frontmatter-scope and exception-escalation claims
+grep -n -iE 'exclude[d]? .*(frontmatter|managed[- ]document)' docs/adr/adr-0*.md
+grep -n -iE 'exception[s]? to|requires? an ADR|narrow exception|another ADR' docs/adr/adr-0*.md
 
-- The four superseded ADRs (0003, 0008, 0017, 0020), graded only for supersession correctness under B10.
-- Whether each decision is _correct_ — this assesses conformance to the recording standard, not the engineering merit of the decisions.
+# O5 — what the ADR payload actually declares about markdown-frontmatter
+sed -n '/\[relations\]/,/^$/p' src/project_standards/payloads/adr/1.4/payload.toml
+grep -n -A4 'FM→ADR compatibility' meta/versioning.md
+```
+
+The one-way `related` edge count (S1) came from a script that parses each record's frontmatter, keeps only `related` entries pointing at `docs/adr/adr-*.md`, and reports edges whose reverse is absent: 37 of them.
+
+## 9. Second pass — inter-ADR conflicts, overlapping ownership, and consistency
+
+Pass 1 graded each record in isolation. This pass treats the 23 active ADRs as a decision graph and asks a different question: where do two records claim the same ground, contradict each other, or leave a boundary unowned?
+
+The headline result is that **the corpus has no conflicting decisions but several contested authorities**. Nothing here is a case of two ADRs mandating incompatible outcomes. What recurs instead is one ADR's mechanism being quietly replaced by a later one, or two ADRs claiming the same guarantee through different models, with neither record acknowledging the other. Under 1.4 that is exactly the failure the boundary rules exist to prevent: an unbounded ADR keeps apparent authority over ground a later decision took.
+
+Findings are grouped as **C** (contested authority), **O** (overlapping ownership), and **S** (consistency).
+
+### C1 — Resource URI grammar: three producers, two active ADRs, no reconciliation
+
+Detailed in §5. Added here for graph completeness, with one point §5 did not make: **ADR 0010 has no pointer to ADR 0026.** ADR 0026 lists 0010 in both `related` and More Information and openly discloses the divergence; the reverse edge does not exist. A reader arriving at ADR 0010 — the record that still reads as repository policy on resource addressing — has no way to learn that a later active ADR froze a different grammar and declined to reconcile it.
+
+### C2 — ADR 0006's chosen mechanism is no longer the mechanism
+
+ADR 0006 evaluated exactly two options and chose "**provider registries** — a registry per capability (validators, fixers, drift checks, ID generation, extraction) that standards register implementations into, **looked up by standard identity at call time**".
+
+That is not how providers work today:
+
+- `invoke_provider` (`src/project_standards/control_plane/providers.py:732`) resolves a provider from `payload.manifest.providers`, matching on provider id and operation against the selected immutable payload. There is no capability registry and no registration step.
+- ADR 0023 states the current rule directly: "Only immutable, catalog-trusted package payloads may declare providers", and the control plane "consumes that contract generically and contains no package-ID branches for ordinary behavior."
+- The only registry in the control plane is `AdapterRegistry` (`control_plane/adapters/registry.py`), which serves ADR 0023's semantic-composition model — a different concept that happens to share the word.
+- ADR 0006's five capabilities have become twelve declared operations (`package_contract/payload.py`, `_OPERATION_CONTRACT`).
+
+ADR 0006's **principle** survives intact and is still correct: standard-specific behavior must be pluggable, and adding a standard must not touch shared dispatch code. Its **stated mechanism** was replaced. ADR 0006 remains `status: active`, unamended, with the registry wording unqualified; ADR 0023 lists it in `related` without reciprocation and never says it is replacing it. This is the clearest instance in the corpus of substance changing without amendment or supersession — and the direct motivation for issue #127.
+
+### C3 — Two live ownership models claim the same guarantee
+
+|  | ADR 0004 | ADR 0023 |
+| --- | --- | --- |
+| Model | `(domain, target, concern, owner, mutability)` authority tuples | Semantic units: TOML key path, JSON/JSONC key, YAML mapping, EditorConfig property, task/hook identity, delimiter-bounded Markdown block |
+| Conflict rule | Overlapping mutating claims are a validation error | No precedence; overlapping or ambiguous claims block before writes; identical units are reference-counted |
+| Still implemented? | Yes — `_validate_authorities`, `standards_graph/validators.py:344` | Yes — planner and adapter registry |
+| Claimed guarantee | "arbitrary co-adoption can be **proven conflict-free**" | "package composition and removal become deterministic, reviewable, and **safe**" |
+
+Both are active, both are implemented, and they are in fact complementary: ADR 0004 governs authoring-time conflicts between standard manifests in the standards graph, while ADR 0023 governs write-time ownership of bytes inside a consumer's files. **Neither ADR states that boundary.** ADR 0004's population is never limited to the graph plane, so its conflict-free guarantee reads as covering consumer composition too. ADR 0023 lists 0004 in `related` and does not say what it leaves to it.
+
+This is the paradigm 1.4 case: two records claiming one guarantee through different mechanisms, each recoverable with a single exclusion sentence, neither having one.
+
+### C4 — The ADR that decided tool shape is invisible to the ADRs that fixed the tool registry
+
+ADR 0005 chose "keep future agent/MCP tools generic over `standard_id` and operation" and rejected "a new tool for every standard" because "the tool surface would grow linearly with the number of standards".
+
+ADR 0026 registers six fixed tools (`standards_list`, `standard_read`, `repo_inspect`, `reconcile_preview`, `validate_repo`, `drift_check`) and **explicitly omits** a generic provider-dispatch tool, recording that omission as the resolution of `SPEC-MS01 OQ-007`.
+
+These reconcile cleanly: ADR 0026's tools are generic over standard and version — `standards_list` and `standard_read` take the standard as a parameter — so the surface is fixed at six regardless of how many standards the catalog carries, which is the property ADR 0005 actually protected. ADR 0005 constrains growth _per standard_; ADR 0026 declines a generic dispatch tool _per provider operation_. Different axes.
+
+**That reasoning appears nowhere.** ADR 0026 does not cite ADR 0005 in prose, `related`, `source`, or More Information; neither does ADR 0025. Six other ADRs cite 0005; the two records that implemented its subject do not. A reader who consults ADR 0005 before reviewing the MCP surface will see an apparent departure with no recorded justification, and — because 1.4 says an out-of-scope case needs no exception — may wrongly conclude that an exception was required and skipped.
+
+### C5 — ADR 0002's "primary manifest" claim was narrowed twice without amendment
+
+ADR 0002 decided `standard.toml` is "the primary, machine-readable source of a standard's metadata", explicitly rejecting "expand `registry.json` only" on the grounds that "a single registry would grow too broad and distant from each bundle".
+
+Catalog 5 has three manifest planes:
+
+| Plane | Owns | Established by |
+| --- | --- | --- |
+| Family `standard.toml` | Lifecycle state and relationships | ADR 0002, narrowed by ADR 0018 |
+| Per-version `payload.toml` | Artifacts, resources, providers, digests, destinations | ADRs 0019, 0023 |
+| `src/project_standards/catalogs/5.toml` | Every advertised version, digest, and channel role | ADR 0024 |
+
+The third is a central registry of advertised package metadata — structurally the thing ADR 0002 rejected, reintroduced for a different and good reason (offline resolution and permanent version advertisement). ADR 0018 partially patches the drift by asserting "The family `standard.toml` is the canonical machine-readable **lifecycle** source", silently narrowing 0002's claim from all metadata to lifecycle. ADR 0002 still carries the original unqualified wording and no amendment banner.
+
+### O1 — Markdown frontmatter scope is written by five ADRs at three normative strengths
+
+| ADR | Claim | Modality |
+| --- | --- | --- |
+| 0014 | The `standards.markdown-frontmatter.config` table "is the source of truth for this repository's managed Markdown scope" | declares itself the authority |
+| 0015 | Excludes `standards/**` from local frontmatter validation | decides |
+| 0016 | "The consuming repo **must keep** `.agents/**` excluded from managed-document frontmatter validation" | must |
+| 0021 | "A consumer repository **must exclude** installed skill paths from managed Markdown frontmatter validation, formatting, linting, type checking, **or other standards**" | must, open-ended population |
+| 0022 | "Consumer tooling **should exclude** [installed hook paths] from unrelated content-management rules **where appropriate**" | should, discretionary |
+
+One class of rule, three normative strengths, and two records reaching outside their declared class — ADR 0021's trailing "or other standards" binds packages it does not name, and ADR 0016 imposes a rule on every consuming repository from inside a decision about who owns one skill. ADR 0014 declares itself the scope authority, and three later ADRs write scope rules without amending it.
+
+Under 1.4 the fix is mechanical: each of 0016, 0021, and 0022 should state the population it binds and defer scope authority to 0014, or 0014 should absorb the rules.
+
+### O2 — Exception escalation has four incompatible formulations, and all four predate 1.4's distinction
+
+| ADR | Escalation clause |
+| --- | --- |
+| 0018 | "Exceptions to this lifecycle methodology require an ADR." |
+| 0019 | "require an ADR **or an explicit manifest-backed exception that graph validation can surface**" |
+| 0021 | "invalid **unless a later ADR creates a narrow exception**" |
+| 0022 | "requires **another ADR or a superseding decision**" |
+| 0027 | Defines an amendment threshold instead: routine config changes need nothing; boundary changes need an amendment |
+
+ADR 0027's form is the one 1.4 endorses. The other four share a defect the standard now names explicitly: none distinguishes an **exception** (an in-population item permitted to depart from the rule) from an **out-of-scope case** (an item the ADR never governed). 1.4 is direct about this — "Do not require an exception, waiver, or superseding ADR for a case the ADR never governed." As written, four active ADRs instruct a reader to open an ADR for cases that may simply lie outside them.
+
+ADR 0019's manifest-backed variant is additionally the only one that is machine-surfaceable, and is worth propagating rather than harmonizing away.
+
+### O3 — The `.agents/` root has three claimants and no owner
+
+| ADR  | Claimed destination                         |
+| ---- | ------------------------------------------- |
+| 0016 | `.agents/skills/markdown-frontmatter/`      |
+| 0021 | `.agents/skills/<skill-id>/` (class rule)   |
+| 0022 | `.agents/hooks/<standard-id>/` (class rule) |
+
+The destinations do not collide, and each record justifies its own subtree well. Nothing governs the **root**: who creates `.agents/`, what else may live directly under it, whether a future standard may claim `.agents/<something-new>/`, and who adjudicates if two packages want the same subtree. ADR 0021 comes closest — a new project-local path "may be added only when it remains inside the consumer repository or project and is declared explicitly in the selected payload manifest" — but that governs skills, and a hook or a future artifact class is not bound by it. In 1.4 terms this is unassigned reserved authority: three ADRs each reserve a slice and none reserves the container.
+
+### O4 — ADR 0016 is a special case of ADR 0021, unmarked in both directions
+
+ADR 0016 (2026-07-09) decided ownership and installation for the Markdown Frontmatter skill. ADR 0021 (same day, higher number) generalized the identical reasoning to "skills shipped by standard packages **as a class**", and its rules cover everything 0016 decided about installation destination and global-install prohibition.
+
+ADR 0016 carries an "Amended by ADR 0023" banner and no relationship to 0021. ADR 0021 lists 0016 in `source` — evidence it was written from — but nothing marks it as the record 0021 generalizes. Two active ADRs govern one skill's installation destination, and a future change to the class rule in 0021 would leave 0016 stating the old rule for its one skill.
+
+### O5 — A cross-package compatibility constraint is asserted outside the ADR corpus
+
+`meta/versioning.md` §FM→ADR compatibility states: "The resolved ADR payload declares the Frontmatter contract versions it supports. Selection remains independent **subject to declared compatibility** … the resolver and validator **fail closed** on an incompatible pair."
+
+Nothing in the ADR corpus governs this, and the surrounding evidence points the other way:
+
+- ADR 0013's taxonomy classifies the relationship as `companion`, defined there as a non-binding recommendation, not a hard dependency. A fail-closed version constraint is, in 0013's own vocabulary, `extends` or `conflicts`.
+- The 1.4 standard text says Markdown Frontmatter is "a compatible companion for metadata, **not an installation dependency**."
+- `src/project_standards/payloads/adr/1.4/payload.toml` declares `companions = ["markdown-frontmatter"]` with `extends = []`, `conflicts = []`, and no version constraint of any kind.
+- I did not locate an implementing fail-closed check in `control_plane/` or `package_contract/`. Recorded as **not located**, not as absent — a targeted search would settle it.
+
+Either `meta/versioning.md` overstates a binding constraint, or a real binding cross-package constraint exists with no ADR and no manifest declaration behind it. ADR 0013 is the natural owner and says nothing about version-level compatibility between companions.
+
+### S1 — The decision graph cannot be traversed backwards
+
+Of the ADR→ADR edges in `related`, **37 are one-way**. The pattern is systematic rather than random: later ADRs cite the earlier decisions they build on, and the earlier records are never updated to point forward.
+
+| Cited record           | Cites it               | Points back |
+| ---------------------- | ---------------------- | ----------- |
+| 0004, 0006, 0013       | 0023                   | none        |
+| 0010, 0012, 0023, 0024 | 0025, 0026             | none        |
+| 0002                   | 0010, 0012, 0019       | none        |
+| 0007                   | 0006, 0011, 0012, 0013 | none        |
+
+ADR 0014's own field-value policy defines `related` as "Nearby standard, ADR, spec, or meta doc a reader would naturally consult" and does not require reciprocity, so this violates no rule. It is still the mechanism behind C1–C5: in every one of those findings, the reader who most needs the pointer is standing on the record that lacks it. Reciprocating the ~12 edges that carry a substantive relationship — as distinct from the incidental ones — would close most of the navigational gap without a policy change.
+
+### S2 — Frozen evidence is presented as current authority
+
+| ADR | Cited as authority | Current default |
+| --- | --- | --- |
+| 0014, 0016 | `markdown-frontmatter/versions/1.2/**` | 1.9 |
+| 0018, 0019, 0021, 0022 | `standard-bundle-authoring/versions/2.0/README.md` | 2.6 |
+| 0022 | `agent-handoff/versions/1.1/hooks/session-start/session_start.py` | 1.9 (per `.standards/lock.toml`) |
+
+Every link resolves — advertised payloads are permanent under ADR 0024 — so nothing is broken. The defect is framing: a More Information entry reading "Standard bundle authoring contract: `…/versions/2.0/README.md`" presents itself as the document to consult now, not as the evidence the decision was made against. ADR 0018 shows the correct handling in prose ("`active` consumer-facing standards must satisfy ADR 0023 and SPEC-BA02") while its own link list still points at 2.0.
+
+The corpus has no convention distinguishing _the evidence I decided on_ from _the current authority you should read_. ADR 0014's `source` versus `related` split is exactly that distinction and is already available; the body link lists do not use it.
+
+### S3 — Terminology drift across the V1→V2 rename
+
+| Term               | Used normatively by          |
+| ------------------ | ---------------------------- |
+| "standard bundle"  | 0001, 0002, 0004, 0007, 0010 |
+| "standard package" | 0018, 0019, 0021, 0022       |
+| "package family"   | 0018                         |
+| "payload"          | 0019, 0023, 0024             |
+
+ADR 0019 states that V1 layout paths "remain historical migration and compatibility evidence only", which handles the paths. It does not handle the vocabulary: ADRs 0001–0010 still use "bundle" inside active normative sentences — "every standard bundle must now maintain an additional manifest file" — with nothing indicating the term was renamed or that the rule now binds `standards/<id>/versions/<version>/`. A reader cannot tell whether those rules survived the rename or were scoped to a layout that no longer exists.
+
+### S4 — The index asserts a supersession discipline the corpus does not have
+
+`docs/adr/README.md:37` states that ADRs 0001–0013 "were accepted on 2026-07-07; later decisions **preserve that history through explicit amendment or supersession**."
+
+C2, C3, and C5 are counterexamples. ADR 0006's mechanism was replaced, ADR 0004's guarantee was duplicated by a different model, and ADR 0002's claim was narrowed — none through amendment, none through supersession, and none reflected in either record. The index states the intended discipline as though it were the achieved one.
+
+### S5 — Cross-references to superseded ADRs
+
+ADRs 0018, 0019, 0021, and 0022 cite superseded records (0003, 0017, 0020) in `source` and More Information. This is **correct** and worth recording as a pass: each is cited as historical evidence, and ADR 0018 labels it explicitly ("ADR 0017 remains historical context for the superseded V1 adoption model"). No active ADR presents a superseded decision as current authority. Both supersession chains — 0023 over 0003/0008/0017, and 0024 over 0020 — are reciprocal and correctly scoped under B10.
+
+## 10. Remediation backlog
+
+Ordered by value per unit of effort, covering both passes. None of this was applied.
+
+### Tier 1 — small, independent, high leverage
+
+| # | Item | Finding | Scope | Why it ranks here |
+| --- | --- | --- | --- | --- |
+| 1 | Replace `docs/adr/adr.template.md` with the 1.4 template and correct the lock record | F1 | 1 file + lock | Stops the defect reproducing; every future ADR inherits boundary prompts. Requires deciding how a create-only artifact is legitimately refreshed — that decision is itself worth an ADR |
+| 2 | Reciprocate the ~12 substantive `related` edges | S1 | ~12 ADRs, frontmatter only | Cheapest item with the widest effect: it is the mechanism behind C1–C5, and in each of those the reader who needs the pointer is standing on the record that lacks it |
+| 3 | Retarget `docs/adr/README.md` to the 1.4 standard and correct its supersession-discipline claim | F3, S4 | 2 lines + 1 frontmatter entry | Authors following the index read the pre-boundary standard, and the index asserts a discipline C2/C3/C5 contradict |
+| 4 | Note in ADR 0006 that manifest-declared providers replaced capability registries | C2 | 0006 (+0023 back-edge) | An active ADR names a mechanism that does not exist. Sanctioned form depends on #127; an interim banner matches existing practice |
+| 5 | Correct ADR 0014's governed population and drop the dead `docs/adr-library/**` include | F4 | 0014 + `.standards/config.toml` | Already on the owner queue; 1.4 makes it a boundary defect, not just stale config |
+| 6 | Add reciprocal exclusions to ADRs 0004 and 0023 naming the graph plane and the consumer-file plane | C3 | 2 sentences | Two records claim one guarantee; one sentence each recovers both |
+| 7 | Cite ADR 0005 from ADRs 0025/0026 with the per-standard-versus-per-operation reasoning | C4 | 2 ADRs | The reconciliation is sound and entirely unrecorded |
+| 8 | Add an exclusion to ADR 0010 for the MCP URI grammar, or reconcile 0010 and 0026 | §5, C1 | 0010 (+0026) | The one live contested grammar; ADR 0026 already flagged it for owner decision |
+| 9 | Settle the FM→ADR compatibility claim in `meta/versioning.md` | O5 | 1 doc, possibly 1 ADR | Either the meta doc overstates a binding constraint, or a fail-closed cross-package rule has no ADR and no manifest declaration |
+
+### Tier 2 — substantive, best done as deliberate passes
+
+| # | Item | Finding | Scope | Why it ranks here |
+| --- | --- | --- | --- | --- |
+| 10 | Move the five Cohort A requirements out of `### Consequences` into Decision Outcome | §4, B6 | 0001, 0002, 0004, 0006, 0007 | Load-bearing rules sit where 1.4 says policy must not live and where readers skip |
+| 11 | Add a boundary paragraph to each Cohort A Decision Outcome | §4, B1–B3 | 11 ADRs | Highest total value, highest cost. Mechanical per record: population, applicability, one exclusion. Do as one pass — the eleven share a shape and will be more consistent rewritten together |
+| 12 | Harmonize the frontmatter-scope claims and defer scope authority to ADR 0014 | O1 | 0014, 0016, 0021, 0022 | One class of rule at three normative strengths, two of them binding unnamed populations |
+| 13 | Assign ownership of the `.agents/` root | O3 | new ADR, or extend 0021/0022 | Three ADRs each reserve a subtree; none reserves the container |
+| 14 | Harmonize exception clauses on ADR 0027's amendment-threshold form, keeping 0019's manifest-backed variant | O2 | 0018, 0019, 0021, 0022 | Four formulations, none distinguishing an in-population exception from an out-of-scope case — the distinction 1.4 introduced. Depends on #127 |
+| 15 | Mark ADR 0016 as the special case ADR 0021 generalizes | O4 | 0016, 0021 | A later class-rule change would leave 0016 stating the old rule for its one skill |
+| 16 | Record that ADR 0002's claim is now lifecycle-scoped | C5 | 0002 (+0018, 0024) | Narrowed twice without amendment; the central catalog is the registry 0002 rejected |
+| 17 | Decide ADR 0012's lifecycle now that its gate has passed | §4 | 0012 | An active ADR appears to prohibit shipped work |
+| 18 | Split ADR 0024's release-classification rules from its consumer selector rules | §4, B9 | 0024 + new ADR | Two populations in one record; the clearest split case in Cohort C |
+
+### Tier 3 — conventions and cosmetics
+
+| # | Item | Finding | Scope | Why it ranks here |
+| --- | --- | --- | --- | --- |
+| 19 | Adopt a convention separating frozen evidence from current authority in body link lists | S2 | corpus-wide | The `source`-versus-`related` split already encodes this; body links do not use it |
+| 20 | Reconcile bundle/package/family/payload terminology in ADRs 0001–0010 | S3 | 5 ADRs | Active normative sentences use a vocabulary the V1→V2 rename retired |
+| 21 | Rename ADR 0025 and 0026 files to omit the repository name | F2 | 2 files + inbound references | Cosmetic; touches the index, five frontmatter references, and inline links |
+
+**Filed:** the amendment-vocabulary gap (§6) is now [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127). Items 4, 14, and 16 all want the sanctioned form it requests, so #127 is a soft prerequisite for the cleanest version of each; interim banner notes match existing practice and need not wait.
+
+## 11. Not assessed
+
+- The four superseded ADRs (0003, 0008, 0017, 0020), graded only for supersession correctness under B10 and for cross-reference handling under S5.
+- Whether each decision is _correct_ — this assesses conformance to the recording standard and internal consistency, not the engineering merit of the decisions.
 - ADRs in other repositories that adopt this package.
 - `standards/adr/library/**`, which holds reusable candidate ADR material rather than this repository's decisions.
 - Prettier and markdownlint conformance of the ADR corpus, which the repository gate already owns.
+- Whether a fail-closed FM→ADR compatibility check exists in the control plane (O5) — searched and not located, not proven absent.
+- Conflicts between the ADR corpus and the specifications under `docs/specs/`. Pass 2 checked ADR-to-ADR and ADR-to-implementation consistency only; the specs are a third authority plane and were out of scope.
