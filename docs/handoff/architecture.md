@@ -28,3 +28,5 @@
 - Packages remain independent by default. Profiles recommend combinations; the MCP server surfaces declared relationships without enforcing hidden dependencies.
 - ADRs 0001-0013 are accepted. ADRs 0025-0026 govern local read-only MCP; later write and remote decisions remain deferred. See `specs-plans.md`.
 - ADR 0027 adopts Go alongside Python under neutral tooling: an independent gate, no shared toolchain, and no language preference in the standards.
+- **Create-only delivery gap:** a create-only artifact cannot be revised for an existing consumer, and drift-check cannot see it. Bug 006; decision owed under #128.
+- **ADR corpus conformance:** 11 of 23 active ADRs state no boundary; five authorities contested, five unowned. See `docs/reviews/adr-conformance/`; scheduled as v5.17.0.

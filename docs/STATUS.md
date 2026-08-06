@@ -13,4 +13,7 @@
 - Reviewed action pins: setup-uv 9.0.0 (`prune-cache: true`), setup-node 7.0.0, setup-python 7.0.0.
 - Dependabot stays disabled by decision; dependency currency moves through the payload cycle under the pin and width-table guards.
 - The `js-yaml` override remains until `markdownlint-cli2-action` ships >= 0.23.2 (v24 still bundles 0.23.1).
+- The ADR corpus was assessed against ADR 1.4: 11 of 23 active records state no boundary, five authorities contested, five boundaries unowned. See `docs/reviews/adr-conformance/`.
+- v5.17.0 is scoped as the ADR train: #127 ships as `adr` 1.5, then the 21-item corpus backlog in #128. MINOR; 1.5 must stay non-breaking to become the Catalog 5 default.
+- The repository's `docs/adr/adr.template.md` is still the 1.3 template because create-only artifacts are invisible to drift-check (bug 006).
 - Program tail otherwise unchanged: T24–T29, SPEC-GSF3 T1, and the Usage Documentation Site V2 specs stay queued for later sessions.

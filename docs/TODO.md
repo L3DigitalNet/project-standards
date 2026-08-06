@@ -60,7 +60,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Deliver the v5.17.0 ADR train: amendment vocabulary (#127) plus corpus remediation (#128).
 
-  Owner decision 2026-08-05: bundle both and target **5.17.0** (MINOR — `adr` 1.4 → 1.5 becomes the Catalog 5 default). Ship #127 as `adr` 1.5 first, then the 21 backlog items in `docs/reviews/adr-conformance/2026-08-05-1941-adr-1-4-conformance-assessment.md` §10 using the 1.5 amendment form. `adr` 1.5 must stay non-breaking or it cannot become the default within catalog major 5.
+  Owner decision 2026-08-05: bundle both and target **5.17.0** (MINOR — `adr` 1.4 → 1.5 becomes the Catalog 5 default). Ship #127 as `adr` 1.5 first, then the 21 backlog items in the ADR conformance assessment §10 using the 1.5 amendment form.
+
+  `adr` 1.5 must stay non-breaking or it cannot become the default within catalog major 5.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
