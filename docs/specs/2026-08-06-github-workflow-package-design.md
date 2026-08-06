@@ -21,7 +21,7 @@ related: []
 - Operation: `create`
 - Decision owner: repository owner
 - Created and approved: `2026-08-06`
-- Revision: 1.2 — 2026-08-06 owner-directed amendment: operator issue/PR summaries follow a packaged attention-first layout shipped as a sixth reference (D8). Prior: 1.1 (same day) Go skill tooling (D7); initial approval 2026-08-06.
+- Revision: 1.3 — 2026-08-06 owner-directed amendment: agents present a consistent creation receipt after creating an issue or PR (D9). Prior same-day: 1.2 operator summary layout (D8), 1.1 Go skill tooling (D7); initial approval 2026-08-06.
 - Prior design brief: none
 - Working-state source: `.project-pipeline/github-workflow-package/design-discovery/` (removed after promotion)
 - Design input: [GitHub Repository Administration Standard (preliminary)](archive/2026-08-06-github-repo-administration-preliminary-design.md)
@@ -95,7 +95,7 @@ One mandatory skill, `github-workflow`. Trigger boundary: agents must load it be
 | `issue-structure.md` | `.agents/skills/github-workflow/references/` | Canonical issue body headings and the five Issue Type definitions |
 | `pr-standard.md` | `.agents/skills/github-workflow/references/` | PR content standard and draft-PR policy |
 | `review-checklist.md` | `.agents/skills/github-workflow/references/` | Layered PR-review checklist — discipline only, no gating |
-| `summary-format.md` | `.agents/skills/github-workflow/references/` | Attention-first layout for operator-requested issue/PR summaries |
+| `summary-format.md` | `.agents/skills/github-workflow/references/` | Attention-first layout for operator-requested issue/PR summaries plus the single-item creation receipt |
 | `policy.toml` | `.standards/packages/github-workflow/policy.toml` | Rendered consumer configuration for the skill to read |
 | `gh-workflow-audit` | `.agents/skills/github-workflow/bin/gh-workflow-audit` | Compiled Go audit tool (linux/amd64), mode 0755 |
 
@@ -202,6 +202,13 @@ Exactly two options:
 - Rationale: summaries exist to drive operator decisions; leading with what needs the human matches the control-plane philosophy, and a packaged layout makes reports comparable across sessions and agents.
 - Reopen when: recurring summary needs appear that the fixed sections cannot express (e.g., milestone burn-down), warranting layout variants in a minor version.
 
+### D9: Creation receipts
+
+- Status: `approved` (user, 2026-08-06; owner directive)
+- Decision: after creating an issue or PR, the agent presents a consistent single-item creation receipt, defined in `summary-format.md` alongside the D8 layout: a header line (kind, number, link, title), the field values actually set (Type, Workflow, Priority, Size or Severity, Change risk, Execution mode, Target date; for PRs the governing Issue, draft/ready state, CI status), and a gaps line naming anything still unset or missing (pinned fields without values, absent acceptance criteria, missing governing-Issue link).
+- Rationale: creation is the moment metadata gaps are cheapest to fix; a fixed receipt makes agent output comparable across sessions and lets the operator verify the work contract at a glance instead of opening GitHub.
+- Scope note: bound to creation only; receipts after ordinary edits were not requested and would add noise. Reopen if material mutations (reprioritization sweeps, bulk triage) prove to need the same treatment.
+
 ## Complexity disposition
 
 ### Retained
@@ -275,6 +282,7 @@ Non-blocking:
   - D6 providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate
   - D7 skill tooling in Go; audit ships as committed linux/amd64 binary, reproducibly built
   - D8 operator summaries follow the packaged attention-first layout (summary-format.md); summary presentation is a skill trigger
+  - D9 agents present a consistent creation receipt (header, fields set, gaps) after creating an issue or PR
 - Agent-applied defaults:
   - org-schema resource in YAML (design-input §35 fidelity)
   - capability naming mirrors agent-handoff

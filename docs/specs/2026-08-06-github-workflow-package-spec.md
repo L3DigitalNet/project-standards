@@ -31,6 +31,7 @@ related:
 | 0.1 | 2026-08-06 | Claude with owner-approved design input | Initial draft from the approved github-workflow package design brief. |
 | 0.2 | 2026-08-06 | Claude with owner directive | Skill tooling is Go (design D7): the org audit ships as a committed, reproducibly built linux/amd64 `gh-workflow-audit` binary the skill invokes. Adds FR-015/FR-016, NFR-005, IR-004, C-006, WH-006, D-008, EC-006, ERR-005; reworks FR-008, AW-001, OQ-002. |
 | 0.3 | 2026-08-06 | Claude with owner directive | Standardized attention-first operator summaries (design D8): sixth reference `summary-format.md`, summary presentation added to the skill trigger boundary. Adds FR-017, AW-004, D-009; reworks FR-002/FR-004 and reference counts. |
+| 0.4 | 2026-08-06 | Claude with owner directive | Creation receipts (design D9): agents present a consistent single-item summary after creating an issue or PR, defined in `summary-format.md`. Adds FR-018, D-010; extends the primary workflow. |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -150,7 +151,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 
 | ID | Goal | Success Signal | Achieved By |
 | --- | --- | --- | --- |
-| G-001 | Any agent session in a consuming repository applies one consistent GitHub work discipline. | Skill loads on work-state mutation; block invariants present in every harness context; summaries render in one layout. | FR-001–FR-007, FR-010, FR-017 |
+| G-001 | Any agent session in a consuming repository applies one consistent GitHub work discipline. | Skill loads on work-state mutation; block invariants present in every harness context; summaries and creation receipts render in one layout. | FR-001–FR-007, FR-010, FR-017, FR-018 |
 | G-002 | The organization schema has one versioned, auditable in-repo representation. | Skill audit compares `org-schema.yaml` to live state and reports drift without mutating. | FR-008, FR-009, FR-015, FR-016, DR-001 |
 | G-003 | The package upgrades and drift-checks like every other Catalog 5 family. | `reconcile`, `drift-check`, and `upgrade` cover all delivered artifacts. | FR-011–FR-014, C-005 |
 | G-004 | Later adoption phases remain additive. | Phase-3+ capability lands as new payload versions without breaking v1 consumers. | WH-002, WH-005, D-007 |
@@ -172,6 +173,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | Managed artifact | A package-delivered file the control plane owns, upgrades, and drift-checks. | Distinct from create-only seeds, which this package never uses (C-005). |
 | Audit | The read-only comparison of live organization schema to `org-schema.yaml`, executed by the packaged `gh-workflow-audit` Go tool under the operator's `gh` authentication, producing findings for human action. | Never a provider; never a mutation. |
 | Operator summary | An on-request digest of issues and/or PRs rendered in the packaged attention-first layout (`summary-format.md`). | Read-only to gather, but still a skill trigger so the layout binds. |
+| Creation receipt | The fixed single-item summary (header, fields set, gaps) an agent presents immediately after creating an issue or PR. | Bound to creation only; not emitted for ordinary edits. |
 
 ---
 
@@ -198,6 +200,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | FR-015 | The package shall deliver `gh-workflow-audit` as a managed artifact at `.agents/skills/github-workflow/bin/gh-workflow-audit` with mode `0755`, compiled for linux/amd64 from repository Go source. | Owner-directed Go tooling with zero consumer toolchain requirement (design D7). | Artifact present with pinned digest and executable mode after reconcile; binary is statically linked (`CGO_ENABLED=0`). | Must |
 | FR-016 | The audit tool shall read the baseline from `org-schema.yaml` and the organization from `policy.toml`, query live organization schema read-only under the operator's existing `gh` authentication, emit a deterministic findings report distinguishing matches, missing elements, value mismatches, and extras, and exit nonzero on unmet preconditions (missing auth, unreachable API, unsupported platform) without emitting a partial report. | The audit must be trustworthy without human re-derivation (design D7). | Offline fixture-driven tests cover every finding class and precondition failure; a recorded manual run against the live organization is implementation evidence. | Must |
 | FR-017 | `summary-format.md` shall define the attention-first operator summary layout — scope header (target, timestamp, counts); Needs-attention section (Blocked, Needs definition, terminal-sync mismatches, passed target dates); Issues table (number, Type, title, Workflow, Priority, Size or Severity, Execution mode); PRs table (number, title, governing Issue, state, CI, risk notes); discovered-follow-ups tail — and the skill shall present operator-requested issue/PR summaries in that layout. | One comparable report shape across sessions and agents (design D8). | `summary-format.md` matches the layout; SKILL.md directs its use for summary requests. | Must |
+| FR-018 | `summary-format.md` shall additionally define a single-item creation receipt — header (kind, number, link, title); the field values set (Type, Workflow, Priority, Size or Severity, Change risk, Execution mode, Target date; for PRs the governing Issue, draft/ready state, CI status); and a gaps line naming unset pinned fields, absent acceptance criteria, or a missing governing-Issue link — and the skill shall direct agents to present it immediately after creating an issue or PR. | Creation is when metadata gaps are cheapest to fix; receipts make agent output verifiable at a glance (design D9). | Receipt layout present in `summary-format.md`; SKILL.md requires the receipt after every issue/PR creation. | Must |
 
 ### 7.2 Non-Functional Requirements
 
@@ -276,6 +279,7 @@ flowchart LR
 | D-007 | v1.0 packages operating-model phases 1–2 only; later phases arrive as additive payload versions. | The data model must prove itself in manual operation before enforcement automation. | Shipping phase-3 checks now. | design brief D0 |
 | D-008 | Skill executables are Go; the audit ships as a committed, reproducibly built linux/amd64 binary. | Deterministic, testable audit; zero consumer toolchain; ADR 0027 Go lane. | Source-shipped local build (agent-recommended, not selected); `go install` channel (network dependency, second version channel). | design brief D7 |
 | D-009 | Operator summaries follow the packaged attention-first layout; summary presentation is a skill trigger. | Summaries drive decisions — lead with what needs the human; one comparable shape across sessions. | Queue-first table-led layout (owner-rejected); ad-hoc per-session formats. | design brief D8 |
+| D-010 | Agents present a consistent creation receipt after creating an issue or PR. | Metadata gaps are cheapest to fix at creation; the receipt makes the work contract verifiable without opening GitHub. | Ad-hoc confirmation prose; receipts on every mutation (noise — reopen trigger recorded in the brief). | design brief D9 |
 
 ### 8.5 Design Constraints
 
@@ -324,8 +328,9 @@ Steps:
 1. Agent determines the action touches work state (creation, mutation, triage, or audit) and loads the skill.
 2. Agent selects the Issue Type and populates fields per `field-vocabulary.md`; authors bodies per `issue-structure.md`.
 3. Agent applies PR discipline per `pr-standard.md`; links the governing Issue for nontrivial PRs.
-4. Agent keeps `Workflow` transitions legal and terminal states synchronized with GitHub close reasons.
-5. Discovered durable follow-up work becomes an Issue before the session ends.
+4. Immediately after creating an issue or PR, the agent presents the creation receipt per `summary-format.md` (FR-018).
+5. Agent keeps `Workflow` transitions legal and terminal states synchronized with GitHub close reasons.
+6. Discovered durable follow-up work becomes an Issue before the session ends.
 
 Expected result:
 
@@ -459,7 +464,7 @@ The audit tool's live behavior is verified by a documented manual run against th
 
 | Requirement ID | Test / Verification Method | Status |
 | --- | --- | --- |
-| FR-001–FR-017 | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-001–FR-018 | To be completed by the implementer per Appendix B.3 | Not Started |
 | NFR-001–NFR-005 | To be completed by the implementer per Appendix B.3 | Not Started |
 | IR-001–IR-004, DR-001–DR-002 | To be completed by the implementer per Appendix B.3 | Not Started |
 
@@ -524,7 +529,7 @@ Exit: `project-standards validate` and graph/catalog checks pass with placeholde
 
 ### MS-1 — Content artifacts
 
-1. SKILL.md, openai.yaml, six references authored (FR-001–FR-006, FR-008, FR-009, FR-017; DR-001).
+1. SKILL.md, openai.yaml, six references authored (FR-001–FR-006, FR-008, FR-009, FR-017, FR-018; DR-001).
 2. Block contribution content and `render-semantic` rendering (FR-007, FR-010).
 3. `gh-workflow-audit` implemented under the repository Go lane, reproducible build wired, binary committed (FR-015, FR-016, NFR-005); OQ-002 resolved and recorded.
 
