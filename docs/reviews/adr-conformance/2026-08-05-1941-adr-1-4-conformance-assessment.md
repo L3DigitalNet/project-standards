@@ -53,6 +53,8 @@ Read-only assessment. No ADR, configuration, or payload file was modified.
 
 This report covers two passes. **Pass 1** (§1–§8) grades each active ADR individually against the 1.4 decision-boundary rubric. **Pass 2** (§9) treats the corpus as a graph and examines inter-ADR conflicts, overlapping ownership, and internal consistency. The consolidated backlog in §10 covers both.
 
+**Status.** The full §10 backlog is tracked by [issue #128](https://github.com/L3DigitalNet/project-standards/issues/128), scoped by the owner to the next release. The amendment-vocabulary gap in §6 is [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127) and is a soft prerequisite for backlog items 4, 14, and 16.
+
 ## 1. Scope and method
 
 **Corpus.** All 27 records under `docs/adr/`. Four carry `status: superseded` (0003, 0008, 0017, 0020) and are excluded from grading; the remaining **23 active ADRs** are assessed individually.
