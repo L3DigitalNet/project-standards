@@ -29,6 +29,7 @@ related:
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
 | 0.1 | 2026-08-06 | Claude with owner-approved design input | Initial draft from the approved github-workflow package design brief. |
+| 0.2 | 2026-08-06 | Claude with owner directive | Skill tooling is Go (design D7): the org audit ships as a committed, reproducibly built linux/amd64 `gh-workflow-audit` binary the skill invokes. Adds FR-015/FR-016, NFR-005, IR-004, C-006, WH-006, D-008, EC-006, ERR-005; reworks FR-008, AW-001, OQ-002. |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -52,7 +53,8 @@ After successful implementation, any agent session in a consuming repository loa
 
 - An adoptable `standards/github-workflow/` package family at payload version `1.0` under the Standard Bundle Authoring 2.6 contract.
 - A mandatory repo-local skill at `.agents/skills/github-workflow/` with a Codex companion and five on-demand reference files.
-- A machine-readable organization-schema reference (`org-schema.yaml`) and a skill-driven audit procedure over live organization state via `gh`.
+- A machine-readable organization-schema reference (`org-schema.yaml`) and a skill-driven audit over live organization state.
+- A compiled Go audit tool, `gh-workflow-audit` (linux/amd64), shipped as a managed artifact and invoked by the skill under the operator's `gh` authentication.
 - Managed markdown-block contributions to `AGENTS.md` and `CLAUDE.md` carrying the skill mandate and standing invariants.
 - A rendered per-consumer `policy.toml` under `.standards/packages/github-workflow/`.
 - A two-option consumer configuration schema (`organization`, `harnesses`).
@@ -79,6 +81,7 @@ After successful implementation, any agent session in a consuming repository loa
 | WH-003 | A `migrate` provider and legacy signatures. | No legacy predecessor exists for this package. | Legacy label-based approximations are discovered in consumer repositories. |
 | WH-004 | Multi-organization support (`organization` as a list). | Exactly one organization exists today. | A second organization appears; the change is additive. |
 | WH-005 | Coordinator, claiming, and unattended dispatch machinery (design-input phases 4–5). | Phases 1–2 must prove the model manually first. | The owner authorizes the coordinator program separately. |
+| WH-006 | Audit-tool binaries for platforms beyond linux/amd64. | Every current consumer is linux/amd64; additional platforms multiply payload size with no consumer. | A non-linux/amd64 consumer appears. |
 
 ### 2.4 Boundaries
 
@@ -107,12 +110,14 @@ consumer-repo/
 ├── .agents/skills/github-workflow/
 │   ├── SKILL.md                       # decision procedures, refusals, trigger boundary
 │   ├── agents/openai.yaml             # Codex companion
-│   └── references/
+│   ├── references/
 │       ├── field-vocabulary.md        # seven fields, values, pinning, fields-not-to-create
 │       ├── org-schema.yaml            # machine-readable org baseline for the audit
 │       ├── issue-structure.md         # canonical issue body headings + five Issue Types
 │       ├── pr-standard.md             # PR content standard + draft-PR policy
 │       └── review-checklist.md        # layered review checklist (discipline only)
+│   └── bin/
+│       └── gh-workflow-audit          # compiled Go audit tool (linux/amd64)
 └── .standards/packages/github-workflow/
     └── policy.toml                    # rendered consumer configuration
 ```
@@ -135,6 +140,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | C-003 | The published payload is organization-agnostic; the organization login enters only through consumer configuration. | Design decision D3/D4. |
 | C-004 | The operating model must function on GitHub Free organization plans. | Design input section 1.3. |
 | C-005 | Every delivered artifact uses `policy = "managed"`; no create-only artifacts. | Design decision D2; bug 006. |
+| C-006 | Any executable shipped with the skill is implemented in Go and delivered as a committed, digest-pinned, reproducibly built per-platform binary; v1.0 ships linux/amd64 only. | Owner directive 2026-08-06; design decision D7; ADR 0027 Go lane. |
 
 ---
 
@@ -143,7 +149,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | ID | Goal | Success Signal | Achieved By |
 | --- | --- | --- | --- |
 | G-001 | Any agent session in a consuming repository applies one consistent GitHub work discipline. | Skill loads on work-state mutation; block invariants present in every harness context. | FR-001–FR-007, FR-010 |
-| G-002 | The organization schema has one versioned, auditable in-repo representation. | Skill audit compares `org-schema.yaml` to live state and reports drift without mutating. | FR-008, FR-009, DR-001 |
+| G-002 | The organization schema has one versioned, auditable in-repo representation. | Skill audit compares `org-schema.yaml` to live state and reports drift without mutating. | FR-008, FR-009, FR-015, FR-016, DR-001 |
 | G-003 | The package upgrades and drift-checks like every other Catalog 5 family. | `reconcile`, `drift-check`, and `upgrade` cover all delivered artifacts. | FR-011–FR-014, C-005 |
 | G-004 | Later adoption phases remain additive. | Phase-3+ capability lands as new payload versions without breaking v1 consumers. | WH-002, WH-005, D-007 |
 
@@ -162,7 +168,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | Skill mandate | The rule that agents load the `github-workflow` skill before creating or mutating work state or performing triage or an org audit. | Delivered by the managed block; the block also binds invariants independently. |
 | Standing invariants | The block-carried subset of the operating model's invariants that bind even when the skill was never loaded: never infer readiness (design-input invariant 5); no `Execution mode` self-promotion plus the human-applied org-schema rule (invariant 6); a nontrivial PR links its governing Issue (invariant 8); terminal-state synchronization (invariants 10 and 11); durable follow-up work becomes an Issue (invariant 15). | Numbering follows the design input's invariant list (its section 34). |
 | Managed artifact | A package-delivered file the control plane owns, upgrades, and drift-checks. | Distinct from create-only seeds, which this package never uses (C-005). |
-| Audit | The skill-driven, read-only comparison of live organization schema to `org-schema.yaml` via `gh`, producing findings for human action. | Never a provider; never a mutation. |
+| Audit | The read-only comparison of live organization schema to `org-schema.yaml`, executed by the packaged `gh-workflow-audit` Go tool under the operator's `gh` authentication, producing findings for human action. | Never a provider; never a mutation. |
 
 ---
 
@@ -179,13 +185,15 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | FR-005 | `field-vocabulary.md` shall reproduce the operating model's seven Issue Fields with their exact value sets, the field-pinning matrix, and the fields-not-to-create list. | Agents need the authoritative vocabulary without loading the full operating model. | Content matches the design input's field definitions (sections 6–13) and fields-not-to-create list (section 29) value-for-value. | Must |
 | FR-006 | `issue-structure.md` shall reproduce the five Issue Types and the canonical issue body headings; `pr-standard.md` shall reproduce the PR content standard and draft-PR policy; `review-checklist.md` shall reproduce the layered review checklist with an explicit no-automation statement. | Reference fidelity to the operating model (design D1). | Content matches the design input sections 4, 16, and 21–23; review-checklist.md states it gates nothing. | Must |
 | FR-007 | The package shall contribute a bounded markdown block to `CLAUDE.md` when `harnesses` contains `claude-code` and to `AGENTS.md` when `harnesses` contains `codex`, containing the skill mandate, the standing invariants, and the configured organization name. | The block is the always-loaded defense (design D3). | Blocks render from config via `render-semantic`; both contain the five standing invariants enumerated in the Glossary in agent-directive phrasing; block body stays within approximately 12 content lines. | Must |
-| FR-008 | The skill shall define a read-only audit procedure that compares live organization Issue Types and Issue Fields to `org-schema.yaml` via `gh` and reports matches, missing elements, value mismatches, and extras. | Versioned schema linkage with human-applied changes (design D0). | Audit procedure documented in the skill; produces findings without any mutating call; explicitly instructs agents to hand findings to a human. | Must |
+| FR-008 | The skill shall direct the org-schema audit through the packaged `gh-workflow-audit` tool, which compares live organization Issue Types and Issue Fields to `org-schema.yaml` read-only and reports matches, missing elements, value mismatches, and extras. | Versioned schema linkage with human-applied changes (design D0/D7). | Skill documents invoking the tool; the audit produces findings without any mutating call; the skill explicitly instructs agents to hand findings to a human. | Must |
 | FR-009 | The skill shall refuse — and instruct agents to refuse — organization-schema mutation, `Execution mode` self-promotion, readiness inference from open state alone, and enforcement bypass. | The refusal set is the package's safety boundary (NG-001, NG-006; design D1). | Each refusal stated imperatively in SKILL.md; refusals mirrored in the block where they are standing invariants. | Must |
 | FR-010 | The package shall render `.standards/packages/github-workflow/policy.toml` from consumer configuration, carrying at minimum the organization login, for the skill to read at runtime. | The skill needs deterministic access to consumer config without parsing `.standards/config.toml` (agent-handoff precedent). | `policy.toml` present after reconcile; contains the configured organization; skill documents reading it. | Must |
 | FR-011 | Every delivered artifact shall use `policy = "managed"`. | Upgradeability and drift visibility; zero bug-006 exposure (C-005). | Payload contains no create-only artifact entries. | Must |
 | FR-012 | The package shall implement providers `render-semantic`, `validate`, `verify`, `drift-check`, and `upgrade`, and no `scaffold` or `migrate` provider. | Standard managed-artifact integrity without unneeded machinery (design D6). | Provider table matches; validate/verify/drift-check cover all managed artifacts; no network access in any provider. | Must |
 | FR-013 | The package shall declare capabilities `github-workflow.audit`, `github-workflow.validate`, and `github-workflow.drift-check`, and relations `companions = ["agent-handoff"]`, `extends = []`, `conflicts = []`. | Catalog integration and declared affinity (design D5). | `payload.toml` capability and relation entries match; graph validation passes. | Must |
 | FR-014 | The package shall ship the standard family documentation set: `README.md` (canonical standard), `adopt.md`, and `agent-summary.md` within the repository's agent-summary size limit. | Every Catalog 5 family carries these resources (C-001). | Resources present with payload digests; agent-summary byte limit enforced by existing repository tests. | Must |
+| FR-015 | The package shall deliver `gh-workflow-audit` as a managed artifact at `.agents/skills/github-workflow/bin/gh-workflow-audit` with mode `0755`, compiled for linux/amd64 from repository Go source. | Owner-directed Go tooling with zero consumer toolchain requirement (design D7). | Artifact present with pinned digest and executable mode after reconcile; binary is statically linked (`CGO_ENABLED=0`). | Must |
+| FR-016 | The audit tool shall read the baseline from `org-schema.yaml` and the organization from `policy.toml`, query live organization schema read-only under the operator's existing `gh` authentication, emit a deterministic findings report distinguishing matches, missing elements, value mismatches, and extras, and exit nonzero on unmet preconditions (missing auth, unreachable API, unsupported platform) without emitting a partial report. | The audit must be trustworthy without human re-derivation (design D7). | Offline fixture-driven tests cover every finding class and precondition failure; a recorded manual run against the live organization is implementation evidence. | Must |
 
 ### 7.2 Non-Functional Requirements
 
@@ -195,6 +203,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | NFR-002 | Maintainability | Package version `1.0` shall be immutable once released; every content change ships as a new digest-pinned payload version. | Repository payload-immutability tests pass for the new family. | Must |
 | NFR-003 | Usability | The managed block shall stay compact enough that non-GitHub sessions pay negligible context cost. | Block content body approximately 12 lines; no field vocabulary or body-structure detail inline. | Should |
 | NFR-004 | Reliability | Reconcile, drift-check, and upgrade over the package shall behave deterministically with no network dependency. | Package tests run fully offline; no provider imports a network client. | Must |
+| NFR-005 | Reproducibility | The audit-tool binary shall be reproducibly buildable from repository Go source with `CGO_ENABLED=0`, `-trimpath`, and the toolchain pinned by `go.mod`. | An independent documented rebuild yields the committed bytes; verified in the repository gate or release evidence. | Must |
 
 ### 7.3 Interface Requirements
 
@@ -203,6 +212,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | IR-001 | Consumer configuration | The config schema shall accept exactly two options: `organization` (string, required, nonempty) and `harnesses` (array of `claude-code` \| `codex`, required, nonempty). | `config.schema.json` per SPEC-BA02. | Schema validation rejects missing/unknown options and empty values; package tests cover accept and reject cases. |
 | IR-002 | `gh` CLI | The skill's audit and work-state procedures shall use `gh` (CLI or its API subcommands) under the operator's existing authentication, and shall not embed or request credentials. | Documented commands in SKILL.md and references. | No credential material in any artifact; commands runnable with a standard authenticated `gh`. |
 | IR-003 | Managed block | Block contributions shall use the control plane's markdown-block adapter with scope `block:github-workflow` in both `AGENTS.md` and `CLAUDE.md`. | SPEC-CP01 contribution contract. | Reconcile round-trips the block; consumer-owned surrounding content untouched. |
+| IR-004 | `gh-workflow-audit` CLI | The tool shall run non-interactively, support human-readable and JSON findings modes, and require no arguments for the default audit, resolving `org-schema.yaml` and `policy.toml` from their delivered locations. | Exact flag surface recorded in the skill references (OQ-002). | Tool runs from a consumer checkout with an authenticated `gh` and produces findings in both modes. |
 
 ### 7.4 Data Requirements
 
@@ -241,6 +251,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | `SKILL.md` + `openai.yaml` | Decision procedures, refusals, trigger boundary, audit procedure | Skill loading; `gh` | The only component permitted network interaction, via the operator's `gh`. |
 | `references/*` (5 files) | Authoritative vocabulary, org schema, body/PR/review structures | Read by skill on demand | Content fidelity to the operating model is a Must requirement (FR-005/006, DR-001). |
+| `bin/gh-workflow-audit` | Deterministic read-only org-schema audit | CLI; operator `gh` auth; YAML/TOML inputs | Static Go binary, linux/amd64, reproducibly built (NFR-005); the only skill component that touches the network, and only in sessions. |
 | Block contributions | Skill mandate + standing invariants in every harness context | markdown-block adapter | Harness-gated; org name rendered from config. |
 | `policy.toml` | Runtime consumer configuration for the skill | TOML read | Rendered by `render-semantic`. |
 | Providers | Render, validate, verify, drift-check, upgrade | Control-plane provider contract | Offline only (NG-002). |
@@ -259,12 +270,14 @@ flowchart LR
 | D-005 | `companions = ["agent-handoff"]`; no dependencies. | Real session-closeout affinity without hidden coupling. | No declared relation. | design brief D5 |
 | D-006 | Org audit is skill-driven via `gh`; providers stay offline; no scaffold/migrate. | Preserves deterministic reconcile; no legacy predecessor exists. | Network-capable audit provider. | design brief D6 |
 | D-007 | v1.0 packages operating-model phases 1–2 only; later phases arrive as additive payload versions. | The data model must prove itself in manual operation before enforcement automation. | Shipping phase-3 checks now. | design brief D0 |
+| D-008 | Skill executables are Go; the audit ships as a committed, reproducibly built linux/amd64 binary. | Deterministic, testable audit; zero consumer toolchain; ADR 0027 Go lane. | Source-shipped local build (agent-recommended, not selected); `go install` channel (network dependency, second version channel). | design brief D7 |
 
 ### 8.5 Design Constraints
 
 - Follow SPEC-BA02 payload anatomy exactly; do not introduce novel artifact policies or provider kinds for this package.
 - Keep every operating-model reproduction (FR-005/006, DR-001) faithful to the preserved design input; divergences are deviations, not editorial improvements.
 - Keep the skill's `gh` usage read-only for anything organization-scoped.
+- Implement any skill-shipped executable in Go under the repository Go lane; never ship interpreted scripts with the skill (C-006).
 - Do not let SKILL.md grow procedures that belong in references; the block must not grow vocabulary that belongs in references.
 
 > **§8.4 (Solution Alternatives Considered) and §8.6 (Dependency Policy) are Full-tier** and are intentionally omitted at the Standard profile.
@@ -317,7 +330,7 @@ Expected result:
 
 | ID | Trigger | Behavior | Expected Result |
 | --- | --- | --- | --- |
-| AW-001 | Operator requests an org-schema audit. | Skill runs read-only `gh` comparison of live Issue Types/Fields against `org-schema.yaml`; classifies matches, missing, mismatched values, extras. | Findings report handed to the human; no mutation. |
+| AW-001 | Operator requests an org-schema audit. | Skill invokes `gh-workflow-audit`, which compares live Issue Types/Fields against `org-schema.yaml` read-only and classifies matches, missing, mismatched values, extras. | Findings report handed to the human; no mutation. |
 | AW-002 | Agent performs triage on captured issues. | Skill-guided: assign Type, recommend Priority/Size/Change risk/Severity per vocabulary; flag missing acceptance criteria as `Needs definition`. | Issues carry canonical metadata or are explicitly parked. |
 | AW-003 | Read-only query (`gh issue view`, `gh pr list`, searches). | No skill load required. | Zero added context cost for reads. |
 
@@ -330,6 +343,7 @@ Expected result:
 | EC-003 | Issue sized `XL` is a dispatch candidate. | Skill refuses direct implementation and directs decomposition into sub-issues. |
 | EC-004 | `gh` unauthenticated or network unavailable during audit. | Audit aborts with a clear finding; no partial report presented as complete. |
 | EC-005 | Consumer selects only one harness. | Only that harness's block and companion artifacts are delivered; reconcile remains clean. |
+| EC-006 | Audit tool missing or invoked on an unsupported platform. | Tool or skill reports the precondition failure distinctly; the agent surfaces the gap instead of improvising `gh` mutations; reconcile repair restores a damaged binary. |
 
 ### 10.4 State Transitions
 
@@ -353,6 +367,7 @@ Deleted: the package exposes no UI and no API surface of its own; its interfaces
 | ERR-002 | Managed artifact drift (edited skill or reference). | `drift-check` reports; `reconcile` repairs to payload content. | Control-plane findings. | Standard reconcile repair. |
 | ERR-003 | Invalid consumer configuration (unknown org value shape, empty harnesses). | Config schema validation rejects before any artifact change. | Control-plane validation errors. | Consumer corrects `.standards/config.toml`. |
 | ERR-004 | Agent attempts a refused operation (org mutation, Execution-mode self-promotion). | Skill directive: refuse and surface to the human. | Session report. | Human decides; no automated path exists by design. |
+| ERR-005 | Audit binary missing, corrupted, or wrong platform. | Tool exits nonzero with a precondition message; no partial findings. | `drift-check` flags the digest mismatch. | `reconcile` repair restores the pinned binary. |
 
 ### 12.2 Retry and Idempotency
 
@@ -394,6 +409,7 @@ None handled: package artifacts are public-safe standard content plus the organi
 | Issue/PR content treated as instructions (prompt injection via work items). | Agent executes attacker-authored directives. | Skill directs treating GitHub content as untrusted data; refusal rules are non-overridable by work-item text. |
 | Agent self-expands authority (org mutation, mode promotion). | Control-plane integrity loss. | Refusals in skill and standing invariants in block (FR-009); org plane human-only (NG-001). |
 | Delivered artifact tampering in a consumer. | Discipline silently weakened. | All-managed artifacts under digest drift-check (FR-011, ERR-002). |
+| Committed audit binary diverges from its Go source (supply-chain drift). | Unreviewable behavior ships to consumers. | Reproducible-build verification (NFR-005) plus payload digest pinning; an independent rebuild must match the committed bytes. |
 
 ### 13.6 Hardening Checklist
 
@@ -428,17 +444,18 @@ None handled: package artifacts are public-safe standard content plus the organi
 | Database | — | N/A: no datastore | No |
 | End-to-end | Dogfood composition fixture with the new package selected | Reconcile from clean fixture to target tree | Yes |
 | Security | Refusal text presence; no credential material; no network imports in providers | FR-009, NFR-004 assertions | Yes |
+| Go audit tool | Finding classification, precondition failures, JSON/human output | Offline fixture-driven tests via the repository Go gate (`make go-check`); reproducible-build check (NFR-005) | Yes |
 | Regression | Bug-006 guard: zero create-only artifacts in this family | Payload scan test | Yes |
 
-The skill's live `gh` audit is verified by procedure review and a documented manual run against the real organization (recorded as implementation evidence), not by networked CI tests (NFR-004).
+The audit tool's live behavior is verified by a documented manual run against the real organization (recorded as implementation evidence); its comparison logic is tested offline with fixtures, never by networked CI tests (NFR-004).
 
 ### 17.3 Requirement-to-Test Traceability
 
 | Requirement ID | Test / Verification Method | Status |
 | --- | --- | --- |
-| FR-001–FR-014 | To be completed by the implementer per Appendix B.3 | Not Started |
-| NFR-001–NFR-004 | To be completed by the implementer per Appendix B.3 | Not Started |
-| IR-001–IR-003, DR-001–DR-002 | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-001–FR-016 | To be completed by the implementer per Appendix B.3 | Not Started |
+| NFR-001–NFR-005 | To be completed by the implementer per Appendix B.3 | Not Started |
+| IR-001–IR-004, DR-001–DR-002 | To be completed by the implementer per Appendix B.3 | Not Started |
 
 ---
 
@@ -448,7 +465,7 @@ The skill's live `gh` audit is verified by procedure review and a documented man
 
 | Item | Value |
 | --- | --- |
-| Runtime | The `project-standards` control plane (Python) for delivery; `gh` CLI in agent sessions |
+| Runtime | The `project-standards` control plane (Python) for delivery; `gh` CLI plus the static Go audit binary in agent sessions (no consumer Go toolchain) |
 | OS / Platform | Consumer repository working trees; no service runtime |
 | Datastore | None |
 | External services | GitHub (skill-only, via `gh`) |
@@ -467,7 +484,7 @@ Environment matrix: not applicable — one delivery environment (the consumer re
 ### 18.3 Deployment Flow
 
 1. Trigger: inclusion in a `project-standards` release train (placement decided by the owner; after v5.17.0).
-2. CI checks: the repository's standard gate (validators, package-contract tests, coherence, markdown gates).
+2. CI checks: the repository's standard gate (validators, package-contract tests, coherence, markdown gates) plus the Go gate for the audit tool.
 3. Release per the repository release contract; consumers adopt by selecting the package and reconciling.
 4. Rollback: consumers reselect the prior payload version; the control plane repairs artifacts.
 
@@ -503,13 +520,14 @@ Exit: `project-standards validate` and graph/catalog checks pass with placeholde
 
 1. SKILL.md, openai.yaml, five references authored (FR-001–FR-006, FR-008, FR-009; DR-001).
 2. Block contribution content and `render-semantic` rendering (FR-007, FR-010).
+3. `gh-workflow-audit` implemented under the repository Go lane, reproducible build wired, binary committed (FR-015, FR-016, NFR-005); OQ-002 resolved and recorded.
 
 Exit: reconcile of a fixture consumer produces the §3.2 target tree; content-fidelity checks pass.
 
 ### MS-2 — Providers and tests
 
 1. validate/verify/drift-check/upgrade providers (FR-012); capabilities/relations (FR-013).
-2. Package-contract, config, regression (bug-006 guard), and dogfood tests per §17.2.
+2. Package-contract, config, regression (bug-006 guard), dogfood, and Go-gate audit-tool tests per §17.2.
 
 Exit: full repository gate green including the new family.
 
@@ -538,7 +556,7 @@ Exit: Definition of Done (§17.1) satisfied except owner acceptance items.
 | ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | OQ-001 | Which release train ships `github-workflow` 1.0? | After the v5.17.0 ADR train; exact release decided at plan time. | No | Owner | MS-3 | Open |
-| OQ-002 | Exact `gh` command surface for the audit (REST vs GraphQL subcommands for Issue Fields). | Implementer selects during MS-1 against the then-current GA API and records it in the skill references. | No | Implementer | MS-1 | Open |
+| OQ-002 | Exact `gh-workflow-audit` CLI flag surface and GitHub API usage (REST vs GraphQL) for Issue Fields. | Implementer selects during MS-1 against the then-current GA API and records it in the skill references. | No | Implementer | MS-1 | Open |
 
 ---
 

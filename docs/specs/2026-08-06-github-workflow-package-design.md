@@ -21,7 +21,7 @@ related: []
 - Operation: `create`
 - Decision owner: repository owner
 - Created and approved: `2026-08-06`
-- Revision: initial approved design
+- Revision: 1.1 — 2026-08-06 owner-directed amendment: skill tooling is Go, and the org audit ships as a packaged per-platform Go binary (D7). Initial approval 2026-08-06.
 - Prior design brief: none
 - Working-state source: `.project-pipeline/github-workflow-package/design-discovery/` (removed after promotion)
 - Design input: [GitHub Repository Administration Standard (preliminary)](archive/2026-08-06-github-repo-administration-preliminary-design.md)
@@ -96,6 +96,7 @@ One mandatory skill, `github-workflow`. Trigger boundary: agents must load it be
 | `pr-standard.md` | `.agents/skills/github-workflow/references/` | PR content standard and draft-PR policy |
 | `review-checklist.md` | `.agents/skills/github-workflow/references/` | Layered PR-review checklist — discipline only, no gating |
 | `policy.toml` | `.standards/packages/github-workflow/policy.toml` | Rendered consumer configuration for the skill to read |
+| `gh-workflow-audit` | `.agents/skills/github-workflow/bin/gh-workflow-audit` | Compiled Go audit tool (linux/amd64), mode 0755 |
 
 ### Contributions
 
@@ -126,7 +127,7 @@ Exactly two options:
 
 ### Providers
 
-`render-semantic` (block and `policy.toml` from configuration), `validate`, `verify`, `drift-check`, `upgrade`. No `scaffold` (no create-only artifacts, no scaffolding need) and no `migrate` (no legacy predecessor). The org audit is skill-driven via `gh` and is never a provider: providers run offline against files inside the reconcile transaction, and a network-dependent provider would break that model.
+`render-semantic` (block and `policy.toml` from configuration), `validate`, `verify`, `drift-check`, `upgrade`. No `scaffold` (no create-only artifacts, no scaffolding need) and no `migrate` (no legacy predecessor). The org audit is skill-driven and is never a provider: providers run offline against files inside the reconcile transaction, and a network-dependent provider would break that model. Under D7 the audit is executed by a packaged Go binary the skill invokes; it runs only in agent sessions under the operator's `gh` authentication, never during reconcile.
 
 ### Trust boundaries
 
@@ -183,10 +184,20 @@ Exactly two options:
 - Decision: `render-semantic`, `validate`, `verify`, `drift-check`, `upgrade`; no `scaffold`, no `migrate`; the org audit is never a provider.
 - Reopen when: legacy label-based approximations are found needing migration signatures, or reconcile gains a sanctioned online phase.
 
+### D7: Skill tooling in Go; audit ships as a per-platform binary
+
+- Status: `approved` (user, 2026-08-06; owner directive)
+- Decision: any executable shipped with the skill is implemented in Go (ADR 0027 lane). v1.0 ships the org audit as a compiled Go tool, `gh-workflow-audit`, delivered as a committed, digest-pinned managed artifact for `linux/amd64` only, reproducibly built (`CGO_ENABLED=0`, `-trimpath`, toolchain pinned by `go.mod`). The skill invokes the tool instead of prose `gh` command sequences.
+- Agent recommendation differed: source-shipped, locally-built delivery was recommended to keep the payload platform-agnostic and text-diffable; the user selected committed binaries for zero consumer toolchain requirements.
+- Agent-applied scoping default: single platform `linux/amd64`, justified by the all-Linux consumer fleet; additional platforms are an additive deferral.
+- Residual risk: binary bytes enter the digest-pinned payload lineage (repo growth per payload version; artifacts not reviewable by diff). Mitigation: the reproducible-build requirement makes the binary independently rebuildable and verifiable from the repository Go source.
+- Reopen when: a non-linux/amd64 consumer appears (add platforms), or payload growth becomes operationally painful (revisit source-built delivery).
+
 ## Complexity disposition
 
 ### Retained
 
+- Packaged Go audit binary (D7) — deterministic, testable audit output in place of fragile prose command sequences; committed per-platform delivery is the owner-selected distribution.
 - Reference-file split (five files) — guards `SKILL.md` size; progressive disclosure is an established repository pattern.
 - Configuration-rendered `organization` — keeps the published payload org-agnostic; a hardcoded organization would force a payload version per org change.
 - Full provider set minus `scaffold`/`migrate` — required by the Standard Bundle Authoring managed-artifact integrity contract.
@@ -199,6 +210,8 @@ Exactly two options:
 
 ### Rejected
 
+- Source-shipped, locally-built skill tooling — owner-rejected in favor of committed binaries; zero consumer toolchain requirement won.
+- `go install` distribution for skill tooling — network dependency and a second version channel outside the payload digest contract.
 - Two-skill split — fuzzy boundary, double versioning burden.
 - Fat managed block — context tax on every session; pattern inversion.
 - Configuration for area labels, Issue Type subsets, project numbers, or field customization — duplicated or forked state.
@@ -251,6 +264,7 @@ Non-blocking:
   - D4 config = `organization` + `harnesses` only
   - D5 companions agent-handoff; audit/validate/drift-check capabilities
   - D6 providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate
+  - D7 skill tooling in Go; audit ships as committed linux/amd64 binary, reproducibly built
 - Agent-applied defaults:
   - org-schema resource in YAML (design-input §35 fidelity)
   - capability naming mirrors agent-handoff
