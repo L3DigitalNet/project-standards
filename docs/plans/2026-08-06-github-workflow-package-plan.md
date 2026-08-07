@@ -172,12 +172,12 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-013 | Capabilities audit/validate/drift-check; companions agent-handoff | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10 | PV-T1-001, PV-T10-001 |
 | FR-015 | `gh-workflow` binary artifact, 0755, static, all nine subcommands | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
-| FR-016 | `audit`: schema+policy inputs, read-only live comparison, deterministic findings, fail-closed preconditions | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4, T12 | PV-T4-001, PV-T12-001 |
+| FR-016 | `audit`: schema+policy inputs, read-only live comparison, deterministic findings, fail-closed preconditions | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4, T12, T13 | PV-T4-001, PV-T12-001, PV-T13-001 |
 | FR-017 | `summary-format.md` defines the attention-first operator summary layout; the skill presents summaries in it | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
 | FR-018 | `summary-format.md` defines the creation receipt; skill requires it after creation | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
-| FR-019 | `ledger`: `docs/GH-WORKFLOWS.md` with header, TOC anchors, layout; atomic whole-file; gate-clean output | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5, T12 | PV-T5-001, PV-T12-001 |
+| FR-019 | `ledger`: `docs/GH-WORKFLOWS.md` with header, TOC anchors, layout; atomic whole-file; gate-clean output | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5, T12, T13 | PV-T5-001, PV-T12-001, PV-T13-001 |
 | FR-020 | Skill refresh rule (after mutations + on demand) and staleness rule | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
-| FR-021 | `set`/`new`/`close`/`reopen`: schema-validated mutations, scaffold+receipt on create, ordered failure-safe terminal sync; org read-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6, T12 | PV-T6-001, PV-T12-001 |
+| FR-021 | `set`/`new`/`close`/`reopen`: schema-validated mutations, scaffold+receipt on create, ordered failure-safe terminal sync; org read-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6, T12, T13 | PV-T6-001, PV-T12-001, PV-T13-001 |
 | FR-022 | `summary`/`receipt` render via the ledger layout engine to stdout | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5 | PV-T5-001 |
 | FR-023 | `check`: read-only Ready preconditions with itemized findings and exit codes | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6 | PV-T6-001 |
 | FR-024 | SKILL.md maps routine actions to subcommands; judgment boundary stated | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
@@ -221,6 +221,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T10 | Family docs, catalog, live-run evidence, spec traceability | active | documentation | P4 | T9 | FR-014 | PV-T10-001 | no / T1, T3 shared docs |
 | T11 | Close-out and handoff reconciliation | active | documentation | P4 | T10 | REQ-901 | PV-T11-001 | no / none |
 | T12 | Go review corrections before the binary freeze | active | behavior | P2 | T6 | FR-016, FR-019, FR-021 | PV-T12-001 | no / corrects T4–T6 surfaces post-completion |
+| T13 | Reopen-aware divergence messages and residual review fixes | active | behavior | P2 | T12 | FR-016, FR-019, FR-021 | PV-T13-001 | no / corrects T12 surfaces post-completion |
 
 ## 9. Implementation Tasks
 
@@ -492,6 +493,38 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T12.5 REFACTOR** — consolidate constants/helpers introduced by the fixes; keep green.
   - **T12.6 Verify Task** — run PV-T12-001; commit with checkpoint trailers.
 
+#### T13: Reopen-aware divergence messages and residual review fixes
+
+- **disposition:** active
+- **outcome:** the third golang-skills review pass's pre-freeze findings are corrected: both failure paths reachable after the reclassifying reopen emit a reopen-aware message (issue now open, Workflow field state stated truthfully, rerun hint included) instead of the false "nothing diverged" claim; live-vs-baseline type drift in field conversion reports as a failure pointing at `gh-workflow audit`, not an operator usage error; the same-origin pagination guard normalizes default ports and resolves relative `rel="next"` links against the base before comparing; `main.version` defaults to `render.Version` so one authority remains; validated number-field values marshal via `json.Number` preserving the operator's digits verbatim.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T12]
+- **dependency_reason:** corrects code produced by T12 after its completion (discovered_from: owner-directed golang-skills review pass 3 over the T12 diff, 2026-08-07; corrects: T12 surfaces without reopening it)
+- **requirements:** [FR-016, FR-019, FR-021]
+- **proof:** [PV-T13-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [ghworkflow-corrected-v1]
+- **produces:** [ghworkflow-corrected-v2]
+- **preserves:** [the frozen nine-subcommand CLI flag surface; org GET-only invariant; stdlib-only constraint; all T4–T12 proven behavior outside the corrected message and conversion paths]
+- **invariants:** [`X-GitHub-Api-Version` stays `2022-11-28`; no new module dependencies; no network in any test; the field write remains gated on the API-echoed state]
+- **executor_discretion:** [message wording, helper structure for the origin normalization]
+- **files:** [`cmd/gh-workflow/main.go` (modify; owner T4), `internal/ghworkflow/` (modify; owner T4)]
+- **parallel_safe:** no
+- **conflicts_with:** [T4, T5, T6, T12]
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** restore last green checkpoint; `make go-check` re-verifies
+- **acceptance:** PV-T13-001 proves the reopen-then-close step-2 failure and post-check divergence paths emit the reopen-aware message with the rerun hint (tests fail against the reverted messages), drift misclassification and origin-guard normalization and version-default and number-fidelity fixes are covered, and `make go-check` plus the full Go suite pass with the CLI surface unchanged
+- **sub-tasks:**
+  - **T13.1 RED** — failing tests for the reopen-aware messages and the drift exit class; expected failure: the current false-claim text and usage classification.
+  - **T13.2 Verify RED** — failures reproduce the reviewed defects.
+  - **T13.3 GREEN** — apply the five fixes.
+  - **T13.4 Verify GREEN** — targeted `go test` plus `make go-check`.
+  - **T13.5 Verify Task** — run PV-T13-001; commit with checkpoint trailers.
+
 ### Phase P3: package integration
 
 #### T8: Payload completion with providers, contributions, config, policy
@@ -718,6 +751,7 @@ None.
 | PV-T10-001 | FR-014 | T10 | acceptance | all repository gates; live organization | verify.sh + wheel validate + go-check + markdown gate + spec validate/lint; witnessed live `audit` + `ledger` run | all green; §17.3 Passing; EV-001 recorded | gate battery fails on any seeded regression during authoring | local plus one witnessed live run | EV-001 |
 | PV-T11-001 | REQ-901 | T11 | inspection | agent-handoff validators | `project-standards agent-handoff validate --repo .` and `drift-check --repo .` | both pass; close-out complete; OQ-001 surfaced | validator fails on a malformed handoff edit | local | ephemeral |
 | PV-T12-001 | FR-016, FR-019, FR-021 | T12 | unit | golang-skills review verdicts; current GitHub REST versioning docs | targeted `go test ./internal/ghworkflow/... ./cmd/...` plus `make go-check` | corrected behaviors proven; gates green; CLI surface unchanged | each corrected defect's new test fails with the correction reverted | local, offline | ephemeral |
+| PV-T13-001 | FR-016, FR-019, FR-021 | T13 | unit | golang-skills review pass-3 verdict | targeted `go test ./internal/ghworkflow/... ./cmd/...` plus `make go-check` | reopen-aware messages, drift classification, origin normalization, version default, number fidelity proven; gates green; CLI surface unchanged | message and classification tests fail against the reverted text | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
 
