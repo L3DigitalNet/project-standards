@@ -175,9 +175,9 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-016 | `audit`: schema+policy inputs, read-only live comparison, deterministic findings, fail-closed preconditions | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4, T12, T13 | PV-T4-001, PV-T12-001, PV-T13-001 |
 | FR-017 | `summary-format.md` defines the attention-first operator summary layout; the skill presents summaries in it | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
 | FR-018 | `summary-format.md` defines the creation receipt; skill requires it after creation | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
-| FR-019 | `ledger`: `docs/GH-WORKFLOWS.md` with header, TOC anchors, layout; atomic whole-file; gate-clean output | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5, T12, T13 | PV-T5-001, PV-T12-001, PV-T13-001 |
+| FR-019 | `ledger`: `docs/GH-WORKFLOWS.md` with header, TOC anchors, layout; atomic whole-file; gate-clean output | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5, T12, T13, T14 | PV-T5-001, PV-T12-001, PV-T13-001, PV-T14-001 |
 | FR-020 | Skill refresh rule (after mutations + on demand) and staleness rule | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
-| FR-021 | `set`/`new`/`close`/`reopen`: schema-validated mutations, scaffold+receipt on create, ordered failure-safe terminal sync; org read-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6, T12, T13 | PV-T6-001, PV-T12-001, PV-T13-001 |
+| FR-021 | `set`/`new`/`close`/`reopen`: schema-validated mutations, scaffold+receipt on create, ordered failure-safe terminal sync; org read-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6, T12, T13, T14 | PV-T6-001, PV-T12-001, PV-T13-001, PV-T14-001 |
 | FR-022 | `summary`/`receipt` render via the ledger layout engine to stdout | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5 | PV-T5-001 |
 | FR-023 | `check`: read-only Ready preconditions with itemized findings and exit codes | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6 | PV-T6-001 |
 | FR-024 | SKILL.md maps routine actions to subcommands; judgment boundary stated | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
@@ -222,6 +222,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T11 | Close-out and handoff reconciliation | active | documentation | P4 | T10 | REQ-901 | PV-T11-001 | no / none |
 | T12 | Go review corrections before the binary freeze | active | behavior | P2 | T6 | FR-016, FR-019, FR-021 | PV-T12-001 | no / corrects T4–T6 surfaces post-completion |
 | T13 | Reopen-aware divergence messages and residual review fixes | active | behavior | P2 | T12 | FR-016, FR-019, FR-021 | PV-T13-001 | no / corrects T12 surfaces post-completion |
+| T14 | Linker-effective version stamp and JSON-grammar number validation | active | behavior | P2 | T13 | FR-019, FR-021 | PV-T14-001 | no / corrects T13 surfaces post-completion |
 
 ## 9. Implementation Tasks
 
@@ -525,6 +526,38 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T13.4 Verify GREEN** — targeted `go test` plus `make go-check`.
   - **T13.5 Verify Task** — run PV-T13-001; commit with checkpoint trailers.
 
+#### T14: Linker-effective version stamp and JSON-grammar number validation
+
+- **disposition:** active
+- **outcome:** the fourth golang-skills review pass's freeze-blocking findings are corrected: the version default becomes a constant chain (`render.DefaultVersion` const; `render.Version` var initialized from it; `main.version` initialized from the const) so `-ldflags "-X main.version=…"` is linker-effective again while one authority remains; number-field validation uses the JSON number grammar (decoder with UseNumber over the raw token) so every value that passes validation encodes, and forms like `.5`/`+3` are refused offline as usage errors per EC-008.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T13]
+- **dependency_reason:** corrects code produced by T13 after its completion (discovered_from: owner-directed golang-skills review pass 4 over the T13 diff, 2026-08-07, findings verified by execution; corrects: T13 surfaces without reopening it)
+- **requirements:** [FR-019, FR-021]
+- **proof:** [PV-T14-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [ghworkflow-corrected-v2]
+- **produces:** [ghworkflow-corrected-v3]
+- **preserves:** [the frozen nine-subcommand CLI flag surface; org GET-only invariant; stdlib-only constraint; all previously proven behavior outside the two corrected paths]
+- **invariants:** [`X-GitHub-Api-Version` stays `2022-11-28`; no new module dependencies; no network in any test; validation still precedes any client construction]
+- **executor_discretion:** [validation helper structure, test naming]
+- **files:** [`cmd/gh-workflow/main.go` (modify; owner T4), `internal/ghworkflow/` (modify; owner T4)]
+- **parallel_safe:** no
+- **conflicts_with:** [T4, T5, T6, T12, T13]
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** restore last green checkpoint; `make go-check` re-verifies
+- **acceptance:** PV-T14-001 proves a binary built with `-ldflags "-X main.version=probe"` carries `probe` into the rendered ledger header (linker-level assertion, not in-process assignment), the JSON-grammar refusal cases (`.5`, `+3`, quoted strings) fail offline as usage errors with zero requests, previously valid plain numbers still apply, and `make go-check` plus the full Go suite pass with the CLI surface unchanged
+- **sub-tasks:**
+  - **T14.1 RED** — failing tests: the ldflags-built stamp assertion against current source; the `.5`/`+3` refusal cases.
+  - **T14.2 Verify RED** — failures reproduce the pass-4 findings.
+  - **T14.3 GREEN** — apply the const-chain and grammar-validation fixes.
+  - **T14.4 Verify GREEN** — targeted `go test` plus `make go-check` plus the `-X` build probe.
+  - **T14.5 Verify Task** — run PV-T14-001; commit with checkpoint trailers.
+
 ### Phase P3: package integration
 
 #### T8: Payload completion with providers, contributions, config, policy
@@ -752,6 +785,7 @@ None.
 | PV-T11-001 | REQ-901 | T11 | inspection | agent-handoff validators | `project-standards agent-handoff validate --repo .` and `drift-check --repo .` | both pass; close-out complete; OQ-001 surfaced | validator fails on a malformed handoff edit | local | ephemeral |
 | PV-T12-001 | FR-016, FR-019, FR-021 | T12 | unit | golang-skills review verdicts; current GitHub REST versioning docs | targeted `go test ./internal/ghworkflow/... ./cmd/...` plus `make go-check` | corrected behaviors proven; gates green; CLI surface unchanged | each corrected defect's new test fails with the correction reverted | local, offline | ephemeral |
 | PV-T13-001 | FR-016, FR-019, FR-021 | T13 | unit | golang-skills review pass-3 verdict | targeted `go test ./internal/ghworkflow/... ./cmd/...` plus `make go-check` | reopen-aware messages, drift classification, origin normalization, version default, number fidelity proven; gates green; CLI surface unchanged | message and classification tests fail against the reverted text | local, offline | ephemeral |
+| PV-T14-001 | FR-019, FR-021 | T14 | unit | golang-skills review pass-4 verdict (execution-verified) | targeted `go test` plus `make go-check` plus a `-ldflags "-X main.version=probe"` build asserting the stamped ledger header | linker-effective stamp; JSON-grammar refusals offline as usage errors; plain numbers still apply; gates green | stamp assertion fails against the var-initialized default; `.5` case fails against ParseFloat validation | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
 
