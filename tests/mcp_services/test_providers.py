@@ -779,6 +779,15 @@ AUTHORITATIVE_INPUT_OWNER: dict[tuple[str, str], str] = {
     ("markdown-frontmatter", "validate-frontmatter"): "family",
     ("project-spec", "validate"): "family",
     ("project-spec", "lint"): "family",
+    # github-workflow splits across both authorities rather than sitting in one:
+    # `validate` and `drift-check` are family-served because their providers build
+    # their entire answer from `snapshots`, so the generic empty input would report
+    # every delivered artifact missing; `verify` has no public command at all and
+    # stays with the executor's post-apply plan-bound snapshot, the same authority
+    # the three rows below name.
+    ("github-workflow", "validate"): "family",
+    ("github-workflow", "drift-check"): "family",
+    ("github-workflow", "verify"): "plan-bound",
     ("cli-documentation", "verify-workflow"): "plan-bound",
     ("markdown-tooling", "verify-format"): "plan-bound",
     ("markdown-tooling", "verify-lint"): "plan-bound",
@@ -2428,7 +2437,7 @@ def test_unconstructible_authoritative_input_fails_typed_rather_than_empty(
 def test_every_shipping_catalog_provider_is_seam_served() -> None:
     """TC-T14-004: no shipping provider may fall back to generic dispatch.
 
-    Standards outside the seam's four families keep the existing generic input, so
+    Standards outside the seam's five families keep the existing generic input, so
     the fixture standards the rest of this suite depends on are unaffected. That
     tolerance is exactly what could let a future packaged standard reopen the
     empty-input defect silently, so the shipping catalog is pinned: every provider

@@ -11,7 +11,7 @@ files. Provider input construction cannot be generic today: the packaged
 under which key, and making it declarable means republishing payloads.
 
 The owner's resolution (T15, 2026-07-30) was therefore to CONCENTRATE that
-knowledge rather than let it leak: four per-family branches, one module, and the
+knowledge rather than let it leak: five per-family branches, one module, and the
 package-id literals live here and nowhere else in the control plane. Retiring
 this module means declaring input shapes in the payloads themselves; that is
 recorded as the post-hold retirement path, not scheduled work.
@@ -89,6 +89,13 @@ _SPEC_OPERATIONS = frozenset({ProviderOperation.VALIDATE, ProviderOperation.LINT
 _HANDOFF_OPERATIONS = frozenset(
     {ProviderOperation.VALIDATE, ProviderOperation.VERIFY, ProviderOperation.DRIFT_CHECK}
 )
+# `verify` is deliberately absent. Unlike agent-handoff, this family ships no
+# public verify command: its only authoritative verify dispatcher is the executor's
+# post-apply pass, which sends the plan-bound snapshot. Claiming the operation here
+# would win the worker's family-first routing and hand the MCP composite a
+# different input than the executor uses — the CLI/service divergence this seam
+# exists to prevent, arrived at from the opposite direction.
+_GH_WORKFLOW_OPERATIONS = frozenset({ProviderOperation.VALIDATE, ProviderOperation.DRIFT_CHECK})
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,6 +151,32 @@ _HANDOFF_READ_PATHS = (
     "docs/handoff/sessions",
     "docs/handoff/specs-plans.md",
     "docs/handoff/state.md",
+)
+
+# The GitHub Workflow declared read set: every artifact the payload delivers, the
+# rendered consumer policy, and the two agent-instruction files that carry its
+# managed block. Fixed rather than walked like the handoff corpus above, because
+# nothing here is consumer-authored — the package publishes exactly these targets,
+# so directory discovery could only add paths no provider ever looks up.
+#
+# The harness-gated targets (`agents/openai.yaml`, `AGENTS.md`, `CLAUDE.md`) are
+# listed unconditionally on purpose. The providers report a file left behind by a
+# harness the consumer has since dropped, and that leftover is by definition absent
+# from the lock; a read set narrowed to the current selection would capture nothing
+# at those paths and silently retire the profile-drift rules.
+_GH_WORKFLOW_READ_PATHS = (
+    ".agents/skills/github-workflow/SKILL.md",
+    ".agents/skills/github-workflow/agents/openai.yaml",
+    ".agents/skills/github-workflow/bin/gh-workflow",
+    ".agents/skills/github-workflow/references/field-vocabulary.md",
+    ".agents/skills/github-workflow/references/issue-structure.md",
+    ".agents/skills/github-workflow/references/org-schema.yaml",
+    ".agents/skills/github-workflow/references/pr-standard.md",
+    ".agents/skills/github-workflow/references/review-checklist.md",
+    ".agents/skills/github-workflow/references/summary-format.md",
+    ".standards/packages/github-workflow/policy.toml",
+    "AGENTS.md",
+    "CLAUDE.md",
 )
 
 
@@ -239,6 +272,8 @@ def provider_dispatch_input(
         )
     if owner == "agent-handoff" and operation in _HANDOFF_OPERATIONS:
         return _handoff_input(selected)
+    if owner == "github-workflow" and operation in _GH_WORKFLOW_OPERATIONS:
+        return _gh_workflow_input(selected)
     if owner in _FRONTMATTER_STANDARDS and operation in _FRONTMATTER_OPERATIONS:
         return _frontmatter_input(selected, paths, schema_override=schema_override)
     raise NoDeclaredProviderInput(
@@ -491,6 +526,30 @@ def _handoff_input(selected: SelectedCommandPackage) -> JsonObject:
         snapshots.update(capture_command_snapshot(selected.repo, missing))
     snapshots["managed_units"] = managed_unit_snapshot(selected.lock, "agent-handoff")
     snapshots["managed_markdown_units"] = managed_markdown_unit_snapshot(selected.lock)
+    return snapshots
+
+
+def _gh_workflow_input(selected: SelectedCommandPackage) -> JsonObject:
+    """Build the path-keyed GitHub Workflow snapshot plus its managed-unit facts.
+
+    Structurally the agent-handoff shape, and for the same two reasons: these
+    providers key every finding on the consumer path they inspect, and the
+    lock-bound units are the only expected-byte authority available to them — a
+    payload path may be declared once, as an artifact source or as a resource but
+    never both, so the delivered skill, references, and binary are unreachable as
+    provider resources and cannot be re-hashed inside the payload.
+
+    An empty input is NOT an acceptable fallback for this family, which is why the
+    branch exists rather than a census exemption: the providers build their whole
+    answer from `snapshots`, so `{}` makes every delivered target read as missing
+    and manufactures a findings set the CLI never produces.
+
+    `managed_markdown_units` is deliberately not sent. The handoff providers read
+    every package's Markdown blocks to reason about files they share; these ask only
+    whether their own block is current, which `managed_units` already answers.
+    """
+    snapshots = capture_command_snapshot(selected.repo, _GH_WORKFLOW_READ_PATHS)
+    snapshots["managed_units"] = managed_unit_snapshot(selected.lock, "github-workflow")
     return snapshots
 
 
