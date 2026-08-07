@@ -21,7 +21,6 @@ from project_standards.control_plane.cli import (
 )
 from project_standards.control_plane.codec import parse_lock
 from project_standards.control_plane.config_edit import (
-    set_standard_enabled,
     set_standard_version,
 )
 from project_standards.control_plane.distribution import InstalledDistribution
@@ -34,7 +33,7 @@ from tests.issue_regressions.tool_oracle import (
     markdownlint_patterns,
     prettier_workflow,
 )
-from tests.package_compatibility.matrix import catalog_default_ids
+from tests.package_compatibility.matrix import catalog_default_ids, enable_standard
 
 pytestmark = pytest.mark.compatibility
 
@@ -93,7 +92,7 @@ def _materialize_track(
     _write_clean_consumer_seed(repo)
     initialize_control_plane(repo, "5", distribution=distribution)
     for standard_id in catalog_default_ids():
-        set_standard_enabled(repo, standard_id, True)
+        enable_standard(repo, distribution, standard_id)
     set_standard_version(repo, authority.standard_id, selector)
     _apply(repo, distribution)
 
