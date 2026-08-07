@@ -21,7 +21,7 @@ related: []
 - Operation: `create`
 - Decision owner: repository owner
 - Created and approved: `2026-08-06`
-- Revision: 1.5 — 2026-08-06 owner-approved amendment: the tool absorbs the skill's deterministic plumbing — mutation subcommands, render subcommands, and a readiness check (D11). Prior same-day: 1.4 ledger and tool consolidation (D10), 1.3 creation receipts (D9), 1.2 operator summary layout (D8), 1.1 Go skill tooling (D7); initial approval 2026-08-06.
+- Revision: 1.6 — 2026-08-06 owner-approved amendment: PR existence is repository-local policy; the package binds PR obligations only once a PR exists (D12). Prior same-day: 1.5 tool plumbing subcommands (D11). Earlier same-day: 1.4 ledger and tool consolidation (D10), 1.3 creation receipts (D9), 1.2 operator summary layout (D8), 1.1 Go skill tooling (D7); initial approval 2026-08-06.
 - Prior design brief: none
 - Working-state source: `.project-pipeline/github-workflow-package/design-discovery/` (removed after promotion)
 - Design input: [GitHub Repository Administration Standard (preliminary)](archive/2026-08-06-github-repo-administration-preliminary-design.md)
@@ -225,6 +225,14 @@ Exactly two options:
 - Rationale: field mutations are the worst API surface in the model (GraphQL field/option ID plumbing); terminal sync is the most invariant-critical two-step; rendering was already deterministic. Tool validation converts vocabulary and sync discipline from model memory into mechanical refusal.
 - Reopen when: a subcommand's scope starts absorbing judgment (value selection, content authoring) — that is the boundary violation signal.
 
+### D12: PR existence is repository-local policy
+
+- Status: `approved` (user, 2026-08-06; owner directive)
+- Decision: the package owns PR _content_ semantics (governing-Issue linkage, content sections, draft policy, review discipline) but never PR _existence_. Whether a change requires a PR — the direct-push versus PR threshold — is repository-local branch policy that legitimately varies per repository with project scope and importance. `pr-standard.md` states this deference explicitly, and package obligations bind only once a PR exists. Default when the consuming repository is silent: nontrivial or consequential changes go through a PR; minor or inconsequential changes may be pushed directly rather than polluting history with ceremony.
+- Context: the owner is moving toward a more PR-based workflow overall, but does not want PRs forced for minor changes, and expects the threshold to sit differently in each repository.
+- Rationale: the portable/local boundary test — "does the rule survive being moved to a different repository unchanged?" PR content rules do; PR-requirement thresholds do not. Enforcement of any repo's threshold belongs to its rulesets, never to the skill (NG-006 unchanged).
+- Reopen when: a consumer wants the threshold expressed as package configuration rather than repo-local instructions — resist unless several repositories converge on identical thresholds worth centralizing.
+
 ## Complexity disposition
 
 ### Retained
@@ -301,6 +309,7 @@ Non-blocking:
   - D9 agents present a consistent creation receipt (header, fields set, gaps) after creating an issue or PR
   - D10 tool consolidated as `gh-workflow` (audit + ledger subcommands); maintained human-readable ledger at docs/GH-WORKFLOWS.md with TOC, refreshed after mutating tasks
   - D11 tool absorbs deterministic plumbing: new/set/close/reopen (validated mutations, atomic terminal sync), summary/receipt (rendering), check (Ready preconditions); judgment stays with the agent
+  - D12 PR existence is repo-local policy (per-repo direct-push threshold); package binds PR obligations only once a PR exists; silent-repo default: PRs for consequential changes, direct push for minor ones
 - Agent-applied defaults:
   - org-schema resource in YAML (design-input §35 fidelity)
   - capability naming mirrors agent-handoff
