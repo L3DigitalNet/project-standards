@@ -186,7 +186,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | NFR-003 | Block ~12 content lines; no vocabulary inline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Should | T8 | T8 | PV-T8-001 |
 | NFR-004 | Reconcile/drift/upgrade deterministic, offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T9 | T9 | PV-T9-001 |
 | NFR-005 | Binary reproducibly buildable; independent rebuild yields committed bytes | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
-| IR-001 | Config schema exactly `organization` + `harnesses`; reject unknown/empty | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T1, T8, T16, T17 | PV-T1-001, PV-T8-002, PV-T16-001, PV-T17-001 |
+| IR-001 | Config schema exactly `organization` + `harnesses`; reject unknown/empty | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T1, T8, T16, T17, T18 | PV-T1-001, PV-T8-002, PV-T16-001, PV-T17-001, PV-T18-001 |
 | IR-002 | All GitHub access via operator's `gh` auth; no embedded credentials | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4 | PV-T4-001 |
 | IR-003 | markdown-block adapter, scope `block:github-workflow`, round-trips | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | IR-004 | Non-interactive CLI, nine subcommands, JSON+human modes for read-only, zero-arg defaults | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T4, T5, T6, T7 | PV-T4-001, PV-T5-001, PV-T6-001, PV-T7-001 |
@@ -226,6 +226,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T15 | Catalog activation and repository-inventory reconciliation | active | configuration | P3 | T8 | FR-014 | PV-T15-001 | no / T10 shared catalog surface |
 | T16 | Compatibility-matrix support for required-option catalog defaults | active | behavior | P3 | T15 | IR-001 | PV-T16-001 | no / none |
 | T17 | Consumer-outcome enablement with issue-ledger amendments | active | behavior | P3 | T16 | IR-001 | PV-T17-001 | no / none |
+| T18 | Performance-lane enablement through the matrix | active | behavior | P3 | T16 | IR-001 | PV-T18-001 | no / none |
 
 ## 9. Implementation Tasks
 
@@ -724,6 +725,38 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T17.4 Verify GREEN** — full package-compatibility suite green; ledger negative control.
   - **T17.5 Verify Task** — run PV-T17-001; commit with checkpoint trailers.
 
+#### T18: Performance-lane enablement through the matrix
+
+- **disposition:** active
+- **outcome:** `tests/package_compatibility/test_performance.py` enables catalog defaults through the matrix's `enable_standard` path at both of its enablement sites, so the two performance-lane tests resolve `github-workflow@1.0`'s required options and the `-m performance` lane is green again — the last enablement site outside the matrix helper.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T16]
+- **dependency_reason:** consumes matrix-compat-v1: the fix imports the matrix's `enable_standard` helper (discovered_from: T17 verification — two performance tests fail on bare `set_standard_enabled` with empty config, pre-existing at T17's base; corrects: the final enablement residue of T15's activation)
+- **requirements:** [IR-001]
+- **proof:** [PV-T18-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [matrix-compat-v1]
+- **produces:** [performance-lane-green-v1]
+- **preserves:** [performance assertions and thresholds unchanged; all previously passing suites; no package or payload changes]
+- **invariants:** [fixture values only; no network; no new enablement paths outside the matrix helper]
+- **executor_discretion:** [none beyond mechanical substitution details]
+- **files:** [`tests/package_compatibility/test_performance.py` (modify; owner T18)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** revert the file; restore last green checkpoint
+- **acceptance:** PV-T18-001 proves `test_performance.py::test_real_catalog_plans_inside_scale_and_time_boundary` and `test_performance.py::test_one_hundred_requested_and_discovery_orders_are_byte_deterministic` pass, and `pytest tests/package_compatibility/ -q` exits 0 with no failed tests
+- **sub-tasks:**
+  - **T18.1 RED** — reproduce the two failures; expected cause: empty-config resolution at the bare enablement sites.
+  - **T18.2 Verify RED** — the cause and nothing else.
+  - **T18.3 GREEN** — substitute `enable_standard` at both sites.
+  - **T18.4 Verify GREEN** — performance lane green; whole-directory run green.
+  - **T18.5 Verify Task** — run PV-T18-001; commit with checkpoint trailers.
+
 ### Phase P4: release readiness and close-out
 
 #### T10: Family docs, catalog, live-run evidence, spec traceability
@@ -887,6 +920,7 @@ None.
 | PV-T15-001 | FR-014 | T15 | integration | repository catalog/inventory suites | targeted pytest on the four previously failing suites plus the standards validator battery | all pass with the family advertised; validators green | reverting the catalog entry re-fails the activation suite | local, offline | ephemeral |
 | PV-T16-001 | IR-001 | T16 | integration | package-compatibility matrix suite | full `pytest tests/package_compatibility/` with the family advertised | all rows pass incl. the 28 previously failing and the four stable-id tests; no package schema changed | removing the standard's minimal-config table entry yields a clear error, not a silent empty-config pass | local, offline | ephemeral |
 | PV-T17-001 | IR-001 | T17 | integration | package-compatibility suite + issue-ledger validator | full `pytest tests/package_compatibility/` incl. consumer outcomes | all rows pass; ledger accepts the six amendment records | a bare digest swap without amendment records is rejected with `LedgerError` | local, offline | ephemeral |
+| PV-T18-001 | IR-001 | T18 | integration | performance-lane suite | `pytest tests/package_compatibility/ -q` whole directory incl. `-m performance` | all lanes green; no bare enablement site remains | reverting the substitution re-fails both performance tests | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
 
