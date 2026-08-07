@@ -60,6 +60,14 @@ digest = "sha256:6afe771c87e108d8a46dc00380365f1b1793891e3c57544a188e0b37d28a4f4
 policy = "managed"
 
 [[artifacts]]
+id = "tool-binary"
+target = ".agents/skills/github-workflow/bin/gh-workflow"
+source = "skills/github-workflow/bin/gh-workflow"
+digest = "sha256:b0a8712d6fe6019794498b5961ae0ca571a000b61eafa1d7f835a387db0f7551"
+policy = "managed"
+mode = "0755"
+
+[[artifacts]]
 id = "reference-field-vocabulary"
 target = ".agents/skills/github-workflow/references/field-vocabulary.md"
 source = "skills/github-workflow/references/field-vocabulary.md"
