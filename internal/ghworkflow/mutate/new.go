@@ -38,7 +38,7 @@ const canonicalBody = `## Outcome
 
 func runNew(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("new", flag.ContinueOnError)
-	target := addTargetFlags(fs, true)
+	tgt := addTargetFlags(fs, true)
 	title := fs.String("title", "", "issue title")
 	issueType := fs.String("type", "", "Issue Type: one of the five in the organization schema")
 	bodyFile := fs.String("body-file", "", "file holding the authored issue body "+
@@ -62,7 +62,7 @@ func runNew(ctx context.Context, env *cli.Env, args []string) error {
 		return cli.Usagef("pass --type with one of the organization's Issue Types")
 	}
 
-	schema, err := target.loadSchema(env)
+	schema, err := tgt.loadSchema(env)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func runNew(ctx context.Context, env *cli.Env, args []string) error {
 		return err
 	}
 
-	repo, err := target.resolve(env)
+	repo, err := tgt.resolve(env)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func runNew(ctx context.Context, env *cli.Env, args []string) error {
 		return fmt.Errorf("created %s#%d (%s) but could not read it back for the receipt: %w",
 			repo, created.Number, created.HTMLURL, err)
 	}
-	return emit(env, mode, render.Receipt(item), render.NewReceiptReport(item))
+	return emit(env, mode, func() string { return render.Receipt(item) }, render.NewReceiptReport(item))
 }
 
 func issueBody(path string) (string, error) {

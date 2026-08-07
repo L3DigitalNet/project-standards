@@ -118,12 +118,14 @@ func (t *target) resolve(env *cli.Env) (render.Repository, error) {
 // before anything reaches the network, so a schema the tool cannot read is a precondition
 // failure rather than a half-applied mutation.
 func (t *target) loadSchema(env *cli.Env) (*orgschema.Schema, error) {
-	// A subcommand that validates no values registers no --schema flag; reaching here
-	// without one is a wiring mistake, not an operator error.
-	path := ""
-	if t.schema != nil {
-		path = *t.schema
+	// A subcommand that validates no values registers no --schema flag, so reaching here
+	// without one is a wiring mistake rather than an operator error. It is refused instead
+	// of quietly falling back to the delivered default, which would validate against a
+	// schema the invocation had no way to name or override.
+	if t.schema == nil {
+		return nil, errors.New("internal: a subcommand registered without --schema asked for the schema")
 	}
+	path := *t.schema
 	if path == "" {
 		resolved, err := cli.ResolveRepoFile(env.WorkDir, cli.DefaultSchemaPath)
 		if err != nil {
@@ -161,15 +163,18 @@ func requireIssue(number int) error {
 }
 
 // emit renders in the requested mode and writes once, after every fallible step has
-// succeeded (spec FR-016's no-partial-report rule, applied to these surfaces too).
-func emit(env *cli.Env, mode cli.OutputMode, human string, report any) error {
-	rendered := []byte(human)
+// succeeded (spec FR-016's no-partial-report rule, applied to these surfaces too). The
+// human form is a function so JSON mode never pays to build a string it discards.
+func emit(env *cli.Env, mode cli.OutputMode, human func() string, report any) error {
+	var rendered []byte
 	if mode == cli.OutputJSON {
 		encoded, err := cli.MarshalJSON(report)
 		if err != nil {
 			return err
 		}
 		rendered = encoded
+	} else {
+		rendered = []byte(human())
 	}
 	if _, err := env.Stdout.Write(rendered); err != nil {
 		return fmt.Errorf("writing the report: %w", err)

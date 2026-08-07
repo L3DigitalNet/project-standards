@@ -30,7 +30,7 @@ type transition struct {
 
 func runClose(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("close", flag.ContinueOnError)
-	target := addTargetFlags(fs, true)
+	tgt := addTargetFlags(fs, true)
 	issue := fs.Int("issue", 0, "issue number to close")
 	as := fs.String("as", "", "terminal disposition: done or dropped")
 	if err := parse(fs, env, args, "Usage: gh-workflow close --issue N --as done|dropped [flags]\n\n"+
@@ -52,26 +52,27 @@ func runClose(ctx context.Context, env *cli.Env, args []string) error {
 	default:
 		return cli.Usagef("pass --as done or --as dropped")
 	}
+	reason, _ := terminalReason(workflow)
 	move := transition{
 		state:    stateClosed,
-		reason:   terminalWorkflow[workflow],
+		reason:   reason,
 		workflow: workflow,
 		rerun:    fmt.Sprintf("close --issue %d --as %s", *issue, strings.ToLower(*as)),
 	}
 
-	schema, err := target.loadSchema(env)
+	schema, err := tgt.loadSchema(env)
 	if err != nil {
 		return err
 	}
 	if err := requireWorkflowValue(schema, workflow); err != nil {
 		return err
 	}
-	return apply(ctx, env, target, *issue, move)
+	return apply(ctx, env, tgt, *issue, move)
 }
 
 func runReopen(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("reopen", flag.ContinueOnError)
-	target := addTargetFlags(fs, true)
+	tgt := addTargetFlags(fs, true)
 	issue := fs.Int("issue", 0, "issue number to reopen")
 	workflow := fs.String("workflow", "", "nonterminal Workflow value to restore")
 	if err := parse(fs, env, args, "Usage: gh-workflow reopen --issue N --workflow VALUE [flags]\n\n"+
@@ -87,19 +88,19 @@ func runReopen(ctx context.Context, env *cli.Env, args []string) error {
 		return cli.Usagef("pass --workflow with the nonterminal value to restore")
 	}
 
-	schema, err := target.loadSchema(env)
+	schema, err := tgt.loadSchema(env)
 	if err != nil {
 		return err
 	}
 	if err := requireWorkflowValue(schema, *workflow); err != nil {
 		return err
 	}
-	if _, terminal := terminalWorkflow[*workflow]; terminal {
+	if _, terminal := terminalReason(*workflow); terminal {
 		return cli.Usagef("Workflow %q is a terminal value and pairs with a closed issue; "+
 			"reopening restores a nonterminal value: %s",
 			*workflow, strings.Join(nonterminalWorkflowValues(schema), ", "))
 	}
-	return apply(ctx, env, target, *issue, transition{
+	return apply(ctx, env, tgt, *issue, transition{
 		state:    stateOpen,
 		reason:   reasonReopened,
 		workflow: *workflow,
@@ -125,8 +126,8 @@ func requireWorkflowValue(schema *orgschema.Schema, value string) error {
 // Workflow field is not — visible in every listing, and exactly what the divergence
 // report names. The reverse order would leave a `Done` field on an open issue, which
 // reads as a completed item and hides itself.
-func apply(ctx context.Context, env *cli.Env, target *target, number int, move transition) error {
-	repo, err := target.resolve(env)
+func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move transition) error {
+	repo, err := tgt.resolve(env)
 	if err != nil {
 		return err
 	}
@@ -157,16 +158,47 @@ func apply(ctx context.Context, env *cli.Env, target *target, number int, move t
 		return err
 	}
 
-	if _, err := client.SetIssueState(ctx, repo.Owner, repo.Name, number, move.state, move.reason); err != nil {
+	// A closed issue cannot be reclassified in place. GitHub applies state_reason only when
+	// the state itself changes, so PATCHing closed/not_planned to closed/completed answers
+	// 200 and changes nothing — and writing the matching Workflow value on the strength of
+	// that answer would manufacture the exact divergence this sequence exists to prevent,
+	// permanently, since the pre-check would then compare against a reason no rerun can
+	// reach. The reclassification is therefore expressed as the transition GitHub honors:
+	// reopen, then close with the new reason. If the second step fails the issue is left
+	// open, which the rerun converges from.
+	if move.state == stateClosed && before.State == stateClosed && before.StateReason != move.reason {
+		if _, err := client.SetIssueState(ctx, repo.Owner, repo.Name, number,
+			stateOpen, reasonReopened); err != nil {
+			return fmt.Errorf("%s#%d: reopening to reclassify the close reason from %s to %s failed, "+
+				"so the issue is unchanged and nothing diverged: %w",
+				repo, number, before.StateReason, move.reason, err)
+		}
+	}
+
+	updated, err := client.SetIssueState(ctx, repo.Owner, repo.Name, number, move.state, move.reason)
+	if err != nil {
 		return fmt.Errorf("%s#%d: the native state change failed, so the Workflow field was left "+
 			"untouched and nothing diverged: %w", repo, number, err)
 	}
+	// The API's own answer is the oracle, not the 2xx. A dropped state_reason comes back as
+	// a success carrying the old value, and the Workflow field must not be written against
+	// a native state GitHub did not actually record. The reason is checked only for a
+	// close: `reopened` is a byproduct of the transition, while a close reason is half of
+	// the terminal pairing FR-021 keeps synchronized.
+	if updated.State != move.state || (move.state == stateClosed && updated.StateReason != move.reason) {
+		return fmt.Errorf("%s#%d: GitHub still reports %s after the state change rather than the "+
+			"requested %s, so the Workflow field was left untouched and nothing diverged; "+
+			"reclassify the issue in GitHub, then rerun `gh-workflow %s`",
+			repo, number, nativeState(updated.State, updated.StateReason),
+			nativeState(move.state, move.reason), move.rerun)
+	}
 
 	if err := client.AddIssueFieldValues(ctx, repo.Owner, repo.Name, number, values); err != nil {
-		return fmt.Errorf("%s#%d is now %s on GitHub but its Workflow field is still %s rather than %q: %w\n"+
-			"The terminal pairing has diverged. Rerun `gh-workflow %s` to converge; both steps are idempotent",
+		return fmt.Errorf("%s#%d is now %s on GitHub but its Workflow field is still %s rather than %q.\n"+
+			"The terminal pairing has diverged. Rerun `gh-workflow %s` to converge; both steps are "+
+			"idempotent: %w",
 			repo, number, nativeState(move.state, move.reason),
-			quotedOrUnset(before.Field(render.FieldWorkflow)), move.workflow, err, move.rerun)
+			quotedOrUnset(before.Field(render.FieldWorkflow)), move.workflow, move.rerun, err)
 	}
 
 	_, err = fmt.Fprintf(env.Stdout, "%s#%d: GitHub state %s; Workflow = %s.\n",
@@ -200,7 +232,7 @@ func nonterminalWorkflowValues(schema *orgschema.Schema) []string {
 	}
 	values := make([]string, 0, len(field.Values))
 	for _, value := range field.Values {
-		if _, terminal := terminalWorkflow[value]; !terminal {
+		if _, terminal := terminalReason(value); !terminal {
 			values = append(values, value)
 		}
 	}

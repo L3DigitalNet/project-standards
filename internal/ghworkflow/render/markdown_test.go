@@ -43,10 +43,10 @@ func TestTableEscapesCellText(t *testing.T) {
 
 	table := render.Table(
 		[]string{"Title"},
-		[][]string{{"a | b *c* _d_ <e> `f` https://example.test/x"}},
+		[][]string{{"a | b *c* _d_ ~~g~~ <e> `f` https://example.test/x"}},
 	)
 	row := strings.Split(table, "\n")[2]
-	for _, want := range []string{`\|`, `\*c\*`, `\_d\_`, `\<e\>`, "`https://example.test/x`"} {
+	for _, want := range []string{`\|`, `\*c\*`, `\_d\_`, `\~\~g\~\~`, `\<e\>`, "`https://example.test/x`"} {
 		if !strings.Contains(row, want) {
 			t.Errorf("row %q does not contain %q", row, want)
 		}

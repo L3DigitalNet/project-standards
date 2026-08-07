@@ -91,14 +91,16 @@ var (
 	whitespaceRunning = regexp.MustCompile(`\s+`)
 	// markdownEscapes are the characters that would otherwise let arbitrary GitHub text
 	// act on the document: a pipe silently adds a column, emphasis and link markers
-	// restyle content markdownlint pins to one style, and an angle bracket opens inline
-	// HTML the same linter forbids outright.
+	// restyle content markdownlint pins to one style, a tilde pair opens GFM
+	// strikethrough, and an angle bracket opens inline HTML the same linter forbids
+	// outright.
 	markdownEscapes = strings.NewReplacer(
 		`\`, `\\`,
 		"|", `\|`,
 		"`", "\\`",
 		"*", `\*`,
 		"_", `\_`,
+		"~", `\~`,
 		"<", `\<`,
 		">", `\>`,
 		"[", `\[`,

@@ -123,7 +123,7 @@ func targetDatePassed(item WorkItem, readAt time.Time) (string, bool) {
 	if value == "" {
 		return "", false
 	}
-	target, err := time.Parse(targetDateLayout, value)
+	target, err := time.Parse(DateLayout, value)
 	if err != nil {
 		// An unparseable date is reported as-is by the table rather than raised here;
 		// the tool does not fail a whole summary over one malformed field value.

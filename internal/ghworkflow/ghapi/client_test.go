@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -102,6 +104,70 @@ func TestListFollowsPagination(t *testing.T) {
 	}
 	if len(got) != 2 || got[1].Name != "Feature" {
 		t.Fatalf("ListIssueTypes() = %+v, want both pages concatenated", got)
+	}
+}
+
+// Every other test in this package injects a fake RoundTripper, which is what keeps the
+// suite offline — and also what leaves the client's own net/http path unexercised: header
+// construction, connection handling, and body closing are all skipped by a transport that
+// never speaks HTTP. One loopback server covers that path end to end without leaving the
+// machine.
+func TestClientAgainstALoopbackServer(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != typesPath {
+			http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
+			return
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer gho_testtoken" {
+			http.Error(w, `{"message":"Bad credentials"}`, http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "application/vnd.github+json")
+		_, _ = io.WriteString(w, `[{"name":"Bug","is_enabled":true}]`)
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := ghapi.NewClient(server.URL, "gho_testtoken", nil)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v, want nil", err)
+	}
+	got, err := client.ListIssueTypes(context.Background(), "L3DigitalNet")
+	if err != nil {
+		t.Fatalf("ListIssueTypes() error = %v, want nil", err)
+	}
+	if len(got) != 1 || got[0].Name != "Bug" {
+		t.Errorf("ListIssueTypes() = %+v, want the single Bug type", got)
+	}
+}
+
+// The Link header is server-controlled text, and every request this client builds carries
+// the operator's token in an Authorization header. Go strips credentials across hosts only
+// on redirects it follows itself, which is not this path: a rel="next" pointing anywhere
+// else would hand the bearer token to that host. Pagination therefore stops at the origin
+// it started from, and says so rather than silently truncating the read.
+func TestPaginationRefusesACrossOriginNextLink(t *testing.T) {
+	t.Parallel()
+
+	const elsewhere = "https://exfiltrate.test" + typesPath + "?per_page=100&page=2"
+	transport := &ghtest.Transport{Routes: map[string]ghtest.Response{
+		"GET " + typesPath: {
+			Status: http.StatusOK,
+			Body:   `[{"name":"Bug","is_enabled":true}]`,
+			Header: http.Header{"Link": []string{fmt.Sprintf(`<%s>; rel="next"`, elsewhere)}},
+		},
+	}}
+
+	got, err := newClient(t, transport).ListIssueTypes(context.Background(), "L3DigitalNet")
+	if err == nil {
+		t.Fatalf("ListIssueTypes() = %+v, error = nil; want a refusal of the cross-origin next link", got)
+	}
+	if !strings.Contains(err.Error(), "exfiltrate.test") {
+		t.Errorf("error = %q, want it to name the refused host", err)
+	}
+	if requests := transport.Requests(); len(requests) != 1 {
+		t.Errorf("made %d requests, want 1: the token must never reach %s", len(requests), elsewhere)
 	}
 }
 

@@ -52,7 +52,7 @@ type CheckReport struct {
 
 func runCheck(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
-	target := addTargetFlags(fs, false)
+	tgt := addTargetFlags(fs, false)
 	issue := fs.Int("issue", 0, "issue number to check")
 	output := fs.String("output", string(cli.OutputHuman), "output format: human or json")
 	if err := parse(fs, env, args, "Usage: gh-workflow check --issue N [flags]\n\n"+
@@ -69,7 +69,7 @@ func runCheck(ctx context.Context, env *cli.Env, args []string) error {
 		return err
 	}
 
-	repo, err := target.resolve(env)
+	repo, err := tgt.resolve(env)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func runCheck(ctx context.Context, env *cli.Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := emit(env, mode, renderCheck(report), report); err != nil {
+	if err := emit(env, mode, func() string { return renderCheck(report) }, report); err != nil {
 		return err
 	}
 
@@ -158,7 +158,7 @@ func acceptanceFinding(item render.WorkItem) Finding {
 func dependenciesFinding(blockers []ghapi.Issue) Finding {
 	var open []string
 	for _, blocker := range blockers {
-		if blocker.State == "open" {
+		if blocker.State == stateOpen {
 			open = append(open, "#"+strconv.Itoa(blocker.Number))
 		}
 	}

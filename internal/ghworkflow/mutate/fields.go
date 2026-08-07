@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,15 +14,22 @@ import (
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 )
 
-// dateLayout is the format GitHub stores and returns date Issue Field values in.
-const dateLayout = "2006-01-02"
-
-// terminalWorkflow is the pair of Workflow values that must stay synchronized with the
-// native closed state. They are named here because three subcommands need the same
-// answer: `set` refuses them, `close` applies them, and `reopen` refuses them.
-var terminalWorkflow = map[string]string{
-	"Done":    "completed",
-	"Dropped": "not_planned",
+// terminalReason returns the native close reason paired with a terminal Workflow value,
+// and reports whether the value is terminal at all.
+//
+// Three subcommands need the same answer — `set` refuses these values, `close` applies
+// them, `reopen` refuses them — and it is a function rather than a package map because a
+// map is writable by anything in the package, while this pairing is the vocabulary
+// contract the whole terminal sequence rests on.
+func terminalReason(workflow string) (reason string, terminal bool) {
+	switch workflow {
+	case "Done":
+		return "completed", true
+	case "Dropped":
+		return "not_planned", true
+	default:
+		return "", false
+	}
 }
 
 // assignment is one `--field Name=Value` pair as the operator wrote it.
@@ -38,11 +46,11 @@ type assignments struct {
 }
 
 func (a *assignments) String() string {
-	names := make([]string, 0, len(a.items))
+	pairs := make([]string, 0, len(a.items))
 	for _, item := range a.items {
-		names = append(names, item.Name+"="+item.Value)
+		pairs = append(pairs, item.Name+"="+item.Value)
 	}
-	return strings.Join(names, ", ")
+	return strings.Join(pairs, ", ")
 }
 
 func (a *assignments) Set(raw string) error {
@@ -91,7 +99,7 @@ func (a *assignments) validate(schema *orgschema.Schema, allowTerminalWorkflow b
 			return err
 		}
 		if !allowTerminalWorkflow && item.Name == render.FieldWorkflow {
-			if _, terminal := terminalWorkflow[item.Value]; terminal {
+			if _, terminal := terminalReason(item.Value); terminal {
 				return cli.Usagef("Workflow %q is a terminal value and must stay paired with the "+
 					"native closed state; apply it with `gh-workflow close` instead", item.Value)
 			}
@@ -111,15 +119,23 @@ func validateValue(field orgschema.Field, value string) error {
 		return cli.Usagef("%q is not a valid %s value; valid values are: %s",
 			value, field.Name, strings.Join(field.Values, ", "))
 
-	case "date":
-		if _, err := time.Parse(dateLayout, value); err != nil {
+	case orgschema.TypeDate:
+		if _, err := time.Parse(render.DateLayout, value); err != nil {
 			return cli.Usagef("%q is not a valid %s value; dates are YYYY-MM-DD", value, field.Name)
 		}
 		return nil
 
+	case orgschema.TypeNumber:
+		// Checked here, offline, so a value GitHub would reject as the wrong JSON type is
+		// refused before anything is sent rather than surfacing as an API error (EC-008).
+		if _, err := strconv.ParseFloat(value, 64); err != nil {
+			return cli.Usagef("%q is not a valid %s value; %s takes a number", value, field.Name, field.Name)
+		}
+		return nil
+
 	default:
-		// Text and number fields have no enumerated vocabulary to check against. The
-		// value is still required to be non-empty, which Set already guarantees.
+		// Text fields have no vocabulary to check against. The value is still required to
+		// be non-empty, which Set already guarantees.
 		return nil
 	}
 }
@@ -160,21 +176,44 @@ func resolveFieldIDs(ctx context.Context, client *ghapi.Client, org string,
 	if err != nil {
 		return nil, err
 	}
-	byName := make(map[string]int64, len(live))
+	byName := make(map[string]ghapi.IssueFieldIdentity, len(live))
 	for _, field := range live {
-		byName[field.Name] = field.ID
+		byName[field.Name] = field
 	}
 
 	resolved := make([]ghapi.IssueFieldAssignment, 0, len(items))
 	for _, item := range items {
-		id, ok := byName[item.Name]
+		field, ok := byName[item.Name]
 		if !ok {
 			return nil, fmt.Errorf("the %s organization defines no Issue Field named %q, "+
 				"though the baseline schema does; run `gh-workflow audit` to see the drift", org, item.Name)
 		}
-		resolved = append(resolved, ghapi.IssueFieldAssignment{FieldID: id, Value: item.Value})
+		value, err := fieldValue(field, item.Value)
+		if err != nil {
+			return nil, err
+		}
+		resolved = append(resolved, ghapi.IssueFieldAssignment{FieldID: field.ID, Value: value})
 	}
 	return resolved, nil
+}
+
+// fieldValue converts the operator's text into the JSON type the field's data type
+// requires.
+//
+// Every flag value arrives as a string, and encoding one for a number field would send
+// `"3"` where GitHub expects `3` — a type error the API reports as a rejected write rather
+// than as the mistyped conversion it is. The live data type decides, because it is what
+// the write is addressed against; the baseline schema has already refused anything the
+// conversion could fail on.
+func fieldValue(field ghapi.IssueFieldIdentity, raw string) (any, error) {
+	if field.DataType != orgschema.TypeNumber {
+		return raw, nil
+	}
+	number, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return nil, cli.Usagef("%q is not a valid %s value; %s takes a number", raw, field.Name, field.Name)
+	}
+	return number, nil
 }
 
 // describe renders applied assignments the way the confirmation lines read them out.

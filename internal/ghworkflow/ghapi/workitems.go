@@ -3,7 +3,7 @@ package ghapi
 // Repository-scoped work-item reads: the issues, pull requests, and CI state the
 // rendering surfaces (spec FR-019, FR-022) present. It extends this package rather than
 // standing up a second HTTP client so the two structural properties the package
-// documentation states — read-only, and every request through the injected transport —
+// documentation states — scoped writes, and every request through the injected transport —
 // keep holding for all of the tool's GitHub access. Every request built here is a GET;
 // nothing in this file can mutate a repository, an issue, or organization schema.
 
@@ -156,7 +156,7 @@ func (c *Client) CIState(ctx context.Context, owner, repo, ref string) (string, 
 		repoPath(owner, repo), url.PathEscape(ref)))
 	switch {
 	case err != nil && !isNotFound(err):
-		return "", err
+		return CIUnknown, err
 	case err == nil && len(checks.CheckRuns) > 0:
 		return summarizeCheckRuns(checks.CheckRuns), nil
 	}
@@ -167,7 +167,7 @@ func (c *Client) CIState(ctx context.Context, owner, repo, ref string) (string, 
 	case err != nil && isNotFound(err):
 		return CIUnknown, nil
 	case err != nil:
-		return "", err
+		return CIUnknown, err
 	case status.TotalCount == 0:
 		return CIUnknown, nil
 	}

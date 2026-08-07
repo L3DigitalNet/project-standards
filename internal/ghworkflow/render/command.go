@@ -130,7 +130,7 @@ func parse(fs *flag.FlagSet, env *cli.Env, args []string, usage string) error {
 
 func runLedger(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("ledger", flag.ContinueOnError)
-	target := addTargetFlags(fs)
+	tgt := addTargetFlags(fs)
 	path := fs.String("path", "", "ledger path to write (default: "+LedgerRelPath+" at the checkout root)")
 	if err := parse(fs, env, args, "Usage: gh-workflow ledger [flags]\n\n"+
 		"Regenerates the repository's work-state ledger from live GitHub state. The file\n"+
@@ -143,7 +143,7 @@ func runLedger(ctx context.Context, env *cli.Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	read, err := snapshot(ctx, env, target)
+	read, err := snapshot(ctx, env, tgt)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func ledgerPath(env *cli.Env, explicit string) (string, error) {
 
 func runSummary(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("summary", flag.ContinueOnError)
-	target := addTargetFlags(fs)
+	tgt := addTargetFlags(fs)
 	output := fs.String("output", string(cli.OutputHuman), "output format: human or json")
 	if err := parse(fs, env, args, "Usage: gh-workflow summary [flags]\n\n"+
 		"Prints the attention-first operator summary of open work in the packaged layout,\n"+
@@ -184,7 +184,7 @@ func runSummary(ctx context.Context, env *cli.Env, args []string) error {
 		return cli.Usagef("%v", err)
 	}
 
-	read, err := snapshot(ctx, env, target)
+	read, err := snapshot(ctx, env, tgt)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func runSummary(ctx context.Context, env *cli.Env, args []string) error {
 
 func runReceipt(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("receipt", flag.ContinueOnError)
-	target := addTargetFlags(fs)
+	tgt := addTargetFlags(fs)
 	issue := fs.Int("issue", 0, "issue number to render a receipt for")
 	pull := fs.Int("pr", 0, "pull request number to render a receipt for")
 	output := fs.String("output", string(cli.OutputHuman), "output format: human or json")
@@ -213,7 +213,7 @@ func runReceipt(ctx context.Context, env *cli.Env, args []string) error {
 		return cli.Usagef("issue and pull request numbers are positive")
 	}
 
-	repo, err := target.resolve(env)
+	repo, err := tgt.resolve(env)
 	if err != nil {
 		return err
 	}

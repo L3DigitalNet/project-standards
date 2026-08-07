@@ -25,6 +25,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Version is the tool version stamped into generated output (spec FR-019). It is a
@@ -69,8 +71,10 @@ const (
 // invented and never dropped, so the operator can see the hole.
 const dash = "—"
 
-// targetDateLayout is the Issue Field date format GitHub returns.
-const targetDateLayout = "2006-01-02"
+// DateLayout is the format GitHub stores and returns date Issue Field values in. It is
+// exported because the write path validates operator input against the same format, and
+// two independently written copies of a date layout drift silently.
+const DateLayout = "2006-01-02"
 
 // WorkItem is one issue or pull request, reduced to what the three layouts present.
 type WorkItem struct {
@@ -119,7 +123,10 @@ func (w WorkItem) StateLabel() string {
 	if w.State == "" {
 		return ""
 	}
-	return strings.ToUpper(w.State[:1]) + w.State[1:]
+	// Decoded rather than sliced: State is API text, and capitalizing its first byte would
+	// cut a multi-byte rune in half the moment GitHub returns anything but ASCII.
+	first, size := utf8.DecodeRuneInString(w.State)
+	return string(unicode.ToUpper(first)) + w.State[size:]
 }
 
 // Snapshot is one read of a repository's open work: the input every surface renders.

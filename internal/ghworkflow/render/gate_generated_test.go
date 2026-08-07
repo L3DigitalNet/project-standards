@@ -3,6 +3,7 @@ package render_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
@@ -24,8 +25,11 @@ func TestWriteGeneratedOutputForGateRun(t *testing.T) {
 		Fields: map[string]string{render.FieldWorkflow: "Inbox"},
 	}
 	snapshot := fixtureSnapshot(t)
+	// Cloned first: appending to the fixture's own slice would write through to it
+	// whenever its capacity allows, which is a shared-fixture bug waiting for the day
+	// another test reads the same snapshot.
 	full := render.NewSnapshot(snapshot.Target, snapshot.ReadAt,
-		append(snapshot.Issues, hostile), snapshot.PullRequests)
+		append(slices.Clone(snapshot.Issues), hostile), snapshot.PullRequests)
 
 	for name, body := range map[string]string{
 		"ledger.md":       render.Ledger(full),

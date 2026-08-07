@@ -20,9 +20,15 @@ import (
 	"strings"
 )
 
-// TypeSingleSelect is the only field type carrying an enumerated value list; every
-// other type (date, text, number) is compared on its type alone.
-const TypeSingleSelect = "single_select"
+// Issue Field data types, named as GitHub names them. TypeSingleSelect is the only one
+// carrying an enumerated value list; the rest are compared on their type alone, but the
+// write path validates values against the type, so the names belong here rather than as
+// literals at each use.
+const (
+	TypeSingleSelect = "single_select"
+	TypeDate         = "date"
+	TypeNumber       = "number"
+)
 
 const (
 	keyIssueTypes  = "issue_types"
@@ -95,6 +101,13 @@ type parser struct {
 }
 
 func (p *parser) line(n int, raw string) error {
+	// A CRLF checkout — which a payload-managed artifact gets on any platform normalizing
+	// line endings — delivers every line with a trailing carriage return. This parser
+	// measures indentation and trims trailing whitespace by hand, and the trim covers
+	// spaces only, so an untrimmed \r would ride into every scalar: a baseline of "Bug\r"
+	// matches nothing live, and the audit reports the whole organization as both missing
+	// and extra while looking like it succeeded.
+	raw = strings.TrimRight(raw, "\r")
 	if strings.ContainsRune(raw, '\t') {
 		return fmt.Errorf("line %d: tab characters are not permitted in the org schema", n)
 	}

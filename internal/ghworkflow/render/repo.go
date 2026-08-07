@@ -1,6 +1,7 @@
 package render
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ type Repository struct {
 	Name  string `json:"name"`
 }
 
+// String renders the repository as `owner/name`, the form every message and report uses.
 func (r Repository) String() string { return r.Owner + "/" + r.Name }
 
 // ParseRepository reads an `owner/name` value.
@@ -134,7 +136,7 @@ func originURL(config string) (string, error) {
 			return strings.TrimSpace(value), nil
 		}
 	}
-	return "", fmt.Errorf("no `origin` remote is configured")
+	return "", errors.New("no `origin` remote is configured")
 }
 
 // repositoryFromURL accepts the remote URL forms Git writes: scp-like SSH, ssh://, and

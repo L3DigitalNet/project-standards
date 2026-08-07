@@ -3,6 +3,7 @@ package render
 import (
 	"context"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -111,14 +112,19 @@ func pullItem(ctx context.Context, client *ghapi.Client, repo Repository, pull g
 var closingKeyword = regexp.MustCompile(`(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b[:\s]+#(\d+)`)
 
 // GoverningIssue returns the issue a pull request body declares it closes, or zero.
+//
+// The pattern bounds nothing, and the body is arbitrary authored text: a reference wider
+// than an int is an unusable number, not a large one, and it lands in a committed ledger.
+// An unparsable reference therefore reads as "no governing issue" rather than as whatever
+// value the digits happened to produce.
 func GoverningIssue(body string) int {
 	match := closingKeyword.FindStringSubmatch(body)
 	if match == nil {
 		return 0
 	}
-	number := 0
-	for _, digit := range match[1] {
-		number = number*10 + int(digit-'0')
+	number, err := strconv.Atoi(match[1])
+	if err != nil {
+		return 0
 	}
 	return number
 }

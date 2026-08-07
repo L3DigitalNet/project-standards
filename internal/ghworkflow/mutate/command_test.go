@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -144,6 +145,16 @@ const issueClosed = `{"number":16,"title":"Freeze the CLI surface",
 	"issue_field_values":[
 		{"issue_field_name":"Workflow","data_type":"single_select","value":"Done","single_select_option":{"name":"Done"}}]}`
 
+// issueDropped is closed for the other reason: reclassifying it with `close --as done` is
+// the one terminal transition GitHub will not honor as a single PATCH.
+const issueDropped = `{"number":18,"title":"Retire the legacy summary surface",
+	"html_url":"https://github.com/L3DigitalNet/example-repo/issues/18",
+	"state":"closed","state_reason":"not_planned",
+	"body":"## Acceptance criteria\n\n- The surface is gone.\n",
+	"type":{"name":"Task"},
+	"issue_field_values":[
+		{"issue_field_name":"Workflow","data_type":"single_select","value":"Dropped","single_select_option":{"name":"Dropped"}}]}`
+
 const issueCreated = `{"number":31,"title":"Record the frozen flag surface",
 	"html_url":"https://github.com/L3DigitalNet/example-repo/issues/31",
 	"state":"open","state_reason":null,
@@ -205,8 +216,72 @@ func (r *recorder) mutations() []call {
 	return writes
 }
 
+// patchModel reproduces the one piece of GitHub's `PATCH /issues/{n}` semantics the
+// terminal sequence depends on: state_reason is applied only when the state itself
+// changes, and the no-op still answers 200. A fake that echoed the request back instead
+// would report an in-place reclassification as applied — the exact answer the tool must
+// not believe, and therefore the one this suite has to be able to produce.
+type patchModel struct {
+	mu     sync.Mutex
+	issues map[int]map[string]any
+}
+
+func newPatchModel(t *testing.T, bodies map[int]string) *patchModel {
+	t.Helper()
+
+	model := &patchModel{issues: make(map[int]map[string]any, len(bodies))}
+	for number, body := range bodies {
+		var decoded map[string]any
+		if err := json.Unmarshal([]byte(body), &decoded); err != nil {
+			t.Fatalf("fixture issue %d is not valid JSON: %v", number, err)
+		}
+		model.issues[number] = decoded
+	}
+	return model
+}
+
+func (m *patchModel) apply(number int, body string) (ghtest.Response, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	issue, known := m.issues[number]
+	if !known {
+		return ghtest.Response{}, false
+	}
+	var requested struct {
+		State  string `json:"state"`
+		Reason string `json:"state_reason"`
+	}
+	if err := json.Unmarshal([]byte(body), &requested); err != nil {
+		return ghtest.Response{Status: http.StatusBadRequest, Body: `{"message":"Invalid request"}`}, true
+	}
+	if requested.State != "" && requested.State != issue["state"] {
+		issue["state"] = requested.State
+		issue["state_reason"] = requested.Reason
+	}
+	encoded, err := json.Marshal(issue)
+	if err != nil {
+		return ghtest.Response{Status: http.StatusInternalServerError, Body: `{"message":"fixture"}`}, true
+	}
+	return ghtest.Response{Status: http.StatusOK, Body: string(encoded)}, true
+}
+
+// patchedIssue reads the issue number out of a repository-scoped issue path.
+func patchedIssue(path string) (int, bool) {
+	rest, ok := strings.CutPrefix(path, fixtureRepo+"/issues/")
+	if !ok {
+		return 0, false
+	}
+	number, err := strconv.Atoi(rest)
+	if err != nil {
+		return 0, false
+	}
+	return number, true
+}
+
 type harness struct {
 	env       *cli.Env
+	root      string
 	stdout    *bytes.Buffer
 	stderr    *bytes.Buffer
 	transport *recorder
@@ -249,18 +324,44 @@ func newHarness(t *testing.T) *harness {
 		"GET " + fixtureRepo + "/issues/14/dependencies/blocked_by": {Status: http.StatusOK,
 			Body: `[{"number":9,"title":"Land the transport","state":"open",
 				"html_url":"https://github.com/L3DigitalNet/example-repo/issues/9"}]`},
+		"GET " + fixtureRepo + "/issues/18":                     {Status: http.StatusOK, Body: issueDropped},
 		"POST " + fixtureRepo + "/issues":                       {Status: http.StatusCreated, Body: issueCreated},
 		"POST " + fixtureRepo + "/issues/12/issue-field-values": {Status: http.StatusOK, Body: "[]"},
 		"POST " + fixtureRepo + "/issues/14/issue-field-values": {Status: http.StatusOK, Body: "[]"},
 		"POST " + fixtureRepo + "/issues/16/issue-field-values": {Status: http.StatusOK, Body: "[]"},
-		"PATCH " + fixtureRepo + "/issues/12":                   {Status: http.StatusOK, Body: issueReady},
-		"PATCH " + fixtureRepo + "/issues/14":                   {Status: http.StatusOK, Body: issueNotReady},
-		"PATCH " + fixtureRepo + "/issues/16":                   {Status: http.StatusOK, Body: issueClosed},
+		"POST " + fixtureRepo + "/issues/18/issue-field-values": {Status: http.StatusOK, Body: "[]"},
 	}
-	transport := &recorder{inner: &ghtest.Transport{Routes: routes}}
+
+	// PATCH is served by the model rather than by a canned body, so a response reports the
+	// state GitHub would actually hold after the request. A test that needs a different
+	// answer — a rejection, or a server that drops the write — registers an explicit route,
+	// which wins.
+	model := newPatchModel(t, map[int]string{
+		12: issueReady, 14: issueNotReady, 16: issueClosed, 18: issueDropped, 31: issueCreated,
+	})
+	inner := &ghtest.Transport{Routes: routes}
+	inner.RouteFunc = func(req *http.Request) (ghtest.Response, bool) {
+		if req.Method != http.MethodPatch {
+			return ghtest.Response{}, false
+		}
+		if _, overridden := routes[req.Method+" "+req.URL.Path]; overridden {
+			return ghtest.Response{}, false
+		}
+		number, ok := patchedIssue(req.URL.Path)
+		if !ok {
+			return ghtest.Response{}, false
+		}
+		raw, err := io.ReadAll(req.Body)
+		if err != nil {
+			return ghtest.Response{}, false
+		}
+		return model.apply(number, string(raw))
+	}
+	transport := &recorder{inner: inner}
 
 	stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}
 	return &harness{
+		root: root,
 		env: &cli.Env{
 			Stdout:    stdout,
 			Stderr:    stderr,
@@ -286,6 +387,20 @@ func (h *harness) reset() {
 	h.transport.mu.Lock()
 	h.transport.calls = nil
 	h.transport.mu.Unlock()
+}
+
+// write replaces one of the checkout's delivered artifacts, which is how a test covering a
+// field type the shipped schema has no example of builds one.
+func (h *harness) write(t *testing.T, rel, body string) {
+	t.Helper()
+
+	path := filepath.Join(h.root, rel)
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		t.Fatalf("MkdirAll(%s) error = %v", path, err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatalf("WriteFile(%s) error = %v", path, err)
+	}
 }
 
 // assertNoMutations is the EC-008 oracle: a refused mutation changes nothing remotely.
@@ -407,16 +522,139 @@ func TestSetAppliesValidatedValues(t *testing.T) {
 func TestSetRequiresAnIssueAndAtLeastOneField(t *testing.T) {
 	t.Parallel()
 
-	for name, args := range map[string][]string{
-		"no issue": {"set", "--field", "Workflow=Ready"},
-		"no field": {"set", "--issue", "12"},
-		"no pair":  {"set", "--issue", "12", "--field", "Workflow"},
+	for _, tc := range []struct {
+		name string
+		args []string
+	}{
+		{name: "no issue", args: []string{"set", "--field", "Workflow=Ready"}},
+		{name: "no field", args: []string{"set", "--issue", "12"}},
+		{name: "no pair", args: []string{"set", "--issue", "12", "--field", "Workflow"}},
 	} {
-		h := newHarness(t)
-		if code := h.run(args...); code != cli.ExitUsage {
-			t.Errorf("%s: exit = %d, want %d\nstderr: %s", name, code, cli.ExitUsage, h.stderr)
-		}
-		h.assertNoMutations(t)
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			if code := h.run(tc.args...); code != cli.ExitUsage {
+				t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitUsage, h.stderr)
+			}
+			h.assertNoMutations(t)
+		})
+	}
+}
+
+// A date field is validated but not enumerated, so the accepting branch is a different
+// path from every single_select case above and needs its own proof that a valid value
+// reaches GitHub in the format the field stores.
+func TestSetAppliesAValidTargetDate(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	if code := h.run("set", "--issue", "12", "--field", "Target date=2026-01-01"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
+	}
+	writes := h.transport.mutations()
+	if len(writes) != 1 {
+		t.Fatalf("want exactly one mutating request, got %+v", writes)
+	}
+	wants(t, writes[0].Body, `"field_id":106`, `"value":"2026-01-01"`)
+	wants(t, h.stdout.String(), "#12", "Target date = 2026-01-01")
+}
+
+// GitHub types Issue Field values, and a number field rejects the string form. Every flag
+// value arrives as text, so the conversion is the tool's job; the delivered schema has no
+// number field, hence the synthetic one.
+func TestSetSendsANumberFieldAsANumber(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.write(t, cli.DefaultSchemaPath, fixtureSchema+"\n  Effort:\n    type: number\n")
+	h.routes["GET /orgs/"+fixtureOrg+"/issue-fields"] = ghtest.Response{Status: http.StatusOK,
+		Body: `[{"id":108,"name":"Effort","data_type":"number","options":[]}]`}
+
+	if code := h.run("set", "--issue", "12", "--field", "Effort=3"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
+	}
+	writes := h.transport.mutations()
+	if len(writes) != 1 {
+		t.Fatalf("want exactly one mutating request, got %+v", writes)
+	}
+	var payload struct {
+		Values []struct {
+			FieldID int64           `json:"field_id"`
+			Value   json.RawMessage `json:"value"`
+		} `json:"issue_field_values"`
+	}
+	if err := json.Unmarshal([]byte(writes[0].Body), &payload); err != nil {
+		t.Fatalf("request body is not the documented shape: %v\n%s", err, writes[0].Body)
+	}
+	if len(payload.Values) != 1 || string(payload.Values[0].Value) != "3" {
+		t.Errorf("field values = %+v, want the JSON number 3 rather than a string", payload.Values)
+	}
+}
+
+// A non-numeric value for a number field is a mistyped invocation, refused offline like
+// every other vocabulary failure (EC-008).
+func TestSetRefusesANonNumericNumberField(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.write(t, cli.DefaultSchemaPath, fixtureSchema+"\n  Effort:\n    type: number\n")
+
+	if code := h.run("set", "--issue", "12", "--field", "Effort=three"); code != cli.ExitUsage {
+		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitUsage, h.stderr)
+	}
+	wants(t, h.stderr.String(), "Effort", "number")
+	h.assertNoRequests(t)
+}
+
+// A field the baseline defines and the organization does not is drift, not operator error:
+// it fails as a precondition, with the message pointing at the audit that explains it
+// rather than at the flag the operator typed correctly.
+func TestSetReportsSchemaDriftWhenTheOrganizationLacksTheField(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.routes["GET /orgs/"+fixtureOrg+"/issue-fields"] = ghtest.Response{Status: http.StatusOK,
+		Body: `[{"id":101,"name":"Workflow","data_type":"single_select","options":[{"name":"Ready"}]}]`}
+
+	if code := h.run("set", "--issue", "12", "--field", "Priority=P1 — Next"); code != cli.ExitFailure {
+		t.Fatalf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	}
+	wants(t, h.stderr.String(), fixtureOrg, `"Priority"`, "gh-workflow audit")
+	h.assertNoMutations(t)
+}
+
+// The repository is resolved three ways and only the origin-remote fallback is covered by
+// the zero-argument test; the other two decide which repository is written to.
+func TestRepositoryResolutionFromTheRepoFlag(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name    string
+		repo    string
+		wantOrg string
+	}{
+		{name: "owner/name is used verbatim", repo: "OtherOrg/other-repo", wantOrg: "OtherOrg"},
+		{name: "a bare name is completed from policy", repo: "other-repo", wantOrg: fixtureOrg},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			wantPath := "/repos/" + tc.wantOrg + "/other-repo/issues/12/issue-field-values"
+			h.routes["GET /orgs/"+tc.wantOrg+"/issue-fields"] = ghtest.Response{
+				Status: http.StatusOK, Body: fixtureOrgFields}
+			h.routes["POST "+wantPath] = ghtest.Response{Status: http.StatusOK, Body: "[]"}
+
+			if code := h.run("set", "--repo", tc.repo, "--issue", "12",
+				"--field", "Workflow=Ready"); code != cli.ExitOK {
+				t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
+			}
+			writes := h.transport.mutations()
+			if len(writes) != 1 || writes[0].Path != wantPath {
+				t.Errorf("wrote to %+v, want POST %s", writes, wantPath)
+			}
+		})
 	}
 }
 
@@ -499,6 +737,26 @@ func TestNewWithABodyFileUsesTheAuthoredBody(t *testing.T) {
 	}
 	if payload.Body != authored {
 		t.Errorf("body = %q, want the authored body verbatim", payload.Body)
+	}
+}
+
+// The receipt comes from a read-back, so it can fail after the issue exists. Losing the
+// number of an issue that was just created would be worse than the missing receipt, so the
+// failure has to name it — and must not look like a creation that did not happen.
+func TestNewNamesTheCreatedIssueWhenTheReceiptReadFails(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.routes["GET "+fixtureRepo+"/issues/31"] = ghtest.Response{
+		Status: http.StatusInternalServerError, Body: `{"message":"Server Error"}`}
+
+	if code := h.run("new", "--type", "Task", "--title", "Record the frozen flag surface"); code != cli.ExitFailure {
+		t.Fatalf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	}
+	wants(t, h.stderr.String(), "created", "#31",
+		"https://github.com/L3DigitalNet/example-repo/issues/31", "could not read it back")
+	if h.stdout.Len() != 0 {
+		t.Errorf("a failed read-back still wrote a receipt: %s", h.stdout)
 	}
 }
 
@@ -667,6 +925,61 @@ func TestCloseIsANoOpWhenAlreadyConverged(t *testing.T) {
 	}
 	h.assertNoMutations(t)
 	wants(t, h.stdout.String(), "#16", "Done")
+}
+
+// Reclassifying an already-closed issue is the case a single PATCH cannot express: GitHub
+// applies state_reason only when the state changes, so closed/not_planned → closed/completed
+// answers 200 and changes nothing. Believing that answer and writing `Workflow = Done` on
+// top of it would produce a permanent divergence that every rerun reports as fixed, so the
+// transition is expressed the way GitHub honors it — reopen, then close with the new reason.
+func TestCloseReclassifiesAnIssueClosedForTheOtherReason(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	if code := h.run("close", "--issue", "18", "--as", "done"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
+	}
+
+	writes := h.transport.mutations()
+	if len(writes) != 3 {
+		t.Fatalf("want reopen, close, then the Workflow write; got %+v", writes)
+	}
+	if writes[0].Method != http.MethodPatch || writes[0].Path != fixtureRepo+"/issues/18" {
+		t.Errorf("first write = %s %s, want the reopening PATCH", writes[0].Method, writes[0].Path)
+	}
+	wants(t, writes[0].Body, `"state":"open"`)
+	if writes[1].Method != http.MethodPatch || writes[1].Path != fixtureRepo+"/issues/18" {
+		t.Errorf("second write = %s %s, want the reclassifying close", writes[1].Method, writes[1].Path)
+	}
+	wants(t, writes[1].Body, `"state":"closed"`, `"state_reason":"completed"`)
+	if writes[2].Path != fixtureRepo+"/issues/18/issue-field-values" {
+		t.Errorf("third write = %s %s, want the Workflow field last", writes[2].Method, writes[2].Path)
+	}
+	wants(t, writes[2].Body, "Done")
+	wants(t, h.stdout.String(), "#18", "completed", "Done")
+}
+
+// The same defect seen from the other side: when GitHub answers 200 and still reports the
+// old close reason, the reclassification did not happen. Reporting success there is the
+// false-success path; the Workflow field must stay untouched so nothing diverges.
+func TestCloseReportsDivergenceWhenTheCloseReasonIsNotApplied(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.routes["PATCH "+fixtureRepo+"/issues/18"] = ghtest.Response{Status: http.StatusOK, Body: issueDropped}
+
+	if code := h.run("close", "--issue", "18", "--as", "done"); code != cli.ExitFailure {
+		t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s", code, cli.ExitFailure, h.stdout, h.stderr)
+	}
+	wants(t, h.stderr.String(), "#18", "not_planned", "completed")
+	if h.stdout.Len() != 0 {
+		t.Errorf("an unapplied close reason reported success on stdout: %s", h.stdout)
+	}
+	for _, write := range h.transport.mutations() {
+		if strings.HasSuffix(write.Path, "/issue-field-values") {
+			t.Errorf("the Workflow field was written though the close reason never changed: %+v", write)
+		}
+	}
 }
 
 func TestCloseRefusesAnUnknownTerminal(t *testing.T) {

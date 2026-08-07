@@ -10,7 +10,7 @@ import (
 
 func runSet(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("set", flag.ContinueOnError)
-	target := addTargetFlags(fs, true)
+	tgt := addTargetFlags(fs, true)
 	issue := fs.Int("issue", 0, "issue number to update")
 	fields := addFieldFlag(fs, "Issue Field assignment as Name=Value; repeat for several fields")
 	if err := parse(fs, env, args, "Usage: gh-workflow set --issue N --field Name=Value [flags]\n\n"+
@@ -28,7 +28,7 @@ func runSet(ctx context.Context, env *cli.Env, args []string) error {
 
 	// Validation first, and entirely offline: after this point the invocation is known
 	// good, so anything that fails is the environment rather than the request (EC-008).
-	schema, err := target.loadSchema(env)
+	schema, err := tgt.loadSchema(env)
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func runSet(ctx context.Context, env *cli.Env, args []string) error {
 		return err
 	}
 
-	repo, err := target.resolve(env)
+	repo, err := tgt.resolve(env)
 	if err != nil {
 		return err
 	}

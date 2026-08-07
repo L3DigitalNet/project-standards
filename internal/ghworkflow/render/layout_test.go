@@ -1,8 +1,8 @@
 package render_test
 
 import (
-	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -269,7 +269,7 @@ func TestGapsFollowThePinningMatrix(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			got := render.Gaps(tc.item)
-			if fmt.Sprint(got) != fmt.Sprint(tc.want) {
+			if !slices.Equal(got, tc.want) {
 				t.Errorf("Gaps() = %v, want %v", got, tc.want)
 			}
 		})

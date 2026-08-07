@@ -3,13 +3,11 @@ package ghapi
 // Repository-scoped writes: the issue creation, Issue Field value, and lifecycle calls
 // the mutation subcommands perform (spec FR-021).
 //
-// This file adds the tool's only non-GET requests, and the boundary it draws is the one
-// the package documentation in ghapi.go describes: writes are repository-scoped, and no
-// call here addresses an `/orgs/` path with anything but GET. The organization schema
-// stays read-only — audits report drift, humans apply it — so there remains no
-// org-mutation surface for a caller to reach for. (The package comment predates this
-// file and still states the stronger "no non-GET request" property; the accurate rule is
-// the scoped one stated here.)
+// This file holds the tool's only non-GET requests, and the boundary it draws is the one
+// the package documentation in ghapi.go states: writes are repository-scoped, and no call
+// here addresses an `/orgs/` path with anything but GET. The organization schema stays
+// read-only — audits report drift, humans apply it — so there remains no org-mutation
+// surface for a caller to reach for.
 //
 // The one org-scoped read that lives here, ListIssueFieldIdentities, exists because
 // GitHub addresses field values by numeric id while every operator-facing surface — the

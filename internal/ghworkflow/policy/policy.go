@@ -9,6 +9,7 @@
 package policy
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -84,7 +85,7 @@ func Parse(data []byte) (*Policy, error) {
 
 	org := values["organization"]
 	if org == "" {
-		return nil, fmt.Errorf("policy is missing a non-empty top-level `organization` key")
+		return nil, errors.New("policy is missing a non-empty top-level `organization` key")
 	}
 	if !validLogin(org) {
 		return nil, fmt.Errorf("policy `organization` value %q is not a valid GitHub login", org)

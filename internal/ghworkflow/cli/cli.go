@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghauth"
@@ -92,7 +93,14 @@ func (e *Env) Client(ctx context.Context) (*ghapi.Client, error) {
 	return ghapi.NewClient(e.BaseURL, token, e.Transport)
 }
 
-var registry = map[string]*Command{}
+// The registry is guarded because Register is exported: package initialization is
+// single-threaded, but nothing stops a caller — a test spinning up a fixture subcommand,
+// most plausibly — from registering or listing concurrently, and an unsynchronized map
+// answers that with a fatal runtime throw rather than an error.
+var (
+	registryMu sync.RWMutex
+	registry   = map[string]*Command{}
+)
 
 // Register adds a subcommand. It panics on a malformed or duplicate registration:
 // registration happens during package initialization, where a mistake is a programming
@@ -106,18 +114,30 @@ func Register(cmd *Command) {
 	case cmd.Run == nil:
 		panic("cli: Register(" + cmd.Name + ") with no Run function")
 	}
+	registryMu.Lock()
+	defer registryMu.Unlock()
 	if _, exists := registry[cmd.Name]; exists {
 		panic("cli: duplicate registration of subcommand " + cmd.Name)
 	}
 	registry[cmd.Name] = cmd
 }
 
+// lookup returns the registered subcommand with the given name.
+func lookup(name string) (*Command, bool) {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	cmd, ok := registry[name]
+	return cmd, ok
+}
+
 // Commands returns every registered subcommand, sorted by name.
 func Commands() []*Command {
+	registryMu.RLock()
 	commands := make([]*Command, 0, len(registry))
 	for _, cmd := range registry {
 		commands = append(commands, cmd)
 	}
+	registryMu.RUnlock()
 	sort.Slice(commands, func(i, j int) bool { return commands[i].Name < commands[j].Name })
 	return commands
 }
@@ -126,7 +146,10 @@ func Commands() []*Command {
 // ExitFailure so scripts can tell a typo from an unmet precondition.
 type UsageError struct{ Err error }
 
+// Error returns the underlying message; the usage classification is carried by the type.
 func (e *UsageError) Error() string { return e.Err.Error() }
+
+// Unwrap exposes the wrapped cause to errors.Is and errors.As.
 func (e *UsageError) Unwrap() error { return e.Err }
 
 // Usagef builds a UsageError.
@@ -147,7 +170,7 @@ func Run(ctx context.Context, env *Env, args []string) int {
 		return ExitOK
 	}
 
-	cmd, ok := registry[args[0]]
+	cmd, ok := lookup(args[0])
 	if !ok {
 		_, _ = fmt.Fprintf(env.Stderr, "gh-workflow: unknown subcommand %q\n\n", args[0])
 		writeUsage(env.Stderr)
@@ -175,7 +198,7 @@ func writeUsage(w io.Writer) {
 	var b strings.Builder
 	b.WriteString("Usage: gh-workflow <subcommand> [flags]\n\nSubcommands:\n")
 	for _, cmd := range Commands() {
-		fmt.Fprintf(&b, "  %-10s %s\n", cmd.Name, cmd.Summary)
+		_, _ = fmt.Fprintf(&b, "  %-10s %s\n", cmd.Name, cmd.Summary)
 	}
 	b.WriteString("\nRun `gh-workflow <subcommand> -h` for a subcommand's flags.\n")
 	_, _ = io.WriteString(w, b.String())

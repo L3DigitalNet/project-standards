@@ -1,11 +1,13 @@
-// Package ghapi is the tool's GitHub REST client for organization schema.
+// Package ghapi is the tool's GitHub REST client: organization schema reads, repository
+// work-item reads, and the repository-scoped writes the mutation subcommands perform.
 //
 // Two properties are structural rather than conventional:
 //
-//   - Read-only. The audit compares organization Issue Types and Issue Fields without
-//     mutating them (spec FR-016, invariant "org-scoped calls read-only"). This package
-//     exposes no mutating call and builds no non-GET request, so there is no org-mutation
-//     surface for a caller to reach for.
+//   - Scoped writes. Organization-scoped calls are GET-only (spec FR-016, invariant
+//     "org-scoped calls read-only"): the audit reports schema drift and humans apply it,
+//     so no call here addresses an `/orgs/` path with anything but GET. Every mutating
+//     call lives in mutations.go and addresses a repository, which is the only surface
+//     the tool writes to.
 //   - Injected transport. Every request goes through an http.RoundTripper supplied by
 //     the caller (decision D-002), which is how the whole test suite runs offline against
 //     a fake and why no test depends on GitHub availability or the operator's account.
@@ -21,6 +23,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // DefaultBaseURL is the public GitHub REST endpoint.
@@ -38,6 +41,9 @@ const (
 	maxPages = 50
 	// maxResponseBytes bounds a single response body for the same reason.
 	maxResponseBytes = 8 << 20
+	// maxMessageBytes bounds the error excerpt shown when a response carries no JSON
+	// message of its own, so a stray HTML error page cannot flood the terminal.
+	maxMessageBytes = 200
 	// requestTimeout keeps an unreachable API a precondition failure rather than a hang.
 	requestTimeout = 30 * time.Second
 )
@@ -76,6 +82,7 @@ type APIError struct {
 	Message string
 }
 
+// Error renders the failed request the way the operator would reproduce it.
 func (e *APIError) Error() string {
 	return fmt.Sprintf("GET %s: %d %s", e.URL, e.Status, e.Message)
 }
@@ -174,7 +181,41 @@ func (c *Client) get(ctx context.Context, endpoint string) (body []byte, nextURL
 	if resp.StatusCode != http.StatusOK {
 		return nil, "", &APIError{Status: resp.StatusCode, URL: endpoint, Message: apiMessage(body)}
 	}
-	return body, nextLink(resp.Header.Get("Link")), nil
+	next, err := c.nextPageURL(resp.Header.Get("Link"))
+	if err != nil {
+		return nil, "", err
+	}
+	return body, next, nil
+}
+
+// nextPageURL returns the rel="next" URL to follow, refusing one that leaves the API
+// origin this client was built for.
+//
+// The check is a credential boundary, not tidiness. The Link header is server-controlled
+// text, and every request built here attaches the operator's token as a bearer header. Go
+// strips credentials across hosts only on redirects it follows itself; this URL is read
+// from a header and handed to a fresh request, so nothing else would stop the token from
+// reaching whatever host the header names. A link outside the origin fails the read rather
+// than ending pagination quietly, because a silently short page is exactly the truncation
+// getList refuses to present as organization drift.
+func (c *Client) nextPageURL(header string) (string, error) {
+	target := nextLink(header)
+	if target == "" {
+		return "", nil
+	}
+	next, err := url.Parse(target)
+	if err != nil {
+		return "", fmt.Errorf("the pagination link %q is not a usable URL: %w", target, err)
+	}
+	base, err := url.Parse(c.baseURL)
+	if err != nil {
+		return "", fmt.Errorf("the API base URL %q is not a usable URL: %w", c.baseURL, err)
+	}
+	if !strings.EqualFold(next.Scheme, base.Scheme) || !strings.EqualFold(next.Host, base.Host) {
+		return "", fmt.Errorf("refusing the pagination link %q: it leaves the API origin %s://%s, "+
+			"where the request's credentials belong", target, base.Scheme, base.Host)
+	}
+	return target, nil
 }
 
 // apiMessage extracts GitHub's own error text, falling back to a bounded excerpt so a
@@ -187,8 +228,15 @@ func apiMessage(body []byte) string {
 		return payload.Message
 	}
 	text := strings.TrimSpace(string(body))
-	if len(text) > 200 {
-		text = text[:200] + "…"
+	if len(text) > maxMessageBytes {
+		// Cutting at a fixed byte offset can land inside a multi-byte rune, and the half
+		// rune prints as U+FFFD: the operator reads corruption where the tool meant to
+		// show a truncated message. Back up to a rune boundary first.
+		cut := maxMessageBytes
+		for cut > 0 && !utf8.RuneStart(text[cut]) {
+			cut--
+		}
+		text = text[:cut] + "…"
 	}
 	if text == "" {
 		return "no response body"

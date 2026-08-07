@@ -1,7 +1,9 @@
 package orgschema_test
 
 import (
+	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -162,6 +164,33 @@ func TestParseRejects(t *testing.T) {
 				t.Errorf("Parse() error = %q, want it to mention %q", err, tc.wantSub)
 			}
 		})
+	}
+}
+
+// A consumer checkout on a CRLF-normalizing platform delivers org-schema.yaml with
+// carriage returns. The parser measures indentation and trims trailing whitespace itself,
+// so an untrimmed \r rides into every scalar: the baseline becomes "Bug\r" against a live
+// "Bug", and the audit reports the entire organization as both missing and extra — the
+// confidently-wrong answer the parser's fail-closed design exists to prevent.
+func TestParseToleratesCRLFLineEndings(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile(filepath.Join("testdata", "org-schema.yaml"))
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	unix, err := orgschema.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse(LF) error = %v, want nil", err)
+	}
+	windows, err := orgschema.Parse([]byte(strings.ReplaceAll(string(data), "\n", "\r\n")))
+	if err != nil {
+		t.Fatalf("Parse(CRLF) error = %v, want nil", err)
+	}
+	if !reflect.DeepEqual(unix, windows) {
+		// Quoted, because the whole difference is invisible otherwise.
+		t.Errorf("CRLF parse diverges from the LF parse\nissue types = %q\n       want = %q",
+			windows.IssueTypes, unix.IssueTypes)
 	}
 }
 
