@@ -17,6 +17,11 @@ func TestSubcommandsAreWired(t *testing.T) {
 		"ledger":  false,
 		"summary": false,
 		"receipt": false,
+		"new":     false,
+		"set":     false,
+		"close":   false,
+		"reopen":  false,
+		"check":   false,
 	}
 	for _, cmd := range cli.Commands() {
 		if _, expected := want[cmd.Name]; expected {
