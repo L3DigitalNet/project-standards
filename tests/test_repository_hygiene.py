@@ -56,6 +56,7 @@ _IMMUTABLE_PROJECTION_EXCLUSIONS = frozenset(
 
 _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
     {
+        "standards/github-workflow/versions/1.0/skills/github-workflow/bin/gh-workflow",
         "standards/markdown-frontmatter/versions/1.8/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/markdown-frontmatter/versions/1.9/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/project-spec/versions/1.6/resources/tooling-notes.md",
@@ -66,6 +67,15 @@ _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
         "standards/project-spec/versions/1.7/templates/spec-full-template.md",
         "standards/project-spec/versions/1.7/templates/spec-light-template.md",
         "standards/project-spec/versions/1.7/templates/spec-standard-template.md",
+    }
+)
+
+# Repository tooling that became executable after the mode-policy anchor. It cannot
+# join `_EXECUTABLE_ALLOWLIST`: that set is pinned to the anchor tree by the equality
+# above it, so anything added there would fail the anchor-inventory assertion instead.
+_POST_ANCHOR_TOOLING_EXECUTABLES = frozenset(
+    {
+        "scripts/build-gh-workflow.sh",
     }
 )
 
@@ -115,6 +125,7 @@ def test_git_mode_policy__classifies_and_normalizes_the_complete_anchor_inventor
         _EXECUTABLE_ALLOWLIST
         | _IMMUTABLE_PROJECTION_EXCLUSIONS
         | _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES
+        | _POST_ANCHOR_TOOLING_EXECUTABLES
     )
     assert {path: entries[path][0] for path in _MUTABLE_NORMALIZATION_ALLOWLIST} == dict.fromkeys(
         _MUTABLE_NORMALIZATION_ALLOWLIST, "100644"

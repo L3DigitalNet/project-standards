@@ -116,6 +116,12 @@ digest = "sha256:7c6e609bdccdf526cb1426b817b26efcc5622552138ac5e826d917aad91c09b
 role = "default"
 
 [[packages]]
+id = "github-workflow"
+version = "1.0"
+digest = "sha256:946f967be3e24f90dd1f9a2c5dd7a384927d9fa46e76a065afa8c3166c3eeb55"
+role = "default"
+
+[[packages]]
 id = "markdown-frontmatter"
 version = "1.2"
 digest = "sha256:e1e2ac7d41fb2b7be8772717292d5d8afadcbe878a70d562e82d7f4c1bdd606c"
