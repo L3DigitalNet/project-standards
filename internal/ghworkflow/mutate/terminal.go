@@ -166,6 +166,13 @@ func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move tran
 	// reach. The reclassification is therefore expressed as the transition GitHub honors:
 	// reopen, then close with the new reason. If the second step fails the issue is left
 	// open, which the rerun converges from.
+	//
+	// reopenApplied records whether that first move was made, and it is the fact every failure
+	// path below turns on: once the reopen lands, the issue is no longer where the operator
+	// left it, so a message claiming nothing changed is false — and false in the direction
+	// that matters, because it tells someone holding an open issue that there is nothing to
+	// finish.
+	reopenApplied := false
 	if move.state == stateClosed && before.State == stateClosed && before.StateReason != move.reason {
 		if _, err := client.SetIssueState(ctx, repo.Owner, repo.Name, number,
 			stateOpen, reasonReopened); err != nil {
@@ -173,10 +180,17 @@ func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move tran
 				"so the issue is unchanged and nothing diverged: %w",
 				repo, number, before.StateReason, move.reason, err)
 		}
+		reopenApplied = true
 	}
 
 	updated, err := client.SetIssueState(ctx, repo.Owner, repo.Name, number, move.state, move.reason)
 	if err != nil {
+		if reopenApplied {
+			return fmt.Errorf("%s#%d: the reclassifying reopen was applied but the close that follows "+
+				"it failed, so the issue is now open and its Workflow field is untouched, still %s. "+
+				"Rerun `gh-workflow %s` to converge; every step is idempotent: %w",
+				repo, number, quotedOrUnset(before.Field(render.FieldWorkflow)), move.rerun, err)
+		}
 		return fmt.Errorf("%s#%d: the native state change failed, so the Workflow field was left "+
 			"untouched and nothing diverged: %w", repo, number, err)
 	}
@@ -186,6 +200,15 @@ func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move tran
 	// close: `reopened` is a byproduct of the transition, while a close reason is half of
 	// the terminal pairing FR-021 keeps synchronized.
 	if updated.State != move.state || (move.state == stateClosed && updated.StateReason != move.reason) {
+		if reopenApplied {
+			return fmt.Errorf("%s#%d: the reclassifying reopen was applied, so the issue has already "+
+				"changed, but GitHub reports %s after the close that should have followed rather than "+
+				"the requested %s; the Workflow field was left untouched, still %s. Rerun "+
+				"`gh-workflow %s` to converge, or reclassify the issue in GitHub first",
+				repo, number, nativeState(updated.State, updated.StateReason),
+				nativeState(move.state, move.reason),
+				quotedOrUnset(before.Field(render.FieldWorkflow)), move.rerun)
+		}
 		return fmt.Errorf("%s#%d: GitHub still reports %s after the state change rather than the "+
 			"requested %s, so the Workflow field was left untouched and nothing diverged; "+
 			"reclassify the issue in GitHub, then rerun `gh-workflow %s`",

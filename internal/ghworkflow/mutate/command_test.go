@@ -266,6 +266,42 @@ func (m *patchModel) apply(number int, body string) (ghtest.Response, bool) {
 	return ghtest.Response{Status: http.StatusOK, Body: string(encoded)}, true
 }
 
+// failPatchAfter fails PATCHes to one path once the leading ones have been served.
+//
+// It exists because a route override cannot express a sequence: registering a failing
+// PATCH for an issue fails the reclassifying reopen too, and the branch under test is the
+// one reached only when that reopen succeeded and the close after it did not. The failing
+// request is short-circuited rather than passed through, so the fake's issue stays in the
+// state the reopen left it — open, which is what the message under test has to report.
+type failPatchAfter struct {
+	inner http.RoundTripper
+	path  string
+	serve int
+
+	mu   sync.Mutex
+	seen int
+}
+
+func (f *failPatchAfter) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method != http.MethodPatch || req.URL.Path != f.path {
+		return f.inner.RoundTrip(req)
+	}
+	f.mu.Lock()
+	f.seen++
+	served := f.seen
+	f.mu.Unlock()
+	if served <= f.serve {
+		return f.inner.RoundTrip(req)
+	}
+	return &http.Response{
+		Status:     http.StatusText(http.StatusServiceUnavailable),
+		StatusCode: http.StatusServiceUnavailable,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(`{"message":"Service unavailable"}`)),
+		Request:    req,
+	}, nil
+}
+
 // patchedIssue reads the issue number out of a repository-scoped issue path.
 func patchedIssue(path string) (int, bool) {
 	rest, ok := strings.CutPrefix(path, fixtureRepo+"/issues/")
@@ -590,6 +626,57 @@ func TestSetSendsANumberFieldAsANumber(t *testing.T) {
 	if len(payload.Values) != 1 || string(payload.Values[0].Value) != "3" {
 		t.Errorf("field values = %+v, want the JSON number 3 rather than a string", payload.Values)
 	}
+}
+
+// GitHub's number fields are JSON numbers, and JSON numbers are arbitrary-precision text:
+// routing the operator's digits through a float64 would round anything past 2^53 into a
+// different number and write that instead. The digits are validated, not rewritten.
+func TestSetPreservesTheDigitsOfALargeNumberField(t *testing.T) {
+	t.Parallel()
+
+	const big = "9007199254740993" // 2^53 + 1: the first integer float64 cannot hold.
+
+	h := newHarness(t)
+	h.write(t, cli.DefaultSchemaPath, fixtureSchema+"\n  Effort:\n    type: number\n")
+	h.routes["GET /orgs/"+fixtureOrg+"/issue-fields"] = ghtest.Response{Status: http.StatusOK,
+		Body: `[{"id":108,"name":"Effort","data_type":"number","options":[]}]`}
+
+	if code := h.run("set", "--issue", "12", "--field", "Effort="+big); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
+	}
+	writes := h.transport.mutations()
+	if len(writes) != 1 {
+		t.Fatalf("want exactly one mutating request, got %+v", writes)
+	}
+	var payload struct {
+		Values []struct {
+			Value json.RawMessage `json:"value"`
+		} `json:"issue_field_values"`
+	}
+	if err := json.Unmarshal([]byte(writes[0].Body), &payload); err != nil {
+		t.Fatalf("request body is not the documented shape: %v\n%s", err, writes[0].Body)
+	}
+	if len(payload.Values) != 1 || string(payload.Values[0].Value) != big {
+		t.Errorf("field values = %+v, want the JSON number %s written verbatim", payload.Values, big)
+	}
+}
+
+// A live number field the baseline schema types otherwise is drift, not operator error:
+// the value passed baseline validation, so blaming the invocation sends the operator to
+// fix a flag that is already correct. It fails as a precondition, pointing at the audit.
+func TestSetReportsDriftWhenTheLiveFieldTypeDisagreesWithTheBaseline(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.write(t, cli.DefaultSchemaPath, fixtureSchema+"\n  Effort:\n    type: text\n")
+	h.routes["GET /orgs/"+fixtureOrg+"/issue-fields"] = ghtest.Response{Status: http.StatusOK,
+		Body: `[{"id":108,"name":"Effort","data_type":"number","options":[]}]`}
+
+	if code := h.run("set", "--issue", "12", "--field", "Effort=three"); code != cli.ExitFailure {
+		t.Fatalf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	}
+	wants(t, h.stderr.String(), "Effort", "number", "gh-workflow audit")
+	h.assertNoMutations(t)
 }
 
 // A non-numeric value for a number field is a mistyped invocation, refused offline like
@@ -959,9 +1046,45 @@ func TestCloseReclassifiesAnIssueClosedForTheOtherReason(t *testing.T) {
 	wants(t, h.stdout.String(), "#18", "completed", "Done")
 }
 
+// Once the reclassifying reopen has been applied, the issue has already moved, so a
+// failure after it cannot claim the issue is untouched. The operator is left holding an
+// open issue and needs to be told exactly that, plus the rerun that finishes the job.
+func TestCloseReportsTheOpenIssueWhenTheReclassifyingCloseFails(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	// The reopen is served; the close that should follow it is not.
+	h.env.Transport = &failPatchAfter{inner: h.transport, path: fixtureRepo + "/issues/18", serve: 1}
+
+	if code := h.run("close", "--issue", "18", "--as", "done"); code != cli.ExitFailure {
+		t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s", code, cli.ExitFailure, h.stdout, h.stderr)
+	}
+	stderr := h.stderr.String()
+	wants(t, stderr,
+		"#18",                                    // which item
+		"reopen",                                 // that the reopen already fired
+		"open",                                   // the state the issue is actually in
+		"Dropped",                                // the Workflow value that was left alone
+		"gh-workflow close --issue 18 --as done") // the rerun that converges
+	if strings.Contains(stderr, "nothing diverged") {
+		t.Errorf("the message still claims nothing changed though the reopen was applied:\n%s", stderr)
+	}
+	if h.stdout.Len() != 0 {
+		t.Errorf("a failed reclassification reported success on stdout: %s", h.stdout)
+	}
+	for _, write := range h.transport.mutations() {
+		if strings.HasSuffix(write.Path, "/issue-field-values") {
+			t.Errorf("the Workflow field was written after the close failed: %+v", write)
+		}
+	}
+}
+
 // The same defect seen from the other side: when GitHub answers 200 and still reports the
 // old close reason, the reclassification did not happen. Reporting success there is the
 // false-success path; the Workflow field must stay untouched so nothing diverges.
+//
+// The reopen preceding it was accepted, so this message may not claim the issue is
+// unchanged either, and it carries the same rerun hint every other divergence branch does.
 func TestCloseReportsDivergenceWhenTheCloseReasonIsNotApplied(t *testing.T) {
 	t.Parallel()
 
@@ -971,13 +1094,38 @@ func TestCloseReportsDivergenceWhenTheCloseReasonIsNotApplied(t *testing.T) {
 	if code := h.run("close", "--issue", "18", "--as", "done"); code != cli.ExitFailure {
 		t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s", code, cli.ExitFailure, h.stdout, h.stderr)
 	}
-	wants(t, h.stderr.String(), "#18", "not_planned", "completed")
+	stderr := h.stderr.String()
+	wants(t, stderr, "#18", "not_planned", "completed", "reopen",
+		"gh-workflow close --issue 18 --as done")
+	if strings.Contains(stderr, "nothing diverged") {
+		t.Errorf("the message still claims nothing changed though the reopen was applied:\n%s", stderr)
+	}
 	if h.stdout.Len() != 0 {
 		t.Errorf("an unapplied close reason reported success on stdout: %s", h.stdout)
 	}
 	for _, write := range h.transport.mutations() {
 		if strings.HasSuffix(write.Path, "/issue-field-values") {
 			t.Errorf("the Workflow field was written though the close reason never changed: %+v", write)
+		}
+	}
+}
+
+// Closing an open issue takes no reopen, so when GitHub drops the close reason there the
+// issue really is untouched — the counterpart assertion that keeps the reopen-aware
+// wording confined to the branch that earned it.
+func TestCloseReportsAnUntouchedIssueWhenNoReopenWasNeeded(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.routes["PATCH "+fixtureRepo+"/issues/12"] = ghtest.Response{Status: http.StatusOK, Body: issueReady}
+
+	if code := h.run("close", "--issue", "12", "--as", "done"); code != cli.ExitFailure {
+		t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s", code, cli.ExitFailure, h.stdout, h.stderr)
+	}
+	wants(t, h.stderr.String(), "#12", "nothing diverged", "gh-workflow close --issue 12 --as done")
+	for _, write := range h.transport.mutations() {
+		if strings.HasSuffix(write.Path, "/issue-field-values") {
+			t.Errorf("the Workflow field was written though the state never changed: %+v", write)
 		}
 	}
 }

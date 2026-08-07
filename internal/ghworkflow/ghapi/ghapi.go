@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -198,6 +199,11 @@ func (c *Client) get(ctx context.Context, endpoint string) (body []byte, nextURL
 // reaching whatever host the header names. A link outside the origin fails the read rather
 // than ending pagination quietly, because a silently short page is exactly the truncation
 // getList refuses to present as organization drift.
+//
+// What the guard compares is the origin, not the spelling of it: the link is resolved
+// against the base first, so a relative rel="next" — which the Link header permits, and
+// which a proxy in front of the API may well emit — is followed rather than refused as
+// though it named another host.
 func (c *Client) nextPageURL(header string) (string, error) {
 	target := nextLink(header)
 	if target == "" {
@@ -211,11 +217,30 @@ func (c *Client) nextPageURL(header string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("the API base URL %q is not a usable URL: %w", c.baseURL, err)
 	}
-	if !strings.EqualFold(next.Scheme, base.Scheme) || !strings.EqualFold(next.Host, base.Host) {
+	resolved := base.ResolveReference(next)
+	if !strings.EqualFold(resolved.Scheme, base.Scheme) || originHost(resolved) != originHost(base) {
 		return "", fmt.Errorf("refusing the pagination link %q: it leaves the API origin %s://%s, "+
 			"where the request's credentials belong", target, base.Scheme, base.Host)
 	}
-	return target, nil
+	return resolved.String(), nil
+}
+
+// originHost renders a URL's host the way an origin comparison has to read it: lowercased,
+// with a port that only restates the scheme's default dropped.
+//
+// `api.github.com:443` and `api.github.com` are one origin over https, so comparing the
+// raw Host refuses a legitimate page for spelling the port out. Every other port survives,
+// which is what keeps the guard fail-closed: another port is another origin.
+func originHost(u *url.URL) string {
+	host, port := strings.ToLower(u.Hostname()), u.Port()
+	scheme := strings.ToLower(u.Scheme)
+	if (scheme == "https" && port == "443") || (scheme == "http" && port == "80") {
+		port = ""
+	}
+	if port == "" {
+		return host
+	}
+	return net.JoinHostPort(host, port)
 }
 
 // apiMessage extracts GitHub's own error text, falling back to a bounded excerpt so a

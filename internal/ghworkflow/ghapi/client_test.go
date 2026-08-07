@@ -171,6 +171,45 @@ func TestPaginationRefusesACrossOriginNextLink(t *testing.T) {
 	}
 }
 
+// The origin guard protects a credential boundary, so it compares origins rather than
+// spellings of one. A link that names the default port, and a relative link, both stay on
+// the origin the request started from; refusing either would truncate a legitimate read
+// and report the missing elements as organization drift.
+func TestPaginationAcceptsEquivalentSpellingsOfTheSameOrigin(t *testing.T) {
+	t.Parallel()
+
+	for name, next := range map[string]string{
+		"default port": "https://api.github.test:443" + typesPath + "?per_page=100&page=2",
+		"relative":     typesPath + "?per_page=100&page=2",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			transport := &ghtest.Transport{Routes: map[string]ghtest.Response{
+				"GET " + typesPath: {
+					Status: http.StatusOK,
+					Body:   `[{"name":"Bug","is_enabled":true}]`,
+					Header: http.Header{"Link": []string{fmt.Sprintf(`<%s>; rel="next"`, next)}},
+				},
+			}}
+			transport.RouteFunc = func(req *http.Request) (ghtest.Response, bool) {
+				if req.URL.Query().Get("page") == "2" {
+					return ghtest.Response{Status: http.StatusOK, Body: `[{"name":"Feature","is_enabled":true}]`}, true
+				}
+				return ghtest.Response{}, false
+			}
+
+			got, err := newClient(t, transport).ListIssueTypes(context.Background(), "L3DigitalNet")
+			if err != nil {
+				t.Fatalf("ListIssueTypes() error = %v, want the link followed", err)
+			}
+			if len(got) != 2 || got[1].Name != "Feature" {
+				t.Errorf("ListIssueTypes() = %+v, want both pages concatenated", got)
+			}
+		})
+	}
+}
+
 func TestRequestCarriesAuthAndAPIVersion(t *testing.T) {
 	t.Parallel()
 

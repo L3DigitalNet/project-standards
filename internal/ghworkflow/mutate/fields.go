@@ -2,6 +2,7 @@ package mutate
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"strconv"
@@ -203,17 +204,24 @@ func resolveFieldIDs(ctx context.Context, client *ghapi.Client, org string,
 // Every flag value arrives as a string, and encoding one for a number field would send
 // `"3"` where GitHub expects `3` — a type error the API reports as a rejected write rather
 // than as the mistyped conversion it is. The live data type decides, because it is what
-// the write is addressed against; the baseline schema has already refused anything the
-// conversion could fail on.
+// the write is addressed against, so the conversion can still fail here even though the
+// baseline schema accepted the value: that disagreement is drift between the two schemas,
+// reported as the precondition failure it is rather than blamed on a correct invocation.
+//
+// The validated digits are carried through as json.Number rather than the parsed float,
+// because JSON numbers are arbitrary-precision text and a round trip through float64 would
+// silently rewrite anything past 2^53 into a neighbouring value — writing a number the
+// operator never typed.
 func fieldValue(field ghapi.IssueFieldIdentity, raw string) (any, error) {
 	if field.DataType != orgschema.TypeNumber {
 		return raw, nil
 	}
-	number, err := strconv.ParseFloat(raw, 64)
-	if err != nil {
-		return nil, cli.Usagef("%q is not a valid %s value; %s takes a number", raw, field.Name, field.Name)
+	if _, err := strconv.ParseFloat(raw, 64); err != nil {
+		return nil, fmt.Errorf("the organization types %q as a %s field, but the baseline schema "+
+			"accepted the value %q, which is not a number; run `gh-workflow audit` to see the drift",
+			field.Name, field.DataType, raw)
 	}
-	return number, nil
+	return json.Number(raw), nil
 }
 
 // describe renders applied assignments the way the confirmation lines read them out.
