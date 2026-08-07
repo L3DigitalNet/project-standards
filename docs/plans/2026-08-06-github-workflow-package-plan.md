@@ -170,7 +170,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-011 | Every artifact `managed`; zero create-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8, T9 | PV-T9-001 |
 | FR-012 | Providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate; offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | FR-013 | Capabilities audit/validate/drift-check; companions agent-handoff | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
-| FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10 | PV-T1-001, PV-T10-001 |
+| FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10, T15 | PV-T1-001, PV-T10-001, PV-T15-001 |
 | FR-015 | `gh-workflow` binary artifact, 0755, static, all nine subcommands | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
 | FR-016 | `audit`: schema+policy inputs, read-only live comparison, deterministic findings, fail-closed preconditions | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4, T12, T13 | PV-T4-001, PV-T12-001, PV-T13-001 |
 | FR-017 | `summary-format.md` defines the attention-first operator summary layout; the skill presents summaries in it | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
@@ -223,6 +223,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T12 | Go review corrections before the binary freeze | active | behavior | P2 | T6 | FR-016, FR-019, FR-021 | PV-T12-001 | no / corrects T4–T6 surfaces post-completion |
 | T13 | Reopen-aware divergence messages and residual review fixes | active | behavior | P2 | T12 | FR-016, FR-019, FR-021 | PV-T13-001 | no / corrects T12 surfaces post-completion |
 | T14 | Linker-effective version stamp and JSON-grammar number validation | active | behavior | P2 | T13 | FR-019, FR-021 | PV-T14-001 | no / corrects T13 surfaces post-completion |
+| T15 | Catalog activation and repository-inventory reconciliation | active | configuration | P3 | T8 | FR-014 | PV-T15-001 | no / T10 shared catalog surface |
 
 ## 9. Implementation Tasks
 
@@ -626,6 +627,37 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T9.5 REFACTOR** — deduplicate fixture plumbing; keep green.
   - **T9.6 Verify Task** — run PV-T9-001; commit with checkpoint trailers.
 
+#### T15: Catalog activation and repository-inventory reconciliation
+
+- **disposition:** active
+- **outcome:** `github-workflow@1.0` is advertised in catalog 5 and the repository's own inventory gates accept the delivered family: the catalog-activation, catalog-matrix, and release-consistency suites pass with the family advertised, and the repository-hygiene executable allowlist includes `scripts/build-gh-workflow.sh` and the committed payload binary. Release publication remains out of scope (OQ-001): advertisement makes the family part of catalog 5 source; the released-baseline immutability mechanism keys on release refs, not advertisement.
+- **work_type:** configuration
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T8]
+- **dependency_reason:** requires payload-1.0-final: only a complete payload may be advertised (SBA 2.6 author workflow; discovered_from: T9 full-gate failure — six catalog-derived tests and one hygiene inventory reject the unadvertised complete family; corrects: catalog/inventory residue of T1/T7/T8 without reopening them)
+- **requirements:** [FR-014]
+- **proof:** [PV-T15-001]
+- **source_refs:** [request, repo:standards/catalog.md, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [payload-1.0-final]
+- **produces:** [catalog-activation-v1]
+- **preserves:** [existing catalog entries and consumer-default derivations; release publication deferred (OQ-001); payload bytes unchanged]
+- **invariants:** [advertisement only — no release records, no deployed pins, no version bumps; every previously passing suite stays green]
+- **executor_discretion:** [catalog entry field ordering, inventory-list placement]
+- **files:** [`src/project_standards/catalogs/5.toml` (modify; owner T15), `tests/test_repository_hygiene.py` (modify; owner T15), `tests/test_release_consistency.py` (modify; owner T15), `standards/catalog.md` (modify; owner T10)]
+- **parallel_safe:** no
+- **conflicts_with:** [T10]
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** revert the catalog entry and inventory additions; restore last green checkpoint
+- **acceptance:** PV-T15-001 proves the previously failing suites (`test_current_catalog_activation`, `test_catalog_matrix`, `test_release_consistency` shallow-corpus case, `test_repository_hygiene` git-mode case) pass with the family advertised, the standards validator battery stays green, and reverting the catalog entry re-fails the activation suite (negative control)
+- **sub-tasks:**
+  - **T15.1 PRECHECK** — reproduce the failing suites at base; confirm each failure names the unadvertised family or missing inventory entries.
+  - **T15.2 APPLY** — add the catalog 5 entry, the two executable allowlist entries, and the shallow-corpus entries; regenerate the catalog document.
+  - **T15.3 VERIFY** — rerun the previously failing suites plus the validator battery; negative control by temporary revert.
+  - **T15.4 Verify Task** — run PV-T15-001; commit with checkpoint trailers.
+
 ### Phase P4: release readiness and close-out
 
 #### T10: Family docs, catalog, live-run evidence, spec traceability
@@ -786,6 +818,7 @@ None.
 | PV-T12-001 | FR-016, FR-019, FR-021 | T12 | unit | golang-skills review verdicts; current GitHub REST versioning docs | targeted `go test ./internal/ghworkflow/... ./cmd/...` plus `make go-check` | corrected behaviors proven; gates green; CLI surface unchanged | each corrected defect's new test fails with the correction reverted | local, offline | ephemeral |
 | PV-T13-001 | FR-016, FR-019, FR-021 | T13 | unit | golang-skills review pass-3 verdict | targeted `go test ./internal/ghworkflow/... ./cmd/...` plus `make go-check` | reopen-aware messages, drift classification, origin normalization, version default, number fidelity proven; gates green; CLI surface unchanged | message and classification tests fail against the reverted text | local, offline | ephemeral |
 | PV-T14-001 | FR-019, FR-021 | T14 | unit | golang-skills review pass-4 verdict (execution-verified) | targeted `go test` plus `make go-check` plus a `-ldflags "-X main.version=probe"` build asserting the stamped ledger header | linker-effective stamp; JSON-grammar refusals offline as usage errors; plain numbers still apply; gates green | stamp assertion fails against the var-initialized default; `.5` case fails against ParseFloat validation | local, offline | ephemeral |
+| PV-T15-001 | FR-014 | T15 | integration | repository catalog/inventory suites | targeted pytest on the four previously failing suites plus the standards validator battery | all pass with the family advertised; validators green | reverting the catalog entry re-fails the activation suite | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
 
