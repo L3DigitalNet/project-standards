@@ -1,0 +1,23 @@
+# Delivered consumer tree for `harnesses = ["codex"]` (SPEC-GHW1 §3.2, EC-005).
+#
+# Codex alone keeps `agents/openai.yaml` and the AGENTS.md block while CLAUDE.md
+# receives nothing. See `both.toml` for the full meaning of each key.
+
+files = [
+  ".agents/skills/github-workflow/SKILL.md",
+  ".agents/skills/github-workflow/agents/openai.yaml",
+  ".agents/skills/github-workflow/bin/gh-workflow",
+  ".agents/skills/github-workflow/references/field-vocabulary.md",
+  ".agents/skills/github-workflow/references/issue-structure.md",
+  ".agents/skills/github-workflow/references/org-schema.yaml",
+  ".agents/skills/github-workflow/references/pr-standard.md",
+  ".agents/skills/github-workflow/references/review-checklist.md",
+  ".agents/skills/github-workflow/references/summary-format.md",
+  ".standards/packages/github-workflow/policy.toml",
+]
+
+blocks = ["AGENTS.md"]
+blockless = ["CLAUDE.md"]
+
+[modes]
+".agents/skills/github-workflow/bin/gh-workflow" = "0755"

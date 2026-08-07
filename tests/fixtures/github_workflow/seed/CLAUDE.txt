@@ -1,0 +1,7 @@
+# Fixture Consumer Claude Instructions
+
+Consumer-owned prose that predates the `github-workflow` package. Reconcile must
+insert the managed block without disturbing these bytes, so the dogfood suite
+asserts this heading survives beside the block.
+
+Claude Code reads this file.

@@ -1,0 +1,34 @@
+# Delivered consumer tree for `harnesses = ["claude-code", "codex"]` (SPEC-GHW1 §3.2).
+#
+# `files` is the COMPLETE set of package-owned whole-file paths a reconcile must
+# produce; the dogfood suite compares it for equality, so a new artifact that is
+# not listed here fails rather than passing unnoticed. Control-plane state
+# (`.standards/catalog.toml`, `config.toml`, `lock.toml`) is deliberately absent:
+# it belongs to the control plane, not to this package. `docs/GH-WORKFLOWS.md` is
+# likewise absent because the ledger is tool-generated, not a payload artifact.
+#
+# `modes` carries ONLY the modes the payload pins. Every other artifact is created
+# under the consumer's umask, so asserting `0644` here would fail a legitimate
+# `0664` checkout rather than catch a defect.
+#
+# `blocks` lists the instruction files that must carry the bounded managed block,
+# and `blockless` the ones that must not (EC-005 harness gating).
+
+files = [
+  ".agents/skills/github-workflow/SKILL.md",
+  ".agents/skills/github-workflow/agents/openai.yaml",
+  ".agents/skills/github-workflow/bin/gh-workflow",
+  ".agents/skills/github-workflow/references/field-vocabulary.md",
+  ".agents/skills/github-workflow/references/issue-structure.md",
+  ".agents/skills/github-workflow/references/org-schema.yaml",
+  ".agents/skills/github-workflow/references/pr-standard.md",
+  ".agents/skills/github-workflow/references/review-checklist.md",
+  ".agents/skills/github-workflow/references/summary-format.md",
+  ".standards/packages/github-workflow/policy.toml",
+]
+
+blocks = ["AGENTS.md", "CLAUDE.md"]
+blockless = []
+
+[modes]
+".agents/skills/github-workflow/bin/gh-workflow" = "0755"
