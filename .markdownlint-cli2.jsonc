@@ -30,7 +30,12 @@
 		"tests/fixtures/observed_consumers/**",
 		// Verbatim agent-session export (issue #133 evidence): byte-locked
 		// harness output, not authored prose held to the body-style standard.
-		"docs/reference/session-export-gh-workflows-implementation.md"
+		"docs/reference/session-export-gh-workflows-implementation.md",
+		// Vendored third-party Go skill bundle: byte-locked upstream copies whose
+		// findings are unfixable by construction — editing them to satisfy MD036
+		// or MD040 would fork the bytes from their source. The repo-authored
+		// skills (`agent-handoff`, `github-workflow`) stay gated deliberately.
+		".agents/skills/go-*/**"
 	],
 	"gitignore": true
 }
