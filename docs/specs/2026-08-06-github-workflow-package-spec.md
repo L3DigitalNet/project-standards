@@ -337,13 +337,17 @@ Agent session mutating work state in a consuming repository:
 sequenceDiagram
     actor Agent
     participant Skill as github-workflow skill
-    participant GH as GitHub (gh CLI)
+    participant Tool as gh-workflow tool
+    participant GH as GitHub
 
     Agent->>Skill: load at mutation boundary
-    Skill-->>Agent: procedures + refusals + references
-    Agent->>GH: create/update issue, fields, PR per discipline
-    GH-->>Agent: result
-    Agent->>GH: terminal sync (Done→closed-completed / Dropped→closed-not-planned)
+    Skill-->>Agent: procedures + refusals + subcommand routing
+    Agent->>Tool: new / set per discipline
+    Tool->>GH: gh-authenticated validated mutation
+    GH-->>Tool: result
+    Tool-->>Agent: creation receipt / outcome
+    Agent->>Tool: close (terminal sync, FR-021 ordered sequence)
+    Tool->>GH: close reason, then Workflow field
 ```
 
 Steps:
