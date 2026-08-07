@@ -485,11 +485,44 @@ The audit tool's live behavior is verified by a documented manual run against th
 
 ### 17.3 Requirement-to-Test Traceability
 
-| Requirement ID | Test / Verification Method | Status |
-| --- | --- | --- |
-| FR-001–FR-024 | To be completed by the implementer per Appendix B.3 | Not Started |
-| NFR-001–NFR-005 | To be completed by the implementer per Appendix B.3 | Not Started |
-| IR-001–IR-004, DR-001–DR-003 | To be completed by the implementer per Appendix B.3 | Not Started |
+| Requirement ID | Test / Verification Method                          | Status      |
+| -------------- | --------------------------------------------------- | ----------- |
+| FR-001         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-002         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-003         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-004         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-005         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-006         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-007         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-008         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-009         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-010         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-011         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-012         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-013         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-014         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-015         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-016         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-017         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-018         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-019         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-020         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-021         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-022         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-023         | To be completed by the implementer per Appendix B.3 | Not Started |
+| FR-024         | To be completed by the implementer per Appendix B.3 | Not Started |
+| NFR-001        | To be completed by the implementer per Appendix B.3 | Not Started |
+| NFR-002        | To be completed by the implementer per Appendix B.3 | Not Started |
+| NFR-003        | To be completed by the implementer per Appendix B.3 | Not Started |
+| NFR-004        | To be completed by the implementer per Appendix B.3 | Not Started |
+| NFR-005        | To be completed by the implementer per Appendix B.3 | Not Started |
+| IR-001         | To be completed by the implementer per Appendix B.3 | Not Started |
+| IR-002         | To be completed by the implementer per Appendix B.3 | Not Started |
+| IR-003         | To be completed by the implementer per Appendix B.3 | Not Started |
+| IR-004         | To be completed by the implementer per Appendix B.3 | Not Started |
+| DR-001         | To be completed by the implementer per Appendix B.3 | Not Started |
+| DR-002         | To be completed by the implementer per Appendix B.3 | Not Started |
+| DR-003         | To be completed by the implementer per Appendix B.3 | Not Started |
 
 ---
 
