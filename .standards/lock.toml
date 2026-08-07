@@ -3,7 +3,7 @@ schema_version = "1.1"
 catalog = "5"
 release = "5.16.0"
 catalog_digest = "sha256:2bced53d5152c8d72bb4789ea482369d444ec7481b5dbf2966eeaa568b918802"
-config_digest = "sha256:a3c22a18a434d6d36c03b5125c2de3d49d7631f8019f278443943d2d1f47ca13"
+config_digest = "sha256:3360e0eaabcbc7e59ef93db6d50a2a4cc660211dcf4bf3159ece168393257113"
 
 [standards.adr]
 requested = "latest"
@@ -25,6 +25,13 @@ resolved = "1.6"
 selection = "stable"
 payload_digest = "sha256:7c6e609bdccdf526cb1426b817b26efcc5622552138ac5e826d917aad91c09ba"
 effective_config_digest = "sha256:f468155ebc87979f1dbad12ae07ad3424eaf9122664df42d3e388078c1974cdc"
+
+[standards.github-workflow]
+requested = "latest"
+resolved = "1.0"
+selection = "stable"
+payload_digest = "sha256:946f967be3e24f90dd1f9a2c5dd7a384927d9fa46e76a065afa8c3166c3eeb55"
+effective_config_digest = "sha256:f675a924a3693ca08c4e132725a702344200b5988aee13f9062f10b8e3412238"
 
 [standards.markdown-frontmatter]
 requested = "latest"
@@ -90,6 +97,115 @@ policy = "managed"
 semantic_digest = "sha256:1b78fb94b81aad4df0bbf149a6d4c47b887fbe31e19818723bde5579ec33413c"
 content_digest = "sha256:1b78fb94b81aad4df0bbf149a6d4c47b887fbe31e19818723bde5579ec33413c"
 created_container = false
+
+[[artifacts]]
+path = ".agents/skills/github-workflow/SKILL.md"
+adapter = "whole-file"
+scope = "$file"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:e3b7d2e6dfbd405f897bebd5d541f0bf52023ff967e556dae4b03e598b1692c6"
+content_digest = "sha256:e3b7d2e6dfbd405f897bebd5d541f0bf52023ff967e556dae4b03e598b1692c6"
+created_container = true
+
+[[artifacts]]
+path = ".agents/skills/github-workflow/agents/openai.yaml"
+adapter = "whole-file"
+scope = "$file"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:6afe771c87e108d8a46dc00380365f1b1793891e3c57544a188e0b37d28a4f42"
+content_digest = "sha256:6afe771c87e108d8a46dc00380365f1b1793891e3c57544a188e0b37d28a4f42"
+created_container = true
+
+[[artifacts]]
+path = ".agents/skills/github-workflow/bin/gh-workflow"
+adapter = "whole-file"
+scope = "$file"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:b0a8712d6fe6019794498b5961ae0ca571a000b61eafa1d7f835a387db0f7551"
+content_digest = "sha256:b0a8712d6fe6019794498b5961ae0ca571a000b61eafa1d7f835a387db0f7551"
+mode = "0755"
+created_container = true
+
+[[artifacts]]
+path = ".agents/skills/github-workflow/references/field-vocabulary.md"
+adapter = "whole-file"
+scope = "$file"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:c1bc1528de730e4869d0204af5a790a0e3284cabeebadc7857f6095b4689df8e"
+content_digest = "sha256:c1bc1528de730e4869d0204af5a790a0e3284cabeebadc7857f6095b4689df8e"
+created_container = true
+
+[[artifacts]]
+path = ".agents/skills/github-workflow/references/issue-structure.md"
+adapter = "whole-file"
+scope = "$file"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:1d98d69b6e36b36b73b90452b0bcaed65f93dddc8dab41e6f6e50a85110164a4"
+content_digest = "sha256:1d98d69b6e36b36b73b90452b0bcaed65f93dddc8dab41e6f6e50a85110164a4"
+created_container = true
+
+[[artifacts]]
+path = ".agents/skills/github-workflow/references/org-schema.yaml"
+adapter = "whole-file"
+scope = "$file"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:2be7ee80d55869211ab3e8cc9b7dd66c482f3531e9188340eb5ef4663fb354f1"
+content_digest = "sha256:2be7ee80d55869211ab3e8cc9b7dd66c482f3531e9188340eb5ef4663fb354f1"
+created_container = true
+
+[[artifacts]]
+path = ".agents/skills/github-workflow/references/pr-standard.md"
+adapter = "whole-file"
+scope = "$file"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:ae439d69f58ab2dca808495abcd6868f71fd74ba367d7774c40940083bb98aed"
+content_digest = "sha256:ae439d69f58ab2dca808495abcd6868f71fd74ba367d7774c40940083bb98aed"
+created_container = true
+
+[[artifacts]]
+path = ".agents/skills/github-workflow/references/review-checklist.md"
+adapter = "whole-file"
+scope = "$file"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:6028ea271a4251241189b9ffd6c28fbb0bee7856374b413ae781007f32866e03"
+content_digest = "sha256:6028ea271a4251241189b9ffd6c28fbb0bee7856374b413ae781007f32866e03"
+created_container = true
+
+[[artifacts]]
+path = ".agents/skills/github-workflow/references/summary-format.md"
+adapter = "whole-file"
+scope = "$file"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:80e475b09ccac36b5c40a2c1e1e1d8499b8c4855dd73aa2b065be4d901482a46"
+content_digest = "sha256:80e475b09ccac36b5c40a2c1e1e1d8499b8c4855dd73aa2b065be4d901482a46"
+created_container = true
 
 [[artifacts]]
 path = ".agents/skills/markdown-frontmatter/SKILL.md"
@@ -496,6 +612,18 @@ policy = "managed"
 semantic_digest = "sha256:ca67fa9232375073d9dec834af6053057f31069ca83054e61948d2738a6e3e92"
 content_digest = "sha256:ca67fa9232375073d9dec834af6053057f31069ca83054e61948d2738a6e3e92"
 created_container = false
+
+[[artifacts]]
+path = ".standards/packages/github-workflow/policy.toml"
+adapter = "whole-file"
+scope = "$file"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "provider"
+policy = "managed"
+semantic_digest = "sha256:17e024863f1a5b4bcf643cc6a5b2f2ef7d88ec69c2597eb164e6eb3052d1d32b"
+content_digest = "sha256:17e024863f1a5b4bcf643cc6a5b2f2ef7d88ec69c2597eb164e6eb3052d1d32b"
+created_container = true
 
 [[artifacts]]
 path = ".standards/packages/markdown-frontmatter/agent-summary.md"
@@ -934,6 +1062,18 @@ created_container = false
 [[artifacts]]
 path = "AGENTS.md"
 adapter = "markdown-block"
+scope = "block:github-workflow"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "provider"
+policy = "managed"
+semantic_digest = "sha256:a64b7c954376b7773f747018836d856c9be62c039de45bea849781fbf0f5dcff"
+content_digest = "sha256:a64b7c954376b7773f747018836d856c9be62c039de45bea849781fbf0f5dcff"
+created_container = false
+
+[[artifacts]]
+path = "AGENTS.md"
+adapter = "markdown-block"
 scope = "block:markdown-tooling"
 owners = ["markdown-tooling"]
 versions = { markdown-tooling = "1.13" }
@@ -965,6 +1105,18 @@ provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:632f927e3f1b4e9b02ab5d86cfbd4d802fe8079db8bfd77f42a63a92fbdb095d"
 content_digest = "sha256:632f927e3f1b4e9b02ab5d86cfbd4d802fe8079db8bfd77f42a63a92fbdb095d"
+created_container = false
+
+[[artifacts]]
+path = "CLAUDE.md"
+adapter = "markdown-block"
+scope = "block:github-workflow"
+owners = ["github-workflow"]
+versions = { github-workflow = "1.0" }
+provenance = "provider"
+policy = "managed"
+semantic_digest = "sha256:a64b7c954376b7773f747018836d856c9be62c039de45bea849781fbf0f5dcff"
+content_digest = "sha256:a64b7c954376b7773f747018836d856c9be62c039de45bea849781fbf0f5dcff"
 created_container = false
 
 [[artifacts]]

@@ -116,3 +116,22 @@ uv run ruff check src tests --fix
 <!-- END project-standards:python-tooling -->
 
 <!-- prettier-ignore-end -->
+
+<!-- prettier-ignore-start -->
+
+<!-- BEGIN project-standards:github-workflow -->
+<!-- markdownlint-disable MD025 -->
+# GitHub Workflow
+
+Load the repo-local `github-workflow` skill before creating or mutating GitHub work state — issues, field values, pull requests, lifecycle transitions, milestones — before triage, and before an organization-schema audit. This repository's work belongs to the `L3DigitalNet` organization. These rules bind even when the skill was never loaded:
+
+- Never infer readiness: an open issue is not `Ready` until acceptance criteria exist and it was deliberately admitted to the executable queue.
+- Never promote your own `Execution mode`, and never create, rename, or retire an organization issue type, field, or value — that schema is human-applied.
+- A nontrivial pull request links the issue that governs it.
+- Keep terminal state synchronized: `Done` closes as completed, `Dropped` closes as not planned, and a reopened issue returns to a nonterminal `Workflow` value in the same action.
+- Durable follow-up work discovered while implementing becomes an issue before the session ends.
+
+<!-- markdownlint-enable MD025 -->
+<!-- END project-standards:github-workflow -->
+
+<!-- prettier-ignore-end -->

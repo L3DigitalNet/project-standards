@@ -18,6 +18,11 @@ enabled = true
 version = "latest"
 config = { contract_version = "1.0" }
 
+[standards.github-workflow]
+enabled = true
+version = "latest"
+config = { harnesses = ["claude-code", "codex"], organization = "L3DigitalNet" }
+
 [standards.markdown-frontmatter]
 enabled = true
 version = "latest"
