@@ -38,6 +38,9 @@ related:
 | 1.0 | 2026-08-06 | Claude with owner authorization | Owner approved the specification for implementation planning; no content change. |
 | 1.1 | 2026-08-06 | Claude with owner-directed cross-agent review | Codex high-effort review corrections: FR-021 ordered failure-safe terminal pairing replaces the impossible cross-API atomicity claim; FR-016 platform precondition moves to the skill (EC-006); IR-002 and the component view permit `gh`-issued-token API access by the tool; NFR-005/C-006 pin the exact reproducible-build invocation; FR-019 guarantees the markdown-tooling default gate, not arbitrary consumer configs. |
 | 1.2 | 2026-08-06 | Claude with owner-directed cross-agent review | Codex round-2 residue sweep: FR-021 fixes the sequence order (native state first, then `Workflow` field; rerun-as-retry idempotency); §10.1/AW-004/§8.2.1 route all work-state traffic and summary gathering through the tool; ERR-005 splits into missing/corrupt (ERR-005) and unsupported-platform (ERR-006, skill-reported, remedied only by a future platform payload); NFR-005 completes the build command with pinned `-ldflags`, output path, and package operand. |
+| 1.3 | 2026-08-07 | Claude, implementation evidence | NFR-005 and C-006 amended: the fixed build invocation now pins `GOEXPERIMENT=dwarf5`. The go command resolves an unset or empty value from `$GOROOT/go.env`, and Fedora's `go.env` sets `nodwarf5`, which changed the emitted DWARF and produced a binary 253 KiB smaller than an upstream-default build of the same source. `dwarf5` is the upstream baseline, so the pin alters no code generation and makes Fedora and upstream toolchains byte-identical — the planned reproducibility-risk treatment realized. |
+| 1.4 | 2026-08-07 | Claude with owner decision | DR-001 amended: the baseline `org-schema.yaml` adopts the live organization's plain-space forms for the thirteen indexed values of `Priority`, `Change risk`, and `Severity` (`P0 Immediate`, `R1 Low`, `S0 Critical`) in place of the design input's em-dash separators, per owner decision 2026-08-07. The `P`/`R`/`S` index prefixes are retained deliberately: they carry ordering the bare labels do not. A live audit now reports zero mismatches. |
+| 1.5 | 2026-08-07 | Claude, implementation close-out | OQ-002 **Answered**: the frozen stdlib-`flag` CLI surface — nine subcommands, shared `--repo`/`--policy`/`--schema` defaults, and the three-value exit-code contract — is recorded inline in the packaged `SKILL.md`, and GitHub access is REST only. §17.3 completed: all 36 requirement rows Passing with their real proving commands. Live-run evidence recorded: one live read-only `audit` plus a scratch-checkout `ledger` run against the organization. OQ-001 (release placement) deliberately remains Open — an owner decision. |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -153,7 +156,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | C-003 | The published payload is organization-agnostic; the organization login enters only through consumer configuration. | Design decision D3/D4. |
 | C-004 | The operating model must function on GitHub Free organization plans. | Design input section 1.3. |
 | C-005 | Every delivered artifact uses `policy = "managed"`; no create-only artifacts. | Design decision D2; bug 006. |
-| C-006 | Any executable shipped with the skill is implemented in Go and delivered as a committed, digest-pinned, reproducibly built per-platform binary (`CGO_ENABLED=0`, `-trimpath`, `-buildvcs=false`, pinned arch and toolchain); v1.0 ships linux/amd64 only. | Owner directive 2026-08-06; design decision D7; ADR 0027 Go lane. |
+| C-006 | Any executable shipped with the skill is implemented in Go and delivered as a committed, digest-pinned, reproducibly built per-platform binary (`CGO_ENABLED=0`, `-trimpath`, `-buildvcs=false`, pinned arch, toolchain, and `GOEXPERIMENT`); v1.0 ships linux/amd64 only. | Owner directive 2026-08-06; design decision D7; ADR 0027 Go lane. |
 
 ---
 
@@ -228,7 +231,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 | NFR-002 | Maintainability | Package version `1.0` shall be immutable once released; every content change ships as a new digest-pinned payload version. | Repository payload-immutability tests pass for the new family. | Must |
 | NFR-003 | Usability | The managed block shall stay compact enough that non-GitHub sessions pay negligible context cost. | Block content body approximately 12 lines; no field vocabulary or body-structure detail inline. | Should |
 | NFR-004 | Reliability | Reconcile, drift-check, and upgrade over the package shall behave deterministically with no network dependency. | Package tests run fully offline; no provider imports a network client. | Must |
-| NFR-005 | Reproducibility | The tool binary shall be reproducibly buildable from repository Go source via exactly one complete invocation: `GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags "-buildid= -X main.version=1.0" -o standards/github-workflow/versions/1.0/skills/github-workflow/bin/gh-workflow ./cmd/gh-workflow`, with the toolchain pinned by `go.mod` and no variable build-time stamps. | An independent rebuild from a clean worktree at the same commit yields the committed bytes; verified in the repository gate or release evidence. | Must |
+| NFR-005 | Reproducibility | The tool binary shall be reproducibly buildable from repository Go source via exactly one complete invocation: `GOEXPERIMENT=dwarf5 GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags "-buildid= -X main.version=1.0" -o standards/github-workflow/versions/1.0/skills/github-workflow/bin/gh-workflow ./cmd/gh-workflow`, with the toolchain pinned by `go.mod` and no variable build-time stamps. `GOEXPERIMENT` is pinned rather than inherited: the go command resolves an unset or empty value from `$GOROOT/go.env`, and Fedora's `go.env` sets `nodwarf5`, which changes the emitted DWARF and produces different bytes from an upstream-default toolchain. `dwarf5` is the upstream baseline, so the pin changes no code generation and makes the two toolchains byte-identical. | An independent rebuild from a clean worktree at the same commit yields the committed bytes; verified in the repository gate or release evidence. | Must |
 
 ### 7.3 Interface Requirements
 
@@ -243,7 +246,7 @@ Agent sessions load the skill before creating or mutating GitHub work state. The
 
 | ID | Data Entity | Requirement | Validation Rules | Ownership |
 | --- | --- | --- | --- | --- |
-| DR-001 | `org-schema.yaml` | The package shall represent the baseline org schema in YAML: five Issue Types and seven Issue Fields with types and exact value lists, matching the operating model's baseline schema. | Parses as YAML; content equals the design input's baseline schema (its section 35); covered by an artifact digest. | Package-owned reference; live org state is the audit subject and is never package-owned. |
+| DR-001 | `org-schema.yaml` | The package shall represent the baseline org schema in YAML: five Issue Types and seven Issue Fields with types and exact value lists, matching the live organization's applied schema. Per owner decision 2026-08-07, the thirteen indexed values of `Priority`, `Change risk`, and `Severity` carry the live organization's plain-space forms (`P0 Immediate`, `R1 Low`, `S0 Critical`) rather than the design input's em-dash separators; the `P`/`R`/`S` index prefixes are retained deliberately, because they carry the ordering the bare labels do not. | Parses as YAML; content equals the live applied schema, which is the design input's baseline schema (its section 35) under the normalization above; covered by an artifact digest; a live `audit` run reports zero mismatches. | Package-owned reference; live org state is the audit subject and is never package-owned. |
 | DR-002 | `policy.toml` | The rendered policy shall carry the configured organization login and the package version, and shall contain only values derivable from consumer configuration and the payload. | Valid TOML; regenerated deterministically by `render-semantic`. | Control-plane-managed consumer artifact. |
 | DR-003 | `docs/GH-WORKFLOWS.md` | The ledger is tool-generated consumer content, not a payload artifact: excluded from package digests and drift-check, owned whole-file by the tool, and regenerated rather than merged. | Generated header present; content derives only from live GitHub state and the tool version. | Tool-owned generated file; never hand-maintained. |
 
@@ -489,48 +492,50 @@ None handled: package artifacts are public-safe standard content plus the organi
 | Go tool | Audit finding classification, precondition failures, JSON/human output; ledger header, TOC anchors, layout, atomic write, gate-clean output; mutation validation and refusal, scaffold content, terminal-sync pairing, summary/receipt rendering, readiness checks | Offline fixture-driven tests via the repository Go gate (`make go-check`); reproducible-build check (NFR-005) | Yes |
 | Regression | Bug-006 guard: zero create-only artifacts in this family | Payload scan test | Yes |
 
-The audit tool's live behavior is verified by a documented manual run against the real organization (recorded as implementation evidence); its comparison logic is tested offline with fixtures, never by networked CI tests (NFR-004).
+The audit tool's live behavior is verified by a documented manual run against the real organization, recorded in [the live-run evidence record](../research/2026-08-06-github-workflow-live-run-evidence.md); its comparison logic is tested offline with fixtures, never by networked CI tests (NFR-004).
 
 ### 17.3 Requirement-to-Test Traceability
 
-| Requirement ID | Test / Verification Method                          | Status      |
-| -------------- | --------------------------------------------------- | ----------- |
-| FR-001         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-002         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-003         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-004         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-005         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-006         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-007         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-008         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-009         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-010         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-011         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-012         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-013         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-014         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-015         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-016         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-017         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-018         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-019         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-020         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-021         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-022         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-023         | To be completed by the implementer per Appendix B.3 | Not Started |
-| FR-024         | To be completed by the implementer per Appendix B.3 | Not Started |
-| NFR-001        | To be completed by the implementer per Appendix B.3 | Not Started |
-| NFR-002        | To be completed by the implementer per Appendix B.3 | Not Started |
-| NFR-003        | To be completed by the implementer per Appendix B.3 | Not Started |
-| NFR-004        | To be completed by the implementer per Appendix B.3 | Not Started |
-| NFR-005        | To be completed by the implementer per Appendix B.3 | Not Started |
-| IR-001         | To be completed by the implementer per Appendix B.3 | Not Started |
-| IR-002         | To be completed by the implementer per Appendix B.3 | Not Started |
-| IR-003         | To be completed by the implementer per Appendix B.3 | Not Started |
-| IR-004         | To be completed by the implementer per Appendix B.3 | Not Started |
-| DR-001         | To be completed by the implementer per Appendix B.3 | Not Started |
-| DR-002         | To be completed by the implementer per Appendix B.3 | Not Started |
-| DR-003         | To be completed by the implementer per Appendix B.3 | Not Started |
+Commands run from the repository root. `scripts/verify.sh` is the canonical Python gate and runs both package suites; **pkg** abbreviates `tests/test_github_workflow_package.py` and **dog** abbreviates `tests/test_github_workflow_dogfood.py`, with the named test identified by its behavior clause. `make go-check` runs the Go gate end to end (`go-format-check`, `go-mod-check`, `go-vet`, `go-lint`, `go-test`, `go-build`, `go-audit`, `go-verify-binary`); the `go test` selections named below are the subsets it covers. “Live run” is [the recorded live audit and ledger run](../research/2026-08-06-github-workflow-live-run-evidence.md).
+
+| Requirement ID | Test / Verification Method | Status |
+| --- | --- | --- |
+| FR-001 | `scripts/verify.sh` (pkg: artifact inventory, declared digests; dog: reconcile reproduces the target tree) | Passing |
+| FR-002 | `scripts/verify.sh` (pkg: declared digests; dog: delivered bytes match the payload sources) over the frozen SKILL.md trigger section | Passing |
+| FR-003 | `scripts/verify.sh` (dog: instruction blocks land only in selected harnesses; unselected harness artifact is profile drift) | Passing |
+| FR-004 | `scripts/verify.sh` (pkg: artifact inventory matches the delivered set; dog: reconcile reproduces the target tree) | Passing |
+| FR-005 | `scripts/verify.sh` (pkg: declared digests) plus the live-run `audit` — 12/12 live match on the same value sets | Passing |
+| FR-006 | `scripts/verify.sh` (pkg: declared digests, payload inventory equals the tracked payload tree) over the three frozen references | Passing |
+| FR-007 | `scripts/verify.sh` (dog: instruction blocks land only in selected harnesses; consumer prose survives block insertion) | Passing |
+| FR-008 | `make go-check` → `go test ./internal/ghworkflow/audit/...`; live behavior in the live-run record | Passing |
+| FR-009 | `scripts/verify.sh` (pkg: declared digests; dog: delivered bytes match the payload sources) over the SKILL.md refusal set and the rendered blocks | Passing |
+| FR-010 | `scripts/verify.sh` (dog: rendered policy carries the configured organization); the live run confirms the tool reads it | Passing |
+| FR-011 | `scripts/verify.sh` (pkg: every delivered unit is managed; bug-006 guard reports a seeded create-only artifact) | Passing |
+| FR-012 | `PYTHONPATH=$PWD/build/wheel-runtime uv run project-standards validate`; `scripts/verify.sh` (pkg: provider module imports no network client; dog: clean consumer reports no findings, seeded tamper is reported per artifact class) | Passing |
+| FR-013 | `PYTHONPATH=$PWD/build/wheel-runtime uv run project-standards standards validate-graph --root .` and `standards render-catalog --root . --check`; `scripts/verify.sh` (pkg: catalog 5 advertises 1.0 at the pinned digest) | Passing |
+| FR-014 | `PYTHONPATH=$PWD/build/wheel-runtime uv run project-standards standards validate-packages --root .`; `scripts/verify.sh` (pkg: payload inventory equals the tracked payload tree); agent-summary 2361 B against the 3000 B limit | Passing |
+| FR-015 | `make go-check` (`go-build`, `go-verify-binary`); `scripts/verify.sh` (pkg: compiled binary is the only undecodable payload file; dog: delivered artifacts carry their pinned modes) | Passing |
+| FR-016 | `make go-check` → `go test ./internal/ghworkflow/audit/...` (every finding class and precondition failure); live run recorded in the live-run record | Passing |
+| FR-017 | `make go-check` → `go test ./internal/ghworkflow/render/...` (layout and fixture suites) | Passing |
+| FR-018 | `make go-check` → `go test ./internal/ghworkflow/render/...` (receipt fixtures) | Passing |
+| FR-019 | `make go-check` → `go test ./internal/ghworkflow/render/...` (generated-gate, markdown, atomic-write suites); live run and gate conformance in the live-run record | Passing |
+| FR-020 | `scripts/verify.sh` (pkg: declared digests) over the SKILL.md ledger section | Passing |
+| FR-021 | `make go-check` → `go test ./internal/ghworkflow/mutate/...` (validation, refusal, scaffold, terminal pairing, divergence report) | Passing |
+| FR-022 | `make go-check` → `go test ./internal/ghworkflow/render/...` (command suite, byte-for-byte fixtures) | Passing |
+| FR-023 | `make go-check` → `go test ./internal/ghworkflow/mutate/...` (readiness precondition classes) | Passing |
+| FR-024 | `scripts/verify.sh` (pkg: declared digests) over the SKILL.md routing map and Command surface | Passing |
+| NFR-001 | `scripts/verify.sh` (pkg: packaged sources name no concrete organization; organization scan reports a seeded org literal and a seeded GitHub owner URL) | Passing |
+| NFR-002 | `scripts/verify.sh` (pkg: unchanged published payload is a patch transition; mutating a published payload file is forbidden; deleting a published payload is forbidden) | Passing |
+| NFR-003 | `scripts/verify.sh` (dog: instruction blocks land only in selected harnesses; consumer prose survives block insertion); the rendered body is 7 content lines — one heading, one directive paragraph, five standing invariants — against the ~12-line ceiling | Passing |
+| NFR-004 | `scripts/verify.sh` (pkg: provider module imports no network client; dog: independent reconciles produce identical bytes, reconciling a clean consumer changes nothing) — the whole suite runs with the network fixture-blocked | Passing |
+| NFR-005 | `make go-check` → `go-verify-binary` (`scripts/build-gh-workflow.sh --verify`): rebuild to a scratch directory and byte-compare against the committed binary | Passing |
+| IR-001 | `scripts/verify.sh` (pkg: valid configurations are accepted; invalid configurations are rejected; config schema declares exactly two closed options) | Passing |
+| IR-002 | `make go-check` → `go test ./internal/ghworkflow/ghauth/...`; the live run exercised both subcommands under the operator's existing `gh` login | Passing |
+| IR-003 | `scripts/verify.sh` (dog: instruction blocks land only in selected harnesses; unselected harness block is profile drift; consumer prose survives block insertion) | Passing |
+| IR-004 | `make go-check` → `go test ./internal/ghworkflow/cli/... ./cmd/gh-workflow/...`; the frozen surface is recorded in SKILL.md (OQ-002) | Passing |
+| DR-001 | `make go-check` → `go test ./internal/ghworkflow/orgschema/...`; `scripts/verify.sh` (pkg: declared digests); the live-run `audit` reports 12 match / 0 missing / 0 mismatch / 0 extra against the live organization | Passing |
+| DR-002 | `make go-check` → `go test ./internal/ghworkflow/policy/...`; `scripts/verify.sh` (dog: rendered policy carries the configured organization) | Passing |
+| DR-003 | `scripts/verify.sh` (pkg: payload inventory equals the tracked payload tree — the ledger is absent from it; dog: clean consumer reports no findings); the live run wrote the ledger in a scratch consumer only | Passing |
 
 ---
 
@@ -631,7 +636,9 @@ Exit: Definition of Done (§17.1) satisfied except owner acceptance items.
 | ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | OQ-001 | Which release train ships `github-workflow` 1.0? | After the v5.17.0 ADR train; exact release decided at plan time. | No | Owner | MS-3 | Open |
-| OQ-002 | Exact `gh-workflow` CLI flag surface and GitHub API usage (REST vs GraphQL) for Issue Fields. | Implementer selects during MS-1 against the then-current GA API and records it in the skill references. | No | Implementer | MS-1 | Open |
+| OQ-002 | Exact `gh-workflow` CLI flag surface and GitHub API usage (REST vs GraphQL) for Issue Fields. | Implementer selects during MS-1 against the then-current GA API and records it in the skill references. | No | Implementer | MS-1 | **Answered** (2026-08-07) |
+
+**OQ-002 — answer.** The CLI is a stdlib `flag` surface: nine subcommands, long flags only, no interactive prompting, and no third-party CLI dependency. Shared flags are `--repo` (every subcommand but `audit`, which is organization-scoped), `--policy`, and `--schema` on the value-validating subcommands, each with a working default so an ordinary invocation carries no flags at all. Exit codes are `0` success or eligible, `1` precondition failure or reported divergence, `2` usage error or refusal. The complete surface is recorded inline in the packaged `SKILL.md` under **Command surface**, which is the artifact an agent actually loads; `gh-workflow help` and `gh-workflow <subcommand> -h` remain the runtime authority. GitHub access is **REST only**; no GraphQL query is issued. The Issue Fields GA surface exposes everything the tool needs over REST — `/orgs/{org}/issue-types` and `/orgs/{org}/issue-fields` for the schema, `/repos/{owner}/{repo}/issues/{n}` and `/repos/{owner}/{repo}/issues/{n}/issue-field-values` for work items and their field values — which keeps the client a single paginating stdlib `net/http` wrapper instead of two transports. Every call runs under the operator's `gh`-issued token (IR-002).
 
 ---
 

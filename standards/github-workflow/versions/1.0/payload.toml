@@ -22,14 +22,14 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:a7f2a1908f7c35cd68d3391c5bcc8ef95529a0088bf3ea2ba37f6f5f66c574ae"
+digest = "sha256:68045ef12d6a3e5f37019d4eb9ae2f631651849a8c87cbd109b2b7852a52daf7"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:0707b87369a91a84e1688e8b49943830b5d615f817dd001896e7dfc180b9fd46"
+digest = "sha256:f6b50839d757a1c804b91f2c012c358621421917f5f50359af2351afa13bb8a4"
 
 [[resources]]
 id = "config-schema"
@@ -43,7 +43,7 @@ id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:ee774bcbf311b732fa7c2d3f5603c8a6cf52fef0713e3d04b4992caec1d3287e"
+digest = "sha256:0e5e40c11f2474fb79cfe5cf89a43adcb572f80825691839be2a579d4c440ba5"
 
 [[resources]]
 id = "policy-template"
@@ -91,7 +91,7 @@ digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57f
 id = "skill"
 target = ".agents/skills/github-workflow/SKILL.md"
 source = "skills/github-workflow/SKILL.md"
-digest = "sha256:e3b7d2e6dfbd405f897bebd5d541f0bf52023ff967e556dae4b03e598b1692c6"
+digest = "sha256:7d302c2fb9b3cf37ca09242e012077198ad4ce3cde1599d4f0036ecec44c4d23"
 policy = "managed"
 
 [[artifacts]]
@@ -149,7 +149,7 @@ policy = "managed"
 id = "reference-summary-format"
 target = ".agents/skills/github-workflow/references/summary-format.md"
 source = "skills/github-workflow/references/summary-format.md"
-digest = "sha256:80e475b09ccac36b5c40a2c1e1e1d8499b8c4855dd73aa2b065be4d901482a46"
+digest = "sha256:20fcc966d222774c05001dfccde4fbcd8155c974ca575aab4178aed94e6140a6"
 policy = "managed"
 
 [[contributions]]

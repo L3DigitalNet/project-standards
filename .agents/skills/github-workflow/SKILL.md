@@ -38,7 +38,7 @@ Never improvise raw `gh` mutations in place of an unavailable tool. Every GitHub
 
 ## Routing map
 
-Route every routine mechanical action through its subcommand instead of a hand-built `gh` call. Take the exact flag surface from the tool's own help output rather than from memory.
+Route every routine mechanical action through its subcommand instead of a hand-built `gh` call. The surface below is the frozen 1.0 contract; when a flag's exact spelling matters, still consult the tool's own help (`gh-workflow help`, `gh-workflow <subcommand> -h`) rather than reciting it from memory.
 
 | Action | Subcommand | Judgment that stays with you |
 | --- | --- | --- |
@@ -51,6 +51,30 @@ Route every routine mechanical action through its subcommand instead of a hand-b
 | Render an operator summary | `summary` | the scope requested and what to say alongside the output |
 | Render a creation receipt | `receipt` | how to close the gaps it names |
 | Regenerate the ledger at `docs/GH-WORKFLOWS.md` | `ledger` | when to run it — never the file's contents |
+
+## Command surface
+
+Nine subcommands, frozen at 1.0. `gh-workflow help` lists them all.
+
+Shared flags, each with a working default so ordinary invocations carry no flags at all:
+
+- `--repo owner/name` — the repository to act on. A bare `name` is completed with the organization from policy; omitted, it is this checkout's `origin` remote. Every subcommand except `audit` takes it; `audit` is organization-scoped, not repository-scoped.
+- `--policy PATH` — defaults to `.standards/packages/github-workflow/policy.toml`, found by walking up from the working directory.
+- `--schema PATH` — defaults to `.agents/skills/github-workflow/references/org-schema.yaml`, found the same way. Carried by the subcommands that validate field values: `audit`, `new`, `set`, `close`, `reopen`.
+
+| Subcommand | Surface | Notes |
+| --- | --- | --- |
+| `audit` | `[--org LOGIN] [--output human\|json] [--fail-on-drift]` | Read-only. Finding drift exits 0 unless `--fail-on-drift` is given. `--org` bypasses policy entirely and audits the login you name. |
+| `ledger` | `[--path PATH]` | Writes `docs/GH-WORKFLOWS.md` atomically and prints a one-line confirmation. `--path` overrides the destination. |
+| `summary` | `[--output human\|json]` | Read-only. Relay the human output verbatim. |
+| `receipt` | `--issue N \| --pr N [--output human\|json]` | Read-only. Exactly one of `--issue` and `--pr`; supplying both or neither is a usage error. |
+| `new` | `--type T --title S [--body-file PATH] [--field Name=Value ...] [--output human\|json]` | Scaffolds the canonical body headings (or takes yours from `--body-file`), applies the `--field` assignments, and prints the creation receipt. Type and every value are validated before anything is created. |
+| `set` | `--issue N --field Name=Value ...` | At least one `--field`; repeat it per field. An invalid value is refused with the valid set and nothing reaches GitHub. A terminal `Workflow` value is refused here — that transition belongs to `close`. |
+| `close` | `--issue N --as done\|dropped` | Ordered failure-safe terminal pairing: native close reason first, then the `Workflow` value. Partial failure reports the exact divergence; rerunning converges. |
+| `reopen` | `--issue N --workflow VALUE` | Same protocol in reverse; `VALUE` must be nonterminal and is your judgment, so it is required. |
+| `check` | `--issue N [--output human\|json]` | Read-only Ready preconditions, itemized finding by finding. |
+
+Exit codes are uniform: `0` success or eligible, `1` a precondition failure or a reported divergence (and drift under `--fail-on-drift`), `2` a usage error or a refusal. Treat `1` as "the world is not as required" and `2` as "the invocation was wrong" — they call for different responses.
 
 ## Decision procedures
 

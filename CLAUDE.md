@@ -2,7 +2,7 @@
 
 **Session startup:** the repo hook injects live state; do not reread `docs/handoff/state.md`.
 
-**Purpose:** source of truth for reusable standards. Catalog 5 has seven consumer packages plus reference-only **Python Coding** and internal **Standard Bundle Authoring**.
+**Purpose:** source of truth for reusable standards. Catalog 5 has eight consumer packages plus reference-only **Python Coding** and internal **Standard Bundle Authoring**.
 
 **Markdown Tooling:** Prettier and markdownlint remain the formatting and structure authorities; see `AGENTS.md` for the gate.
 

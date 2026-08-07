@@ -49,7 +49,7 @@ Section rules:
 
 - **Scope header.** `{target}` is the repository or the scope actually queried; `{timestamp}` is when live state was read, not when the summary was written. Counts describe what the tables below contain.
 - **Needs attention.** Exactly four categories, in the order shown: Blocked, Needs definition, terminal-sync mismatches (a `Workflow` value that disagrees with the GitHub open/closed state and close reason), and passed target dates. Categories with no members are omitted; when all four are empty, keep the section and say so in one line rather than dropping it.
-- **Issues.** `Size / Severity` carries `Severity` for Bugs and `Size` for every other Type — one column, because they are never both pinned.
+- **Issues.** `Size / Severity` carries `Severity` for Bugs and `Size` for every other Type — one column, because Severity is the value that column asks for on a Bug. A Bug pins both fields (see the pinning matrix in [field-vocabulary.md](field-vocabulary.md)); the column reports `Severity` and its `Size` simply is not surfaced here.
 - **Pull requests.** `Governing issue` is the linked Issue or `—` when the PR has none; a missing link on a nontrivial PR belongs in Needs attention as well.
 - **Discovered follow-ups.** Work noticed while summarizing. Each entry states its disposition: filed as an Issue with its number, or proposed and awaiting the operator's decision. This tail is a handoff, not a list to act on unilaterally.
 
