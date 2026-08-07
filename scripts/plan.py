@@ -8,7 +8,7 @@ The helper is deliberately standard-library-only so a validated master can carry
 its own deterministic bridge into an arbitrary target repository.
 
 Commands:
-  scaffold   create a bundled Small/Standard/Full authoring draft
+  scaffold   create a bundled proportionate authoring draft
   validate   validate a draft/master and any generated execution state
   promote    atomically promote an initial validated draft
   pause      freeze an active master before material source revision
@@ -19,7 +19,7 @@ Commands:
   recover    reconstruct completed task state from durable Git checkpoints
   sync       re-project append-only task additions while preserving state
   next       print tasks ready to execute
-  state      apply one validated task/subtask transition atomically
+  state      apply one validated task transition atomically
 
 Plan format 3 is selected explicitly by ``plan_format: 3``. Older plans should
 continue to use the bridge version with which they were created or be migrated as
@@ -39,10 +39,11 @@ import stat
 import subprocess
 import sys
 import tempfile
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Any, Iterable, NoReturn, Sequence
+from typing import Any, NoReturn, cast
 
 # ---------------------------------------------------------------------------
 # Grammar and contracts
@@ -54,9 +55,7 @@ PLACEHOLDER_RE = re.compile(r"<[A-Za-z][^>\n]*>")
 TASK_HEADER_RE = re.compile(r"^#{3,6}\s+(T\d+)\s*:\s*(.+?)\s*$")
 PHASE_HEADER_RE = re.compile(r"^#{2,4}\s+Phase\s+(P\d+)\s*:\s*(.+?)\s*$")
 FIELD_RE = re.compile(r"^\s*-\s+\*\*([a-z_]+):\*\*\s*(.*?)\s*$")
-SUBTASK_RE = re.compile(
-    r"^\s*-\s+\*\*(T\d+)\.(\d+)\s+(.+?)\*\*\s*(?:—|-)\s*(.*?)\s*$"
-)
+SUBTASK_RE = re.compile(r"^\s*-\s+\*\*(T\d+)\.(\d+)\s+(.+?)\*\*\s*(?:—|-)\s*(.*?)\s*$")
 CHECK_TASK_RE = re.compile(r"^###\s+(T\d+)\s*:\s*(.+?)\s*$")
 CHECK_FIELD_RE = re.compile(r"^\s*-\s+\*\*([a-z_]+):\*\*\s+`?(.*?)`?\s*$")
 CHECK_SUB_RE = re.compile(r"^\s*-\s*\[([ xX])\]\s+\*\*(T\d+\.\d+)\s+(.+?)\*\*\s*$")
@@ -73,7 +72,7 @@ TABLE_SEPARATOR_CELL_RE = re.compile(r"^:?-{3,}:?$")
 FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})([^\n]*)$")
 MAX_RANGE_EXPANSION = 1000
 
-REQUIRED_HEADINGS = [
+ALL_HEADINGS = [
     "## 1. Objective",
     "## 2. Authority and Source Map",
     "## 3. Scope, Boundaries, and Constraints",
@@ -92,6 +91,14 @@ REQUIRED_HEADINGS = [
     "## Appendix C. Durable Evidence",
     "## Appendix D. Deferred Work",
 ]
+REQUIRED_HEADINGS = [
+    "## 1. Objective",
+    "## 3. Scope, Boundaries, and Constraints",
+    "## 6. Requirements and Acceptance",
+    "## 9. Implementation Tasks",
+    "## 12. Final Verification",
+]
+CONDITIONAL_HEADINGS = [heading for heading in ALL_HEADINGS if heading not in REQUIRED_HEADINGS]
 
 LIFECYCLES: dict[str, tuple[tuple[int, str], ...]] = {
     "behavior": (
@@ -235,7 +242,6 @@ PROOF_METHOD_KEYWORDS = {
 TIERS = {"small", "standard", "full"}
 PRIORITIES = {"Must", "Should", "Could"}
 CHECK_STATUSES = {"not-started", "in-progress", "blocked", "done", "skipped", "superseded"}
-SUBTASK_TOKENS = CHECK_STATUSES - {"superseded"}
 TERMINAL_TASK_STATUSES = {"done", "skipped"}
 
 # Closed transition matrices owned by the `state` command.  Every ordered pair
@@ -253,22 +259,14 @@ TASK_TRANSITIONS: dict[tuple[str, str], frozenset[str]] = {
     ("blocked", "in-progress"): frozenset({"clear_blocker"}),
     ("blocked", "skipped"): frozenset({"reason", "commit"}),
 }
-SUBTASK_TRANSITIONS: dict[tuple[str, str], frozenset[str]] = {
-    ("not-started", "in-progress"): frozenset(),
-    ("not-started", "blocked"): frozenset({"blocker"}),
-    ("in-progress", "done"): frozenset({"evidence"}),
-    ("in-progress", "blocked"): frozenset({"blocker"}),
-    ("in-progress", "skipped"): frozenset({"evidence"}),
-    ("blocked", "in-progress"): frozenset({"clear_blocker"}),
-}
 COMPANION_FLAGS = ("evidence", "blocker", "reason", "clear_blocker", "commit")
 COMPANION_FLAG_NAMES = {name: f"--{name.replace('_', '-')}" for name in COMPANION_FLAGS}
 
 # Durable checkpoint trailer contract.  `Plan-Id` binds a checkpoint to the plan
 # that produced it; without it a second master with an identically defined task
 # matches the first master's history, because the definition digest covers the
-# task alone.  The order is part of the contract: parsers accept this sequence
-# and reject a duplicated field.
+# task alone. The tuple is the recommended emission order; parsing treats the
+# trailers as a unique field set so hand-authored commits remain recoverable.
 CHECKPOINT_TRAILER_ORDER = (
     "id",
     "task",
@@ -555,8 +553,6 @@ def read_utf8(path: Path) -> str:
         die(f"not valid UTF-8: {path}: {exc}", 3)
 
 
-
-
 def valid_iso_date(value: str) -> bool:
     if DATE_RE.fullmatch(value) is None:
         return False
@@ -565,6 +561,7 @@ def valid_iso_date(value: str) -> bool:
     except ValueError:
         return False
     return True
+
 
 def unquote(value: str) -> str:
     value = value.strip()
@@ -742,9 +739,8 @@ def split_csv(value: str) -> list[str]:
             continue
         if char in "([{<" and quote is None and not code:
             depth += 1
-        elif char in ")]}>":
-            if quote is None and not code and depth:
-                depth -= 1
+        elif char in ")]}>" and quote is None and not code and depth:
+            depth -= 1
         if char == "," and quote is None and not code and depth == 0:
             item = strip_code(unquote("".join(buf).strip()))
             if item:
@@ -773,7 +769,9 @@ def expand_ids(raw_items: Iterable[str], problems: list[str], context: str) -> l
         token = strip_code(raw.strip())
         if not token:
             continue
-        range_match = re.fullmatch(r"([A-Z][A-Z0-9]{0,15})-(\d+)\s*(?:–|\.\.)\s*([A-Z][A-Z0-9]{0,15})-(\d+)", token)
+        range_match = re.fullmatch(
+            r"([A-Z][A-Z0-9]{0,15})-(\d+)\s*(?:\u2013|\.\.)\s*([A-Z][A-Z0-9]{0,15})-(\d+)", token
+        )
         if range_match:
             left_prefix, left_num, right_prefix, right_num = range_match.groups()
             if left_prefix != right_prefix:
@@ -863,10 +861,8 @@ def find_repo_root(start: Path) -> Path:
     identity is therefore a required input to every mutating command.
     """
 
-    current = Path(os.path.abspath(start))
-    if current.exists() and current.is_file():
-        current = current.parent
-    elif not current.exists() and current.suffix:
+    current = Path(os.path.abspath(start))  # noqa: PTH100
+    if (current.exists() and current.is_file()) or (not current.exists() and current.suffix):
         current = current.parent
     for candidate in (current, *current.parents):
         marker = candidate / ".git"
@@ -948,8 +944,6 @@ def relative_local_path(raw: str) -> Path | None:
             rest = rest.split("::", 1)[0]
             return Path(rest)
     return None
-
-
 
 
 def split_source_ref(raw: str) -> tuple[str, Path | None, str | None, str | None]:
@@ -1045,8 +1039,10 @@ def is_plan_authoring_instruction_path(path: Path) -> bool:
     parts = tuple(part.casefold() for part in path.parts)
     if "plan-authoring" not in parts:
         return False
-    return path.name.casefold() == "skill.md" or "references" in parts or (
-        "assets" in parts and "plan-template" in path.name.casefold()
+    return (
+        path.name.casefold() == "skill.md"
+        or "references" in parts
+        or ("assets" in parts and "plan-template" in path.name.casefold())
     )
 
 
@@ -1105,9 +1101,9 @@ def apply_publication_mode(temp_path: Path, target: Path, fallback: int | None =
 
     try:
         mode = stat.S_IMODE(target.lstat().st_mode)
-    except (FileNotFoundError, NotADirectoryError):
+    except FileNotFoundError, NotADirectoryError:
         mode = default_file_mode() if fallback is None else fallback
-    os.chmod(temp_path, mode)
+    os.chmod(temp_path, mode)  # noqa: PTH101
 
 
 def fsync_directory(path: Path) -> None:
@@ -1146,7 +1142,7 @@ def atomic_write_text(path: Path, text: str) -> None:
             die(f"{path}: staged write could not be fsynced; nothing was replaced: {exc}", 1)
     try:
         apply_publication_mode(temp_path, path)
-        os.replace(temp_path, path)
+        os.replace(temp_path, path)  # noqa: PTH105
         try:
             fsync_directory(path.parent)
         except OSError as exc:
@@ -1177,7 +1173,7 @@ def atomic_write_bytes(path: Path, content: bytes) -> None:
             die(f"{path}: staged write could not be fsynced; nothing was replaced: {exc}", 1)
     try:
         apply_publication_mode(temp_path, path)
-        os.replace(temp_path, path)
+        os.replace(temp_path, path)  # noqa: PTH105
         try:
             fsync_directory(path.parent)
         except OSError as exc:
@@ -1188,6 +1184,7 @@ def atomic_write_bytes(path: Path, content: bytes) -> None:
             )
     finally:
         temp_path.unlink(missing_ok=True)
+
 
 # ---------------------------------------------------------------------------
 # Parsing
@@ -1244,7 +1241,14 @@ def cell(row: Sequence[str], indexes: dict[str, int], *names: str) -> str:
 
 def parse_tables(
     body: str, problems: list[str]
-) -> tuple[list[SourceMapEntry], list[Requirement], list[Proof], list[Evidence], list[OpenQuestion], list[SummaryRow]]:
+) -> tuple[
+    list[SourceMapEntry],
+    list[Requirement],
+    list[Proof],
+    list[Evidence],
+    list[OpenQuestion],
+    list[SummaryRow],
+]:
     sources: list[SourceMapEntry] = []
     requirements: list[Requirement] = []
     proofs: list[Proof] = []
@@ -1285,7 +1289,7 @@ def parse_tables(
         } <= keys:
             for row in rows:
                 rid = strip_code(cell(row, indexes, "id"))
-                if not rid or rid.lower().startswith("req-") and "<" in rid:
+                if not rid or (rid.lower().startswith("req-") and "<" in rid):
                     continue
                 ids = expand_ids([rid], problems, f"requirements table line {line_number}")
                 if len(ids) != 1:
@@ -1366,7 +1370,15 @@ def parse_tables(
                 )
             continue
 
-        if {"id", "question", "currentassumption", "blocking", "owner", "neededby", "status"} <= keys:
+        if {
+            "id",
+            "question",
+            "currentassumption",
+            "blocking",
+            "owner",
+            "neededby",
+            "status",
+        } <= keys:
             for row in rows:
                 qid = strip_code(cell(row, indexes, "id"))
                 if not qid:
@@ -1417,7 +1429,9 @@ def parse_tables(
                             )
                         ),
                         proof=parse_proof_ids(
-                            cell(row, indexes, "primary proof"), problems, f"summary {task_id} proof"
+                            cell(row, indexes, "primary proof"),
+                            problems,
+                            f"summary {task_id} proof",
                         ),
                         parallel=cell(row, indexes, "parallel / conflict"),
                     )
@@ -1461,29 +1475,70 @@ def check_nonempty(value: str, context: str, problems: list[str]) -> None:
         problems.append(f"{context}: missing substantive value")
 
 
+def section_is_substantive(content: str) -> bool:
+    """Return whether a present section carries authored content.
+
+    Placeholder-only text is stripped with the same grammar used by the
+    repository-wide placeholder check. Markdown structure counts only when it
+    contains content, so an empty table header does not make a conditional
+    section appear complete.
+    """
+
+    cleaned = COMMENT_RE.sub("", content)
+    cleaned = PLACEHOLDER_RE.sub("", cleaned)
+    lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
+    for index, line in enumerate(lines):
+        if FENCE_RE.match(line):
+            return True
+        if line.startswith(("- ", "* ", "+ ", "> ")) and line[2:].strip():
+            return True
+        if re.match(r"^\d+[.)]\s+\S", line):
+            return True
+        if line.startswith("|"):
+            cells = split_markdown_row(line)
+            if index >= 2 and cells and not is_separator_row(cells):
+                return True
+            continue
+        if line.startswith("#"):
+            continue
+        return True
+    return False
+
+
 def check_headings(master: Master, problems: list[str]) -> None:
     body_without_comments = COMMENT_RE.sub("", master.body)
-    positions: list[int] = []
-    for heading in REQUIRED_HEADINGS:
-        matches = [m.start() for m in re.finditer(rf"(?m)^{re.escape(heading)}\s*$", body_without_comments)]
-        if len(matches) != 1:
+    positions: dict[str, int] = {}
+    for heading in ALL_HEADINGS:
+        matches = [
+            m.start() for m in re.finditer(rf"(?m)^{re.escape(heading)}\s*$", body_without_comments)
+        ]
+        if heading in REQUIRED_HEADINGS and len(matches) != 1:
             problems.append(f"heading {heading!r}: expected exactly once, found {len(matches)}")
-            positions.append(-1)
-        else:
-            positions.append(matches[0])
-    present = [position for position in positions if position >= 0]
-    if present != sorted(present):
-        problems.append("required top-level headings are out of canonical order")
+        elif heading in CONDITIONAL_HEADINGS and len(matches) > 1:
+            problems.append(f"heading {heading!r}: expected at most once, found {len(matches)}")
+        positions[heading] = matches[0] if len(matches) == 1 else -1
 
-    for index, heading in enumerate(REQUIRED_HEADINGS):
-        position = positions[index]
+    present = [
+        (ALL_HEADINGS.index(heading), position)
+        for heading, position in positions.items()
+        if position >= 0
+    ]
+    if [position for _, position in present] != sorted(position for _, position in present):
+        problems.append("top-level headings are out of canonical order")
+
+    ordered_present = sorted(present)
+    for present_index, (heading_index, position) in enumerate(ordered_present):
+        heading = ALL_HEADINGS[heading_index]
         if position < 0:
             continue
         start = body_without_comments.find("\n", position) + 1
-        end_candidates = [p for p in positions[index + 1 :] if p >= 0]
-        end = min(end_candidates) if end_candidates else len(body_without_comments)
-        content = body_without_comments[start:end].strip()
-        if not content:
+        end = (
+            ordered_present[present_index + 1][1]
+            if present_index + 1 < len(ordered_present)
+            else len(body_without_comments)
+        )
+        content = body_without_comments[start:end]
+        if not section_is_substantive(content):
             problems.append(f"{heading}: section body is empty")
 
 
@@ -1497,7 +1552,11 @@ def check_snippet_labels(body: str, problems: list[str]) -> None:
             continue
         delimiter, info = match.groups()
         if open_delimiter is not None:
-            if delimiter[0] == open_delimiter and len(delimiter) >= open_length and not info.strip():
+            if (
+                delimiter[0] == open_delimiter
+                and len(delimiter) >= open_length
+                and not info.strip()
+            ):
                 open_delimiter = None
                 open_length = 0
             continue
@@ -1537,11 +1596,19 @@ def check_table_shapes(body: str, problems: list[str]) -> None:
             delimiter, info = match.groups()
             if open_delimiter is None:
                 open_delimiter, open_length = delimiter[0], len(delimiter)
-            elif delimiter[0] == open_delimiter and len(delimiter) >= open_length and not info.strip():
+            elif (
+                delimiter[0] == open_delimiter
+                and len(delimiter) >= open_length
+                and not info.strip()
+            ):
                 open_delimiter, open_length = None, 0
             index += 1
             continue
-        if open_delimiter is not None or not line.lstrip().startswith("|") or index + 1 >= len(lines):
+        if (
+            open_delimiter is not None
+            or not line.lstrip().startswith("|")
+            or index + 1 >= len(lines)
+        ):
             index += 1
             continue
         separator_line = lines[index + 1]
@@ -1594,7 +1661,9 @@ def check_source_ref(
     if target is None:
         return
     if anchor and symbol:
-        problems.append(f"{context}: source reference may not combine #anchor and ::symbol: {ref!r}")
+        problems.append(
+            f"{context}: source reference may not combine #anchor and ::symbol: {ref!r}"
+        )
         return
     if kind in {"spec", "adr"} and exact_task_ref and not anchor:
         problems.append(f"{context}: task {kind} reference requires an exact #anchor: {ref!r}")
@@ -1640,8 +1709,12 @@ def check_source_map(master: Master, repo_root: Path, problems: list[str]) -> No
         check_nonempty(source.version, f"source {source.ref!r} version/date", problems)
         check_nonempty(source.surface, f"source {source.ref!r} affected plan surface", problems)
         check_source_ref(source.ref, repo_root, "Authority and Source Map", problems)
-        kind, path, _, _ = split_source_ref(source.ref)
-        if path is not None and source.role in {"normative", "decision"} and is_plan_authoring_instruction_path(path):
+        _kind, path, _, _ = split_source_ref(source.ref)
+        if (
+            path is not None
+            and source.role in {"normative", "decision"}
+            and is_plan_authoring_instruction_path(path)
+        ):
             problems.append(
                 f"source {source.ref!r}: plan-authoring skill/templates may orient current state but may not be project {source.role} authority"
             )
@@ -1666,7 +1739,9 @@ def source_map_covers(ref: str, sources: list[SourceMapEntry]) -> bool:
 
 def task_lists(task: Task, problems: list[str]) -> dict[str, tuple[str, ...]]:
     result: dict[str, tuple[str, ...]] = {}
-    result["depends_on"] = parse_task_ids(task.scalar("depends_on"), problems, f"{task.id} depends_on")
+    result["depends_on"] = parse_task_ids(
+        task.scalar("depends_on"), problems, f"{task.id} depends_on"
+    )
     result["requirements"] = tuple(
         expand_ids(task.items("requirements"), problems, f"{task.id} requirements")
     )
@@ -1690,7 +1765,12 @@ def task_lists(task: Task, problems: list[str]) -> dict[str, tuple[str, ...]]:
     return result
 
 
-def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[str, dict[str, tuple[str, ...]]]:
+def check_tasks(
+    master: Master,
+    repo_root: Path,
+    problems: list[str],
+    warnings: list[str] | None = None,
+) -> dict[str, dict[str, tuple[str, ...]]]:
     ids = [task.id for task in master.tasks]
     dedupe_check(ids, problems, "task headers")
     known = set(ids)
@@ -1747,7 +1827,7 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
             problems.append(f"{task.id}: invalid boundary {boundary!r}")
 
         if disposition == "active":
-            for field_name in ("requirements", "proof", "evidence"):
+            for field_name in ("requirements", "evidence"):
                 if not parsed[field_name]:
                     problems.append(f"{task.id}: {field_name} must not be empty")
             if parsed["superseded_by"]:
@@ -1763,7 +1843,9 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
                 if parsed[field_name]:
                     problems.append(f"{task.id}: superseded task {field_name} must be empty")
             if len(parsed["superseded_by"]) != 1:
-                problems.append(f"{task.id}: superseded task requires exactly one superseded_by task")
+                problems.append(
+                    f"{task.id}: superseded task requires exactly one superseded_by task"
+                )
             if parsed["supersedes"]:
                 problems.append(f"{task.id}: superseded task may not supersede another task")
             if task.subtasks:
@@ -1790,7 +1872,7 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
                 problems,
                 exact_task_ref=True,
             )
-            if not source_map_covers(source_ref, master.sources):
+            if master.sources and not source_map_covers(source_ref, master.sources):
                 problems.append(
                     f"{task.id}: source reference {source_ref!r} is not represented in the Authority and Source Map"
                 )
@@ -1801,7 +1883,9 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
         for item in file_items:
             raw_path, owner = parse_file_claim(item)
             if raw_path is None:
-                problems.append(f"{task.id}: file item must contain a code-formatted path: {item!r}")
+                problems.append(
+                    f"{task.id}: file item must contain a code-formatted path: {item!r}"
+                )
                 continue
             file_path = Path(raw_path)
             if file_path.is_absolute() or ".." in file_path.parts:
@@ -1811,11 +1895,15 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
 
         check_nonempty(task.scalar("acceptance"), f"{task.id} acceptance", problems)
         check_nonempty(task.scalar("recovery"), f"{task.id} recovery", problems)
-        if re.search(r"\b(?:works? correctly|tests? pass|handle errors?)\b", task.scalar("acceptance"), re.I):
+        if re.search(
+            r"\b(?:works? correctly|tests? pass|handle errors?)\b", task.scalar("acceptance"), re.I
+        ):
             problems.append(f"{task.id}: acceptance contains non-observable filler")
 
-        if disposition == "active" and work_type in DURABLE_WORK_TYPES and not any(
-            EVIDENCE_ID_RE.fullmatch(item) for item in parsed["evidence"]
+        if (
+            disposition == "active"
+            and work_type in DURABLE_WORK_TYPES
+            and not any(EVIDENCE_ID_RE.fullmatch(item) for item in parsed["evidence"])
         ):
             problems.append(f"{task.id}: {work_type} tasks require durable EV-### evidence")
 
@@ -1830,12 +1918,38 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
             if re.search(r"(?i)\b(?:defer(?:red)?\s+to|at)\s+T\d+\b", acceptance):
                 problems.append(f"{task.id}: acceptance may not be deferred to another task")
 
-            expected = LIFECYCLES.get(work_type)
-            actual = tuple((subtask.index, subtask.label) for subtask in task.subtasks)
-            if expected is not None and actual != expected:
+            labels = [subtask.label.casefold() for subtask in task.subtasks]
+            implementation_positions = [
+                index
+                for index, label in enumerate(labels)
+                if label in {"apply", "green", "implement", "refactor", "run", "update"}
+            ]
+            verification_positions = [
+                index
+                for index, label in enumerate(labels)
+                if "verify" in label or label in {"capture evidence", "rerun"}
+            ]
+            first_implementation = min(implementation_positions, default=-1)
+            if not implementation_positions or not any(
+                position > first_implementation for position in verification_positions
+            ):
                 problems.append(
-                    f"{task.id}: lifecycle mismatch for {work_type}; expected {list(expected)}, got {list(actual)}"
+                    f"{task.id}: lifecycle must declare implementation followed by verification"
                 )
+            if work_type in {"behavior", "brownfield-behavior"}:
+                red_positions = [index for index, label in enumerate(labels) if label == "red"]
+                verify_red_positions = [
+                    index for index, label in enumerate(labels) if label == "verify red"
+                ]
+                if (
+                    not red_positions
+                    or not verify_red_positions
+                    or min(red_positions) >= min(verify_red_positions)
+                    or min(verify_red_positions) >= first_implementation
+                ):
+                    problems.append(
+                        f"{task.id}: behavior changes require RED and correct-reason Verify RED before implementation"
+                    )
             if task.subtasks:
                 last_instruction = task.subtasks[-1].instruction.casefold()
                 if "commit" not in last_instruction and "checkpoint" not in last_instruction:
@@ -1867,14 +1981,18 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
         if disposition == "active":
             for old_id in data["supersedes"]:
                 if dispositions.get(old_id) != "superseded":
-                    problems.append(f"{task.id}: supersedes target {old_id} is not marked superseded")
+                    problems.append(
+                        f"{task.id}: supersedes target {old_id} is not marked superseded"
+                    )
                 if task.id not in parsed_lists.get(old_id, {}).get("superseded_by", ()):
                     problems.append(
                         f"{task.id}/{old_id}: supersedes and superseded_by must be reciprocal"
                     )
             for dependency in data["depends_on"]:
                 if dispositions.get(dependency) == "superseded":
-                    problems.append(f"{task.id}: active task may not depend on superseded task {dependency}")
+                    problems.append(
+                        f"{task.id}: active task may not depend on superseded task {dependency}"
+                    )
 
     # Dependency phase sanity and DAG cycle detection for executable tasks.
     for task in master.tasks:
@@ -1894,7 +2012,7 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
             return
         if task_id in visiting:
             start = chain.index(task_id) if task_id in chain else 0
-            problems.append(f"dependency cycle: {' -> '.join(chain[start:] + [task_id])}")
+            problems.append(f"dependency cycle: {' -> '.join([*chain[start:], task_id])}")
             return
         visiting.add(task_id)
         chain.append(task_id)
@@ -1922,7 +2040,9 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
         if len(path_claims) == 1:
             task_id, owner = path_claims[0]
             if owner is not None and owner != task_id:
-                problems.append(f"{task_id}: sole claim for {raw_path} may only name itself as owner")
+                problems.append(
+                    f"{task_id}: sole claim for {raw_path} may only name itself as owner"
+                )
             continue
         owners = {owner for _, owner in path_claims if owner is not None}
         if any(owner is None for _, owner in path_claims) or len(owners) != 1:
@@ -1933,7 +2053,9 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
         owner = next(iter(owners))
         contributors = {task_id for task_id, _ in path_claims}
         if owner not in contributors:
-            problems.append(f"shared artifact {raw_path}: declared owner {owner} is not a contributor")
+            problems.append(
+                f"shared artifact {raw_path}: declared owner {owner} is not a contributor"
+            )
             continue
         for contributor in contributors - {owner}:
             contributor_data = parsed_lists[contributor]
@@ -1989,6 +2111,7 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
             else:
                 produced_by[normalized] = task.id
 
+    warnings = [] if warnings is None else warnings
     for task in active_tasks:
         task_consumes = {strip_code(item).strip().casefold() for item in task.items("consumes")}
         for dependency in parsed_lists.get(task.id, {}).get("depends_on", ()):
@@ -2008,6 +2131,16 @@ def check_tasks(master: Master, repo_root: Path, problems: list[str]) -> dict[st
                     "exact contract produced by that task; use matching consumes/produces values "
                     "or prefix dependency_reason with `ordering-only:`"
                 )
+                continue
+            matched = sorted(producer_outputs & task_consumes)
+            claim_text = " ".join((*producer.items("files"), *task.items("files"))).casefold()
+            for artifact in matched:
+                tokens = [token for token in re.split(r"[^a-z0-9]+", artifact) if len(token) >= 3]
+                if tokens and not any(token in claim_text for token in tokens):
+                    warnings.append(
+                        f"{task.id}: dependency on {dependency} names artifact {artifact!r} "
+                        "without support in either task's file claims"
+                    )
 
     return parsed_lists
 
@@ -2031,9 +2164,6 @@ def check_requirements_and_proofs(
 
     if not master.requirements:
         problems.append("requirements table is missing or empty")
-    if not master.proofs:
-        problems.append("Appendix B proof table is missing or empty")
-
     for row in master.requirements:
         if row.priority not in PRIORITIES:
             problems.append(f"{row.id}: priority must be Must, Should, or Could")
@@ -2056,8 +2186,6 @@ def check_requirements_and_proofs(
                 problems.append(f"{row.id}: {row.priority} requirement has no Owner Task")
             if not row.tasks:
                 problems.append(f"{row.id}: {row.priority} requirement has no claiming task")
-            if not row.proofs:
-                problems.append(f"{row.id}: {row.priority} requirement has no proof")
 
     # Every task claim must exist in the table and mappings must be exact.
     for task_id, data in task_data.items():
@@ -2129,9 +2257,7 @@ def check_requirements_and_proofs(
         if any(keyword in method_lower for keyword in DURABLE_METHOD_KEYWORDS) and not any(
             EVIDENCE_ID_RE.fullmatch(item) for item in proof.evidence
         ):
-            problems.append(
-                f"{proof.id}: {proof.method!r} proof requires durable EV-### evidence"
-            )
+            problems.append(f"{proof.id}: {proof.method!r} proof requires durable EV-### evidence")
         for evidence_id in proof.evidence:
             if evidence_id != "ephemeral" and evidence_id not in evidence_by_id:
                 problems.append(f"{proof.id}: references undefined durable evidence {evidence_id}")
@@ -2155,7 +2281,9 @@ def check_requirements_and_proofs(
         check_nonempty(evidence.retention, f"{evidence.id} retention reason", problems)
 
 
-def check_summary(master: Master, task_data: dict[str, dict[str, tuple[str, ...]]], problems: list[str]) -> None:
+def check_summary(
+    master: Master, task_data: dict[str, dict[str, tuple[str, ...]]], problems: list[str]
+) -> None:
     summary_ids = [row.task for row in master.summary]
     dedupe_check(summary_ids, problems, "execution summary")
     task_by_id = {task.id: task for task in master.tasks}
@@ -2182,7 +2310,9 @@ def check_summary(master: Master, task_data: dict[str, dict[str, tuple[str, ...]
             problems.append(f"summary {row.task}: requirements differ from task field")
         if task.scalar("disposition") == "active":
             if not set(row.proof).issubset(set(data["proof"])) or not row.proof:
-                problems.append(f"summary {row.task}: primary proof is missing or not owned by task")
+                problems.append(
+                    f"summary {row.task}: primary proof is missing or not owned by task"
+                )
         elif row.proof:
             problems.append(f"summary {row.task}: superseded task may not claim a primary proof")
         if not row.parallel.strip():
@@ -2241,13 +2371,16 @@ def load_spec_result_ids(path: Path, problems: list[str]) -> set[str]:
 
     def walk(value: Any) -> None:
         if isinstance(value, dict):
-            for key, item in value.items():
-                if key in {"id", "requirement_id", "acceptance_id"} and isinstance(item, str):
-                    if REQ_ID_RE.fullmatch(item):
-                        ids.add(item)
+            for key, item in cast(dict[str, Any], value).items():
+                if (
+                    key in {"id", "requirement_id", "acceptance_id"}
+                    and isinstance(item, str)
+                    and REQ_ID_RE.fullmatch(item)
+                ):
+                    ids.add(item)
                 walk(item)
         elif isinstance(value, list):
-            for item in value:
+            for item in cast(list[Any], value):
                 walk(item)
 
     walk(payload)
@@ -2256,7 +2389,9 @@ def load_spec_result_ids(path: Path, problems: list[str]) -> set[str]:
     return ids
 
 
-def check_source_ids(master: Master, repo_root: Path, spec_result: Path | None, problems: list[str]) -> None:
+def check_source_ids(
+    master: Master, repo_root: Path, spec_result: Path | None, problems: list[str]
+) -> None:
     spec_ref = str(master.frontmatter.get("spec_ref", "")).strip()
     plan_requirement_ids = {row.id for row in master.requirements}
     if spec_ref:
@@ -2273,7 +2408,7 @@ def check_source_ids(master: Master, repo_root: Path, spec_result: Path | None, 
                     )
     if spec_result is not None:
         try:
-            result_relative = Path(os.path.abspath(spec_result)).relative_to(repo_root)
+            result_relative = Path(os.path.abspath(spec_result)).relative_to(repo_root)  # noqa: PTH100
         except ValueError:
             problems.append(f"spec-result must be contained beneath repository root: {spec_result}")
             result_path = None
@@ -2281,10 +2416,12 @@ def check_source_ids(master: Master, repo_root: Path, spec_result: Path | None, 
             result_path = resolve_repo_regular_file(
                 repo_root, result_relative, "spec-result", problems
             )
-        inventory = load_spec_result_ids(result_path, problems) if result_path else set()
+        inventory: set[str] = load_spec_result_ids(result_path, problems) if result_path else set()
         for requirement_id in sorted(plan_requirement_ids):
             if requirement_id.startswith(("REQ-", "AC-")) and requirement_id not in inventory:
-                problems.append(f"{requirement_id}: absent from spec-result inventory {spec_result}")
+                problems.append(
+                    f"{requirement_id}: absent from spec-result inventory {spec_result}"
+                )
 
 
 def read_checklist_files(directory: Path) -> dict[str, str]:
@@ -2342,7 +2479,9 @@ def check_checklist_files(master: Master, files: dict[str, str], problems: list[
             problems.append(f"{task_id}: invalid checklist status {task_state.status!r}")
         expected_digest = task_definition_digest(task)
         if task_state.definition_digest != expected_digest:
-            problems.append(f"{task_id}: checklist definition digest differs from master; use the approved sync/replace operation")
+            problems.append(
+                f"{task_id}: checklist definition digest differs from master; use the approved sync/replace operation"
+            )
         if task.scalar("disposition") == "superseded":
             if task_state.status != "superseded":
                 problems.append(f"{task_id}: superseded task must have checklist status superseded")
@@ -2359,7 +2498,9 @@ def check_checklist_files(master: Master, files: dict[str, str], problems: list[
                     f"{task_id}: {task_state.status} but no checkpoint commit is recorded"
                 )
             elif re.fullmatch(r"[0-9a-fA-F]{7,64}", recorded_commit) is None:
-                problems.append(f"{task_id}: checkpoint commit is not a Git object id: {recorded_commit!r}")
+                problems.append(
+                    f"{task_id}: checkpoint commit is not a Git object id: {recorded_commit!r}"
+                )
         elif recorded_commit.lower() not in {"", "none"}:
             problems.append(
                 f"{task_id}: checkpoint commit is recorded while status is {task_state.status}; "
@@ -2375,10 +2516,19 @@ def check_checklist_files(master: Master, files: dict[str, str], problems: list[
                         f"{task_id}: status {task_state.status} is invalid while dependency "
                         f"{dependency} is {dependency_state.status}; dependencies must be done or skipped"
                     )
+        # Pre-cutover projections may retain stage tokens. They remain readable
+        # for owning-task transitions, but successor writers never create or
+        # require them because lifecycle patterns are advisory execution text.
         expected_subtasks = {subtask.id: subtask for subtask in task.subtasks}
-        if set(task_state.subtasks) != set(expected_subtasks):
-            problems.append(f"{task_id}: checklist subtasks differ from master; run sync")
-        for subtask_id, expected in expected_subtasks.items():
+        unknown_subtasks = set(task_state.subtasks) - set(expected_subtasks)
+        if unknown_subtasks:
+            problems.append(
+                f"{task_id}: checklist contains unknown legacy subtasks: {sorted(unknown_subtasks)}"
+            )
+        for subtask_id, substate in task_state.subtasks.items():
+            expected = expected_subtasks.get(subtask_id)
+            if expected is None:
+                continue
             substate = task_state.subtasks.get(subtask_id)
             if substate is None:
                 continue
@@ -2391,14 +2541,6 @@ def check_checklist_files(master: Master, files: dict[str, str], problems: list[
                 "none",
             }:
                 problems.append(f"{subtask_id}: {substate.token} but evidence is empty")
-        if task_state.status == "done":
-            incomplete = [
-                subtask_id
-                for subtask_id, substate in task_state.subtasks.items()
-                if substate.token not in {"done", "skipped"}
-            ]
-            if incomplete:
-                problems.append(f"{task_id}: done but subtasks incomplete: {', '.join(incomplete)}")
 
 
 def validate_master(
@@ -2407,6 +2549,7 @@ def validate_master(
     draft: bool = False,
     spec_result: Path | None = None,
     include_scratch: bool = True,
+    warnings: list[str] | None = None,
 ) -> list[str]:
     problems: list[str] = list(master.frontmatter.get("__parse_problems__", []))
     fm = master.frontmatter
@@ -2416,7 +2559,6 @@ def validate_master(
         "plan_format",
         "title",
         "slug",
-        "size",
         "status",
         "revision",
         "revises_revision",
@@ -2431,14 +2573,18 @@ def validate_master(
     for key in sorted(required_frontmatter - set(fm)):
         problems.append(f"frontmatter missing key {key}")
     if str(fm.get("plan_format", "")) != "3":
-        problems.append("frontmatter plan_format must be 3; legacy plans require their original bridge")
-    if str(fm.get("size", "")) not in TIERS:
+        problems.append(
+            "frontmatter plan_format must be 3; legacy plans require their original bridge"
+        )
+    if "size" in fm and str(fm.get("size", "")) not in TIERS:
         problems.append(f"frontmatter size must be one of {sorted(TIERS)}")
     status = str(fm.get("status", ""))
     if status not in PLAN_STATUSES:
         problems.append(f"frontmatter status must be one of {sorted(PLAN_STATUSES)}")
     if status == "draft" and not draft:
-        problems.append("frontmatter status is draft; use --draft while authoring or promote before execution")
+        problems.append(
+            "frontmatter status is draft; use --draft while authoring or promote before execution"
+        )
     try:
         revision = int(str(fm.get("revision", "")))
         revises_revision = int(str(fm.get("revises_revision", "")))
@@ -2450,13 +2596,17 @@ def validate_master(
     if revision == 1 and revises_revision != 0:
         problems.append("initial revision 1 must set revises_revision: 0")
     if revision > 1 and revises_revision != revision - 1:
-        problems.append("a revision must set revises_revision to the immediately preceding revision")
+        problems.append(
+            "a revision must set revises_revision to the immediately preceding revision"
+        )
     check_nonempty(str(fm.get("revision_reason", "")), "frontmatter revision_reason", problems)
     pause_reason = str(fm.get("pause_reason", "")).strip()
     if status == "paused-for-revision":
         check_nonempty(pause_reason, "frontmatter pause_reason", problems)
     elif pause_reason:
-        problems.append("frontmatter pause_reason must be empty unless status is paused-for-revision")
+        problems.append(
+            "frontmatter pause_reason must be empty unless status is paused-for-revision"
+        )
     slug = str(fm.get("slug", ""))
     if not SLUG_RE.fullmatch(slug):
         problems.append(f"frontmatter slug is invalid: {slug!r}")
@@ -2492,10 +2642,12 @@ def validate_master(
     check_headings(master, problems)
     check_snippet_labels(master.body, problems)
     check_table_shapes(master.body, problems)
-    check_source_map(master, repo_root, problems)
-    task_data = check_tasks(master, repo_root, problems)
+    if master.sources or "## 2. Authority and Source Map" in master.body:
+        check_source_map(master, repo_root, problems)
+    task_data = check_tasks(master, repo_root, problems, warnings)
     check_requirements_and_proofs(master, task_data, problems)
-    check_summary(master, task_data, problems)
+    if master.summary or "## 8. Execution Summary" in master.body:
+        check_summary(master, task_data, problems)
     check_open_questions(master, draft, problems)
     check_source_ids(master, repo_root, spec_result, problems)
     if include_scratch:
@@ -2520,11 +2672,12 @@ def parse_checklist(
     for line_number, line in enumerate(lines, 1):
         task_match = CHECK_TASK_RE.match(line)
         if task_match:
-            current_task_id, title = task_match.groups()
+            task_id, title = task_match.groups()
+            current_task_id = task_id
             current_task = ChecklistTaskState(title=title)
-            if current_task_id in state:
-                problems.append(f"{source or 'checklist'}:{line_number}: duplicate {current_task_id}")
-            state[current_task_id] = current_task
+            if task_id in state:
+                problems.append(f"{source or 'checklist'}:{line_number}: duplicate {task_id}")
+            state[task_id] = current_task
             current_sub_id = None
             continue
         if current_task is None or current_task_id is None:
@@ -2582,14 +2735,12 @@ def checklist_revision(text: str) -> str:
 def checkpoint_fields(message: str) -> dict[str, str] | None:
     """Parse `Plan-*` trailers, or return None when the message is malformed.
 
-    Malformed means a duplicated field or a recognized field out of the
-    contract's order.  Both are returned as ``None`` rather than as a partial
-    dictionary so a caller can never credit half of an ambiguous checkpoint;
-    ``{}`` means the commit carries no checkpoint trailers at all.
+    Malformed means a duplicated field. It is returned as ``None`` rather than
+    as a partial dictionary so a caller can never credit half of an ambiguous
+    checkpoint; ``{}`` means the commit carries no checkpoint trailers at all.
     """
 
     fields: dict[str, str] = {}
-    positions: list[int] = []
     for line in message.splitlines():
         match = re.fullmatch(r"Plan-([A-Za-z-]+):[ \t]*(.*)", line)
         if match is None:
@@ -2598,10 +2749,6 @@ def checkpoint_fields(message: str) -> dict[str, str] | None:
         if key in fields:
             return None
         fields[key] = match.group(2).strip()
-        if key in CHECKPOINT_TRAILER_ORDER:
-            positions.append(CHECKPOINT_TRAILER_ORDER.index(key))
-    if positions != sorted(positions):
-        return None
     return fields
 
 
@@ -2739,7 +2886,7 @@ def git_checkpoint_scan(master: Master) -> CheckpointScan:
                 DeclinedCheckpoint(
                     commit=commit,
                     task_id="unknown",
-                    reason="duplicated or out-of-order Plan-* trailers",
+                    reason="duplicated Plan-* trailers",
                 )
             )
             continue
@@ -2800,7 +2947,9 @@ def report_declined(declined: Sequence[DeclinedCheckpoint], stream: Any = None) 
         print(f"  - {candidate.commit} [{candidate.task_id}] {candidate.reason}", file=stream)
 
 
-def recovery_state(master: Master, records: dict[str, RecoveryRecord]) -> dict[str, ChecklistTaskState]:
+def recovery_state(
+    master: Master, records: dict[str, RecoveryRecord]
+) -> dict[str, ChecklistTaskState]:
     state: dict[str, ChecklistTaskState] = {}
     tasks = {task.id: task for task in master.tasks}
     for task_id, record in records.items():
@@ -2824,7 +2973,9 @@ def recovery_state(master: Master, records: dict[str, RecoveryRecord]) -> dict[s
     return state
 
 
-def render_checklist(master: Master, tasks: Sequence[Task], prior: dict[str, ChecklistTaskState]) -> str:
+def render_checklist(
+    master: Master, tasks: Sequence[Task], prior: dict[str, ChecklistTaskState]
+) -> str:
     title = str(master.frontmatter.get("title", master.path.stem))
     revision = str(master.frontmatter.get("revision", "1"))
     lines = [
@@ -2834,7 +2985,7 @@ def render_checklist(master: Master, tasks: Sequence[Task], prior: dict[str, Che
         "",
         f"- **revision:** `{revision}`",
         "",
-        f"> Generated from `{master.path.as_posix()}` revision {revision}. Apply every status, blocker, token, evidence, and commit change with `plan.py state`; direct editing is not a sanctioned mutation path.",
+        f"> Generated from `{master.path.as_posix()}` revision {revision}. Apply every task status, blocker, evidence, and commit change with `plan.py state`; direct editing is not a sanctioned mutation path.",
         "> Structural changes belong in the master followed by `plan.py sync`; material source changes use the pause/revise/replace protocol.",
         "",
     ]
@@ -2872,21 +3023,8 @@ def render_checklist(master: Master, tasks: Sequence[Task], prior: dict[str, Che
                 f"- **requirements:** [{', '.join(task.items('requirements'))}]",
                 f"- **proof:** [{', '.join(task.items('proof'))}]",
                 f"- **evidence:** [{', '.join(task.items('evidence'))}]",
-                "",
-                "#### Sub-tasks",
-                "",
             ]
         )
-        for subtask in task.subtasks:
-            substate = old.subtasks.get(subtask.id, ChecklistSubstate(label=subtask.label))
-            checked = "x" if substate.token == "done" else " "
-            lines.extend(
-                [
-                    f"- [{checked}] **{subtask.id} {subtask.label}**",
-                    f"  - **token:** `{substate.token}`",
-                    f"  - **ev:** `{substate.evidence}`",
-                ]
-            )
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
@@ -2924,7 +3062,16 @@ def scratch_is_ignored(repo_root: Path) -> bool | None:
     # the index -- an unrelated historical mistake that says nothing about
     # whether newly generated state will be ignored.
     probe = subprocess.run(
-        ["git", "-C", str(repo_root), "check-ignore", "-q", "--no-index", "--", ".project-pipeline/"],
+        [
+            "git",
+            "-C",
+            str(repo_root),
+            "check-ignore",
+            "-q",
+            "--no-index",
+            "--",
+            ".project-pipeline/",
+        ],
         check=False,
         capture_output=True,
         text=True,
@@ -2954,9 +3101,7 @@ def require_gitignore_coverage(repo_root: Path) -> None:
     if ignored:
         return
     detail = (
-        "it is not ignored"
-        if ignored is False
-        else "actual ignore behavior could not be verified"
+        "it is not ignored" if ignored is False else "actual ignore behavior could not be verified"
     )
     die(
         f"{repo_root / '.project-pipeline'} must be ignored before generated state is written; "
@@ -2969,7 +3114,7 @@ def require_gitignore_coverage(repo_root: Path) -> None:
 
 
 def contained_destination(repo_root: Path, destination: Path, context: str) -> Path:
-    rendered = Path(os.path.abspath(destination))
+    rendered = Path(os.path.abspath(destination))  # noqa: PTH100
     try:
         relative = rendered.relative_to(repo_root)
     except ValueError:
@@ -2998,11 +3143,6 @@ def checklist_layout(master: Master) -> dict[str, list[Task]]:
     projection.  One function, two callers, no drift.
     """
 
-    if str(master.frontmatter.get("size")) == "full":
-        by_phase: dict[str, list[Task]] = {}
-        for task in master.tasks:
-            by_phase.setdefault(task.phase, []).append(task)
-        return {f"{phase.lower()}.md": tasks for phase, tasks in by_phase.items()}
     return {"checklist.md": list(master.tasks)}
 
 
@@ -3020,7 +3160,9 @@ def project(master: Master, directory: Path, prior: dict[str, ChecklistTaskState
 # ---------------------------------------------------------------------------
 
 
-def print_validation(problems: list[str], master: Master, as_json: bool) -> None:
+def print_validation(
+    problems: list[str], master: Master, as_json: bool, warnings: Sequence[str] = ()
+) -> None:
     payload = {
         "ok": not problems,
         "plan": master.path.as_posix(),
@@ -3031,6 +3173,7 @@ def print_validation(problems: list[str], master: Master, as_json: bool) -> None
         "proofs": len(master.proofs),
         "evidence": len(master.evidence),
         "problems": problems,
+        "warnings": list(warnings),
     }
     if as_json:
         print(json.dumps(payload, indent=2, sort_keys=True))
@@ -3045,17 +3188,21 @@ def print_validation(problems: list[str], master: Master, as_json: bool) -> None
             f"{len(master.tasks)} tasks, {len(master.requirements)} requirements, "
             f"{len(master.proofs)} proofs, {len(master.evidence)} durable evidence records)"
         )
+        for warning in warnings:
+            print(f"  warning: {warning}")
 
 
 def cmd_validate(args: argparse.Namespace) -> None:
     master = parse_master(args.master)
+    warnings: list[str] = []
     problems = validate_master(
         master,
         draft=args.draft,
         spec_result=args.spec_result,
         include_scratch=not args.no_scratch,
+        warnings=warnings,
     )
-    print_validation(problems, master, args.json)
+    print_validation(problems, master, args.json, warnings)
     if problems:
         raise SystemExit(1)
 
@@ -3065,7 +3212,7 @@ def cmd_scaffold(args: argparse.Namespace) -> None:
     if output.exists():
         die(f"refusing to overwrite existing scaffold: {output}", 1)
     script_root = Path(__file__).resolve().parent.parent
-    template = script_root / "assets" / f"{args.profile}-plan-template.md"
+    template = script_root / "assets" / "plan-template.md"
     if not template.exists():
         die(f"bundled template unavailable: {template}", 3)
     text = read_utf8(template)
@@ -3100,11 +3247,11 @@ def cmd_scaffold(args: argparse.Namespace) -> None:
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(text, encoding="utf-8")
-    print(f"scaffold: {output} ({args.profile})")
+    print(f"scaffold: {output}")
 
 
 def cmd_promote(args: argparse.Namespace) -> None:
-    source = Path(os.path.abspath(args.draft))
+    source = Path(os.path.abspath(args.draft))  # noqa: PTH100
     repo_root = find_repo_root(source)
     destination = contained_destination(repo_root, args.destination, "durable plan destination")
     if destination.exists() or destination.is_symlink():
@@ -3150,7 +3297,7 @@ def cmd_promote(args: argparse.Namespace) -> None:
     destination_installed = False
     try:
         atomic_write_text(stage, text)
-        os.chmod(stage, draft_mode)
+        os.chmod(stage, draft_mode)  # noqa: PTH101
         candidate = parse_master(stage)
         problems = validate_master(
             candidate, draft=False, spec_result=args.spec_result, include_scratch=False
@@ -3164,9 +3311,9 @@ def cmd_promote(args: argparse.Namespace) -> None:
         # repository-owned, so a missing rule stops promotion instead of being
         # written behind the operator's back.
         require_gitignore_coverage(repo_root)
-        os.replace(source, source_backup)
+        os.replace(source, source_backup)  # noqa: PTH105
         source_moved = True
-        os.replace(stage, destination)
+        os.replace(stage, destination)  # noqa: PTH105
         destination_installed = True
 
         durable = parse_master(destination)
@@ -3185,13 +3332,12 @@ def cmd_promote(args: argparse.Namespace) -> None:
         if destination_installed:
             destination.unlink(missing_ok=True)
         if source_moved and source_backup.exists():
-            os.replace(source_backup, source)
+            os.replace(source_backup, source)  # noqa: PTH105
         raise
     finally:
         stage.unlink(missing_ok=True)
         if not source.exists() and source_backup.exists() and not destination.exists():
-            os.replace(source_backup, source)
-
+            os.replace(source_backup, source)  # noqa: PTH105
 
 
 def replace_frontmatter_scalar(text: str, key: str, value: str) -> str:
@@ -3216,9 +3362,7 @@ def snapshot_checklist_files(directory: Path) -> dict[str, bytes]:
     if not directory.exists():
         return {}
     return {
-        path.name: path.read_bytes()
-        for path in directory.glob("*.md")
-        if path.name != "notes.md"
+        path.name: path.read_bytes() for path in directory.glob("*.md") if path.name != "notes.md"
     }
 
 
@@ -3237,7 +3381,9 @@ def cmd_pause(args: argparse.Namespace) -> None:
     master = parse_master(args.master)
     if str(master.frontmatter.get("status", "")) != "active":
         die("pause requires frontmatter status: active", 1)
-    problems = validate_master(master, draft=False, spec_result=args.spec_result, include_scratch=True)
+    problems = validate_master(
+        master, draft=False, spec_result=args.spec_result, include_scratch=True
+    )
     if problems:
         print_validation(problems, master, False)
         raise SystemExit(1)
@@ -3250,7 +3396,9 @@ def cmd_pause(args: argparse.Namespace) -> None:
     atomic_write_text(master.path, changed)
     try:
         paused = parse_master(master.path)
-        after = validate_master(paused, draft=False, spec_result=args.spec_result, include_scratch=True)
+        after = validate_master(
+            paused, draft=False, spec_result=args.spec_result, include_scratch=True
+        )
         if after:
             print_validation(after, paused, False)
             die("pause validation failed; original master restored", 1)
@@ -3266,7 +3414,9 @@ def cmd_revise(args: argparse.Namespace) -> None:
         die("revise requires a paused-for-revision master", 1)
     if args.output.exists():
         die(f"refusing to overwrite revision draft: {args.output}", 1)
-    problems = validate_master(master, draft=False, spec_result=args.spec_result, include_scratch=True)
+    problems = validate_master(
+        master, draft=False, spec_result=args.spec_result, include_scratch=True
+    )
     if problems:
         print_validation(problems, master, False)
         raise SystemExit(1)
@@ -3291,7 +3441,9 @@ def cmd_revise(args: argparse.Namespace) -> None:
     except BaseException:
         args.output.unlink(missing_ok=True)
         raise
-    print(f"revise: {master.path} revision {old_revision} -> {args.output} revision {old_revision + 1}")
+    print(
+        f"revise: {master.path} revision {old_revision} -> {args.output} revision {old_revision + 1}"
+    )
 
 
 def check_revision_history(
@@ -3319,9 +3471,7 @@ def check_revision_history(
     max_old = max((int(task_id[1:]) for task_id in old_tasks), default=0)
     for task_id in sorted(set(new_tasks) - set(old_tasks)):
         if int(task_id[1:]) <= max_old:
-            problems.append(
-                f"revision task {task_id} must append after prior maximum T{max_old}"
-            )
+            problems.append(f"revision task {task_id} must append after prior maximum T{max_old}")
 
     for task_id, old_task in old_tasks.items():
         new_task = new_tasks.get(task_id)
@@ -3340,9 +3490,11 @@ def check_revision_history(
                 problems.append(
                     f"{task_id}: acceptance target changed without supersession; preserve it or append a replacement task"
                 )
-        elif new_task.scalar("disposition") == "superseded":
-            if status not in {"not-started", "blocked"}:
-                problems.append(f"{task_id}: only not-started or blocked work may be superseded")
+        elif new_task.scalar("disposition") == "superseded" and status not in {
+            "not-started",
+            "blocked",
+        }:
+            problems.append(f"{task_id}: only not-started or blocked work may be superseded")
 
 
 def cmd_replace(args: argparse.Namespace) -> None:
@@ -3355,7 +3507,9 @@ def cmd_replace(args: argparse.Namespace) -> None:
     draft = parse_master(args.draft)
     if str(draft.frontmatter.get("status", "")) != "draft":
         die("replacement source must have status: draft", 1)
-    old_problems = validate_master(old, draft=False, spec_result=args.spec_result, include_scratch=True)
+    old_problems = validate_master(
+        old, draft=False, spec_result=args.spec_result, include_scratch=True
+    )
     if old_problems:
         print_validation(old_problems, old, False)
         raise SystemExit(1)
@@ -3366,7 +3520,12 @@ def cmd_replace(args: argparse.Namespace) -> None:
     text = replace_frontmatter_scalar(text, "pause_reason", "''")
     text = replace_frontmatter_scalar(text, "updated", args.date or date.today().isoformat())
     with tempfile.NamedTemporaryFile(
-        mode="w", encoding="utf-8", prefix=".plan-replace-", suffix=".md", dir=args.draft.parent, delete=False
+        mode="w",
+        encoding="utf-8",
+        prefix=".plan-replace-",
+        suffix=".md",
+        dir=args.draft.parent,
+        delete=False,
     ) as handle:
         candidate_path = Path(handle.name)
         handle.write(text)
@@ -3413,7 +3572,9 @@ def cmd_resume(args: argparse.Namespace) -> None:
     master = parse_master(args.master)
     if str(master.frontmatter.get("status", "")) != "paused-for-revision":
         die("resume requires frontmatter status: paused-for-revision", 1)
-    problems = validate_master(master, draft=False, spec_result=args.spec_result, include_scratch=True)
+    problems = validate_master(
+        master, draft=False, spec_result=args.spec_result, include_scratch=True
+    )
     if problems:
         print_validation(problems, master, False)
         raise SystemExit(1)
@@ -3425,7 +3586,9 @@ def cmd_resume(args: argparse.Namespace) -> None:
     atomic_write_text(master.path, changed)
     try:
         resumed = parse_master(master.path)
-        after = validate_master(resumed, draft=False, spec_result=args.spec_result, include_scratch=True)
+        after = validate_master(
+            resumed, draft=False, spec_result=args.spec_result, include_scratch=True
+        )
         if after:
             print_validation(after, resumed, False)
             die("resume validation failed; paused master restored", 1)
@@ -3581,10 +3744,16 @@ def cmd_sync(args: argparse.Namespace) -> None:
     max_old = max(old_numbers, default=0)
     for task_id, old_state in prior.items():
         if old_state.definition_digest in {"", "none"}:
-            die(f"{task_id}: existing checklist lacks a definition digest; regenerate only through a reviewed migration", 1)
+            die(
+                f"{task_id}: existing checklist lacks a definition digest; regenerate only through a reviewed migration",
+                1,
+            )
         current_digest = task_definition_digest(by_id[task_id])
         if old_state.definition_digest != current_digest:
-            die(f"{task_id}: ordinary sync detected a changed task definition; use pause/revise/replace", 1)
+            die(
+                f"{task_id}: ordinary sync detected a changed task definition; use pause/revise/replace",
+                1,
+            )
     for task_id in set(by_id) - set(prior):
         if int(task_id[1:]) <= max_old:
             die(f"new task {task_id} must append after existing IDs; max existing is T{max_old}", 1)
@@ -3607,7 +3776,9 @@ def cmd_sync(args: argparse.Namespace) -> None:
 
 def cmd_next(args: argparse.Namespace) -> None:
     master = parse_master(args.master)
-    problems = validate_master(master, draft=False, spec_result=args.spec_result, include_scratch=True)
+    problems = validate_master(
+        master, draft=False, spec_result=args.spec_result, include_scratch=True
+    )
     if str(master.frontmatter.get("status", "")) != "active":
         problems.append("ready-work queries require frontmatter status: active")
     if problems:
@@ -3618,15 +3789,17 @@ def cmd_next(args: argparse.Namespace) -> None:
         die(f"execution state does not exist: {directory}; use generate", 1)
     state = read_existing_state(directory)
     terminal = {
-        task_id
-        for task_id, task_state in state.items()
-        if task_state.status in {"done", "skipped"}
+        task_id for task_id, task_state in state.items() if task_state.status in {"done", "skipped"}
     }
     ready: list[Task] = []
     blocked: list[Task] = []
     for task in master.tasks:
         task_state = state[task.id]
-        if task.scalar("disposition") == "superseded" or task_state.status in {"done", "skipped", "superseded"}:
+        if task.scalar("disposition") == "superseded" or task_state.status in {
+            "done",
+            "skipped",
+            "superseded",
+        }:
             continue
         if task_state.status == "blocked":
             blocked.append(task)
@@ -3710,7 +3883,15 @@ def resolve_checkpoint_commit(master: Master, task: Task, revision_spec: str, st
 
     repo_root = find_repo_root(master.path)
     resolved = subprocess.run(
-        ["git", "-C", str(repo_root), "rev-parse", "--verify", "--quiet", f"{revision_spec}^{{commit}}"],
+        [
+            "git",
+            "-C",
+            str(repo_root),
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            f"{revision_spec}^{{commit}}",
+        ],
         check=False,
         capture_output=True,
         text=True,
@@ -3732,7 +3913,7 @@ def resolve_checkpoint_commit(master: Master, task: Task, revision_spec: str, st
         die(f"cannot read checkpoint commit {commit}: {message.stderr.strip()}", 3)
     fields = checkpoint_fields(message.stdout)
     if fields is None:
-        die(f"{commit}: checkpoint carries duplicated or out-of-order Plan-* trailers", 1)
+        die(f"{commit}: checkpoint carries duplicated Plan-* trailers", 1)
     if not fields:
         die(f"{commit}: commit carries no Plan-* checkpoint trailers", 1)
 
@@ -3759,9 +3940,13 @@ def resolve_checkpoint_commit(master: Master, task: Task, revision_spec: str, st
 
 def cmd_state(args: argparse.Namespace) -> None:
     target = str(args.target).strip()
-    subtask_match = re.fullmatch(r"(T\d+)\.(\d+)", target)
-    if TASK_ID_RE.fullmatch(target) is None and subtask_match is None:
-        die(f"target must be T<n> or T<n>.<m>: {target!r}", 2)
+    if re.fullmatch(r"T\d+\.\d+", target) is not None:
+        die(
+            f"state requires a task target T<n>; advisory subtask targets are not mutable: {target!r}",
+            2,
+        )
+    if TASK_ID_RE.fullmatch(target) is None:
+        die(f"state requires a task target T<n>: {target!r}", 2)
     status = str(args.status)
     if status == "superseded":
         die(
@@ -3769,8 +3954,6 @@ def cmd_state(args: argparse.Namespace) -> None:
             "neither set nor clear it",
             2,
         )
-    if subtask_match is not None and status not in SUBTASK_TOKENS:
-        die(f"subtask token must be one of {sorted(SUBTASK_TOKENS)}", 2)
 
     master = parse_master(args.master)
     plan_status = str(master.frontmatter.get("status", ""))
@@ -3790,19 +3973,21 @@ def cmd_state(args: argparse.Namespace) -> None:
         die(f"no checklist files exist under {directory}; use generate or recover", 3)
 
     state: dict[str, ChecklistTaskState] = {}
+    task_ids_by_file: dict[str, set[str]] = {}
     parse_problems: list[str] = []
     for name in sorted(files):
         parsed = parse_checklist(files[name], parse_problems, Path(name))
         overlap = set(state) & set(parsed)
         if overlap:
             die(f"execution state duplicates {sorted(overlap)} across checklist files", 1)
+        task_ids_by_file[name] = set(parsed)
         state.update(parsed)
     if parse_problems:
         for problem in parse_problems:
             print(f"  - {problem}", file=sys.stderr)
         die("cannot parse existing checklist state", 1)
 
-    task_id = target.split(".", 1)[0]
+    task_id = target
     tasks_by_id = {task.id: task for task in master.tasks}
     task = tasks_by_id.get(task_id)
     if task is None:
@@ -3811,10 +3996,12 @@ def cmd_state(args: argparse.Namespace) -> None:
     if task_state is None:
         die(f"{task_id} is absent from generated execution state; run sync", 1)
 
-    layout = checklist_layout(master)
-    owning = next((name for name, tasks in layout.items() if any(item.id == task_id for item in tasks)), None)
-    if owning is None or owning not in files:
+    owning = next((name for name, ids in task_ids_by_file.items() if task_id in ids), None)
+    if owning is None:
         die(f"the checklist file projecting {task_id} is missing from {directory}; run sync", 3)
+    owning_tasks = [
+        candidate for candidate in master.tasks if candidate.id in task_ids_by_file[owning]
+    ]
 
     expected_revision = str(master.frontmatter.get("revision", "")).strip()
     found_revision = checklist_revision(files[owning])
@@ -3834,72 +4021,46 @@ def cmd_state(args: argparse.Namespace) -> None:
         )
 
     supplied = supplied_companions(args)
-    if subtask_match is None:
-        current = task_state.status
-        if current not in CHECK_STATUSES:
-            die(f"{task_id}: unrecognized current status {current!r}", 1)
-        key = (current, status)
-        if key not in TASK_TRANSITIONS:
-            die(f"{task_id}: transition {current} -> {status} is not permitted", 1)
-        require_companions(f"{task_id}: {current} -> {status}", TASK_TRANSITIONS[key], supplied)
-        # Substantiveness is checked before any Git work, so a request that is
-        # malformed as a request fails as a usage error rather than as a
-        # checkpoint rejection.
-        blocker_value = substantive(str(args.blocker), "--blocker") if "blocker" in supplied else ""
-        reason_value = substantive(str(args.reason), "--reason") if "reason" in supplied else ""
-        if status in {"in-progress", "done", "skipped"}:
-            for dependency in task.items("depends_on"):
-                dependency_state = state.get(dependency)
-                observed = dependency_state.status if dependency_state else "absent"
-                if observed not in TERMINAL_TASK_STATUSES:
-                    die(
-                        f"{task_id}: {status} is invalid while dependency {dependency} is "
-                        f"{observed}; dependencies must be done or skipped",
-                        1,
-                    )
-        if status in TERMINAL_TASK_STATUSES:
-            task_state.commit = resolve_checkpoint_commit(master, task, str(args.commit), status)
-        if blocker_value:
-            task_state.blocker = blocker_value
-        if reason_value:
-            # A skip records its authority in the same field a blocker uses;
-            # that is where `validate` and `recover` both look for it.
-            task_state.blocker = reason_value
-        if "clear_blocker" in supplied:
-            task_state.blocker = "none"
-        task_state.status = status
-        detail = f"{task_id}: {current} -> {status}"
-    else:
-        substate = task_state.subtasks.get(target)
-        if substate is None:
-            die(f"{target} is absent from generated execution state; run sync", 1)
-        if task_state.status != "in-progress":
-            die(
-                f"{target}: subtask transitions require {task_id} to be in-progress; it is "
-                f"{task_state.status}",
-                1,
-            )
-        current = substate.token
-        if current not in SUBTASK_TOKENS:
-            die(f"{target}: unrecognized current token {current!r}", 1)
-        key = (current, status)
-        if key not in SUBTASK_TRANSITIONS:
-            die(f"{target}: token transition {current} -> {status} is not permitted", 1)
-        require_companions(f"{target}: {current} -> {status}", SUBTASK_TRANSITIONS[key], supplied)
-        if "evidence" in supplied:
-            substate.evidence = substantive(str(args.evidence), "--evidence")
-        if "blocker" in supplied:
-            task_state.blocker = substantive(str(args.blocker), "--blocker")
-        if "clear_blocker" in supplied:
-            task_state.blocker = "none"
-        substate.token = status
-        detail = f"{target}: {current} -> {status}"
+    current = task_state.status
+    if current not in CHECK_STATUSES:
+        die(f"{task_id}: unrecognized current status {current!r}", 1)
+    key = (current, status)
+    if key not in TASK_TRANSITIONS:
+        die(f"{task_id}: transition {current} -> {status} is not permitted", 1)
+    require_companions(f"{task_id}: {current} -> {status}", TASK_TRANSITIONS[key], supplied)
+    # Substantiveness is checked before any Git work, so a request that is
+    # malformed as a request fails as a usage error rather than as a
+    # checkpoint rejection.
+    blocker_value = substantive(str(args.blocker), "--blocker") if "blocker" in supplied else ""
+    reason_value = substantive(str(args.reason), "--reason") if "reason" in supplied else ""
+    if status in {"in-progress", "done", "skipped"}:
+        for dependency in task.items("depends_on"):
+            dependency_state = state.get(dependency)
+            observed = dependency_state.status if dependency_state else "absent"
+            if observed not in TERMINAL_TASK_STATUSES:
+                die(
+                    f"{task_id}: {status} is invalid while dependency {dependency} is "
+                    f"{observed}; dependencies must be done or skipped",
+                    1,
+                )
+    if status in TERMINAL_TASK_STATUSES:
+        task_state.commit = resolve_checkpoint_commit(master, task, str(args.commit), status)
+    if blocker_value:
+        task_state.blocker = blocker_value
+    if reason_value:
+        # A skip records its authority in the same field a blocker uses;
+        # that is where `validate` and `recover` both look for it.
+        task_state.blocker = reason_value
+    if "clear_blocker" in supplied:
+        task_state.blocker = "none"
+    task_state.status = status
+    detail = f"{task_id}: {current} -> {status}"
 
     # Render the complete file, validate the result, and only then replace it.
     # Validating the rendered text rather than the written file is what makes a
     # rejected transition a no-op: nothing has touched the destination yet.
     rendered = dict(files)
-    rendered[owning] = render_checklist(master, layout[owning], state)
+    rendered[owning] = render_checklist(master, owning_tasks, state)
     problems: list[str] = []
     check_checklist_files(master, rendered, problems)
     if problems:
@@ -3916,39 +4077,48 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     scaffold = subparsers.add_parser("scaffold", help="create a bundled plan draft")
-    scaffold.add_argument("--profile", choices=sorted(TIERS), default="standard")
     scaffold.add_argument("--output", type=Path, required=True)
     scaffold.add_argument("--title", required=True)
     scaffold.add_argument("--slug", required=True)
     scaffold.add_argument("--owner", required=True)
     scaffold.add_argument("--source", default="request", help="primary source label/path")
-    scaffold.add_argument("--spec-ref", default="", help="optional repository-relative specification path")
+    scaffold.add_argument(
+        "--spec-ref", default="", help="optional repository-relative specification path"
+    )
     scaffold.add_argument("--date", help="YYYY-MM-DD; defaults to today")
     scaffold.set_defaults(func=cmd_scaffold)
 
     validate = subparsers.add_parser("validate", help="validate draft/master and generated state")
     validate.add_argument("master", type=Path)
-    validate.add_argument("--draft", action="store_true", help="allow unresolved blocking questions")
+    validate.add_argument(
+        "--draft", action="store_true", help="allow unresolved blocking questions"
+    )
     validate.add_argument("--no-scratch", action="store_true", help="skip generated-state checks")
     validate.add_argument("--spec-result", type=Path)
     validate.add_argument("--json", action="store_true")
     validate.set_defaults(func=cmd_validate)
 
-    promote = subparsers.add_parser("promote", help="promote a validated draft to an active durable master")
+    promote = subparsers.add_parser(
+        "promote", help="promote a validated draft to an active durable master"
+    )
     promote.add_argument("draft", type=Path)
     promote.add_argument("destination", type=Path)
     promote.add_argument("--date", help="YYYY-MM-DD; defaults to today")
     promote.add_argument("--spec-result", type=Path)
     promote.set_defaults(func=cmd_promote)
 
-    pause = subparsers.add_parser("pause", help="freeze an active master before material source revision")
+    pause = subparsers.add_parser(
+        "pause", help="freeze an active master before material source revision"
+    )
     pause.add_argument("master", type=Path)
     pause.add_argument("--reason", required=True)
     pause.add_argument("--date", help="YYYY-MM-DD; defaults to today")
     pause.add_argument("--spec-result", type=Path)
     pause.set_defaults(func=cmd_pause)
 
-    revise = subparsers.add_parser("revise", help="create the next revision draft from a paused master")
+    revise = subparsers.add_parser(
+        "revise", help="create the next revision draft from a paused master"
+    )
     revise.add_argument("master", type=Path)
     revise.add_argument("output", type=Path)
     revise.add_argument("--reason", required=True)
@@ -3956,14 +4126,18 @@ def build_parser() -> argparse.ArgumentParser:
     revise.add_argument("--spec-result", type=Path)
     revise.set_defaults(func=cmd_revise)
 
-    replace = subparsers.add_parser("replace", help="activate a validated revision and preserve execution state")
+    replace = subparsers.add_parser(
+        "replace", help="activate a validated revision and preserve execution state"
+    )
     replace.add_argument("draft", type=Path)
     replace.add_argument("destination", type=Path)
     replace.add_argument("--date", help="YYYY-MM-DD; defaults to today")
     replace.add_argument("--spec-result", type=Path)
     replace.set_defaults(func=cmd_replace)
 
-    resume = subparsers.add_parser("resume", help="cancel a paused revision without changing its definition")
+    resume = subparsers.add_parser(
+        "resume", help="cancel a paused revision without changing its definition"
+    )
     resume.add_argument("master", type=Path)
     resume.add_argument("--reason", required=True)
     resume.add_argument("--date", help="YYYY-MM-DD; defaults to today")
@@ -3983,9 +4157,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     state = subparsers.add_parser(
         "state",
-        help="apply one validated task/subtask transition to generated execution state",
+        help="apply one validated task transition to generated execution state",
         description=(
-            "Apply exactly one validated transition to a task or subtask. This is the only "
+            "Apply exactly one validated transition to a task. This is the only "
             "sanctioned way to change generated execution state: every transition is checked "
             "against the closed matrix, the companion-field contract, the master revision, the "
             "task definition digest, dependency ordering, and -- for a terminal task -- the "
@@ -3994,14 +4168,14 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     state.add_argument("master", type=Path)
-    state.add_argument("target", help="T<n> for a task or T<n>.<m> for a subtask")
+    state.add_argument("target", help="task target T<n>; advisory subtask targets are rejected")
     state.add_argument(
         "--status",
         required=True,
         choices=sorted(CHECK_STATUSES),
         help="requested task status or subtask token",
     )
-    state.add_argument("--evidence", help="evidence pointer for a terminal subtask")
+    state.add_argument("--evidence", help="reserved compatibility flag; task transitions reject it")
     state.add_argument("--blocker", help="concrete blocker recorded on the owning task")
     state.add_argument("--reason", help="substantive reason naming the authority for a skip")
     state.add_argument(

@@ -2,7 +2,6 @@
 plan_format: 3
 title: 'GitHub Workflow Standard Package Implementation Plan'
 slug: 'github-workflow-package'
-size: standard
 status: active
 revision: 1
 revises_revision: 0
@@ -239,7 +238,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **proof:** [PV-T1-001]
 - **source_refs:** [repo:standards/standard-bundle-authoring/versions/2.6/payload.toml, repo:standards/agent-handoff/versions/1.9/payload.toml, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
 - **consumes:** [sba-2.6-template-shapes]
-- **produces:** [family-skeleton-v1]
+- **produces:** [github-workflow-skeleton-v1]
 - **preserves:** [all existing families and catalog entries byte-identical]
 - **invariants:** [no placeholder text ships; every listed file parses; `availability = "consumer"`]
 - **executor_discretion:** [payload skeleton internal ordering, initial resource digests]
@@ -267,11 +266,11 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
 - **boundary:** cross-task
 - **depends_on:** [T1]
-- **dependency_reason:** consumes family-skeleton-v1: the payload tree receives the files
+- **dependency_reason:** consumes github-workflow-skeleton-v1: the payload tree receives the files
 - **requirements:** [FR-005, FR-006, FR-017, FR-018, DR-001]
 - **proof:** [PV-T2-001]
 - **source_refs:** [repo:docs/specs/archive/2026-08-06-github-repo-administration-preliminary-design.md, repo:docs/specs/2026-08-06-github-workflow-package-spec.md, repo:docs/specs/2026-08-06-github-workflow-package-design.md]
-- **consumes:** [family-skeleton-v1]
+- **consumes:** [github-workflow-skeleton-v1]
 - **produces:** [reference-content-v1]
 - **preserves:** [operating-model semantics unaltered — reproduction, not editorial revision]
 - **invariants:** [`org-schema.yaml` parses and equals the baseline schema; `pr-standard.md` states the D12 deference and silent-repo default; `review-checklist.md` states no-automation; `summary-format.md` carries both the operator summary and the creation receipt]
@@ -340,7 +339,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **proof:** [PV-T4-001]
 - **source_refs:** [repo:go.mod, repo:Makefile, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
 - **consumes:** [reference-content-v1]
-- **produces:** [go-core-v1]
+- **produces:** [ghworkflow-core-v1]
 - **preserves:** [`make go-check` green throughout; no network in any test]
 - **invariants:** [org-scoped calls read-only; missing auth/unreachable API/unsupported platform → nonzero exit, no partial report; no credential material in source or output]
 - **executor_discretion:** [internal package decomposition, stdlib flag handling, fixture format]
@@ -368,11 +367,11 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
 - **boundary:** cross-task
 - **depends_on:** [T4]
-- **dependency_reason:** consumes go-core-v1: transport, models, and the subcommand registry
+- **dependency_reason:** consumes ghworkflow-core-v1: transport, models, and the subcommand registry
 - **requirements:** [FR-019, FR-022, DR-003]
 - **proof:** [PV-T5-001]
 - **source_refs:** [repo:docs/specs/2026-08-06-github-workflow-package-spec.md, repo:docs/specs/2026-08-06-github-workflow-package-design.md]
-- **consumes:** [go-core-v1]
+- **consumes:** [ghworkflow-core-v1]
 - **produces:** [render-engine-v1]
 - **preserves:** [prior ledger bytes on any failed write (atomic temp+rename)]
 - **invariants:** [whole-file ownership; generated header with timestamp+version+notice; TOC anchor for every section; output passes Prettier+markdownlint unmodified]
@@ -405,8 +404,8 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **requirements:** [FR-021, FR-023]
 - **proof:** [PV-T6-001]
 - **source_refs:** [repo:docs/specs/2026-08-06-github-workflow-package-spec.md, repo:docs/specs/2026-08-06-github-workflow-package-design.md]
-- **consumes:** [render-engine-v1, go-core-v1]
-- **produces:** [mutation-suite-v1]
+- **consumes:** [render-engine-v1, ghworkflow-core-v1]
+- **produces:** [ghworkflow-mutations-v1]
 - **preserves:** [organization schema untouched by every code path — no org-mutation API surface exists in the client]
 - **invariants:** [validation precedes any mutating call; refusal changes nothing remotely; terminal pairing is one logical operation with partial failure reported explicitly]
 - **executor_discretion:** [flag naming within IR-004 constraints, error text]
@@ -434,12 +433,12 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
 - **boundary:** cross-task
 - **depends_on:** [T6]
-- **dependency_reason:** consumes mutation-suite-v1: the committed binary must contain all subcommands
+- **dependency_reason:** consumes ghworkflow-mutations-v1: the committed binary must contain all subcommands
 - **requirements:** [FR-015, NFR-005, IR-004]
 - **proof:** [PV-T7-001]
 - **source_refs:** [repo:Makefile, repo:go.mod, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
-- **consumes:** [mutation-suite-v1, render-engine-v1, go-core-v1]
-- **produces:** [binary-artifact-v1]
+- **consumes:** [ghworkflow-mutations-v1, render-engine-v1, ghworkflow-core-v1]
+- **produces:** [gh-workflow-binary-v1]
 - **preserves:** [existing Makefile targets; `go-check` extended, not altered]
 - **invariants:** [rebuild from clean checkout yields byte-identical output; binary statically linked; mode 0755 preserved by Git]
 - **executor_discretion:** [make target vs script internals, deterministic ldflags version stamping]
@@ -469,11 +468,11 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
 - **boundary:** cross-task
 - **depends_on:** [T3, T7]
-- **dependency_reason:** consumes skill-content-v1 and binary-artifact-v1: digests require final bytes of skill content and binary
+- **dependency_reason:** consumes skill-content-v1 and gh-workflow-binary-v1: digests require final bytes of skill content and binary
 - **requirements:** [FR-003, FR-004, FR-007, FR-010, FR-011, FR-012, FR-013, NFR-001, NFR-003, IR-001, IR-003, DR-002]
 - **proof:** [PV-T8-001, PV-T8-002]
 - **source_refs:** [repo:standards/agent-handoff/versions/1.9/payload.toml, repo:standards/standard-bundle-authoring/versions/2.6/payload.toml, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
-- **consumes:** [skill-content-v1, binary-artifact-v1]
+- **consumes:** [skill-content-v1, gh-workflow-binary-v1]
 - **produces:** [payload-1.0-final]
 - **preserves:** [organization-agnostic payload sources; existing families untouched]
 - **invariants:** [zero create-only entries; every artifact `managed` and digested; block body ≈12 content lines; providers import no network client]
@@ -542,7 +541,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **proof:** [PV-T10-001]
 - **source_refs:** [repo:standards/catalog.md, repo:docs/specs/2026-08-06-github-workflow-package-spec.md, repo:AGENTS.md, repo:README.md]
 - **consumes:** [test-coverage-v1]
-- **produces:** [release-readiness-v1]
+- **produces:** [docs-readiness-v1]
 - **preserves:** [spec change-control: content edits carry a revision row; other catalog entries unchanged]
 - **invariants:** [agent-summary within the enforced limit; live run is read-only plus a ledger write in a scratch consumer checkout, never this repository]
 - **executor_discretion:** [doc prose, evidence record format]
@@ -568,11 +567,11 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
 - **boundary:** cross-task
 - **depends_on:** [T10]
-- **dependency_reason:** consumes release-readiness-v1: close-out records final verified state
+- **dependency_reason:** consumes docs-readiness-v1: close-out records final verified state
 - **requirements:** [REQ-901]
 - **proof:** [PV-T11-001]
 - **source_refs:** [request, repo:docs/handoff/architecture.md]
-- **consumes:** [release-readiness-v1]
+- **consumes:** [docs-readiness-v1]
 - **produces:** [close-out-record-v1]
 - **preserves:** [handoff document shape rules (160-char bullets); agent-handoff validate/drift-check green]
 - **invariants:** [no irreplaceable evidence deleted; OQ-001 explicitly surfaced to the owner, not silently resolved]
@@ -656,16 +655,16 @@ None.
 
 | Contract | Owner / Producer Task | Consumer(s) | Current | Planned / States | Errors / Limits | Compatibility / Invariant | Source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| family-skeleton-v1 | T1 | T2 | none | manifest + payload tree + config schema | validators reject malformed | SBA 2.6 shapes | `repo:standards/standard-bundle-authoring/versions/2.6/payload.toml` |
+| github-workflow-skeleton-v1 | T1 | T2 | none | manifest + payload tree + config schema | validators reject malformed | SBA 2.6 shapes | `repo:standards/standard-bundle-authoring/versions/2.6/payload.toml` |
 | reference-content-v1 | T2 | T3, T4 | none | six files; `org-schema.yaml` is the audit oracle and loader fixture format | fidelity checks | reproduction, not revision | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
 | skill-content-v1 | T3 | T8 | none | SKILL.md + openai.yaml final bytes | content checks | judgment boundary preserved | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
-| go-core-v1 | T4 | T5, T6, T7 | none | transport interface, loaders, findings model, subcommand registry | fail-closed preconditions | org calls read-only; fake-transport testability | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
+| ghworkflow-core-v1 | T4 | T5, T6, T7 | none | transport interface, loaders, findings model, subcommand registry | fail-closed preconditions | org calls read-only; fake-transport testability | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
 | render-engine-v1 | T5 | T6, T7 | none | one engine, three surfaces; atomic ledger write | prior bytes preserved on failure | gate-clean output | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
-| mutation-suite-v1 | T6 | T7 | none | five subcommands; validation before mutation | refusal mutates nothing | terminal pairing atomic with explicit partial-failure report | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
-| binary-artifact-v1 | T7 | T8 | none | committed static linux/amd64 binary, 0755 | rebuild-compare gate | byte-reproducible | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
+| ghworkflow-mutations-v1 | T6 | T7 | none | five subcommands; validation before mutation | refusal mutates nothing | terminal pairing atomic with explicit partial-failure report | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
+| gh-workflow-binary-v1 | T7 | T8 | none | committed static linux/amd64 binary, 0755 | rebuild-compare gate | byte-reproducible | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
 | payload-1.0-final | T8 | T9 | skeleton | complete digest-pinned payload, providers, contributions | standards validators | all-managed; org-agnostic | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
 | test-coverage-v1 | T9 | T10 | none | passing suites incl. negative controls and dogfood fixture | seeded defects must fail | offline; deterministic | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
-| release-readiness-v1 | T10 | T11 | none | docs/catalog/spec-traceability complete; EV-001 recorded | gate battery | spec change-control respected | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
+| docs-readiness-v1 | T10 | T11 | none | docs/catalog/spec-traceability complete; EV-001 recorded | gate battery | spec change-control respected | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
 | close-out-record-v1 | T11 | none | none | handoff and plan close-out complete | handoff validators | OQ-001 surfaced, not resolved | `request` |
 
 ## Appendix B. Requirement-to-Proof Traceability
