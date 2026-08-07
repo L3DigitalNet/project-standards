@@ -113,7 +113,7 @@ _STATUS_COMPLETED = "completed"
 _CALLER_AUTHORITY = "caller"
 
 # Composite dispatch supplies no input of its own. The empty object is not a
-# placeholder: it is exactly what a standard outside the seam's four families
+# placeholder: it is exactly what a standard outside the seam's five families
 # still receives, so fixture and third-party standards keep the generic dispatch
 # they have always had while every shipping provider is seam-served
 # (pinned by TC-T14-004).

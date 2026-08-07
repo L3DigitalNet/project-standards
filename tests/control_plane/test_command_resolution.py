@@ -373,6 +373,27 @@ _HANDOFF_DECLARED_PATHS = (
     "docs/handoff/state.md",
 )
 
+# Test-owned copy of the GitHub Workflow declared read set, kept byte-independent
+# of `provider_inputs._GH_WORKFLOW_READ_PATHS` for the same reason as the handoff
+# copy above: importing the implementation's tuple would prove only that the seam
+# agrees with itself. ORDER is load-bearing — the seam captures this tuple as
+# given rather than sorting it, and `_key_ordered` compares the dispatched
+# mapping's key order, so a reordering here is a real failure, not a nit.
+_GH_WORKFLOW_DECLARED_PATHS = (
+    ".agents/skills/github-workflow/SKILL.md",
+    ".agents/skills/github-workflow/agents/openai.yaml",
+    ".agents/skills/github-workflow/bin/gh-workflow",
+    ".agents/skills/github-workflow/references/field-vocabulary.md",
+    ".agents/skills/github-workflow/references/issue-structure.md",
+    ".agents/skills/github-workflow/references/org-schema.yaml",
+    ".agents/skills/github-workflow/references/pr-standard.md",
+    ".agents/skills/github-workflow/references/review-checklist.md",
+    ".agents/skills/github-workflow/references/summary-format.md",
+    ".standards/packages/github-workflow/policy.toml",
+    "AGENTS.md",
+    "CLAUDE.md",
+)
+
 # Which (standard, operation) pairs each authoritative site owns today. The
 # agent-handoff row is why family selection cannot key on the provider alone:
 # `agent-handoff/verify` is dispatched by the CLI with the handoff path-keyed
@@ -385,6 +406,7 @@ _SEAM_FAMILIES: dict[str, frozenset[ProviderOperation]] = {
     "agent-handoff": frozenset(
         {ProviderOperation.VALIDATE, ProviderOperation.VERIFY, ProviderOperation.DRIFT_CHECK}
     ),
+    "github-workflow": frozenset({ProviderOperation.VALIDATE, ProviderOperation.DRIFT_CHECK}),
 }
 
 
@@ -582,6 +604,21 @@ def _oracle_handoff_snapshots(selected: SelectedCommandPackage) -> JsonObject:
     return snapshots
 
 
+def _oracle_gh_workflow_snapshots(selected: SelectedCommandPackage) -> JsonObject:
+    """Rebuild the path-keyed GitHub Workflow snapshot plus its managed-unit facts.
+
+    Structurally the handoff shape minus its two extras: the read set is the fixed
+    declared tuple with no `docs/handoff` walk and no Markdown link discovery, and
+    only `managed_units` rides along — these providers ask whether their own
+    delivered artifacts are current, never what another package's Markdown block
+    contains, so `managed_markdown_units` must stay absent for the mapping to
+    match byte for byte.
+    """
+    snapshots = capture_command_snapshot(selected.repo, _GH_WORKFLOW_DECLARED_PATHS)
+    snapshots["managed_units"] = managed_unit_snapshot(selected.lock, "github-workflow")
+    return snapshots
+
+
 def _oracle_verification_snapshot(
     repo: Path,
     plan: ReconciliationPlan,
@@ -671,6 +708,8 @@ def _expected_inputs(
                 continue
             if standard_id == "agent-handoff":
                 expected[identity] = _oracle_handoff_snapshots(selected)
+            elif standard_id == "github-workflow":
+                expected[identity] = _oracle_gh_workflow_snapshots(selected)
             elif standard_id == "project-spec":
                 expected[identity] = _oracle_spec_documents(_oracle_spec_entries(selected))
             else:
@@ -852,7 +891,7 @@ def test_provider_dispatch_input_matches_each_authoritative_construction(
 
     Three roots: the synthetic full package-contract fixture, whose packages
     declare no family the seam owns (so it must fail closed there); this
-    repository, whose reconciled packages cover all four families plus the
+    repository, whose reconciled packages cover all five families plus the
     plan-bound verification snapshot; and a reconciled custom-schema consumer,
     the only root that produces `referenced_input_content`.
 
