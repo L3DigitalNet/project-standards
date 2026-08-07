@@ -1,0 +1,1 @@
+../../../../../../../../standards/github-workflow/versions/1.0/skills/github-workflow/references/issue-structure.md

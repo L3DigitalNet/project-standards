@@ -44,3 +44,45 @@ role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
 digest = "sha256:ee774bcbf311b732fa7c2d3f5603c8a6cf52fef0713e3d04b4992caec1d3287e"
+
+[[artifacts]]
+id = "reference-field-vocabulary"
+target = ".agents/skills/github-workflow/references/field-vocabulary.md"
+source = "skills/github-workflow/references/field-vocabulary.md"
+digest = "sha256:c1bc1528de730e4869d0204af5a790a0e3284cabeebadc7857f6095b4689df8e"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-issue-structure"
+target = ".agents/skills/github-workflow/references/issue-structure.md"
+source = "skills/github-workflow/references/issue-structure.md"
+digest = "sha256:1d98d69b6e36b36b73b90452b0bcaed65f93dddc8dab41e6f6e50a85110164a4"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-org-schema"
+target = ".agents/skills/github-workflow/references/org-schema.yaml"
+source = "skills/github-workflow/references/org-schema.yaml"
+digest = "sha256:2be7ee80d55869211ab3e8cc9b7dd66c482f3531e9188340eb5ef4663fb354f1"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-pr-standard"
+target = ".agents/skills/github-workflow/references/pr-standard.md"
+source = "skills/github-workflow/references/pr-standard.md"
+digest = "sha256:ae439d69f58ab2dca808495abcd6868f71fd74ba367d7774c40940083bb98aed"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-review-checklist"
+target = ".agents/skills/github-workflow/references/review-checklist.md"
+source = "skills/github-workflow/references/review-checklist.md"
+digest = "sha256:6028ea271a4251241189b9ffd6c28fbb0bee7856374b413ae781007f32866e03"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-summary-format"
+target = ".agents/skills/github-workflow/references/summary-format.md"
+source = "skills/github-workflow/references/summary-format.md"
+digest = "sha256:80e475b09ccac36b5c40a2c1e1e1d8499b8c4855dd73aa2b065be4d901482a46"
+policy = "managed"
