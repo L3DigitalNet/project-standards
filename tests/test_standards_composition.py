@@ -6,17 +6,35 @@ from itertools import combinations
 from pathlib import Path
 
 from project_standards.adopt.engine import build_plan, execute_plan
+from project_standards.adopt.manifest import available_standards
 from project_standards.package_contract.catalog import CatalogRole
 from project_standards.package_contract.repository import build_package_repository
 
 _REPO = Path(__file__).resolve().parent.parent
 
+# Advertised catalog-5 defaults the legacy adopt engine deliberately does not serve: they
+# ship no `src/project_standards/bundles/<id>/` tree and are adopted through the control
+# plane instead (spec WH-003 defers any legacy migration; a duplicate legacy bundle would
+# be a hand-maintained drift surface inside a retiring mechanism). The classification is an
+# asserted set rather than a silent filter, so a newly advertised family that has neither a
+# bundle nor an entry here fails this module until it is consciously classified.
+_CATALOG_NATIVE_FAMILIES = {"github-workflow"}
 
-def _adoptable_standard_ids() -> list[str]:
+
+def _catalog_default_ids() -> list[str]:
     repository = build_package_repository(_REPO, catalog_major=5)
     assert repository.findings == ()
     assert repository.catalog is not None
     return [entry.id for entry in repository.catalog.packages if entry.role is CatalogRole.DEFAULT]
+
+
+def _adoptable_standard_ids() -> list[str]:
+    """Catalog-5 defaults the legacy adopt engine can plan, in catalog order."""
+    catalog_defaults = _catalog_default_ids()
+    legacy_served = set(available_standards())
+
+    assert set(catalog_defaults) - legacy_served == _CATALOG_NATIVE_FAMILIES
+    return [standard_id for standard_id in catalog_defaults if standard_id in legacy_served]
 
 
 def test_each_artifact_standard_builds_an_independent_plan() -> None:
@@ -65,8 +83,10 @@ def test_all_standard_plan_deduplicates_shared_artifacts() -> None:
 
 
 def test_successful_dogfood_profile_has_no_declared_conflicts() -> None:
+    # Declared conflicts live in the payload manifests, not the legacy bundles, so this stays
+    # over every advertised default — catalog-native families ship payloads and must be checked.
     repository = build_package_repository(_REPO, catalog_major=5)
-    artifact_ids = set(_adoptable_standard_ids())
+    artifact_ids = set(_catalog_default_ids())
 
     assert not {
         (payload.manifest.payload.standard, target)
