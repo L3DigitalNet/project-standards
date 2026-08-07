@@ -27,7 +27,10 @@
 		"docs/handoff/**",
 		"tests/fixtures/specs/**",
 		"tests/fixtures/package_compatibility/legacy/**",
-		"tests/fixtures/observed_consumers/**"
+		"tests/fixtures/observed_consumers/**",
+		// Verbatim agent-session export (issue #133 evidence): byte-locked
+		// harness output, not authored prose held to the body-style standard.
+		"docs/reference/session-export-gh-workflows-implementation.md"
 	],
 	"gitignore": true
 }

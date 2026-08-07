@@ -60,3 +60,8 @@ tests/control_plane/fixtures/
 # Manifest-generated catalog: the Python renderer and its checked-in freshness
 # test own the exact bytes, so formatting it would create a second generator.
 standards/catalog.md
+
+# Verbatim agent-session export referenced from issue #133: a byte-locked
+# capture of harness output, not authored prose — formatting it is churn and
+# its findings are unfixable by construction.
+docs/reference/session-export-gh-workflows-implementation.md
