@@ -186,7 +186,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | NFR-003 | Block ~12 content lines; no vocabulary inline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Should | T8 | T8 | PV-T8-001 |
 | NFR-004 | Reconcile/drift/upgrade deterministic, offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T9 | T9 | PV-T9-001 |
 | NFR-005 | Binary reproducibly buildable; independent rebuild yields committed bytes | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
-| IR-001 | Config schema exactly `organization` + `harnesses`; reject unknown/empty | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T1, T8 | PV-T1-001, PV-T8-002 |
+| IR-001 | Config schema exactly `organization` + `harnesses`; reject unknown/empty | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T1, T8, T16 | PV-T1-001, PV-T8-002, PV-T16-001 |
 | IR-002 | All GitHub access via operator's `gh` auth; no embedded credentials | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4 | PV-T4-001 |
 | IR-003 | markdown-block adapter, scope `block:github-workflow`, round-trips | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | IR-004 | Non-interactive CLI, nine subcommands, JSON+human modes for read-only, zero-arg defaults | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T4, T5, T6, T7 | PV-T4-001, PV-T5-001, PV-T6-001, PV-T7-001 |
@@ -224,6 +224,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T13 | Reopen-aware divergence messages and residual review fixes | active | behavior | P2 | T12 | FR-016, FR-019, FR-021 | PV-T13-001 | no / corrects T12 surfaces post-completion |
 | T14 | Linker-effective version stamp and JSON-grammar number validation | active | behavior | P2 | T13 | FR-019, FR-021 | PV-T14-001 | no / corrects T13 surfaces post-completion |
 | T15 | Catalog activation and repository-inventory reconciliation | active | configuration | P3 | T8 | FR-014 | PV-T15-001 | no / T10 shared catalog surface |
+| T16 | Compatibility-matrix support for required-option catalog defaults | active | behavior | P3 | T15 | IR-001 | PV-T16-001 | no / none |
 
 ## 9. Implementation Tasks
 
@@ -658,6 +659,38 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T15.3 VERIFY** — rerun the previously failing suites plus the validator battery; negative control by temporary revert.
   - **T15.4 Verify Task** — run PV-T15-001; commit with checkpoint trailers.
 
+#### T16: Compatibility-matrix support for required-option catalog defaults
+
+- **disposition:** active
+- **outcome:** the package-compatibility matrix harness supplies spec-valid configuration for catalog defaults whose config schemas declare required options without JSON-Schema defaults, so all matrix rows pass with `github-workflow@1.0` advertised and every previously green row stays green. The harness change is data-driven (a per-standard minimal-config table using fixture values), does not weaken any other standard's resolution path, and does not modify any package schema.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T15]
+- **dependency_reason:** requires catalog-activation-v1: the failing rows only exist once the eighth default is advertised (discovered_from: T15 verification — 28 rows of `tests/package_compatibility/test_catalog_matrix.py` fail because the matrix resolves every default under an empty config and github-workflow@1.0 is the first default with required options lacking defaults, an IR-001-mandated shape; corrects: the harness's undocumented empty-config assumption, not the package)
+- **requirements:** [IR-001]
+- **proof:** [PV-T16-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [catalog-activation-v1]
+- **produces:** [matrix-compat-v1]
+- **preserves:** [every package schema byte-identical; all previously passing matrix rows; IR-001 strictness (no defaults added to the package schema)]
+- **invariants:** [fixture organization values only — no real organization login enters the harness; no network]
+- **executor_discretion:** [table structure and placement inside the harness, fixture value naming]
+- **files:** [`tests/package_compatibility/matrix.py` (modify; owner T16), `tests/package_compatibility/test_catalog_matrix.py` (modify; owner T16)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** revert the harness change; restore last green checkpoint
+- **acceptance:** PV-T16-001 proves the full `tests/package_compatibility/` suite passes with the family advertised (including the 28 previously failing rows and the four stable-id tests), the harness rejects a standard whose required options are missing from the minimal-config table with a clear error rather than silently passing empty config, and no package schema changed
+- **sub-tasks:**
+  - **T16.1 RED** — reproduce the 28 failing rows and four stable-id failures at base; expected failure: `resolve_options` under `configured = {}` for the required-option default.
+  - **T16.2 Verify RED** — confirm the single root cause and that no other defect contributes.
+  - **T16.3 GREEN** — add the per-standard minimal-config table and wire it into the enablement path.
+  - **T16.4 Verify GREEN** — full package-compatibility suite green; negative control (table entry removed → clear error, not silent empty config).
+  - **T16.5 Verify Task** — run PV-T16-001; commit with checkpoint trailers.
+
 ### Phase P4: release readiness and close-out
 
 #### T10: Family docs, catalog, live-run evidence, spec traceability
@@ -819,6 +852,7 @@ None.
 | PV-T13-001 | FR-016, FR-019, FR-021 | T13 | unit | golang-skills review pass-3 verdict | targeted `go test ./internal/ghworkflow/... ./cmd/...` plus `make go-check` | reopen-aware messages, drift classification, origin normalization, version default, number fidelity proven; gates green; CLI surface unchanged | message and classification tests fail against the reverted text | local, offline | ephemeral |
 | PV-T14-001 | FR-019, FR-021 | T14 | unit | golang-skills review pass-4 verdict (execution-verified) | targeted `go test` plus `make go-check` plus a `-ldflags "-X main.version=probe"` build asserting the stamped ledger header | linker-effective stamp; JSON-grammar refusals offline as usage errors; plain numbers still apply; gates green | stamp assertion fails against the var-initialized default; `.5` case fails against ParseFloat validation | local, offline | ephemeral |
 | PV-T15-001 | FR-014 | T15 | integration | repository catalog/inventory suites | targeted pytest on the four previously failing suites plus the standards validator battery | all pass with the family advertised; validators green | reverting the catalog entry re-fails the activation suite | local, offline | ephemeral |
+| PV-T16-001 | IR-001 | T16 | integration | package-compatibility matrix suite | full `pytest tests/package_compatibility/` with the family advertised | all rows pass incl. the 28 previously failing and the four stable-id tests; no package schema changed | removing the standard's minimal-config table entry yields a clear error, not a silent empty-config pass | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
 
