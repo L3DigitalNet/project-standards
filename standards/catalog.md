@@ -27,7 +27,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.4 | retained | consumer | 14 | 4 | 1 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.5 | retained | consumer | 14 | 4 | 1 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.6 | default | consumer | 14 | 4 | 1 |
-| [`github-workflow`](github-workflow/README.md) | active | 1.0 | unadvertised | consumer | 4 | 0 | 6 |
+| [`github-workflow`](github-workflow/README.md) | active | 1.0 | unadvertised | consumer | 4 | 0 | 8 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | retained | consumer | 29 | 5 | 8 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.3 | retained | consumer | 29 | 5 | 9 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.4 | retained | consumer | 30 | 5 | 9 |
@@ -1965,6 +1965,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `cli-documentation@1.4` | contribution | `usage-document` | `docs/usage.md` | `create-only` | `whole-file` / `$file` |
 | `cli-documentation@1.5` | contribution | `usage-document` | `docs/usage.md` | `create-only` | `whole-file` / `$file` |
 | `cli-documentation@1.6` | contribution | `usage-document` | `docs/usage.md` | `create-only` | `whole-file` / `$file` |
+| `github-workflow@1.0` | artifact | `skill` | `.agents/skills/github-workflow/SKILL.md` | `managed` | whole-file |
+| `github-workflow@1.0` | artifact | `skill-openai` | `.agents/skills/github-workflow/agents/openai.yaml` | `managed` | whole-file |
 | `github-workflow@1.0` | artifact | `reference-field-vocabulary` | `.agents/skills/github-workflow/references/field-vocabulary.md` | `managed` | whole-file |
 | `github-workflow@1.0` | artifact | `reference-issue-structure` | `.agents/skills/github-workflow/references/issue-structure.md` | `managed` | whole-file |
 | `github-workflow@1.0` | artifact | `reference-org-schema` | `.agents/skills/github-workflow/references/org-schema.yaml` | `managed` | whole-file |

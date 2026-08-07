@@ -46,6 +46,20 @@ media_type = "text/markdown"
 digest = "sha256:ee774bcbf311b732fa7c2d3f5603c8a6cf52fef0713e3d04b4992caec1d3287e"
 
 [[artifacts]]
+id = "skill"
+target = ".agents/skills/github-workflow/SKILL.md"
+source = "skills/github-workflow/SKILL.md"
+digest = "sha256:e3b7d2e6dfbd405f897bebd5d541f0bf52023ff967e556dae4b03e598b1692c6"
+policy = "managed"
+
+[[artifacts]]
+id = "skill-openai"
+target = ".agents/skills/github-workflow/agents/openai.yaml"
+source = "skills/github-workflow/agents/openai.yaml"
+digest = "sha256:6afe771c87e108d8a46dc00380365f1b1793891e3c57544a188e0b37d28a4f42"
+policy = "managed"
+
+[[artifacts]]
 id = "reference-field-vocabulary"
 target = ".agents/skills/github-workflow/references/field-vocabulary.md"
 source = "skills/github-workflow/references/field-vocabulary.md"
