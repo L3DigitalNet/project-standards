@@ -12,7 +12,6 @@ import pytest
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.codec import render_catalog, render_lock, semantic_digest
-from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.planner import (
@@ -25,7 +24,11 @@ from project_standards.control_plane.providers import (
     ProviderResult,
     invoke_provider,
 )
-from tests.package_compatibility.matrix import catalog_default_ids, seed_consumer_pyproject
+from tests.package_compatibility.matrix import (
+    catalog_default_ids,
+    enable_standard,
+    seed_consumer_pyproject,
+)
 from tests.wheel_helpers import extract_pure_python_wheel
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -101,7 +104,7 @@ def test_real_catalog_plans_inside_scale_and_time_boundary(
     defaults = catalog_default_ids()
     initialize_control_plane(repo, "5", distribution=source_payload_distribution)
     for standard_id in defaults:
-        set_standard_enabled(repo, standard_id, True)
+        enable_standard(repo, source_payload_distribution, standard_id)
     request = build_planner_request(repo, source_payload_distribution, frozenset())
 
     started = perf_counter()
@@ -124,7 +127,7 @@ def test_one_hundred_requested_and_discovery_orders_are_byte_deterministic(
     seed_consumer_pyproject(repo)
     initialize_control_plane(repo, "5", distribution=source_payload_distribution)
     for standard_id in reversed(catalog_default_ids()):
-        set_standard_enabled(repo, standard_id, True)
+        enable_standard(repo, source_payload_distribution, standard_id)
     base = replace(
         build_planner_request(repo, source_payload_distribution, frozenset()),
         provider_runner=_cached_provider_runner(),
