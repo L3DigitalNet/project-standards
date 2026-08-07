@@ -46,6 +46,24 @@ from pathlib import Path
 from typing import Any, NoReturn, cast
 
 # ---------------------------------------------------------------------------
+# Bridge identity
+# ---------------------------------------------------------------------------
+
+# A bridge copied into a target repository outlives the skill release that
+# produced it, and nothing in the copy reveals its age: a stale bridge and a
+# current one print identical receipts, so a plan can be scaffolded, validated,
+# and projected under retired semantics without a single error.  Stamping the
+# version makes that gap visible in ordinary output instead of requiring a byte
+# comparison nobody runs.
+#
+# This must equal the `version:` field of the sibling SKILL.md.  The constant is
+# duplicated rather than read from that file because the bridge is deliberately
+# self-contained -- it ships as a lone regular file into repositories that have
+# no skill install to read.  `scripts/selftest.py` asserts the two agree, so the
+# duplication cannot drift silently.
+BRIDGE_VERSION = "3.4.1"
+
+# ---------------------------------------------------------------------------
 # Grammar and contracts
 # ---------------------------------------------------------------------------
 
@@ -3174,16 +3192,20 @@ def print_validation(
         "evidence": len(master.evidence),
         "problems": problems,
         "warnings": list(warnings),
+        "bridge_version": BRIDGE_VERSION,
     }
     if as_json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     elif problems:
-        print(f"validate: {len(problems)} problem(s)")
+        # The version belongs on the rejection path too: a finding that looks
+        # wrong is often a stale bridge applying retired rules, and the reader
+        # needs to see which bridge spoke before trusting the verdict.
+        print(f"validate: {len(problems)} problem(s) [bridge {BRIDGE_VERSION}]")
         for problem in problems:
             print(f"  - {problem}")
     else:
         print(
-            "validate: ok "
+            f"validate: ok [bridge {BRIDGE_VERSION}] "
             f"(revision {master.frontmatter.get('revision')}, {len(master.sources)} sources, "
             f"{len(master.tasks)} tasks, {len(master.requirements)} requirements, "
             f"{len(master.proofs)} proofs, {len(master.evidence)} durable evidence records)"
@@ -3247,7 +3269,7 @@ def cmd_scaffold(args: argparse.Namespace) -> None:
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(text, encoding="utf-8")
-    print(f"scaffold: {output}")
+    print(f"scaffold: {output} [bridge {BRIDGE_VERSION}]")
 
 
 def cmd_promote(args: argparse.Namespace) -> None:
@@ -3667,7 +3689,7 @@ def cmd_generate(args: argparse.Namespace) -> None:
         # finished.  Leave nothing behind instead.
         remove_generated_tree(directory)
         raise
-    print(f"generate: {directory} ({len(master.tasks)} tasks)")
+    print(f"generate: {directory} ({len(master.tasks)} tasks) [bridge {BRIDGE_VERSION}]")
 
 
 def cmd_recover(args: argparse.Namespace) -> None:
@@ -3726,7 +3748,9 @@ def cmd_recover(args: argparse.Namespace) -> None:
         remove_generated_tree(directory)
         print_validation(problems, recovered, False)
         die("recovered execution state failed validation and was removed", 1)
-    print(f"recover: {directory} ({len(records)} task checkpoints restored)")
+    print(
+        f"recover: {directory} ({len(records)} task checkpoints restored) [bridge {BRIDGE_VERSION}]"
+    )
 
 
 def cmd_sync(args: argparse.Namespace) -> None:
@@ -3771,7 +3795,9 @@ def cmd_sync(args: argparse.Namespace) -> None:
     except BaseException:
         restore_checklist_files(directory, checklist_snapshot)
         raise
-    print(f"sync: {directory} ({len(master.tasks)} tasks; state preserved)")
+    print(
+        f"sync: {directory} ({len(master.tasks)} tasks; state preserved) [bridge {BRIDGE_VERSION}]"
+    )
 
 
 def cmd_next(args: argparse.Namespace) -> None:
@@ -4073,6 +4099,13 @@ def cmd_state(args: argparse.Namespace) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Plan format 3 scaffold, semantic validator, promotion gate, and execution-state bridge."
+    )
+    # Answers "which bridge is this repository actually running?" without parsing
+    # a plan, so a staleness check costs nothing and works on a bare copy.
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"plan.py bridge {BRIDGE_VERSION}",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
