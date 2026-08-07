@@ -4,17 +4,14 @@ import shutil
 import subprocess
 from itertools import combinations
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, cast
 
 import pytest
 
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.codec import parse_lock
-from project_standards.control_plane.config_edit import (
-    set_standard_enabled,
-    set_standard_version,
-)
+from project_standards.control_plane.config_edit import set_standard_version
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
@@ -32,9 +29,11 @@ from project_standards.package_contract.payload import (
 from tests.package_compatibility.matrix import (
     LifecycleResult,
     catalog_default_ids,
+    enable_standard,
     exercise_fresh_lifecycle,
     exercise_migrated_lifecycle,
     exercise_partial_migrated_lifecycle,
+    legacy_migratable_ids,
     partial_legacy_config,
     seed_consumer_pyproject,
 )
@@ -43,9 +42,23 @@ pytestmark = pytest.mark.compatibility
 
 _DEFAULTS = catalog_default_ids()
 _PAIRS = tuple(combinations(_DEFAULTS, 2))
-_PARTIAL_MIGRATION_ROWS = tuple((standard_id,) for standard_id in _DEFAULTS) + tuple(
-    tuple(candidate for candidate in _DEFAULTS if candidate != omitted) for omitted in _DEFAULTS
+# Every legacy row is a reduction of what a V4 configuration actually enrolled,
+# so it is drawn from the migratable defaults rather than from every default.
+# A catalog-5-only package has no V4 namespace to select, and adopting one after
+# a migration is a second adoption pass: the migration has already materialized
+# the other packages' shared-surface blocks, so the newcomer's block appends
+# after them, while the lifecycle's disable-and-re-enable recreates all blocks in
+# one pass and therefore sorts them. Both orders are correct — managed blocks
+# keep their position and new ones append — but only a single-pass adoption can
+# satisfy the byte-identical re-enable assertion. The fresh rows carry the
+# catalog-5-only packages' full pair and full-set coverage.
+_LEGACY_DEFAULTS = legacy_migratable_ids()
+_LEGACY_PAIRS = tuple(combinations(_LEGACY_DEFAULTS, 2))
+_PARTIAL_MIGRATION_ROWS = tuple((standard_id,) for standard_id in _LEGACY_DEFAULTS) + tuple(
+    tuple(candidate for candidate in _LEGACY_DEFAULTS if candidate != omitted)
+    for omitted in _LEGACY_DEFAULTS
 )
+_PAIR_ROWS = tuple((pair, False) for pair in _PAIRS) + tuple((pair, True) for pair in _LEGACY_PAIRS)
 _MANDATORY_GROUPS = (
     ("python-tooling", "agent-handoff", "markdown-tooling"),
     ("adr", "markdown-frontmatter"),
@@ -182,7 +195,7 @@ def test_correction_predecessors_resolve_exactly_and_latest_transitions_converge
         repo = tmp_path / label
         repo.mkdir()
         initialize_control_plane(repo, "5", distribution=distribution)
-        set_standard_enabled(repo, standard_id, True)
+        enable_standard(repo, distribution, standard_id)
         set_standard_version(repo, standard_id, predecessor)
         exact, _initial_mutations = _apply_exact_selection(repo, distribution)
 
@@ -262,7 +275,7 @@ def test_legacy_migration__unadopted_known_artifact__does_not_enroll_package(
     assert "adr" not in plan.desired_config.standards
 
 
-@pytest.mark.parametrize("standard_id", _DEFAULTS)
+@pytest.mark.parametrize("standard_id", _LEGACY_DEFAULTS)
 def test_partial_legacy_migration__present_empty_namespace__adopts_defaults(
     tmp_path: Path,
     source_payload_distribution: InstalledDistribution,
@@ -322,8 +335,13 @@ def test_each_package_converges_alone_from_source_and_wheel(
     )
 
 
-@pytest.mark.parametrize("standard_ids", _PAIRS)
-@pytest.mark.parametrize("migrated", [False, True], ids=["fresh", "migrated"])
+def _pair_row_id(value: object) -> str:
+    if isinstance(value, tuple):
+        return "+".join(cast("tuple[str, ...]", value))
+    return "migrated" if value else "fresh"
+
+
+@pytest.mark.parametrize(("standard_ids", "migrated"), _PAIR_ROWS, ids=_pair_row_id)
 def test_every_unordered_pair_preserves_ownership_and_converges(
     tmp_path: Path,
     source_payload_distribution: InstalledDistribution,
@@ -353,7 +371,7 @@ def test_full_supported_set_converges_from_source_and_wheel(
         tmp_path,
         source_payload_distribution,
         wheel_payload_distribution,
-        _DEFAULTS,
+        _LEGACY_DEFAULTS if migrated else _DEFAULTS,
         migrated=migrated,
     )
 
@@ -401,7 +419,7 @@ def test_real_catalog_remains_inside_planning_scale_boundary(
     seed_consumer_pyproject(repo)
     initialize_control_plane(repo, "5", distribution=source_payload_distribution)
     for standard_id in _DEFAULTS:
-        set_standard_enabled(repo, standard_id, True)
+        enable_standard(repo, source_payload_distribution, standard_id)
     plan = plan_reconciliation(
         build_planner_request(repo, source_payload_distribution, frozenset())
     )

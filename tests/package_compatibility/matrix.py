@@ -28,7 +28,10 @@ from project_standards.control_plane.codec import parse_lock
 from project_standards.control_plane.command_resolution import capture_command_snapshot
 from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.diagnostics import ActionKind
-from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.control_plane.distribution import (
+    InstalledDistribution,
+    resolution_payloads,
+)
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.migration import (
     apply_legacy_migration,
@@ -38,6 +41,7 @@ from project_standards.control_plane.models import LockedUnit
 from project_standards.control_plane.planner import ReconciliationPlan, plan_reconciliation
 from project_standards.control_plane.providers import ProviderInvocation, invoke_provider
 from project_standards.package_contract.catalog import CatalogRole
+from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.payload import (
     AdapterKind,
     ArtifactPolicy,
@@ -336,6 +340,130 @@ def catalog_default_ids() -> tuple[str, ...]:
     )
 
 
+@cache
+def legacy_migratable_ids() -> tuple[str, ...]:
+    """Return the catalog defaults a V4 configuration can still enroll.
+
+    github-workflow@1.0 ships first in catalog 5 and declares no legacy
+    migration, so no `.project-standards.yml` namespace selects it. Rows that
+    build a partial V4 configuration must be drawn from this set rather than
+    from every default: `partial_legacy_config` can only render namespaces the
+    all-namespaces fixture actually contains, and
+    `exercise_partial_migrated_lifecycle` asserts the migration enrolls exactly
+    the requested packages.
+    """
+    return tuple(sorted(set(catalog_default_ids()) & _LEGACY_CONFIG_PATHS.keys()))
+
+
+# github-workflow@1.0 is the first catalog default whose option schema declares
+# required options with no JSON-Schema default (SPEC-GHW1 IR-001), so planning
+# rejects it under the empty configuration every other default resolves under.
+# Rows therefore enable packages through `enable_standard`, which splices the
+# matching entry below into the synthetic consumer's desired configuration.
+#
+# SCOPE: fixture values only. No real GitHub organization login, repository
+# name, or credential may enter this harness; the rows also run under the
+# conftest network denial, so nothing here is ever resolved against GitHub.
+_MINIMAL_PACKAGE_CONFIG: dict[str, dict[str, JsonValue]] = {
+    "github-workflow": {
+        "organization": "example-org",
+        "harnesses": ["claude-code"],
+    },
+}
+
+_EMPTY_CONFIG_REJECTIONS: dict[Path, frozenset[str]] = {}
+
+
+def _standards_rejecting_empty_config(
+    distribution: InstalledDistribution,
+) -> frozenset[str]:
+    """Return standards whose option schema cannot resolve an empty configuration.
+
+    Asks each schema the same question planning asks in
+    `control_plane.resolution`, rather than reading `required` and `default`
+    keys directly, so a schema that satisfies all of its required options
+    through declared defaults is correctly treated as needing no table entry.
+    Covers every catalog version, not only the default one, because a row may
+    pin a correction predecessor.
+
+    Memoized per installed distribution: `load_catalog` re-verifies every
+    payload's integrity, and each enablement would otherwise repeat that work.
+    """
+    cached = _EMPTY_CONFIG_REJECTIONS.get(distribution.package_root)
+    if cached is not None:
+        return cached
+    rejecting: set[str] = set()
+    for payload in resolution_payloads(distribution.load_catalog("5")):
+        try:
+            _ = payload.option_schema.resolve_options({})
+        except PackageContractError:
+            rejecting.add(payload.standard_id)
+    result = frozenset(rejecting)
+    _EMPTY_CONFIG_REJECTIONS[distribution.package_root] = result
+    return result
+
+
+def _seed_package_config(
+    repo: Path,
+    standard_id: str,
+    options: dict[str, JsonValue],
+) -> None:
+    """Append one package's fixture option table to the desired configuration.
+
+    Appends raw TOML rather than editing through `config_edit`, which exposes
+    no public option writer and whose transform renderer refuses any non-scalar
+    leaf — `harnesses` is an array. Idempotent by design: every row disables and
+    re-enables its packages, and `set_standard_enabled` splices only the
+    `enabled` value, leaving an existing config table intact.
+    """
+    config = repo / ".standards/config.toml"
+    text = config.read_text(encoding="utf-8")
+    header = f"[standards.{standard_id}.config]"
+    if header in text:
+        return
+    lines = [header]
+    for key, value in options.items():
+        if isinstance(value, dict) or (
+            isinstance(value, list) and any(isinstance(item, (dict, list)) for item in value)
+        ):
+            raise AssertionError(f"fixture option {standard_id}.{key} is not a TOML value leaf")
+        lines.append(f"{key} = {json.dumps(value, ensure_ascii=False)}")
+    prefix = text if text.endswith("\n") else f"{text}\n"
+    rendered = "\n".join(lines)
+    config.write_text(f"{prefix}\n{rendered}\n", encoding="utf-8")
+
+
+def enable_standard(
+    repo: Path,
+    distribution: InstalledDistribution,
+    standard_id: str,
+) -> None:
+    """Enable one package together with the minimal options its schema requires.
+
+    Every row must enable through this helper instead of `set_standard_enabled`
+    directly. A package whose schema declares required options without defaults
+    resolves only once its configuration table exists; enabling it bare fails
+    planning with `configured package options are invalid`, which reads as a
+    package defect rather than as the missing harness fixture it is.
+
+    Raises AssertionError, naming the standard and this module's table, when a
+    package needs configuration that `_MINIMAL_PACKAGE_CONFIG` does not carry —
+    a new required-option default must never resolve silently under an empty
+    configuration.
+    """
+    _ = set_standard_enabled(repo, standard_id, True)
+    options = _MINIMAL_PACKAGE_CONFIG.get(standard_id)
+    if options is None:
+        if standard_id in _standards_rejecting_empty_config(distribution):
+            raise AssertionError(
+                f"{standard_id} rejects an empty package configuration: add its "
+                "minimal fixture options to _MINIMAL_PACKAGE_CONFIG in "
+                "tests/package_compatibility/matrix.py"
+            )
+        return
+    _seed_package_config(repo, standard_id, options)
+
+
 def source_distribution(target: Path) -> InstalledDistribution:
     """Materialize source projections like a wheel and return their distribution."""
     installed = target / "project_standards"
@@ -552,7 +680,7 @@ def _exercise_enabled_lifecycle(
     _assert_consumer_sentinels(repo, sentinels)
     _assert_unmanaged_state(repo, sentinels)
     for standard_id in standard_ids:
-        set_standard_enabled(repo, standard_id, True)
+        enable_standard(repo, distribution, standard_id)
     final_plan = _apply(repo, distribution)
     _assert_consumer_sentinels(repo, sentinels)
     consumer_paths = {sentinel.path for sentinel in sentinels}
@@ -599,7 +727,7 @@ def exercise_fresh_lifecycle(
     sentinels = _write_consumer_seed(repo)
     initialize_control_plane(repo, "5", distribution=distribution)
     for standard_id in standard_ids:
-        set_standard_enabled(repo, standard_id, True)
+        enable_standard(repo, distribution, standard_id)
     return _exercise_enabled_lifecycle(repo, distribution, standard_ids, sentinels)
 
 
@@ -622,7 +750,10 @@ def exercise_migrated_lifecycle(
 
     selected = set(standard_ids)
     for standard_id in catalog_default_ids():
-        set_standard_enabled(repo, standard_id, standard_id in selected)
+        if standard_id in selected:
+            enable_standard(repo, distribution, standard_id)
+        else:
+            set_standard_enabled(repo, standard_id, False)
     return _exercise_enabled_lifecycle(repo, distribution, standard_ids, sentinels)
 
 
