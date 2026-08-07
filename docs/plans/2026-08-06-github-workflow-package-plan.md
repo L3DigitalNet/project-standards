@@ -5,7 +5,7 @@ slug: 'github-workflow-package'
 status: active
 revision: 2
 revises_revision: 1
-revision_reason: "supersede T19 with T21 composition-suite classification"
+revision_reason: 'supersede T19 with T21 composition-suite classification'
 pause_reason: ''
 source: 'SPEC-GHW1 approved rev 1.0'
 spec_ref: 'docs/specs/2026-08-06-github-workflow-package-spec.md'
@@ -170,7 +170,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-011 | Every artifact `managed`; zero create-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8, T9 | PV-T9-001 |
 | FR-012 | Providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate; offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8, T22, T23 | PV-T8-001, PV-T22-001, PV-T23-001 |
 | FR-013 | Capabilities audit/validate/drift-check; companions agent-handoff | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
-| FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10, T15, T20, T21 | PV-T1-001, PV-T10-001, PV-T15-001, PV-T20-001, PV-T21-001 |
+| FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10, T15, T20, T21, T24 | PV-T1-001, PV-T10-001, PV-T15-001, PV-T20-001, PV-T21-001, PV-T24-001 |
 | FR-015 | `gh-workflow` binary artifact, 0755, static, all nine subcommands | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
 | FR-016 | `audit`: schema+policy inputs, read-only live comparison, deterministic findings, fail-closed preconditions | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4, T12, T13 | PV-T4-001, PV-T12-001, PV-T13-001 |
 | FR-017 | `summary-format.md` defines the attention-first operator summary layout; the skill presents summaries in it | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
@@ -190,7 +190,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | IR-002 | All GitHub access via operator's `gh` auth; no embedded credentials | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4 | PV-T4-001 |
 | IR-003 | markdown-block adapter, scope `block:github-workflow`, round-trips | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | IR-004 | Non-interactive CLI, nine subcommands, JSON+human modes for read-only, zero-arg defaults | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T4, T5, T6, T7 | PV-T4-001, PV-T5-001, PV-T6-001, PV-T7-001 |
-| DR-001 | `org-schema.yaml` equals the design-input baseline schema | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2 | PV-T2-001 |
+| DR-001 | `org-schema.yaml` equals the design-input baseline schema | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T25 | PV-T2-001, PV-T25-001 |
 | DR-002 | `policy.toml` carries org + package version only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | DR-003 | Ledger is generated consumer content: excluded from digests/drift, tool-owned whole-file | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5 | PV-T5-001 |
 | REQ-901 | Close-out: handoff documentation reconciled; deferred work and OQ-001 surfaced to the owner, not silently resolved | `request` | Must | T11 | T11 | PV-T11-001 |
@@ -231,6 +231,8 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T21 | Composition-suite classification of catalog-native families | active | behavior | P3 | T15 | FR-014 | PV-T21-001 | yes / none |
 | T22 | Seam authority for github-workflow provider dispatch | active | behavior | P3 | T20 | FR-012 | PV-T22-001 | no / none |
 | T23 | Resolution-oracle declaration for the github-workflow seam family | active | behavior | P3 | T22 | FR-012 | PV-T23-001 | no / none |
+| T24 | Self-hosting inventory reconciliation for the delivered artifacts | active | behavior | P3 | T20 | FR-014 | PV-T24-001 | yes / none |
+| T25 | Plain-space field values in the packaged baseline | active | behavior | P3 | T20 | DR-001 | PV-T25-001 | yes / none |
 | T20 | Self-hosting adoption of github-workflow in this repository | active | configuration | P3 | T15 | FR-014 | PV-T20-001 | yes / none |
 
 ## 9. Implementation Tasks
@@ -915,6 +917,70 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T23.4 Verify GREEN** — resolution module green; seam module stays green.
   - **T23.5 Verify Task** — run PV-T23-001; commit with checkpoint trailers.
 
+#### T24: Self-hosting inventory reconciliation for the delivered artifacts
+
+- **disposition:** active
+- **outcome:** the two frozen inventories the self-hosting adoption falsified accept the delivered artifacts: the repository-hygiene anchor inventory classifies the delivered executable `.agents/skills/github-workflow/bin/gh-workflow`, and the agent-handoff managed-markdown owner set includes `github-workflow` as the fourth block owner, so both previously failing tests pass.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T20]
+- **dependency_reason:** consumes self-hosting-adoption-v1: the inventories classify artifacts that exist only because the repository adopted the family (discovered_from: T9's third gate run; corrects: the final self-hosting inventory residue)
+- **requirements:** [FR-014]
+- **proof:** [PV-T24-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [self-hosting-adoption-v1]
+- **produces:** [self-hosting-inventories-v1]
+- **preserves:** [every other inventory entry; both tests' enforcement strength]
+- **invariants:** [inventory additions only — no assertion weakening; no network]
+- **executor_discretion:** [entry placement]
+- **files:** [`tests/test_repository_hygiene.py` (modify; owner T15), `tests/agent_handoff/test_selected_routing.py` (modify; owner T24)]
+- **parallel_safe:** yes
+- **conflicts_with:** [T15]
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** revert both files; restore last green checkpoint
+- **acceptance:** PV-T24-001 proves `pytest tests/test_repository_hygiene.py tests/agent_handoff/test_selected_routing.py -q` exits 0 with no failed tests
+- **sub-tasks:**
+  - **T24.1 RED** — reproduce both failures (unclassified delivered binary; missing fourth owner).
+  - **T24.2 Verify RED** — the two inventory gaps and nothing else.
+  - **T24.3 GREEN** — add the two inventory entries.
+  - **T24.4 Verify GREEN** — both modules green.
+  - **T24.5 Verify Task** — run PV-T24-001; commit with checkpoint trailers.
+
+#### T25: Plain-space field values in the packaged baseline
+
+- **disposition:** active
+- **outcome:** per the owner decision of 2026-08-07 ("use plain spaces"), the packaged baseline adopts the live organization's plain-space field values for the 13 values of `Priority`, `Change risk`, and `Severity` (`P0 Immediate` … `P4 Someday`, `R1 Low` … `R4 Critical`, `S0 Critical` … `S3 Low`): `references/org-schema.yaml` and `references/field-vocabulary.md` are amended, the digest chain is repinned (`standard.toml` aggregate, the catalog 5 entry, consumer catalog/lock lineage), and the repository's delivered copies are refreshed through a control-plane reconcile so delivered bytes equal payload sources again. The Go tool is NOT rebuilt (it reads the consumer's delivered schema at runtime; its test fixtures are self-consistent). The organization schema itself is untouched.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T20]
+- **dependency_reason:** consumes self-hosting-adoption-v1: the delivered-copy refresh reconciles artifacts that exist because the repository adopted the family (discovered_from: owner decision resolving the T4 live-audit divergence; corrects: T2 reference content under owner authority without reopening T2)
+- **requirements:** [DR-001]
+- **proof:** [PV-T25-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [self-hosting-adoption-v1, payload-1.0-final]
+- **produces:** [plain-space-baseline-v1]
+- **preserves:** [all other reference content byte-identical; Workflow/Size/Execution mode/Target date values (already matching live); the Go lane untouched]
+- **invariants:** [exactly the 13 value renames — no other semantic change; the three digest authorities (catalog row, standard.toml pin, recomputed aggregate) stay equal; delivered bytes equal payload sources after reconcile; no network beyond none (reconcile is offline)]
+- **executor_discretion:** [none beyond mechanical application]
+- **files:** [`standards/github-workflow/versions/1.0/skills/github-workflow/references/org-schema.yaml` (modify; owner T2), `standards/github-workflow/versions/1.0/skills/github-workflow/references/field-vocabulary.md` (modify; owner T2), `standards/github-workflow/standard.toml` (modify; owner T1), `catalogs/5.toml` (modify; owner T25), `.standards/catalog.toml` (modify; owner T25), `.standards/lock.toml` (modify; owner T20), `.agents/skills/github-workflow/references/org-schema.yaml` (modify; owner T25), `.agents/skills/github-workflow/references/field-vocabulary.md` (modify; owner T25), `standards/catalog.md` (modify; owner T10)]
+- **parallel_safe:** yes
+- **conflicts_with:** [T1, T2, T10, T15, T20]
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** revert the value renames and repin; restore last green checkpoint
+- **acceptance:** PV-T25-001 proves the standards validator battery passes with the amended references, `pytest tests/test_github_workflow_package.py tests/test_github_workflow_dogfood.py -q` passes against the repinned digests and refreshed delivered copies, a re-reconcile is a no-op, and no em-dash value remains in either amended reference file
+- **sub-tasks:**
+  - **T25.1 RED** — record the current em-dash values and digests; the dogfood delivered-bytes equality holds pre-change (baseline).
+  - **T25.2 Verify RED** — scope confirmed to the 13 values.
+  - **T25.3 GREEN** — amend both references; repin the digest chain; reconcile the delivered copies.
+  - **T25.4 Verify GREEN** — validator battery; both T9 suites; idempotent re-reconcile; no em-dash remains.
+  - **T25.5 Verify Task** — run PV-T25-001; commit with checkpoint trailers.
+
 ### Phase P4: release readiness and close-out
 
 #### T10: Family docs, catalog, live-run evidence, spec traceability
@@ -1082,6 +1148,8 @@ None.
 | PV-T21-001 | FR-014 | T21 | integration | standards-composition suite | `pytest tests/test_standards_composition.py -q` | module green; classification explicit | removing the family from the catalog-native set while advertised fails the classification assertion | local, offline | ephemeral |
 | PV-T22-001 | FR-012 | T22 | integration | MCP seam canary + dispatch-parity suite | `pytest tests/mcp_services/test_providers.py -q` | module green; MCP/CLI input parity for the family | reverting the family branch while the census row remains fails the parity test | local, offline | ephemeral |
 | PV-T23-001 | FR-012 | T23 | integration | command-resolution frozen oracle | `pytest tests/control_plane/test_command_resolution.py -q` plus the seam module | both modules green; oracle reconstructs the input independently | an undeclared family fails the oracle (the reproduced RED) | local, offline | ephemeral |
+| PV-T24-001 | FR-014 | T24 | integration | hygiene + agent-handoff routing suites | `pytest tests/test_repository_hygiene.py tests/agent_handoff/test_selected_routing.py -q` | both modules green | reverting either inventory entry re-fails its test | local, offline | ephemeral |
+| PV-T25-001 | DR-001 | T25 | integration | standards validators + package/dogfood suites | validator battery plus `pytest tests/test_github_workflow_package.py tests/test_github_workflow_dogfood.py -q` | digests consistent; delivered bytes equal sources; no em-dash value remains | a stale digest anywhere in the chain fails the three-way equality test | local, offline | ephemeral |
 | PV-T20-001 | FR-014 | T20 | integration | seam canary + reconcile diff + markdown gate | `pytest tests/mcp_services/test_providers.py -q` plus reconcile inspection | canary green; managed-only diff; idempotent re-reconcile; binary byte-match; markdown gate green | deselecting the package re-fails the canary | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
