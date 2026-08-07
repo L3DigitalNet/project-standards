@@ -694,6 +694,69 @@ func TestSetRefusesANonNumericNumberField(t *testing.T) {
 	h.assertNoRequests(t)
 }
 
+// Go's float syntax is wider than JSON's number grammar: ".5", "5.", "+3", "0x1p-2" and
+// "1_000.5" are all valid Go floats and none of them is a valid JSON number, and a quoted
+// "3" is a JSON string. Validating with a float parser and encoding as JSON therefore put
+// two different oracles on the same value, and the forms only the parser accepted got
+// through validation and died at encode time — after the field-identity read had already
+// gone out — as an internal error, where EC-008 promises an offline refusal with nothing
+// sent. The refusal is measured here by exit code and by silence on the wire.
+func TestSetRefusesNumberFormsOutsideTheJSONGrammar(t *testing.T) {
+	t.Parallel()
+
+	for _, value := range []string{".5", "5.", "+3", "0x1p-2", "1_000.5", `"3"`} {
+		t.Run(value, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			h.write(t, cli.DefaultSchemaPath, fixtureSchema+"\n  Effort:\n    type: number\n")
+
+			if code := h.run("set", "--issue", "12", "--field", "Effort="+value); code != cli.ExitUsage {
+				t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitUsage, h.stderr)
+			}
+			wants(t, h.stderr.String(), "Effort", "number")
+			h.assertNoRequests(t)
+			h.assertNoMutations(t)
+		})
+	}
+}
+
+// The narrower grammar must not narrow what was already valid: every form JSON does
+// accept still reaches the write, and reaches it as the operator's own digits.
+func TestSetAppliesEveryJSONNumberForm(t *testing.T) {
+	t.Parallel()
+
+	for _, value := range []string{"3", "3.5", "-2", "1e3"} {
+		t.Run(value, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			h.write(t, cli.DefaultSchemaPath, fixtureSchema+"\n  Effort:\n    type: number\n")
+			h.routes["GET /orgs/"+fixtureOrg+"/issue-fields"] = ghtest.Response{Status: http.StatusOK,
+				Body: `[{"id":108,"name":"Effort","data_type":"number","options":[]}]`}
+
+			if code := h.run("set", "--issue", "12", "--field", "Effort="+value); code != cli.ExitOK {
+				t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
+			}
+			writes := h.transport.mutations()
+			if len(writes) != 1 {
+				t.Fatalf("want exactly one mutating request, got %+v", writes)
+			}
+			var payload struct {
+				Values []struct {
+					Value json.RawMessage `json:"value"`
+				} `json:"issue_field_values"`
+			}
+			if err := json.Unmarshal([]byte(writes[0].Body), &payload); err != nil {
+				t.Fatalf("request body is not the documented shape: %v\n%s", err, writes[0].Body)
+			}
+			if len(payload.Values) != 1 || string(payload.Values[0].Value) != value {
+				t.Errorf("field values = %+v, want the JSON number %s written verbatim", payload.Values, value)
+			}
+		})
+	}
+}
+
 // A field the baseline defines and the organization does not is drift, not operator error:
 // it fails as a precondition, with the message pointing at the audit that explains it
 // rather than at the flag the operator typed correctly.

@@ -3,9 +3,10 @@ package mutate
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	"strconv"
+	"io"
 	"strings"
 	"time"
 
@@ -129,7 +130,7 @@ func validateValue(field orgschema.Field, value string) error {
 	case orgschema.TypeNumber:
 		// Checked here, offline, so a value GitHub would reject as the wrong JSON type is
 		// refused before anything is sent rather than surfacing as an API error (EC-008).
-		if _, err := strconv.ParseFloat(value, 64); err != nil {
+		if _, ok := jsonNumber(value); !ok {
 			return cli.Usagef("%q is not a valid %s value; %s takes a number", value, field.Name, field.Name)
 		}
 		return nil
@@ -139,6 +140,42 @@ func validateValue(field orgschema.Field, value string) error {
 		// be non-empty, which Set already guarantees.
 		return nil
 	}
+}
+
+// jsonNumber reports whether raw is a JSON number, returning it as the literal text the
+// encoder will write.
+//
+// It is one helper because validation and conversion must agree: they run at opposite
+// ends of the command, and a value the first accepts and the second refuses is refused
+// after the write has been prepared rather than before anything was sent. Every number
+// field passes through here on both paths.
+//
+// The grammar is JSON's, not Go's, because JSON is what leaves the process.
+// strconv.ParseFloat — the obvious check, and the wrong one — accepts ".5", "5.", "+3",
+// "0x1p-2" and "1_000.5", none of which any JSON encoder will emit, so a value it
+// approved died later inside encoding/json as an internal error where EC-008 promises an
+// offline usage refusal with nothing sent. Decoding is the only oracle that answers the
+// question actually being asked.
+//
+// The token must be a json.Number and the stream must then end: unmarshalling into a
+// json.Number is not enough, because that accepts the quoted "3" a number field rejects,
+// and a decoder that stops at the first token would accept "3 4" as the number 3.
+func jsonNumber(raw string) (json.Number, bool) {
+	decoder := json.NewDecoder(strings.NewReader(raw))
+	decoder.UseNumber()
+
+	token, err := decoder.Token()
+	if err != nil {
+		return "", false
+	}
+	number, ok := token.(json.Number)
+	if !ok {
+		return "", false
+	}
+	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
+		return "", false
+	}
+	return number, true
 }
 
 func fieldNames(schema *orgschema.Schema) []string {
@@ -216,12 +253,13 @@ func fieldValue(field ghapi.IssueFieldIdentity, raw string) (any, error) {
 	if field.DataType != orgschema.TypeNumber {
 		return raw, nil
 	}
-	if _, err := strconv.ParseFloat(raw, 64); err != nil {
+	number, ok := jsonNumber(raw)
+	if !ok {
 		return nil, fmt.Errorf("the organization types %q as a %s field, but the baseline schema "+
 			"accepted the value %q, which is not a number; run `gh-workflow audit` to see the drift",
 			field.Name, field.DataType, raw)
 	}
-	return json.Number(raw), nil
+	return number, nil
 }
 
 // describe renders applied assignments the way the confirmation lines read them out.

@@ -29,10 +29,18 @@ import (
 	"unicode/utf8"
 )
 
+// DefaultVersion is the version an unstamped build reports. It is a constant because
+// `-ldflags "-X main.version=..."` only survives package initialization when the variable
+// it names is initialized to a constant string expression: cmd/gh-workflow initializes
+// main.version from this, and initializing it from Version below instead would let
+// initialization overwrite the linker's write and leave every stamped build silently
+// reporting this default.
+const DefaultVersion = "1.0"
+
 // Version is the tool version stamped into generated output (spec FR-019). It is a
 // variable so the reproducible build can override it, and it defaults to the package
 // version rather than "dev" so an unstamped build still labels the file honestly.
-var Version = "1.0"
+var Version = DefaultVersion
 
 // Kind distinguishes the two work-item shapes. They share the model because they share
 // the layout, but they carry different fields: only issues have an Issue Type and Issue
