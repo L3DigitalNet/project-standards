@@ -172,12 +172,12 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-013 | Capabilities audit/validate/drift-check; companions agent-handoff | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10 | PV-T1-001, PV-T10-001 |
 | FR-015 | `gh-workflow` binary artifact, 0755, static, all nine subcommands | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
-| FR-016 | `audit`: schema+policy inputs, read-only live comparison, deterministic findings, fail-closed preconditions | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4 | PV-T4-001 |
+| FR-016 | `audit`: schema+policy inputs, read-only live comparison, deterministic findings, fail-closed preconditions | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4, T12 | PV-T4-001, PV-T12-001 |
 | FR-017 | `summary-format.md` defines the attention-first operator summary layout; the skill presents summaries in it | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
 | FR-018 | `summary-format.md` defines the creation receipt; skill requires it after creation | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
-| FR-019 | `ledger`: `docs/GH-WORKFLOWS.md` with header, TOC anchors, layout; atomic whole-file; gate-clean output | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5 | PV-T5-001 |
+| FR-019 | `ledger`: `docs/GH-WORKFLOWS.md` with header, TOC anchors, layout; atomic whole-file; gate-clean output | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5, T12 | PV-T5-001, PV-T12-001 |
 | FR-020 | Skill refresh rule (after mutations + on demand) and staleness rule | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
-| FR-021 | `set`/`new`/`close`/`reopen`: schema-validated mutations, scaffold+receipt on create, ordered failure-safe terminal sync; org read-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6 | PV-T6-001 |
+| FR-021 | `set`/`new`/`close`/`reopen`: schema-validated mutations, scaffold+receipt on create, ordered failure-safe terminal sync; org read-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6, T12 | PV-T6-001, PV-T12-001 |
 | FR-022 | `summary`/`receipt` render via the ledger layout engine to stdout | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5 | PV-T5-001 |
 | FR-023 | `check`: read-only Ready preconditions with itemized findings and exit codes | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6 | PV-T6-001 |
 | FR-024 | SKILL.md maps routine actions to subcommands; judgment boundary stated | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
@@ -220,6 +220,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T9 | Package tests, fixtures, and guards | active | behavior | P3 | T8 | FR-011, NFR-001, NFR-002, NFR-004 | PV-T9-001 | no / none |
 | T10 | Family docs, catalog, live-run evidence, spec traceability | active | documentation | P4 | T9 | FR-014 | PV-T10-001 | no / T1, T3 shared docs |
 | T11 | Close-out and handoff reconciliation | active | documentation | P4 | T10 | REQ-901 | PV-T11-001 | no / none |
+| T12 | Go review corrections before the binary freeze | active | behavior | P2 | T6 | FR-016, FR-019, FR-021 | PV-T12-001 | no / corrects T4–T6 surfaces post-completion |
 
 ## 9. Implementation Tasks
 
@@ -458,6 +459,39 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T7.5 PROVE IDEMPOTENCY** — repeat build → identical bytes.
   - **T7.6 Verify Task** — run PV-T7-001; commit with checkpoint trailers.
 
+#### T12: Go review corrections before the binary freeze
+
+- **disposition:** active
+- **outcome:** every material finding and each accepted mechanical finding from the two owner-directed golang-skills review passes over T4–T6 is corrected with regression coverage: CRLF-tolerant org-schema parsing; a same-origin guard on pagination `rel="next"` URLs before the bearer token is attached; overflow-safe `strconv`-based governing-issue parsing; terminal reclassification of an already-closed issue verifies the post-PATCH `state_reason` and reports divergence instead of false success; the `ghapi` package documentation states the scoped invariant (org-scoped calls GET-only, writes repository-scoped); `-X main.version` becomes load-bearing for the ledger version stamp; accepted minor/test-gap remediations land. The frozen nine-subcommand CLI flag surface is unchanged.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T6]
+- **dependency_reason:** corrects code produced by T4, T5, and T6 after their completion (discovered_from: owner-directed golang-skills review passes 1–2 and the API-version research, 2026-08-06/07; corrects: T4, T5, T6 implementation surfaces without reopening those tasks)
+- **requirements:** [FR-016, FR-019, FR-021]
+- **proof:** [PV-T12-001]
+- **source_refs:** [request, repo:go.mod, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [ghworkflow-core-v1, render-engine-v1, ghworkflow-mutations-v1]
+- **produces:** [ghworkflow-corrected-v1]
+- **preserves:** [all T4–T6 proven behavior outside the corrected defect paths; the frozen CLI surface (no flag additions, removals, or renames); org GET-only invariant; stdlib-only constraint]
+- **invariants:** [`X-GitHub-Api-Version` stays `2022-11-28` (research-confirmed against current official GitHub docs); no new module dependencies; no network in any test; validation still precedes any mutating call]
+- **executor_discretion:** [mechanical fix details, test naming and placement, whether small shared constants are exported or duplicated]
+- **files:** [`cmd/gh-workflow/main.go` (modify; owner T4), `cmd/gh-workflow/main_test.go` (modify; owner T12), `internal/ghworkflow/` (modify; owner T4)]
+- **parallel_safe:** no
+- **conflicts_with:** [T4, T5, T6]
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** restore last green checkpoint; `make go-check` re-verifies
+- **acceptance:** PV-T12-001 proves each corrected defect has a test that fails when the correction is reverted (CRLF schema case, cross-host pagination refusal, overflow-safe parse, closed-with-different-reason reclassification including the divergence report and convergence path), the `ghapi` package documentation is accurate, the ldflags version stamp reaches the ledger header, and `make go-check` plus the full Go suite pass
+- **sub-tasks:**
+  - **T12.1 RED** — failing tests for the four correctness defects and the material test gap; expected failure: the uncorrected behavior.
+  - **T12.2 Verify RED** — each failure reproduces the reviewed defect, not a harness error.
+  - **T12.3 GREEN** — apply the corrections and accepted mechanical remediations.
+  - **T12.4 Verify GREEN** — targeted `go test` plus `make go-check`.
+  - **T12.5 REFACTOR** — consolidate constants/helpers introduced by the fixes; keep green.
+  - **T12.6 Verify Task** — run PV-T12-001; commit with checkpoint trailers.
+
 ### Phase P3: package integration
 
 #### T8: Payload completion with providers, contributions, config, policy
@@ -683,6 +717,7 @@ None.
 | PV-T9-001 | FR-011, NFR-001, NFR-002, NFR-004 | T9 | integration | payload contract; spec §3.2 tree | new pytest suites + `scripts/verify.sh` | suites pass; fixture consumer matches target tree per harness (EC-005) incl. delivered binary mode 0755 | seeded create-only entry, org literal, and digest mismatch each fail their guard | local, offline | ephemeral |
 | PV-T10-001 | FR-014 | T10 | acceptance | all repository gates; live organization | verify.sh + wheel validate + go-check + markdown gate + spec validate/lint; witnessed live `audit` + `ledger` run | all green; §17.3 Passing; EV-001 recorded | gate battery fails on any seeded regression during authoring | local plus one witnessed live run | EV-001 |
 | PV-T11-001 | REQ-901 | T11 | inspection | agent-handoff validators | `project-standards agent-handoff validate --repo .` and `drift-check --repo .` | both pass; close-out complete; OQ-001 surfaced | validator fails on a malformed handoff edit | local | ephemeral |
+| PV-T12-001 | FR-016, FR-019, FR-021 | T12 | unit | golang-skills review verdicts; current GitHub REST versioning docs | targeted `go test ./internal/ghworkflow/... ./cmd/...` plus `make go-check` | corrected behaviors proven; gates green; CLI surface unchanged | each corrected defect's new test fails with the correction reverted | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
 
