@@ -1,0 +1,12 @@
+schema_version = "2.0"
+
+[standard]
+id = "github-workflow"
+name = "GitHub Workflow Standard"
+summary = "Organization-scoped GitHub work discipline: typed issue contracts, pull-request evidence, and a mandatory agent skill."
+status = "active"
+
+[[versions]]
+version = "1.0"
+payload = "versions/1.0/payload.toml"
+digest = "sha256:d874061a842ab005b245621e1cc28ad58048cc97d7b42b40aa6164ef691bc715"

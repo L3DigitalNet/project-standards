@@ -27,6 +27,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.4 | retained | consumer | 14 | 4 | 1 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.5 | retained | consumer | 14 | 4 | 1 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.6 | default | consumer | 14 | 4 | 1 |
+| [`github-workflow`](github-workflow/README.md) | active | 1.0 | unadvertised | consumer | 4 | 0 | 0 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | retained | consumer | 29 | 5 | 8 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.3 | retained | consumer | 29 | 5 | 9 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.4 | retained | consumer | 30 | 5 | 9 |
@@ -99,6 +100,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `cli-documentation@1.4` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
 | `cli-documentation@1.5` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
 | `cli-documentation@1.6` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
+| `github-workflow@1.0` | — | `project-standards.reconcile` |
 | `markdown-frontmatter@1.2` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-frontmatter@1.3` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-frontmatter@1.4` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
@@ -600,6 +602,10 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `cli-documentation@1.6` | `provider-content` | `provider-resource` | `standards://cli-documentation/1.6/resources/provider-content` | `schemas/content.schema.json` |
 | `cli-documentation@1.6` | `provider-findings` | `provider-resource` | `standards://cli-documentation/1.6/resources/provider-findings` | `schemas/findings.schema.json` |
 | `cli-documentation@1.6` | `provider-migration-report` | `provider-resource` | `standards://cli-documentation/1.6/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `github-workflow@1.0` | `readme` | `canonical-standard` | `standards://github-workflow/1.0/resources/readme` | `README.md` |
+| `github-workflow@1.0` | `agent-summary` | `agent-summary` | `standards://github-workflow/1.0/resources/agent-summary` | `agent-summary.md` |
+| `github-workflow@1.0` | `config-schema` | `config-schema` | `standards://github-workflow/1.0/resources/config-schema` | `config.schema.json` |
+| `github-workflow@1.0` | `adopt` | `adoption-guide` | `standards://github-workflow/1.0/resources/adopt` | `adopt.md` |
 | `markdown-frontmatter@1.2` | `readme` | `canonical-standard` | `standards://markdown-frontmatter/1.2/resources/readme` | `README.md` |
 | `markdown-frontmatter@1.2` | `agent-summary` | `agent-summary` | `standards://markdown-frontmatter/1.2/resources/agent-summary` | `agent-summary.md` |
 | `markdown-frontmatter@1.2` | `config-schema` | `config-schema` | `standards://markdown-frontmatter/1.2/resources/config-schema` | `config.schema.json` |

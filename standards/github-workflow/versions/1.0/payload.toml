@@ -1,0 +1,46 @@
+schema_version = "1.0"
+
+[payload]
+standard = "github-workflow"
+version = "1.0"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = []
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = []
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:a7f2a1908f7c35cd68d3391c5bcc8ef95529a0088bf3ea2ba37f6f5f66c574ae"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:0707b87369a91a84e1688e8b49943830b5d615f817dd001896e7dfc180b9fd46"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:526d70a62acd7f6663d0b315de87664e50eb8c4b418f965511139def003c388d"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:ee774bcbf311b732fa7c2d3f5603c8a6cf52fef0713e3d04b4992caec1d3287e"
