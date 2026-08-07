@@ -12,7 +12,12 @@ import (
 func TestSubcommandsAreWired(t *testing.T) {
 	t.Parallel()
 
-	want := map[string]bool{"audit": false}
+	want := map[string]bool{
+		"audit":   false,
+		"ledger":  false,
+		"summary": false,
+		"receipt": false,
+	}
 	for _, cmd := range cli.Commands() {
 		if _, expected := want[cmd.Name]; expected {
 			want[cmd.Name] = true

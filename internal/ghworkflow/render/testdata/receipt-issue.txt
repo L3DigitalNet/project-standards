@@ -1,0 +1,8 @@
+Created issue #12 — Ledger write leaves a partial file
+https://github.com/L3DigitalNet/example-repo/issues/12
+
+Type: Bug | Workflow: Blocked | Priority: P0 — Immediate
+Size / Severity: S1 — High | Change risk: R3 — High
+Execution mode: Interactive agent | Target date: 2026-08-01
+
+Gaps: none

@@ -14,6 +14,7 @@ import (
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 
 	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/audit"
+	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 )
 
 func main() {

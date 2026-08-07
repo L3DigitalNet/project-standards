@@ -1,0 +1,40 @@
+package render_test
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
+)
+
+// TestWriteGeneratedOutputForGateRun materializes the generated surfaces into the
+// directory named by GH_WORKFLOW_GATE_DIR so the repository's own Prettier and
+// markdownlint can be run over them (spec FR-019). It is a no-op in an ordinary test
+// run: the gate is an external command, not something a Go test can assert.
+func TestWriteGeneratedOutputForGateRun(t *testing.T) {
+	dir := os.Getenv("GH_WORKFLOW_GATE_DIR")
+	if dir == "" {
+		t.Skip("set GH_WORKFLOW_GATE_DIR to emit generated output for the markdown gate")
+	}
+	hostile := render.WorkItem{
+		Kind: render.KindIssue, Number: 99,
+		Title: "Underscores in snake_case_name, [brackets], <html>, *stars* and https://example.test/a_b",
+		Type:  "Research", State: "open",
+		Fields: map[string]string{render.FieldWorkflow: "Inbox"},
+	}
+	snapshot := fixtureSnapshot(t)
+	full := render.NewSnapshot(snapshot.Target, snapshot.ReadAt,
+		append(snapshot.Issues, hostile), snapshot.PullRequests)
+
+	for name, body := range map[string]string{
+		"ledger.md":       render.Ledger(full),
+		"summary.md":      render.Summary(full),
+		"ledger-empty.md": render.Ledger(render.NewSnapshot(snapshot.Target, snapshot.ReadAt, nil, nil)),
+	} {
+		// #nosec G304 G703 -- the destination is the operator's own GH_WORKFLOW_GATE_DIR.
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatalf("WriteFile(%s) error = %v", name, err)
+		}
+	}
+}

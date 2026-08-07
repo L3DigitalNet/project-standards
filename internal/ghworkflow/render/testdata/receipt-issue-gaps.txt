@@ -1,0 +1,8 @@
+Created issue #14 — Add ledger TOC anchors
+https://github.com/L3DigitalNet/example-repo/issues/14
+
+Type: Feature | Workflow: Needs definition | Priority: P2 — Planned
+Size / Severity: M | Change risk: —
+Execution mode: Unattended agent | Target date: —
+
+Gaps: missing Change risk, Target date, and acceptance criteria
