@@ -27,11 +27,11 @@ issue_fields:
   Priority:
     type: single_select
     values:
-      - P0 — Immediate
-      - P1 — Next
-      - P2 — Planned
-      - P3 — Opportunistic
-      - P4 — Someday
+      - P0 Immediate
+      - P1 Next
+      - P2 Planned
+      - P3 Opportunistic
+      - P4 Someday
 
   Size:
     type: single_select
@@ -45,10 +45,10 @@ issue_fields:
   Change risk:
     type: single_select
     values:
-      - R1 — Low
-      - R2 — Moderate
-      - R3 — High
-      - R4 — Critical
+      - R1 Low
+      - R2 Moderate
+      - R3 High
+      - R4 Critical
 
   Execution mode:
     type: single_select
@@ -63,7 +63,7 @@ issue_fields:
   Severity:
     type: single_select
     values:
-      - S0 — Critical
-      - S1 — High
-      - S2 — Moderate
-      - S3 — Low
+      - S0 Critical
+      - S1 High
+      - S2 Moderate
+      - S3 Low

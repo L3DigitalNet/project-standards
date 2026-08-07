@@ -2,7 +2,7 @@
 schema_version = "1.0"
 catalog = "5"
 release = "5.16.0"
-digest = "sha256:2bced53d5152c8d72bb4789ea482369d444ec7481b5dbf2966eeaa568b918802"
+digest = "sha256:21c91bf7a7219e9ddf731d7d2860fec1e26630177aab7de81700a668a5312416"
 
 [standards.adr]
 status = "active"
@@ -126,7 +126,7 @@ candidates = []
 [standards.github-workflow.versions."1.0"]
 channel = "stable"
 availability = "consumer"
-payload_digest = "sha256:946f967be3e24f90dd1f9a2c5dd7a384927d9fa46e76a065afa8c3166c3eeb55"
+payload_digest = "sha256:5053b8851fff13091425bcb50c09406078ee756db7b97bc2765d725c872357ab"
 
 [standards.markdown-frontmatter]
 status = "active"

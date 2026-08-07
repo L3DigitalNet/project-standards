@@ -54,13 +54,13 @@ Never infer readiness merely because an Issue is open.
 
 **Applies to:** All Issue Types
 
-| Value                  | Meaning                                   |
-| ---------------------- | ----------------------------------------- |
-| **P0 — Immediate**     | Interrupt current work                    |
-| **P1 — Next**          | Committed near-term work                  |
-| **P2 — Planned**       | Normal accepted backlog                   |
-| **P3 — Opportunistic** | Worth doing when convenient               |
-| **P4 — Someday**       | Valid work with no foreseeable commitment |
+| Value                | Meaning                                   |
+| -------------------- | ----------------------------------------- |
+| **P0 Immediate**     | Interrupt current work                    |
+| **P1 Next**          | Committed near-term work                  |
+| **P2 Planned**       | Normal accepted backlog                   |
+| **P3 Opportunistic** | Worth doing when convenient               |
+| **P4 Someday**       | Valid work with no foreseeable commitment |
 
 Leave `Priority` empty until triage if no deliberate prioritization has occurred.
 
@@ -108,10 +108,10 @@ An XL Issue may remain as an Initiative or parent tracking object.
 
 | Value | Meaning |
 | --- | --- |
-| **R1 — Low** | Localized, easily reversible, low coupling |
-| **R2 — Moderate** | Meaningful behavior or compatibility implications |
-| **R3 — High** | Significant trust boundary, persistence, concurrency, API, CI, or cross-system effects |
-| **R4 — Critical** | Destructive, difficult-to-reverse, security-sensitive, release-control, infrastructure, or broad systemic consequences |
+| **R1 Low** | Localized, easily reversible, low coupling |
+| **R2 Moderate** | Meaningful behavior or compatibility implications |
+| **R3 High** | Significant trust boundary, persistence, concurrency, API, CI, or cross-system effects |
+| **R4 Critical** | Destructive, difficult-to-reverse, security-sensitive, release-control, infrastructure, or broad systemic consequences |
 
 Change risk measures how dangerous it is to implement this change incorrectly. It does not measure how bad the existing problem is — that is Severity, and only for Bugs.
 
@@ -170,10 +170,10 @@ Do not populate it merely because every Issue looks nicer with one. Empty is a v
 
 | Value | Meaning |
 | --- | --- |
-| **S0 — Critical** | Security compromise, corruption/data loss, unsafe operation, or system unusable |
-| **S1 — High** | Core capability unusable with no acceptable workaround |
-| **S2 — Moderate** | Material impairment with workaround or constrained exposure |
-| **S3 — Low** | Minor defect, cosmetic behavior, narrow edge case, or negligible operational consequence |
+| **S0 Critical** | Security compromise, corruption/data loss, unsafe operation, or system unusable |
+| **S1 High** | Core capability unusable with no acceptable workaround |
+| **S2 Moderate** | Material impairment with workaround or constrained exposure |
+| **S3 Low** | Minor defect, cosmetic behavior, narrow edge case, or negligible operational consequence |
 
 Severity is factual — what consequence does the defect produce. Priority is managerial — when should it be fixed relative to other work. Keeping them separate is what makes triage work.
 

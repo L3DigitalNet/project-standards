@@ -114,7 +114,7 @@ mode = "0755"
 id = "reference-field-vocabulary"
 target = ".agents/skills/github-workflow/references/field-vocabulary.md"
 source = "skills/github-workflow/references/field-vocabulary.md"
-digest = "sha256:c1bc1528de730e4869d0204af5a790a0e3284cabeebadc7857f6095b4689df8e"
+digest = "sha256:ac2e0f732debf847433aaa22cf6162c227eef0ad1aed7a3d859a40ffd937c719"
 policy = "managed"
 
 [[artifacts]]
@@ -128,7 +128,7 @@ policy = "managed"
 id = "reference-org-schema"
 target = ".agents/skills/github-workflow/references/org-schema.yaml"
 source = "skills/github-workflow/references/org-schema.yaml"
-digest = "sha256:2be7ee80d55869211ab3e8cc9b7dd66c482f3531e9188340eb5ef4663fb354f1"
+digest = "sha256:b8170049e40fd944a3dd78a8b7ab9d153feda90b6df42445863fae5ece03da99"
 policy = "managed"
 
 [[artifacts]]

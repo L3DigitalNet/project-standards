@@ -118,7 +118,7 @@ role = "default"
 [[packages]]
 id = "github-workflow"
 version = "1.0"
-digest = "sha256:946f967be3e24f90dd1f9a2c5dd7a384927d9fa46e76a065afa8c3166c3eeb55"
+digest = "sha256:5053b8851fff13091425bcb50c09406078ee756db7b97bc2765d725c872357ab"
 role = "default"
 
 [[packages]]
