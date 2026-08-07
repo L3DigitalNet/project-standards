@@ -115,7 +115,7 @@ No `github-workflow` family exists. Catalog 5 has seven consumer packages plus t
 | Skill + Codex companion | none | trigger boundary, refusals, routing, refresh/staleness rules | `standards/github-workflow/versions/1.0/skills/github-workflow/SKILL.md` | T3 |
 | Go tool: module, plumbing, `audit` | none | gh-auth client, schema/policy loaders, audit findings engine | `cmd/gh-workflow/`, `internal/ghworkflow/` | T4 |
 | Go tool: layout engine, `ledger`/`summary`/`receipt` | none | one rendering engine, three output surfaces | `internal/ghworkflow/render/` | T5 |
-| Go tool: `new`/`set`/`close`/`reopen`/`check` | none | validated mutations, atomic terminal sync, readiness findings | `internal/ghworkflow/mutate/` | T6 |
+| Go tool: `new`/`set`/`close`/`reopen`/`check` | none | validated mutations, ordered failure-safe terminal sync, readiness findings | `internal/ghworkflow/mutate/` | T6 |
 | Reproducible build + committed binary | none | byte-reproducible artifact + rebuild verification | `scripts/build-gh-workflow.sh`, `standards/github-workflow/versions/1.0/skills/github-workflow/bin/gh-workflow` | T7 |
 | Providers, contributions, config, policy | none | render-semantic/validate/verify/drift-check/upgrade; blocks; `policy.toml` | `standards/github-workflow/versions/1.0/providers/` | T8 |
 | Package tests + fixtures | none | spec §17.2 coverage incl. bug-006 guard | `tests/` new modules + fixtures | T9 |
@@ -177,7 +177,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-018 | `summary-format.md` defines the creation receipt; skill requires it after creation | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
 | FR-019 | `ledger`: `docs/GH-WORKFLOWS.md` with header, TOC anchors, layout; atomic whole-file; gate-clean output | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5 | PV-T5-001 |
 | FR-020 | Skill refresh rule (after mutations + on demand) and staleness rule | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
-| FR-021 | `set`/`new`/`close`/`reopen`: schema-validated mutations, scaffold+receipt on create, atomic terminal sync; org read-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6 | PV-T6-001 |
+| FR-021 | `set`/`new`/`close`/`reopen`: schema-validated mutations, scaffold+receipt on create, ordered failure-safe terminal sync; org read-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6 | PV-T6-001 |
 | FR-022 | `summary`/`receipt` render via the ledger layout engine to stdout | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5 | PV-T5-001 |
 | FR-023 | `check`: read-only Ready preconditions with itemized findings and exit codes | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6 | PV-T6-001 |
 | FR-024 | SKILL.md maps routine actions to subcommands; judgment boundary stated | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
@@ -441,7 +441,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **produces:** [gh-workflow-binary-v1]
 - **preserves:** [existing Makefile targets; `go-check` extended, not altered]
 - **invariants:** [one exact build invocation: `GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0 go build -trimpath -buildvcs=false` with deterministic linker flags; rebuild from a clean worktree at the same commit yields byte-identical output; binary statically linked; payload declares `mode = "0755"` (the delivered mode is proved by T9's fixture reconcile)]
-- **executor_discretion:** [make target vs script internals, deterministic ldflags version stamping]
+- **executor_discretion:** [make target vs script internals only — the build invocation itself is fixed by NFR-005, including `-ldflags` and operands]
 - **files:** [`Makefile` (modify; owner T7), `scripts/build-gh-workflow.sh` (create; owner T7), `standards/github-workflow/versions/1.0/skills/github-workflow/bin/gh-workflow` (create; owner T7)]
 - **parallel_safe:** no
 - **conflicts_with:** []
@@ -660,7 +660,7 @@ None.
 | skill-content-v1 | T3 | T8 | none | SKILL.md + openai.yaml final bytes | content checks | judgment boundary preserved | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
 | ghworkflow-core-v1 | T4 | T5, T6, T7 | none | transport interface, loaders, findings model, subcommand registry | fail-closed preconditions | org calls read-only; fake-transport testability | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
 | render-engine-v1 | T5 | T6, T7 | none | one engine, three surfaces; atomic ledger write | prior bytes preserved on failure | gate-clean output | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
-| ghworkflow-mutations-v1 | T6 | T7 | none | five subcommands; validation before mutation | refusal mutates nothing | terminal pairing atomic with explicit partial-failure report | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
+| ghworkflow-mutations-v1 | T6 | T7 | none | five subcommands; validation before mutation | refusal mutates nothing | terminal pairing ordered and failure-safe: native state first, then `Workflow` field; rerun is the corrective retry | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
 | gh-workflow-binary-v1 | T7 | T8 | none | committed static linux/amd64 binary, 0755 | rebuild-compare gate | byte-reproducible | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
 | payload-1.0-final | T8 | T9 | skeleton | complete digest-pinned payload, providers, contributions | standards validators | all-managed; org-agnostic | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
 | test-coverage-v1 | T9 | T10 | none | passing suites incl. negative controls and dogfood fixture | seeded defects must fail | offline; deterministic | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` |
