@@ -170,7 +170,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-011 | Every artifact `managed`; zero create-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8, T9 | PV-T9-001 |
 | FR-012 | Providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate; offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | FR-013 | Capabilities audit/validate/drift-check; companions agent-handoff | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
-| FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10, T15 | PV-T1-001, PV-T10-001, PV-T15-001 |
+| FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10, T15, T19, T20 | PV-T1-001, PV-T10-001, PV-T15-001, PV-T19-001, PV-T20-001 |
 | FR-015 | `gh-workflow` binary artifact, 0755, static, all nine subcommands | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
 | FR-016 | `audit`: schema+policy inputs, read-only live comparison, deterministic findings, fail-closed preconditions | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4, T12, T13 | PV-T4-001, PV-T12-001, PV-T13-001 |
 | FR-017 | `summary-format.md` defines the attention-first operator summary layout; the skill presents summaries in it | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
@@ -227,6 +227,8 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T16 | Compatibility-matrix support for required-option catalog defaults | active | behavior | P3 | T15 | IR-001 | PV-T16-001 | no / none |
 | T17 | Consumer-outcome enablement with issue-ledger amendments | active | behavior | P3 | T16 | IR-001 | PV-T17-001 | no / none |
 | T18 | Performance-lane enablement through the matrix | active | behavior | P3 | T16 | IR-001 | PV-T18-001 | no / none |
+| T19 | Legacy adopt-registry support for the advertised family | active | behavior | P3 | T15 | FR-014 | PV-T19-001 | yes / none |
+| T20 | Self-hosting adoption of github-workflow in this repository | active | configuration | P3 | T15 | FR-014 | PV-T20-001 | yes / none |
 
 ## 9. Implementation Tasks
 
@@ -757,6 +759,69 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T18.4 Verify GREEN** — performance lane green; whole-directory run green.
   - **T18.5 Verify Task** — run PV-T18-001; commit with checkpoint trailers.
 
+#### T19: Legacy adopt-registry support for the advertised family
+
+- **disposition:** active
+- **outcome:** the legacy adopt engine's registry knows `github-workflow`, so the four `tests/test_standards_composition.py` tests that derive their id list from the shipping catalog build plans for it instead of failing `UsageError: unknown standard(s): github-workflow`.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T15]
+- **dependency_reason:** consumes catalog-activation-v1: the registry entry serves the advertised catalog id (discovered_from: T9 full-gate rerun — the composition suite asks the adopt engine for every shipping-catalog id; corrects: second-wave advertisement residue without reopening T15)
+- **requirements:** [FR-014]
+- **proof:** [PV-T19-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [catalog-activation-v1]
+- **produces:** [adopt-registry-v1]
+- **preserves:** [existing registry entries and adopt behavior for all other families; no payload changes]
+- **invariants:** [registry entry mirrors how the other consumer families are registered; no network]
+- **executor_discretion:** [entry placement and any minimal shared-table refactor the registry shape requires]
+- **files:** [`src/project_standards/adopt/` (modify; owner T19)]
+- **parallel_safe:** yes
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** revert the registry entry; restore last green checkpoint
+- **acceptance:** PV-T19-001 proves `pytest tests/test_standards_composition.py -q` exits 0 with no failed tests, `uv run ruff check src tests` exits 0, and `uv run basedpyright` reports 0 errors
+- **sub-tasks:**
+  - **T19.1 RED** — reproduce the four `UsageError: unknown standard(s): github-workflow` failures.
+  - **T19.2 Verify RED** — the registry gap and nothing else.
+  - **T19.3 GREEN** — register the family in the adopt engine.
+  - **T19.4 Verify GREEN** — composition module green; static gate clean.
+  - **T19.5 Verify Task** — run PV-T19-001; commit with checkpoint trailers.
+
+#### T20: Self-hosting adoption of github-workflow in this repository
+
+- **disposition:** active
+- **outcome:** this repository's own standards selection enables `github-workflow` (organization `L3DigitalNet`, harnesses claude-code and codex) and a control-plane reconcile delivers the managed artifacts into the repository (skill tree with references and binary, Codex companion, rendered `policy.toml`, instruction-file blocks), so `tests/mcp_services/test_providers.py::test_every_shipping_catalog_provider_is_seam_served` passes. This is the scope decision recorded in execution notes: the seam canary codifies the repository policy that every advertised consumer package is self-hosted; adoption is reversible by deselection plus reconcile.
+- **work_type:** configuration
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T15]
+- **dependency_reason:** consumes catalog-activation-v1: only an advertised default can be selected by this repository's config (discovered_from: T9 full-gate rerun — the seam canary reports the repo blind to the family; corrects: second-wave advertisement residue)
+- **requirements:** [FR-014]
+- **proof:** [PV-T20-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [catalog-activation-v1, payload-1.0-final]
+- **produces:** [self-hosting-adoption-v1]
+- **preserves:** [every other package's selection and delivered artifacts byte-identical; hand-authored instruction-file prose outside the managed blocks]
+- **invariants:** [delivery only through the control-plane reconcile — no hand-authored artifact bytes; the delivered binary byte-matches the payload source; blocks land inside managed markers only]
+- **executor_discretion:** [config option ordering]
+- **files:** [`.standards/config.toml` (modify; owner T20), `.standards/lock.toml` (modify; owner T20), `.agents/skills/github-workflow/` (create; owner T20), `.standards/packages/github-workflow/` (create; owner T20), `CLAUDE.md` (modify; owner T20), `AGENTS.md` (modify; owner T20)]
+- **parallel_safe:** yes
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** deselect the package and reconcile; restore last green checkpoint
+- **acceptance:** PV-T20-001 proves the seam-canary test passes, the reconcile diff contains only the managed github-workflow artifacts and block insertions, a second reconcile is a byte-identical no-op, the delivered binary equals the payload source bytes, and the repository markdown gate stays green over the modified instruction files
+- **sub-tasks:**
+  - **T20.1 PRECHECK** — reproduce the seam-canary failure; inventory the expected delivery set from the payload.
+  - **T20.2 APPLY** — add the config selection; run the control-plane reconcile; inspect the diff.
+  - **T20.3 VERIFY** — seam canary green; idempotent re-reconcile; markdown gate green; binary byte-compare.
+  - **T20.4 Verify Task** — run PV-T20-001; commit with checkpoint trailers.
+
 ### Phase P4: release readiness and close-out
 
 #### T10: Family docs, catalog, live-run evidence, spec traceability
@@ -921,6 +986,8 @@ None.
 | PV-T16-001 | IR-001 | T16 | integration | package-compatibility matrix suite | full `pytest tests/package_compatibility/` with the family advertised | all rows pass incl. the 28 previously failing and the four stable-id tests; no package schema changed | removing the standard's minimal-config table entry yields a clear error, not a silent empty-config pass | local, offline | ephemeral |
 | PV-T17-001 | IR-001 | T17 | integration | package-compatibility suite + issue-ledger validator | full `pytest tests/package_compatibility/` incl. consumer outcomes | all rows pass; ledger accepts the six amendment records | a bare digest swap without amendment records is rejected with `LedgerError` | local, offline | ephemeral |
 | PV-T18-001 | IR-001 | T18 | integration | performance-lane suite | `pytest tests/package_compatibility/ -q` whole directory incl. `-m performance` | all lanes green; no bare enablement site remains | reverting the substitution re-fails both performance tests | local, offline | ephemeral |
+| PV-T19-001 | FR-014 | T19 | integration | standards-composition suite | `pytest tests/test_standards_composition.py -q` | module green incl. the four previously failing tests | reverting the registry entry re-fails them | local, offline | ephemeral |
+| PV-T20-001 | FR-014 | T20 | integration | seam canary + reconcile diff + markdown gate | `pytest tests/mcp_services/test_providers.py -q` plus reconcile inspection | canary green; managed-only diff; idempotent re-reconcile; binary byte-match; markdown gate green | deselecting the package re-fails the canary | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
 
