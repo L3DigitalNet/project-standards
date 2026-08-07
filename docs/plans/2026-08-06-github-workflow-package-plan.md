@@ -168,7 +168,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-009 | Refusals stated imperatively (org mutation, mode self-promotion, readiness inference, enforcement bypass) | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
 | FR-010 | `policy.toml` rendered with organization for the skill/tool to read | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | FR-011 | Every artifact `managed`; zero create-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8, T9 | PV-T9-001 |
-| FR-012 | Providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate; offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8, T22 | PV-T8-001, PV-T22-001 |
+| FR-012 | Providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate; offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8, T22, T23 | PV-T8-001, PV-T22-001, PV-T23-001 |
 | FR-013 | Capabilities audit/validate/drift-check; companions agent-handoff | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10, T15, T20, T21 | PV-T1-001, PV-T10-001, PV-T15-001, PV-T20-001, PV-T21-001 |
 | FR-015 | `gh-workflow` binary artifact, 0755, static, all nine subcommands | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
@@ -230,6 +230,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T19 | Legacy adopt-registry support for the advertised family | superseded | behavior | P3 | T15 | none | none | yes / superseded by T21 |
 | T21 | Composition-suite classification of catalog-native families | active | behavior | P3 | T15 | FR-014 | PV-T21-001 | yes / none |
 | T22 | Seam authority for github-workflow provider dispatch | active | behavior | P3 | T20 | FR-012 | PV-T22-001 | no / none |
+| T23 | Resolution-oracle declaration for the github-workflow seam family | active | behavior | P3 | T22 | FR-012 | PV-T23-001 | no / none |
 | T20 | Self-hosting adoption of github-workflow in this repository | active | configuration | P3 | T15 | FR-014 | PV-T20-001 | yes / none |
 
 ## 9. Implementation Tasks
@@ -882,6 +883,38 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T22.4 Verify GREEN** — module green; parity negative control.
   - **T22.5 Verify Task** — run PV-T22-001; commit with checkpoint trailers.
 
+#### T23: Resolution-oracle declaration for the github-workflow seam family
+
+- **disposition:** active
+- **outcome:** the command-resolution suite's independent frozen oracle declares the `github-workflow` seam family: `_SEAM_FAMILIES` gains the family with its validate/drift-check operations, `_expected_inputs` gains a family arm calling a test-owned `_oracle_gh_workflow_snapshots` that reconstructs the authoritative input from the public primitives against a test-owned read-set copy (the oracle must not import the implementation's list), and the stale "four families" prose in the resolution test and `src/project_standards/mcp_services/providers.py` reads five. The previously failing oracle test passes and the whole module is green — discharging the residue clause deferred from T22.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T22]
+- **dependency_reason:** consumes seam-authority-v1: the oracle declares and independently reconstructs the input shape T22's family branch serves (discovered_from: T22 verification — the frozen oracle fails by design for any undeclared new family; corrects: the second declaration site outside T22's claims)
+- **requirements:** [FR-012]
+- **proof:** [PV-T23-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [seam-authority-v1]
+- **produces:** [resolution-oracle-v1]
+- **preserves:** [every other family's oracle entries; the oracle's independence rule (no implementation imports); no `src` behavior change beyond the one-word docstring]
+- **invariants:** [the oracle read-set copy is test-owned and byte-independent of the implementation's `_GH_WORKFLOW_READ_PATHS`; no network]
+- **executor_discretion:** [oracle helper naming]
+- **files:** [`tests/control_plane/test_command_resolution.py` (modify; owner T23), `src/project_standards/mcp_services/providers.py` (modify; owner T23)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** revert both files; restore last green checkpoint
+- **acceptance:** PV-T23-001 proves `pytest tests/control_plane/test_command_resolution.py -q` exits 0 with no failed tests and `pytest tests/mcp_services/test_providers.py -q` stays green
+- **sub-tasks:**
+  - **T23.1 RED** — reproduce the oracle failure (`DID NOT RAISE CommandResolutionError`).
+  - **T23.2 Verify RED** — the undeclared family and nothing else.
+  - **T23.3 GREEN** — declare the family, add the oracle arm, fix the prose.
+  - **T23.4 Verify GREEN** — resolution module green; seam module stays green.
+  - **T23.5 Verify Task** — run PV-T23-001; commit with checkpoint trailers.
+
 ### Phase P4: release readiness and close-out
 
 #### T10: Family docs, catalog, live-run evidence, spec traceability
@@ -1048,6 +1081,7 @@ None.
 | PV-T18-001 | IR-001 | T18 | integration | performance-lane suite | `pytest tests/package_compatibility/ -q` whole directory incl. `-m performance` | all lanes green; no bare enablement site remains | reverting the substitution re-fails both performance tests | local, offline | ephemeral |
 | PV-T21-001 | FR-014 | T21 | integration | standards-composition suite | `pytest tests/test_standards_composition.py -q` | module green; classification explicit | removing the family from the catalog-native set while advertised fails the classification assertion | local, offline | ephemeral |
 | PV-T22-001 | FR-012 | T22 | integration | MCP seam canary + dispatch-parity suite | `pytest tests/mcp_services/test_providers.py -q` | module green; MCP/CLI input parity for the family | reverting the family branch while the census row remains fails the parity test | local, offline | ephemeral |
+| PV-T23-001 | FR-012 | T23 | integration | command-resolution frozen oracle | `pytest tests/control_plane/test_command_resolution.py -q` plus the seam module | both modules green; oracle reconstructs the input independently | an undeclared family fails the oracle (the reproduced RED) | local, offline | ephemeral |
 | PV-T20-001 | FR-014 | T20 | integration | seam canary + reconcile diff + markdown gate | `pytest tests/mcp_services/test_providers.py -q` plus reconcile inspection | canary green; managed-only diff; idempotent re-reconcile; binary byte-match; markdown gate green | deselecting the package re-fails the canary | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
