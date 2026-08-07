@@ -168,7 +168,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-009 | Refusals stated imperatively (org mutation, mode self-promotion, readiness inference, enforcement bypass) | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
 | FR-010 | `policy.toml` rendered with organization for the skill/tool to read | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | FR-011 | Every artifact `managed`; zero create-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8, T9 | PV-T9-001 |
-| FR-012 | Providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate; offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
+| FR-012 | Providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate; offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8, T22 | PV-T8-001, PV-T22-001 |
 | FR-013 | Capabilities audit/validate/drift-check; companions agent-handoff | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10, T15, T20, T21 | PV-T1-001, PV-T10-001, PV-T15-001, PV-T20-001, PV-T21-001 |
 | FR-015 | `gh-workflow` binary artifact, 0755, static, all nine subcommands | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
@@ -229,6 +229,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T18 | Performance-lane enablement through the matrix | active | behavior | P3 | T16 | IR-001 | PV-T18-001 | no / none |
 | T19 | Legacy adopt-registry support for the advertised family | superseded | behavior | P3 | T15 | none | none | yes / superseded by T21 |
 | T21 | Composition-suite classification of catalog-native families | active | behavior | P3 | T15 | FR-014 | PV-T21-001 | yes / none |
+| T22 | Seam authority for github-workflow provider dispatch | active | behavior | P3 | T20 | FR-012 | PV-T22-001 | no / none |
 | T20 | Self-hosting adoption of github-workflow in this repository | active | configuration | P3 | T15 | FR-014 | PV-T20-001 | yes / none |
 
 ## 9. Implementation Tasks
@@ -849,6 +850,38 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T20.3 VERIFY** — seam canary green; idempotent re-reconcile; markdown gate green; binary byte-compare.
   - **T20.4 Verify Task** — run PV-T20-001; commit with checkpoint trailers.
 
+#### T22: Seam authority for github-workflow provider dispatch
+
+- **disposition:** active
+- **outcome:** the MCP seam serves `github-workflow`'s `validate` and `drift-check` with authoritative provider input instead of generic empty-input dispatch: `provider_dispatch_input` gains a family branch that supplies the artifact/contribution snapshots the package's findings providers require (`capture_command_snapshot` + `managed_unit_snapshot`, matching the payload's provider-input schema), the `AUTHORITATIVE_INPUT_OWNER` census gains the family's rows, and the full `tests/mcp_services/test_providers.py` module passes — discharging the seam-canary clause deferred from T20. The census-exemption shortcut is explicitly rejected: empty input would make this package's providers fabricate missing-artifact findings, diverging MCP from CLI.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T20]
+- **dependency_reason:** consumes self-hosting-adoption-v1: the seam canary only exercises packages this repository selects, so adoption must be integrated before the authority can be proven (discovered_from: T20 verification — canary assertion 2 and the census test fail with the family adopted; corrects: seam wiring no prior task covered)
+- **requirements:** [FR-012]
+- **proof:** [PV-T22-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [self-hosting-adoption-v1, payload-1.0-final]
+- **produces:** [seam-authority-v1]
+- **preserves:** [dispatch authority and behavior for every other family; CLI provider behavior byte-identical; no payload changes]
+- **invariants:** [MCP composite dispatch and direct CLI dispatch produce identical provider input for the family (the parity property the census test enforces); no network]
+- **executor_discretion:** [branch structure inside provider_inputs.py, snapshot assembly helpers]
+- **files:** [`src/project_standards/control_plane/provider_inputs.py` (modify; owner T22), `tests/mcp_services/test_providers.py` (modify; owner T22)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** revert both files; restore last green checkpoint
+- **acceptance:** PV-T22-001 proves `pytest tests/mcp_services/test_providers.py -q` exits 0 with no failed tests, and the parity test fails when the family branch is reverted while the census row remains
+- **sub-tasks:**
+  - **T22.1 RED** — reproduce the two failures (generic-dispatch fallback; stale census).
+  - **T22.2 Verify RED** — the missing family authority and nothing else.
+  - **T22.3 GREEN** — implement the family branch and census rows.
+  - **T22.4 Verify GREEN** — module green; parity negative control.
+  - **T22.5 Verify Task** — run PV-T22-001; commit with checkpoint trailers.
+
 ### Phase P4: release readiness and close-out
 
 #### T10: Family docs, catalog, live-run evidence, spec traceability
@@ -1014,6 +1047,7 @@ None.
 | PV-T17-001 | IR-001 | T17 | integration | package-compatibility suite + issue-ledger validator | full `pytest tests/package_compatibility/` incl. consumer outcomes | all rows pass; ledger accepts the six amendment records | a bare digest swap without amendment records is rejected with `LedgerError` | local, offline | ephemeral |
 | PV-T18-001 | IR-001 | T18 | integration | performance-lane suite | `pytest tests/package_compatibility/ -q` whole directory incl. `-m performance` | all lanes green; no bare enablement site remains | reverting the substitution re-fails both performance tests | local, offline | ephemeral |
 | PV-T21-001 | FR-014 | T21 | integration | standards-composition suite | `pytest tests/test_standards_composition.py -q` | module green; classification explicit | removing the family from the catalog-native set while advertised fails the classification assertion | local, offline | ephemeral |
+| PV-T22-001 | FR-012 | T22 | integration | MCP seam canary + dispatch-parity suite | `pytest tests/mcp_services/test_providers.py -q` | module green; MCP/CLI input parity for the family | reverting the family branch while the census row remains fails the parity test | local, offline | ephemeral |
 | PV-T20-001 | FR-014 | T20 | integration | seam canary + reconcile diff + markdown gate | `pytest tests/mcp_services/test_providers.py -q` plus reconcile inspection | canary green; managed-only diff; idempotent re-reconcile; binary byte-match; markdown gate green | deselecting the package re-fails the canary | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
