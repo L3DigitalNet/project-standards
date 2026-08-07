@@ -17,3 +17,7 @@
 - v5.17.0 is scoped as the ADR train: #127 ships as `adr` 1.5, then the 21-item corpus backlog in #128. MINOR; 1.5 must stay non-breaking to become the Catalog 5 default.
 - The repository's `docs/adr/adr.template.md` is still the 1.3 template because create-only artifacts are invisible to drift-check (bug 006).
 - Program tail otherwise unchanged: T24–T29, SPEC-GSF3 T1, and the Usage Documentation Site V2 specs stay queued for later sessions.
+- The `github-workflow` package is fully staged: approved design rev 1.6 (D0–D12), SPEC-GHW1 rev 1.2, and an active 11-task format-3 plan with T1 ready.
+- Two Codex high-effort review rounds ran over SPEC-GHW1 and its plan; all ten round-1 findings and the round-2 residues are applied.
+- `scripts/plan.py` is upgraded to the plan-authoring 3.4.0 bridge byte-identically; the open-issue program plan validates and schedules under it.
+- Release placement for `github-workflow@1.0` is an open owner decision (SPEC-GHW1 OQ-001, post-v5.17.0).
