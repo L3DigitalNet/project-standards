@@ -173,8 +173,8 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10 | PV-T1-001, PV-T10-001 |
 | FR-015 | `gh-workflow` binary artifact, 0755, static, all nine subcommands | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
 | FR-016 | `audit`: schema+policy inputs, read-only live comparison, deterministic findings, fail-closed preconditions | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4 | PV-T4-001 |
-| FR-017 | `summary-format.md` defines the attention-first operator summary layout | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2 | PV-T2-001 |
-| FR-018 | `summary-format.md` defines the creation receipt; skill requires it after creation | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2 | PV-T2-001 |
+| FR-017 | `summary-format.md` defines the attention-first operator summary layout; the skill presents summaries in it | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
+| FR-018 | `summary-format.md` defines the creation receipt; skill requires it after creation | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
 | FR-019 | `ledger`: `docs/GH-WORKFLOWS.md` with header, TOC anchors, layout; atomic whole-file; gate-clean output | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5 | PV-T5-001 |
 | FR-020 | Skill refresh rule (after mutations + on demand) and staleness rule | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T3 | T3 | PV-T3-001 |
 | FR-021 | `set`/`new`/`close`/`reopen`: schema-validated mutations, scaffold+receipt on create, atomic terminal sync; org read-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T6 | T6 | PV-T6-001 |
@@ -189,7 +189,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | IR-001 | Config schema exactly `organization` + `harnesses`; reject unknown/empty | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T1, T8 | PV-T1-001, PV-T8-002 |
 | IR-002 | All GitHub access via operator's `gh` auth; no embedded credentials | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4 | PV-T4-001 |
 | IR-003 | markdown-block adapter, scope `block:github-workflow`, round-trips | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
-| IR-004 | Non-interactive CLI, nine subcommands, JSON+human modes for read-only, zero-arg defaults | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
+| IR-004 | Non-interactive CLI, nine subcommands, JSON+human modes for read-only, zero-arg defaults | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T4, T5, T6, T7 | PV-T4-001, PV-T5-001, PV-T6-001, PV-T7-001 |
 | DR-001 | `org-schema.yaml` equals the design-input baseline schema | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2 | PV-T2-001 |
 | DR-002 | `policy.toml` carries org + package version only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | DR-003 | Ledger is generated consumer content: excluded from digests/drift, tool-owned whole-file | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T5 | T5 | PV-T5-001 |
@@ -211,10 +211,10 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | T1 | Family scaffold validating end to end | active | configuration | P1 | None | FR-014, IR-001 | PV-T1-001 | no / none |
 | T2 | Six reference files with fidelity checks | active | behavior | P1 | T1 | FR-005, FR-006, FR-017, FR-018, DR-001 | PV-T2-001 | no / none |
-| T3 | SKILL.md and Codex companion | active | behavior | P2 | T2 | FR-001, FR-002, FR-008, FR-009, FR-020, FR-024 | PV-T3-001 | yes / none |
-| T4 | Go module, gh transport, and audit subcommand | active | behavior | P2 | T2 | FR-016, IR-002 | PV-T4-001 | yes / none |
-| T5 | Layout engine and ledger, summary, receipt subcommands | active | behavior | P2 | T4 | FR-019, FR-022, DR-003 | PV-T5-001 | no / T6 shared registry |
-| T6 | Mutation and check subcommands | active | behavior | P2 | T5 | FR-021, FR-023 | PV-T6-001 | no / T4, T5 shared registry |
+| T3 | SKILL.md and Codex companion | active | behavior | P2 | T2 | FR-001, FR-002, FR-008, FR-009, FR-017, FR-018, FR-020, FR-024 | PV-T3-001 | yes / none |
+| T4 | Go module, gh transport, and audit subcommand | active | behavior | P2 | T2 | FR-016, IR-002, IR-004 | PV-T4-001 | yes / none |
+| T5 | Layout engine and ledger, summary, receipt subcommands | active | behavior | P2 | T4 | FR-019, FR-022, DR-003, IR-004 | PV-T5-001 | no / T6 shared registry |
+| T6 | Mutation and check subcommands | active | behavior | P2 | T5 | FR-021, FR-023, IR-004 | PV-T6-001 | no / T4, T5 shared registry |
 | T7 | Reproducible build, committed binary, gate wiring | active | configuration | P2 | T6 | FR-015, NFR-005, IR-004 | PV-T7-001 | no / none |
 | T8 | Payload completion with providers, contributions, config, policy | active | configuration | P3 | T3, T7 | FR-003, FR-004, FR-007, FR-010, FR-011, FR-012, FR-013, NFR-001, NFR-003, IR-001, IR-003, DR-002 | PV-T8-001 | no / T1 shared payload files |
 | T9 | Package tests, fixtures, and guards | active | behavior | P3 | T8 | FR-011, NFR-001, NFR-002, NFR-004 | PV-T9-001 | no / none |
@@ -302,7 +302,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **boundary:** cross-task
 - **depends_on:** [T2]
 - **dependency_reason:** consumes reference-content-v1: the skill cites the six references by path and content
-- **requirements:** [FR-001, FR-002, FR-008, FR-009, FR-020, FR-024]
+- **requirements:** [FR-001, FR-002, FR-008, FR-009, FR-017, FR-018, FR-020, FR-024]
 - **proof:** [PV-T3-001]
 - **source_refs:** [repo:docs/specs/2026-08-06-github-workflow-package-spec.md, repo:standards/agent-handoff/versions/1.9/skills/agent-handoff/SKILL.md]
 - **consumes:** [reference-content-v1]
@@ -317,7 +317,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **superseded_by:** []
 - **evidence:** [ephemeral]
 - **recovery:** additive; restore last green checkpoint
-- **acceptance:** PV-T3-001 proves scripted content checks find the trigger boundary, all four refusals, the routing map covering all nine subcommands, the refresh + staleness rules, and references to all six files; markdown gate green
+- **acceptance:** PV-T3-001 proves scripted content checks find the trigger boundary, all four refusals, the routing map covering all nine subcommands, the pre-execution platform/binary check (EC-006 — the skill checks because a foreign-platform binary cannot self-diagnose), the refresh + staleness rules, the summary-layout and creation-receipt directives (FR-017/FR-018 skill clauses), and references to all six files; markdown gate green
 - **sub-tasks:**
   - **T3.1 RED** — add content checks for the required skill elements; expected failure: file absent.
   - **T3.2 Verify RED** — run checks; confirm the failure is absence.
@@ -335,14 +335,14 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **boundary:** cross-task
 - **depends_on:** [T2]
 - **dependency_reason:** consumes reference-content-v1: loaders and audit fixtures consume the `org-schema.yaml` format T2 fixes
-- **requirements:** [FR-016, IR-002]
+- **requirements:** [FR-016, IR-002, IR-004]
 - **proof:** [PV-T4-001]
 - **source_refs:** [repo:go.mod, repo:Makefile, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
 - **consumes:** [reference-content-v1]
 - **produces:** [ghworkflow-core-v1]
 - **preserves:** [`make go-check` green throughout; no network in any test]
-- **invariants:** [org-scoped calls read-only; missing auth/unreachable API/unsupported platform → nonzero exit, no partial report; no credential material in source or output]
-- **executor_discretion:** [internal package decomposition, stdlib flag handling, fixture format]
+- **invariants:** [org-scoped calls read-only; missing authentication or unreachable API → nonzero exit, no partial report; no credential material in source or output]
+- **executor_discretion:** [internal package decomposition, stdlib flag handling, fixture format, self-registering subcommand files so later tasks add files rather than rewriting shared registration]
 - **files:** [`cmd/gh-workflow/main.go` (create; owner T4), `internal/ghworkflow/` (create; owner T4), `go.mod` (modify; owner T4), `go.sum` (modify; owner T4)]
 - **parallel_safe:** yes
 - **conflicts_with:** []
@@ -350,7 +350,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **superseded_by:** []
 - **evidence:** [ephemeral]
 - **recovery:** Go lane is additive; restore last green checkpoint; `go-check` re-verifies
-- **acceptance:** PV-T4-001 proves fixture-driven tests cover every finding class and every precondition failure (fail-closed), JSON and human output, and `make go-check` passes with the new packages
+- **acceptance:** PV-T4-001 proves fixture-driven tests cover every finding class and every precondition failure (fail-closed), zero-argument default resolution, JSON and human output, and `make go-check` passes with the new packages
 - **sub-tasks:**
   - **T4.1 RED** — write failing tests for finding classification and precondition behavior against the fake transport.
   - **T4.2 Verify RED** — failures are missing implementation.
@@ -368,13 +368,13 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **boundary:** cross-task
 - **depends_on:** [T4]
 - **dependency_reason:** consumes ghworkflow-core-v1: transport, models, and the subcommand registry
-- **requirements:** [FR-019, FR-022, DR-003]
+- **requirements:** [FR-019, FR-022, DR-003, IR-004]
 - **proof:** [PV-T5-001]
 - **source_refs:** [repo:docs/specs/2026-08-06-github-workflow-package-spec.md, repo:docs/specs/2026-08-06-github-workflow-package-design.md]
 - **consumes:** [ghworkflow-core-v1]
 - **produces:** [render-engine-v1]
 - **preserves:** [prior ledger bytes on any failed write (atomic temp+rename)]
-- **invariants:** [whole-file ownership; generated header with timestamp+version+notice; TOC anchor for every section; output passes Prettier+markdownlint unmodified]
+- **invariants:** [whole-file ownership; generated header with timestamp+version+notice; TOC anchor for every section; output conforms unmodified to the markdown-tooling default Prettier+markdownlint gate — stricter consumer rules are consumer policy]
 - **executor_discretion:** [engine internals, golden-fixture organization]
 - **files:** [`internal/ghworkflow/render/` (create; owner T5), `cmd/gh-workflow/main.go` (modify; owner T4)]
 - **parallel_safe:** no
@@ -383,7 +383,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **superseded_by:** []
 - **evidence:** [ephemeral]
 - **recovery:** restore last green checkpoint; atomic write invariant prevents partial consumer files
-- **acceptance:** PV-T5-001 proves golden-fixture equality for all three surfaces, TOC/header presence, atomicity under injected write failure (prior bytes intact), and that generated output passes the repository's Prettier and markdownlint checks
+- **acceptance:** PV-T5-001 proves golden-fixture equality for all three surfaces, TOC/header presence, zero-argument and JSON/human modes, atomicity under injected write failure (prior bytes intact), and that generated output passes the markdown-tooling default Prettier and markdownlint configuration (this repository's gate)
 - **sub-tasks:**
   - **T5.1 RED** — golden-fixture and atomicity tests failing for the absent engine.
   - **T5.2 Verify RED** — confirm failure cause.
@@ -395,19 +395,19 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 #### T6: Mutation and check subcommands
 
 - **disposition:** active
-- **outcome:** validated mutation subcommands and the read-only readiness check: `set` refuses invalid values listing the valid set; `new` scaffolds the canonical body, applies initial fields, and prints the receipt; `close`/`reopen` pair `Workflow` terminals with close reasons atomically; `check` itemizes Ready-precondition findings with exit codes.
+- **outcome:** validated mutation subcommands and the read-only readiness check: `set` refuses invalid values listing the valid set; `new` scaffolds the canonical body, applies initial fields, and prints the receipt; `close`/`reopen` apply `Workflow` terminals and close reasons as an ordered failure-safe sequence per FR-021; `check` itemizes Ready-precondition findings with exit codes.
 - **work_type:** behavior
 - **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
 - **boundary:** cross-task
 - **depends_on:** [T5]
 - **dependency_reason:** consumes render-engine-v1 for the receipt-on-create path; serializes shared registry ownership after T5
-- **requirements:** [FR-021, FR-023]
+- **requirements:** [FR-021, FR-023, IR-004]
 - **proof:** [PV-T6-001]
 - **source_refs:** [repo:docs/specs/2026-08-06-github-workflow-package-spec.md, repo:docs/specs/2026-08-06-github-workflow-package-design.md]
 - **consumes:** [render-engine-v1, ghworkflow-core-v1]
 - **produces:** [ghworkflow-mutations-v1]
 - **preserves:** [organization schema untouched by every code path — no org-mutation API surface exists in the client]
-- **invariants:** [validation precedes any mutating call; refusal changes nothing remotely; terminal pairing is one logical operation with partial failure reported explicitly]
+- **invariants:** [validation precedes any mutating call; refusal changes nothing remotely; terminal pairing is an ordered failure-safe sequence — divergent state reported exactly, corrective retry required before success (FR-021)]
 - **executor_discretion:** [flag naming within IR-004 constraints, error text]
 - **files:** [`internal/ghworkflow/mutate/` (create; owner T6), `cmd/gh-workflow/main.go` (modify; owner T4)]
 - **parallel_safe:** no
@@ -416,7 +416,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **superseded_by:** []
 - **evidence:** [ephemeral]
 - **recovery:** restore last green checkpoint; fake-transport tests cannot leave remote state
-- **acceptance:** PV-T6-001 proves via fake transport: invalid-value refusal with zero mutating calls (EC-008), scaffold + receipt on create, terminal pairing including the partial-failure path, reopen restoration, and every `check` precondition class; `make go-check` green
+- **acceptance:** PV-T6-001 proves via fake transport: invalid-value refusal with zero mutating calls (EC-008), scaffold + receipt on create, the ordered terminal pairing including the divergent-state report and corrective-retry path, reopen restoration, every `check` precondition class, and IR-004 zero-argument plus JSON/human output for `check`; `make go-check` green
 - **sub-tasks:**
   - **T6.1 RED** — failing tests per subcommand behavior incl. refusal and partial-failure paths.
   - **T6.2 Verify RED** — confirm failure cause.
@@ -440,7 +440,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **consumes:** [ghworkflow-mutations-v1, render-engine-v1, ghworkflow-core-v1]
 - **produces:** [gh-workflow-binary-v1]
 - **preserves:** [existing Makefile targets; `go-check` extended, not altered]
-- **invariants:** [rebuild from clean checkout yields byte-identical output; binary statically linked; mode 0755 preserved by Git]
+- **invariants:** [one exact build invocation: `GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0 go build -trimpath -buildvcs=false` with deterministic linker flags; rebuild from a clean worktree at the same commit yields byte-identical output; binary statically linked; payload declares `mode = "0755"` (the delivered mode is proved by T9's fixture reconcile)]
 - **executor_discretion:** [make target vs script internals, deterministic ldflags version stamping]
 - **files:** [`Makefile` (modify; owner T7), `scripts/build-gh-workflow.sh` (create; owner T7), `standards/github-workflow/versions/1.0/skills/github-workflow/bin/gh-workflow` (create; owner T7)]
 - **parallel_safe:** no
@@ -449,7 +449,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **superseded_by:** []
 - **evidence:** [ephemeral]
 - **recovery:** rebuild regenerates the artifact; restore last green checkpoint
-- **acceptance:** PV-T7-001 proves two independent clean builds byte-match the committed binary, the gate check fails on a deliberately corrupted binary (negative control), `--help` enumerates all nine subcommands, and file mode is 0755
+- **acceptance:** PV-T7-001 proves two independent clean-worktree same-commit builds byte-match the committed binary using the exact prescribed invocation, the gate check fails on a deliberately corrupted binary (negative control), and `--help` enumerates all nine subcommands
 - **sub-tasks:**
   - **T7.1 PRECHECK** — verify toolchain pin and clean tree.
   - **T7.2 PROVE ABSENCE** — rebuild-compare check fails before the binary exists.
@@ -618,7 +618,7 @@ A failure discovered in T9/T10 verification blocks that task, appends a correcti
 
 | ID | Risk | Likelihood | Impact | Treatment | Owner / Task |
 | --- | --- | --- | --- | --- | --- |
-| R-001 | Go binary not byte-reproducible across environments (toolchain/telemetry variance) | medium | high | pin via `go.mod` toolchain, `CGO_ENABLED=0` and `-trimpath`, deterministic ldflags; prove with double-build in PV-T7-001; if variance persists, record the exact build environment in the payload and gate on it | executor / T7 |
+| R-001 | Go binary not byte-reproducible across environments (toolchain/telemetry variance) | medium | high | pin via `go.mod` toolchain and the exact invocation (`GOOS/GOARCH/GOAMD64`, `CGO_ENABLED=0`, `-trimpath`, `-buildvcs=false`, deterministic ldflags); prove with clean-worktree double-build in PV-T7-001; if variance persists, record the exact build environment in the payload and gate on it | executor / T7 |
 | R-002 | Issue Fields GA API surface differs from the design doc's description | medium | medium | D-002 isolates API calls behind the transport; T4 verifies against current API docs before freezing; spec A-001 already scopes the blast radius to a references note | executor / T4 |
 | R-003 | Ledger output fighting consumer markdown gates (Prettier normalization drift) | low | medium | PV-T5-001 runs the repository's actual Prettier and markdownlint over generated fixtures; render emits pre-normalized output | executor / T5 |
 | R-004 | Binary bloats repository/payload beyond comfort | low | low | accepted per design D7 residual risk; stdlib-only keeps the static binary small; reopen trigger recorded in the brief | owner / T7 |
@@ -628,7 +628,7 @@ A failure discovered in T9/T10 verification blocks that task, appends a correcti
 | ID | Assumption | Impact if False |
 | --- | --- | --- |
 | A-001 | The control plane supports binary (non-text) managed artifacts with mode preservation without platform changes | a small platform extension becomes a discovered task appended to this plan; SPEC-CP01 owners decide |
-| A-002 | Stdlib-only Go suffices (no third-party deps) for HTTP, JSON, and the bounded YAML subset `org-schema.yaml` uses | if YAML parsing needs a dependency, adding one is executor discretion under `go-mod-check`; digest and vulncheck gates still apply |
+| A-002 | Stdlib-only Go suffices: HTTP and JSON are stdlib, and `org-schema.yaml` is parsed by an owned bounded-subset parser (exactly two top-level keys, string scalars and string lists, per-field maps with `type` and `values`; anything else fails closed with a parse error) — Go's stdlib has no general YAML decoder and none is needed for this owned file | if the bounded parser proves insufficient, adding a dependency is executor discretion under `go-mod-check`; digest and vulncheck gates still apply |
 
 ### 11.3 Open Questions
 
@@ -673,14 +673,14 @@ None.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | PV-T1-001 | FR-014, IR-001 | T1 | integration | SBA 2.6 schemas + existing validator suite | `PYTHONPATH=$PWD/build/wheel-runtime uv run project-standards validate` plus graph/catalog checks | new family validates; two-option config schema present; prior output unchanged | malformed manifest variant rejected during authoring | local | ephemeral |
 | PV-T2-001 | FR-005, FR-006, FR-017, FR-018, DR-001 | T2 | documentation | preliminary design doc sections; spec layout definitions | scripted fidelity checks + YAML round-trip + markdown gate on new files | all required elements present; schema equals baseline | check fails when a required element is removed | local | ephemeral |
-| PV-T3-001 | FR-001, FR-002, FR-008, FR-009, FR-020, FR-024 | T3 | documentation | spec FR acceptance text | scripted content checks + markdown gate | boundary, refusals, routing map (9 subcommands), refresh/staleness present | check fails on a removed refusal | local | ephemeral |
-| PV-T4-001 | FR-016, IR-002 | T4 | unit | spec finding classes; fake transport | `make go-check` plus targeted `go test ./internal/ghworkflow/...` | all finding classes and precondition failures covered; no credentials; fail-closed | failing fake transport yields nonzero exit and no partial report | local, offline | ephemeral |
-| PV-T5-001 | FR-019, FR-022, DR-003 | T5 | unit | `summary-format.md` layouts; repo Prettier/markdownlint | targeted go tests + gate run over generated fixtures | byte-equal renders; TOC/header present; atomic write preserves prior bytes on failure | injected write failure leaves original intact | local, offline | ephemeral |
-| PV-T6-001 | FR-021, FR-023 | T6 | unit | spec FR-021/023 acceptance; org-schema fixture | targeted go tests + `make go-check` | refusal with zero mutating calls; scaffold+receipt; terminal pairing incl. partial failure; check classes | invalid value mutates nothing; partial failure reported explicitly | local, offline | ephemeral |
-| PV-T7-001 | FR-015, NFR-005, IR-004 | T7 | build | committed bytes as oracle | double clean build + byte compare wired into `make go-check`; `bin/gh-workflow --help` | byte-identical rebuilds; nine subcommands listed; mode 0755 | corrupted binary fails the gate check | local | ephemeral |
+| PV-T3-001 | FR-001, FR-002, FR-008, FR-009, FR-017, FR-018, FR-020, FR-024 | T3 | documentation | spec FR acceptance text | scripted content checks + markdown gate | boundary, refusals, routing map (9 subcommands), platform check, summary/receipt directives, refresh/staleness present | check fails on a removed refusal | local | ephemeral |
+| PV-T4-001 | FR-016, IR-002, IR-004 | T4 | unit | spec finding classes; fake transport | `make go-check` plus targeted `go test ./internal/ghworkflow/...` | all finding classes and precondition failures covered; zero-argument default and JSON+human modes for `audit`; no credentials; fail-closed | failing fake transport yields nonzero exit and no partial report | local, offline | ephemeral |
+| PV-T5-001 | FR-019, FR-022, DR-003, IR-004 | T5 | unit | `summary-format.md` layouts; repo Prettier/markdownlint | targeted go tests + gate run over generated fixtures | byte-equal renders; TOC/header present; zero-argument defaults and JSON+human modes for `summary`/`receipt`; atomic write preserves prior bytes on failure | injected write failure leaves original intact | local, offline | ephemeral |
+| PV-T6-001 | FR-021, FR-023, IR-004 | T6 | unit | spec FR-021/023 acceptance; org-schema fixture | targeted go tests + `make go-check` | refusal with zero mutating calls; scaffold+receipt; ordered terminal pairing incl. divergence report; check classes with zero-argument default and JSON+human modes | invalid value mutates nothing; partial failure reported explicitly | local, offline | ephemeral |
+| PV-T7-001 | FR-015, NFR-005, IR-004 | T7 | build | committed bytes as oracle | double clean build + byte compare wired into `make go-check`; `bin/gh-workflow --help` | byte-identical clean-worktree rebuilds via the exact prescribed invocation; nine subcommands listed | corrupted binary fails the gate check | local | ephemeral |
 | PV-T8-001 | FR-003, FR-004, FR-007, FR-010, FR-012, FR-013, NFR-003, IR-003, DR-002 | T8 | integration | SBA schemas; agent-handoff precedent; spec block content | standards validation + render for each harness combination | complete digest-pinned payload; correct gating; block invariants present; ≈12-line body | render with missing config option rejected | local | ephemeral |
 | PV-T8-002 | IR-001 | T8 | configuration | `config.schema.json` | schema validation acceptance and rejection cases | valid accepted; unknown/missing/empty rejected | unknown-option fixture rejected | local | ephemeral |
-| PV-T9-001 | FR-011, NFR-001, NFR-002, NFR-004 | T9 | integration | payload contract; spec §3.2 tree | new pytest suites + `scripts/verify.sh` | suites pass; fixture consumer matches target tree per harness (EC-005) | seeded create-only entry, org literal, and digest mismatch each fail their guard | local, offline | ephemeral |
+| PV-T9-001 | FR-011, NFR-001, NFR-002, NFR-004 | T9 | integration | payload contract; spec §3.2 tree | new pytest suites + `scripts/verify.sh` | suites pass; fixture consumer matches target tree per harness (EC-005) incl. delivered binary mode 0755 | seeded create-only entry, org literal, and digest mismatch each fail their guard | local, offline | ephemeral |
 | PV-T10-001 | FR-014 | T10 | acceptance | all repository gates; live organization | verify.sh + wheel validate + go-check + markdown gate + spec validate/lint; witnessed live `audit` + `ledger` run | all green; §17.3 Passing; EV-001 recorded | gate battery fails on any seeded regression during authoring | local plus one witnessed live run | EV-001 |
 | PV-T11-001 | REQ-901 | T11 | inspection | agent-handoff validators | `project-standards agent-handoff validate --repo .` and `drift-check --repo .` | both pass; close-out complete; OQ-001 surfaced | validator fails on a malformed handoff edit | local | ephemeral |
 
