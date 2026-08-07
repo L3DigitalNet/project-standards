@@ -2,8 +2,8 @@
 
 ## Current focus
 
-- Next session: implement `github-workflow` via `execute-plan` (plan `2026-08-06-github-workflow-package-plan.md`; T1 ready).
-- Next release is the v5.17.0 ADR train: ship #127 as `adr` 1.5 (must stay non-breaking), then the 21 corpus items in #128.
+- `github-workflow@1.0` is release-ready and self-hosted here; deferred and discovered work is registered in the plan §13 close-out.
+- Next release is the v5.17.0 ADR train: #127 as `adr` 1.5 (non-breaking), then #128's 21 items; `github-workflow@1.0` follows (OQ-001).
 - Decision owed before #128 item 1: how a create-only artifact reaches an existing consumer (bug 006).
 - Tail: T24–T29 (#62, #55; T24 ready), deferred #116, SPEC-GSF3 T1, Usage Doc Site V2 specs; owner: 1.12 legacy-digest residual.
 

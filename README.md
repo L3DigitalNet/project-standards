@@ -21,6 +21,7 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
     - [Project Specification Standard](#project-specification-standard)
     - [CLI Documentation Standard](#cli-documentation-standard)
     - [Agent Handoff Standard](#agent-handoff-standard)
+    - [GitHub Workflow Standard](#github-workflow-standard)
     - [Python Coding Standard (draft)](#python-coding-standard-draft)
     - [Standard Bundle Authoring Standard (internal/reference)](#standard-bundle-authoring-standard-internalreference)
   - [Consuming the standards](#consuming-the-standards)
@@ -46,6 +47,7 @@ project-standards/
 │   ├── project-spec/          #   family index + immutable versioned payloads
 │   ├── cli-documentation/     #   family index + immutable versioned payloads
 │   ├── agent-handoff/         #   family index + immutable versioned payloads
+│   ├── github-workflow/       #   family index + immutable versioned payloads
 │   ├── python-coding/         #   reference-only family + immutable versioned payloads
 │   └── standard-bundle-authoring/ # internal family + immutable versioned payloads
 ├── meta/                      # repository policy, including release/versioning
@@ -120,6 +122,14 @@ Repository-local project knowledge and bounded session continuity for coding age
 - **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.9/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
 - **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.9/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.9/resources/legacy-migration.md)
 
+### GitHub Workflow Standard
+
+GitHub work discipline for organization-owned repositories: typed issue contracts, field vocabulary, pull-request evidence, review expectations, and an attention-first operator summary. The package installs a mandatory repo-local `github-workflow` skill that keeps judgment with the agent, plus `gh-workflow` — a committed, reproducibly built static `linux/amd64` Go binary whose nine subcommands audit the organization schema, maintain the human-facing ledger at `docs/GH-WORKFLOWS.md`, and apply validated issue mutations. The organization schema itself is skill-audited and human-applied; the tool never creates or retires an issue type, field, or value.
+
+- **Standard:** [`standards/github-workflow/versions/1.0/README.md`](standards/github-workflow/versions/1.0/README.md)
+- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.0/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
+- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.0/adopt.md)
+
 ### Python Coding Standard (draft)
 
 Code-shape and agent-behavior rules for Python — the reference companion to Python Tooling. **In-development package `0.6`:** reference-only and not consumer-selectable.
@@ -174,6 +184,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | Project Specification | `1.7` | [`standards/project-spec/versions/1.7/adopt.md`](standards/project-spec/versions/1.7/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
 | Agent Handoff | `1.9` | [`standards/agent-handoff/versions/1.9/adopt.md`](standards/agent-handoff/versions/1.9/adopt.md) |
+| GitHub Workflow | `1.0` | [`standards/github-workflow/versions/1.0/adopt.md`](standards/github-workflow/versions/1.0/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
 
