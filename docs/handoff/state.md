@@ -10,5 +10,4 @@
 
 ## Active incidents
 
-- `testing` HEAD is red on markdownlint: 53 errors in 21 files, all `.agents/skills/go-*/`, from `d4d83bcc` landing without lint exclusions.
-- Three `tests/mcp_services/test_providers.py` failures under the parallel ordinary lane; the composite-dispatch one passes in isolation.
+- `test_slow_provider_..._is_reaped` fails in the ordinary lane on a clean gate run; two neighbours fail only under load. Not a regression.

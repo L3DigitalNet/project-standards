@@ -56,21 +56,24 @@ The session export's "roughly 15 workers × 3–8 minutes of setup" (line 977) i
 
 ## Sink 2 — gate runtimes
 
-Full default `scripts/verify.sh`, one run:
+Two full default `scripts/verify.sh` runs, both in a fully bootstrapped detached worktree. Run A was taken while a separate bootstrap measurement ran concurrently on the same machine; run B had the machine to itself. **Run B is the reference; run A is retained because the spread between them is itself a finding.**
 
-| Lane             | Wall time | Notes                                          |
-| ---------------- | --------- | ---------------------------------------------- |
-| statics          | 5:22      | ran concurrently                               |
-| ordinary         | 10:24     | ran concurrently, `-n` xdist                   |
-| compatibility    | **17:09** | ran concurrently; **whole-gate critical path** |
-| performance      | 0:32      | serial tail                                    |
-| coverage combine | 0:00      | serial tail                                    |
-| coverage report  | 0:03      | serial tail                                    |
-| **TOTAL**        | **17:45** | `user` 178:39, `sys` 10:40                     |
+| Lane             | Run B (clean) | Run A (contended) |
+| ---------------- | ------------- | ----------------- |
+| statics          | 3:44          | 5:22              |
+| ordinary         | 7:55          | 10:24             |
+| compatibility    | **11:53**     | **17:09**         |
+| performance      | 0:23          | 0:32              |
+| coverage combine | 0:00          | 0:00              |
+| coverage report  | 0:01          | 0:03              |
+| **TOTAL**        | **12:17**     | **17:45**         |
 
-Two corrections to the issue's figures. The gate is **17:45, not ~13 minutes**, and the compatibility matrix is **17:09, not ~10**. The `user`-to-`real` ratio of ~10× confirms the concurrent structure is already extracting most available parallelism.
+The issue's figures were close to right: the gate is ~12 minutes against its recorded ~13, and the compatibility matrix ~12 against its recorded ~10. No correction to those estimates is warranted. Run A's `user`-to-`real` ratio of ~10× confirms the concurrent structure already extracts most available parallelism.
 
-The consequential finding is that **compatibility alone exceeds the entire rest of the gate**. It is not one lane among several; it is the critical path, and every other lane finishes inside its shadow. Any proposal that shortens statics or ordinary — including a lane-selection flag — buys nothing at all while compatibility runs. Gate wall clock is a compatibility-matrix problem exclusively.
+Two findings do follow from the measurement:
+
+- **Compatibility is the critical path.** At 11:53 against a 12:17 total, it alone accounts for essentially the whole gate; every other lane finishes inside its shadow. Any proposal that shortens statics or ordinary — including a lane-selection flag — buys nothing while compatibility runs. Gate wall clock is a compatibility-matrix problem exclusively.
+- **The gate is highly sensitive to competing load.** One concurrent bootstrap inflated it by 45%. Timings quoted from a session where other work was in flight should be treated as upper bounds, and the gate should not be timed or judged against a busy machine.
 
 ## Sink 3 — new-family declaration surface
 
@@ -135,7 +138,7 @@ The redundancy across nine independently-enforced layers is what caught the omis
 
 ### R7 — `verify.sh` lane-selection flag: **Defer**
 
-Compatibility is the critical path at 17:09; skipping any other lane saves nothing measurable, and skipping compatibility is precisely the correctness risk the constraints forbid. Revisit only as part of shortening the compatibility matrix itself, which is the one change that would move gate wall clock.
+Compatibility is the critical path at 11:53 of a 12:17 gate; skipping any other lane saves nothing measurable, and skipping compatibility is precisely the correctness risk the constraints forbid. Revisit only as part of shortening the compatibility matrix itself, which is the one change that would move gate wall clock.
 
 ## Guidance destinations
 
@@ -150,4 +153,8 @@ Compatibility is the critical path at 17:09; skipping any other lane saves nothi
 Both surfaced from the gate run and are recorded here as evidence; neither belongs to #133.
 
 1. **`testing` HEAD is red on markdownlint.** 53 errors in 21 files, all under `.agents/skills/go-*/`, introduced by `d4d83bcc`. The vendored Go skill bundle landed without linter exclusions in `.markdownlint-cli2.jsonc`, matching the established pattern that byte-locked vendored copies receive their exclusions in the landing commit.
-2. **Three failures in `tests/mcp_services/test_providers.py` under the parallel ordinary lane**: `test_cooperative_shutdown_is_drained_instead_of_escalated`, `test_slow_provider_returns_bounded_diagnostic_and_worker_is_reaped`, and `test_composite_dispatch_input_matches_authoritative_direct_dispatch`. The third passes in isolation in the primary checkout (87.98 s), so all three are load- or ordering-sensitive rather than a HEAD regression. The third asserts a value mismatch rather than timing out and warrants a closer look.
+2. **`tests/mcp_services/test_providers.py` failures under the parallel ordinary lane.** Run A (contended) failed three: `test_cooperative_shutdown_is_drained_instead_of_escalated`, `test_slow_provider_returns_bounded_diagnostic_and_worker_is_reaped`, and `test_composite_dispatch_input_matches_authoritative_direct_dispatch`. Run B (clean) failed only `test_slow_provider_…_is_reaped`; the other two did not recur, and neither reproduced in isolation. All three are load-sensitive rather than a HEAD regression, and the slow-provider reaping test is the one that fails even on an unloaded machine.
+
+   Two reproduction attempts outside the gate failed for reasons of their own and are recorded because both are instructive. Running the module while concurrently editing a repository file failed `test_real_packaged_provider_validates_real_consumer_root`, which digests the live tree — that test detects **any** concurrent writer, including the operator. Running the ordinary lane in a worktree bootstrapped by hand without `make go-tools` produced nine unrelated failures and five errors. That second attempt is unplanned support for R2: the bootstrap sequence is cheap to run but easy to get subtly wrong from memory, and getting it wrong produces failures indistinguishable from real defects.
+
+   Related fragility, not currently biting: `real_tree_digest`'s `_UNWATCHED_TREES` excludes `.git`, `build`, `node_modules`, and the caches, but not `.project-pipeline` or `.scratch`, both of which exist and churn in the primary checkout during plan execution.
