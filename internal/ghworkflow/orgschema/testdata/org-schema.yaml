@@ -1,0 +1,66 @@
+# Test fixture mirroring the payload's org-schema.yaml shape. It is an independent
+# copy on purpose: the payload file is owned by the reference-content task, and this
+# package's tests assert parser behavior, not payload content.
+issue_types:
+  - Bug
+  - Feature
+  - Task
+  - Initiative
+  - Research
+
+issue_fields:
+  Workflow:
+    type: single_select
+    values:
+      - Inbox
+      - Needs definition
+      - Ready
+      - In progress
+      - Blocked
+      - In review
+      - Done
+      - Dropped
+
+  Priority:
+    type: single_select
+    values:
+      - P0 — Immediate
+      - P1 — Next
+      - P2 — Planned
+      - P3 — Opportunistic
+      - P4 — Someday
+
+  Size:
+    type: single_select
+    values:
+      - XS
+      - S
+      - M
+      - L
+      - XL
+
+  Change risk:
+    type: single_select
+    values:
+      - R1 — Low
+      - R2 — Moderate
+      - R3 — High
+      - R4 — Critical
+
+  Execution mode:
+    type: single_select
+    values:
+      - Unattended agent
+      - Interactive agent
+      - Human only
+
+  Target date:
+    type: date
+
+  Severity:
+    type: single_select
+    values:
+      - S0 — Critical
+      - S1 — High
+      - S2 — Moderate
+      - S3 — Low
