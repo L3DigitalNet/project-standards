@@ -3,14 +3,14 @@ plan_format: 3
 title: 'GitHub Workflow Standard Package Implementation Plan'
 slug: 'github-workflow-package'
 status: active
-revision: 1
-revises_revision: 0
-revision_reason: 'initial plan'
+revision: 2
+revises_revision: 1
+revision_reason: "supersede T19 with T21 composition-suite classification"
 pause_reason: ''
 source: 'SPEC-GHW1 approved rev 1.0'
 spec_ref: 'docs/specs/2026-08-06-github-workflow-package-spec.md'
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-07
 owners:
   - 'Chris Purcell / L3DigitalNet'
   - 'Coding agent under human review'
@@ -170,7 +170,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | FR-011 | Every artifact `managed`; zero create-only | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8, T9 | PV-T9-001 |
 | FR-012 | Providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate; offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | FR-013 | Capabilities audit/validate/drift-check; companions agent-handoff | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
-| FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10, T15, T19, T20 | PV-T1-001, PV-T10-001, PV-T15-001, PV-T19-001, PV-T20-001 |
+| FR-014 | Family README/adopt/agent-summary within size limit | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T10 | T1, T10, T15, T20, T21 | PV-T1-001, PV-T10-001, PV-T15-001, PV-T20-001, PV-T21-001 |
 | FR-015 | `gh-workflow` binary artifact, 0755, static, all nine subcommands | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
 | FR-016 | `audit`: schema+policy inputs, read-only live comparison, deterministic findings, fail-closed preconditions | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4, T12, T13 | PV-T4-001, PV-T12-001, PV-T13-001 |
 | FR-017 | `summary-format.md` defines the attention-first operator summary layout; the skill presents summaries in it | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T2 | T2, T3 | PV-T2-001, PV-T3-001 |
@@ -227,7 +227,8 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T16 | Compatibility-matrix support for required-option catalog defaults | active | behavior | P3 | T15 | IR-001 | PV-T16-001 | no / none |
 | T17 | Consumer-outcome enablement with issue-ledger amendments | active | behavior | P3 | T16 | IR-001 | PV-T17-001 | no / none |
 | T18 | Performance-lane enablement through the matrix | active | behavior | P3 | T16 | IR-001 | PV-T18-001 | no / none |
-| T19 | Legacy adopt-registry support for the advertised family | active | behavior | P3 | T15 | FR-014 | PV-T19-001 | yes / none |
+| T19 | Legacy adopt-registry support for the advertised family | superseded | behavior | P3 | T15 | none | none | yes / superseded by T21 |
+| T21 | Composition-suite classification of catalog-native families | active | behavior | P3 | T15 | FR-014 | PV-T21-001 | yes / none |
 | T20 | Self-hosting adoption of github-workflow in this repository | active | configuration | P3 | T15 | FR-014 | PV-T20-001 | yes / none |
 
 ## 9. Implementation Tasks
@@ -761,15 +762,15 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 
 #### T19: Legacy adopt-registry support for the advertised family
 
-- **disposition:** active
+- **disposition:** superseded
 - **outcome:** the legacy adopt engine's registry knows `github-workflow`, so the four `tests/test_standards_composition.py` tests that derive their id list from the shipping catalog build plans for it instead of failing `UsageError: unknown standard(s): github-workflow`.
 - **work_type:** behavior
 - **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
 - **boundary:** cross-task
 - **depends_on:** [T15]
 - **dependency_reason:** consumes catalog-activation-v1: the registry entry serves the advertised catalog id (discovered_from: T9 full-gate rerun — the composition suite asks the adopt engine for every shipping-catalog id; corrects: second-wave advertisement residue without reopening T15)
-- **requirements:** [FR-014]
-- **proof:** [PV-T19-001]
+- **requirements:** []
+- **proof:** []
 - **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
 - **consumes:** [catalog-activation-v1]
 - **produces:** [adopt-registry-v1]
@@ -780,16 +781,42 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 - **parallel_safe:** yes
 - **conflicts_with:** []
 - **supersedes:** []
+- **superseded_by:** [T21]
+- **evidence:** []
+- **recovery:** revert the registry entry; restore last green checkpoint
+- **acceptance:** superseded by T21 — the adopt registry proved to be a legacy bundles-directory scan with CLI parity coupling; extending the legacy tree for a catalog-native family contradicts spec WH-003, so the composition-suite classification replaces this approach
+
+#### T21: Composition-suite classification of catalog-native families
+
+- **disposition:** active
+- **outcome:** `tests/test_standards_composition.py` derives its adoptable-id list from the families the legacy adopt engine actually serves instead of assuming every catalog-5 default has a legacy bundle: the suite intersects the catalog defaults with `available_standards()` and asserts the remainder equals the explicit catalog-native set (`github-workflow`), so a future family must be consciously classified rather than silently skipped. All five module tests pass. Rationale: the family has no legacy predecessor by design (spec WH-003 defers migration; catalog-native packages adopt via the control plane, as T20 does); authoring a duplicate legacy bundle would create a hand-maintained drift surface in a retiring mechanism.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T15]
+- **dependency_reason:** consumes catalog-activation-v1: the classification distinguishes advertised catalog-native families from legacy-bundle families (discovered_from: T19's blocked investigation — the adopt registry is a bundles-directory scan plus CLI parity tuple, and extending the legacy tree contradicts WH-003; supersedes T19's approach)
+- **requirements:** [FR-014]
+- **proof:** [PV-T21-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [catalog-activation-v1]
+- **produces:** [composition-classification-v1]
+- **preserves:** [legacy adopt behavior for the seven bundle families; the suite's conflict/dedup assertions; no `src/**` changes]
+- **invariants:** [the catalog-native exclusion is an explicit asserted set, never a silent filter; no network]
+- **executor_discretion:** [helper naming, assertion phrasing]
+- **files:** [`tests/test_standards_composition.py` (modify; owner T21)]
+- **parallel_safe:** yes
+- **conflicts_with:** []
+- **supersedes:** [T19]
 - **superseded_by:** []
 - **evidence:** [ephemeral]
-- **recovery:** revert the registry entry; restore last green checkpoint
-- **acceptance:** PV-T19-001 proves `pytest tests/test_standards_composition.py -q` exits 0 with no failed tests, `uv run ruff check src tests` exits 0, and `uv run basedpyright` reports 0 errors
+- **recovery:** revert the file; restore last green checkpoint
+- **acceptance:** PV-T21-001 proves `pytest tests/test_standards_composition.py -q` exits 0 with no failed tests, and the classification assertion fails when `github-workflow` is removed from the explicit catalog-native set while remaining advertised
 - **sub-tasks:**
-  - **T19.1 RED** — reproduce the four `UsageError: unknown standard(s): github-workflow` failures.
-  - **T19.2 Verify RED** — the registry gap and nothing else.
-  - **T19.3 GREEN** — register the family in the adopt engine.
-  - **T19.4 Verify GREEN** — composition module green; static gate clean.
-  - **T19.5 Verify Task** — run PV-T19-001; commit with checkpoint trailers.
+  - **T21.1 RED** — reproduce the four `UsageError: unknown standard(s): github-workflow` failures.
+  - **T21.2 Verify RED** — the derivation assumption and nothing else.
+  - **T21.3 GREEN** — implement the legacy-served derivation with the explicit catalog-native classification.
+  - **T21.4 Verify GREEN** — module green; classification negative control.
+  - **T21.5 Verify Task** — run PV-T21-001; commit with checkpoint trailers.
 
 #### T20: Self-hosting adoption of github-workflow in this repository
 
@@ -986,7 +1013,7 @@ None.
 | PV-T16-001 | IR-001 | T16 | integration | package-compatibility matrix suite | full `pytest tests/package_compatibility/` with the family advertised | all rows pass incl. the 28 previously failing and the four stable-id tests; no package schema changed | removing the standard's minimal-config table entry yields a clear error, not a silent empty-config pass | local, offline | ephemeral |
 | PV-T17-001 | IR-001 | T17 | integration | package-compatibility suite + issue-ledger validator | full `pytest tests/package_compatibility/` incl. consumer outcomes | all rows pass; ledger accepts the six amendment records | a bare digest swap without amendment records is rejected with `LedgerError` | local, offline | ephemeral |
 | PV-T18-001 | IR-001 | T18 | integration | performance-lane suite | `pytest tests/package_compatibility/ -q` whole directory incl. `-m performance` | all lanes green; no bare enablement site remains | reverting the substitution re-fails both performance tests | local, offline | ephemeral |
-| PV-T19-001 | FR-014 | T19 | integration | standards-composition suite | `pytest tests/test_standards_composition.py -q` | module green incl. the four previously failing tests | reverting the registry entry re-fails them | local, offline | ephemeral |
+| PV-T21-001 | FR-014 | T21 | integration | standards-composition suite | `pytest tests/test_standards_composition.py -q` | module green; classification explicit | removing the family from the catalog-native set while advertised fails the classification assertion | local, offline | ephemeral |
 | PV-T20-001 | FR-014 | T20 | integration | seam canary + reconcile diff + markdown gate | `pytest tests/mcp_services/test_providers.py -q` plus reconcile inspection | canary green; managed-only diff; idempotent re-reconcile; binary byte-match; markdown gate green | deselecting the package re-fails the canary | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
