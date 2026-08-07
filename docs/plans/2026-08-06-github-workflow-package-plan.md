@@ -186,7 +186,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | NFR-003 | Block ~12 content lines; no vocabulary inline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Should | T8 | T8 | PV-T8-001 |
 | NFR-004 | Reconcile/drift/upgrade deterministic, offline | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T9 | T9 | PV-T9-001 |
 | NFR-005 | Binary reproducibly buildable; independent rebuild yields committed bytes | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T7 | PV-T7-001 |
-| IR-001 | Config schema exactly `organization` + `harnesses`; reject unknown/empty | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T1, T8, T16 | PV-T1-001, PV-T8-002, PV-T16-001 |
+| IR-001 | Config schema exactly `organization` + `harnesses`; reject unknown/empty | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T1, T8, T16, T17 | PV-T1-001, PV-T8-002, PV-T16-001, PV-T17-001 |
 | IR-002 | All GitHub access via operator's `gh` auth; no embedded credentials | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T4 | T4 | PV-T4-001 |
 | IR-003 | markdown-block adapter, scope `block:github-workflow`, round-trips | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T8 | T8 | PV-T8-001 |
 | IR-004 | Non-interactive CLI, nine subcommands, JSON+human modes for read-only, zero-arg defaults | `repo:docs/specs/2026-08-06-github-workflow-package-spec.md` | Must | T7 | T4, T5, T6, T7 | PV-T4-001, PV-T5-001, PV-T6-001, PV-T7-001 |
@@ -225,6 +225,7 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
 | T14 | Linker-effective version stamp and JSON-grammar number validation | active | behavior | P2 | T13 | FR-019, FR-021 | PV-T14-001 | no / corrects T13 surfaces post-completion |
 | T15 | Catalog activation and repository-inventory reconciliation | active | configuration | P3 | T8 | FR-014 | PV-T15-001 | no / T10 shared catalog surface |
 | T16 | Compatibility-matrix support for required-option catalog defaults | active | behavior | P3 | T15 | IR-001 | PV-T16-001 | no / none |
+| T17 | Consumer-outcome enablement with issue-ledger amendments | active | behavior | P3 | T16 | IR-001 | PV-T17-001 | no / none |
 
 ## 9. Implementation Tasks
 
@@ -691,6 +692,38 @@ Requirement IDs FR/NFR/IR/DR are SPEC-GHW1's stable IDs, used verbatim; REQ-901 
   - **T16.4 Verify GREEN** — full package-compatibility suite green; negative control (table entry removed → clear error, not silent empty config).
   - **T16.5 Verify Task** — run PV-T16-001; commit with checkpoint trailers.
 
+#### T17: Consumer-outcome enablement with issue-ledger amendments
+
+- **disposition:** active
+- **outcome:** `tests/package_compatibility/test_consumer_outcomes.py` enables catalog defaults through the matrix's `enable_standard` path so its six rows resolve `github-workflow@1.0`'s required options, and the proof-digest lock in the issue ledger is honored: each of the six `[[consumer_outcomes]]` entries in `tests/issue_regressions/baseline.toml` receives its own amendment record carrying that entry's own old digest per the established ledger amendment protocol — never a bare digest swap. The full package-compatibility suite is green, discharging the clause deferred from T16.
+- **work_type:** behavior
+- **checkpoint:** one green commit with the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T16]
+- **dependency_reason:** requires matrix-compat-v1: the fix imports `enable_standard` from the T16 harness (discovered_from: T16 verification — six consumer-outcome rows enable defaults under empty config at their own `_materialize_track`; corrects: the residue outside T16's claims without reopening it)
+- **requirements:** [IR-001]
+- **proof:** [PV-T17-001]
+- **source_refs:** [request, repo:docs/specs/2026-08-06-github-workflow-package-spec.md]
+- **consumes:** [matrix-compat-v1]
+- **produces:** [compat-suite-green-v1]
+- **preserves:** [every ledger entry's history (amendment records, no deletions); all previously passing suites; no package schema or payload byte changes]
+- **invariants:** [amendment records follow the repository's ledger protocol exactly — per-entry records with each entry's own prior digest; fixture values only; no network]
+- **executor_discretion:** [amendment record wording within the ledger schema]
+- **files:** [`tests/package_compatibility/test_consumer_outcomes.py` (modify; owner T17), `tests/issue_regressions/baseline.toml` (modify; owner T17)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** revert both files; restore last green checkpoint
+- **acceptance:** PV-T17-001 proves the full `tests/package_compatibility/` suite passes (all rows, all files), the ledger validates the six amendment records (collection succeeds, `LedgerError` gone), and the negative control shows a bare digest swap without amendment records is rejected by the ledger
+- **sub-tasks:**
+  - **T17.1 RED** — reproduce the six failures and the `LedgerError` raised when the proof file is edited without amendment records.
+  - **T17.2 Verify RED** — failures are the empty-config resolution and the digest lock, nothing else.
+  - **T17.3 GREEN** — switch the enablement call and add the six per-entry amendment records.
+  - **T17.4 Verify GREEN** — full package-compatibility suite green; ledger negative control.
+  - **T17.5 Verify Task** — run PV-T17-001; commit with checkpoint trailers.
+
 ### Phase P4: release readiness and close-out
 
 #### T10: Family docs, catalog, live-run evidence, spec traceability
@@ -853,6 +886,7 @@ None.
 | PV-T14-001 | FR-019, FR-021 | T14 | unit | golang-skills review pass-4 verdict (execution-verified) | targeted `go test` plus `make go-check` plus a `-ldflags "-X main.version=probe"` build asserting the stamped ledger header | linker-effective stamp; JSON-grammar refusals offline as usage errors; plain numbers still apply; gates green | stamp assertion fails against the var-initialized default; `.5` case fails against ParseFloat validation | local, offline | ephemeral |
 | PV-T15-001 | FR-014 | T15 | integration | repository catalog/inventory suites | targeted pytest on the four previously failing suites plus the standards validator battery | all pass with the family advertised; validators green | reverting the catalog entry re-fails the activation suite | local, offline | ephemeral |
 | PV-T16-001 | IR-001 | T16 | integration | package-compatibility matrix suite | full `pytest tests/package_compatibility/` with the family advertised | all rows pass incl. the 28 previously failing and the four stable-id tests; no package schema changed | removing the standard's minimal-config table entry yields a clear error, not a silent empty-config pass | local, offline | ephemeral |
+| PV-T17-001 | IR-001 | T17 | integration | package-compatibility suite + issue-ledger validator | full `pytest tests/package_compatibility/` incl. consumer outcomes | all rows pass; ledger accepts the six amendment records | a bare digest swap without amendment records is rejected with `LedgerError` | local, offline | ephemeral |
 
 ## Appendix C. Durable Evidence
 
