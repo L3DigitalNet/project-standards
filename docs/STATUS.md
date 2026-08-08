@@ -16,6 +16,9 @@
 - The ADR corpus was assessed against ADR 1.4: 11 of 23 active records state no boundary, five authorities contested, five boundaries unowned. See `docs/reviews/adr-conformance/`.
 - v5.17.0 is scoped as the ADR train: #127 ships as `adr` 1.5, then the 21-item corpus backlog in #128. MINOR; 1.5 must stay non-breaking to become the Catalog 5 default.
 - The repository's `docs/adr/adr.template.md` is still the 1.3 template because create-only artifacts are invisible to drift-check (bug 006).
+- Issue #133's four follow-ups are delivered: #135 (`scripts/bootstrap-worktree.sh`), #136 (candidate-wheel staleness stamp enforced in the `verify.sh` preflight), #137 (`conventions.md` #18 surface-to-verification map), and #131 (`standards list`/`show` disclose the committed-catalog basis). #134 remains open.
+- That work landed green on the full fast gate at 14:45 — statics 4:01, ordinary 9:01, compatibility 14:17, performance 0:26 — with coverage at 90%.
+- #131 is the only consumer-visible item of the four and is recorded under `CHANGELOG.md` `[Unreleased]` for the v5.17.0 train; the other three are repository tooling.
 - Program tail otherwise unchanged: T24–T29, SPEC-GSF3 T1, and the Usage Documentation Site V2 specs stay queued for later sessions.
 - The `github-workflow` package is fully staged: approved design rev 1.6 (D0–D12), SPEC-GHW1 rev 1.2, and an active 11-task format-3 plan with T1 ready.
 - Two Codex high-effort review rounds ran over SPEC-GHW1 and its plan; all ten round-1 findings and the round-2 residues are applied.

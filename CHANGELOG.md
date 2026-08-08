@@ -37,6 +37,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added
+
+- **`scripts/bootstrap-worktree.sh` brings a fresh checkout or worktree to a gate-ready state in one command.** It runs the dependency sync, `npm ci`, the payload-projection check, the candidate-wheel build, extraction, the new staleness stamp, and `make go-tools`, failing with the name of the step that broke and never continuing past it. Measurement recorded the real cost of the previous hand-run sequence as five agent round-trips rather than machine time — the whole sequence takes about ten seconds — so collapsing the turns is the saving; sharing environments between worktrees was evaluated and rejected for the cross-worktree coupling it introduces. (#135)
+- **`scripts/verify.sh` refuses a stale candidate-wheel runtime, not only a missing one.** `scripts/wheel-runtime-stamp.sh` is the single authority for a content key over the resolved `src/**` tree and `pyproject.toml`, written beside the extraction and checked in the gate preflight. A stale runtime previously surfaced several lanes later as `CP-RESOLUTION: unavailable`, which names resolution rather than the out-of-date extraction that caused it. The key is content rather than mtime, so a reverted edit needs no rebuild, and it is computed from repository-relative paths so every worktree agrees with the primary checkout. An extraction carrying no stamp is treated as stale. The gate fails with the rebuild commands rather than rebuilding, preserving its contract that it does not build its own inputs. (#136)
+- **`docs/handoff/conventions.md` #18 maps a changed surface to the verification that proves it.** Three tiers — the five `standards …` validators plus the Markdown gate for payload, catalog, digest, and manifest edits; the wheel-runtime flow for the commands that cannot run from a source checkout at all; and the full battery for engine and test changes — each naming exact commands, with the measured lane runtimes and their measurement date so the cost of choosing the full gate is explicit. It lowers no requirement. (#137)
+
+### Fixed
+
+- **`project-standards standards list` and `standards show` disclose the catalog basis they read.** Both resolve the committed catalog, which is correct, but before `reconcile --apply` that basis is a release behind and the pre- and post-refresh renderings were structurally identical. A consumer following the documented upgrade order therefore read the previous release's `default=` as current and skipped the adoption guide for the version they were about to land on. Both commands now emit a `note:` on stderr naming the committed and installed releases whenever they differ, matching how `agent-handoff legacy-report` already discloses an unlocked read; stdout is unchanged in both human and `--json` form, and an installation that cannot be identified degrades to no note rather than failing inspection. (#131)
+
 ## [5.16.0] — 2026-08-05
 
 ### Added
