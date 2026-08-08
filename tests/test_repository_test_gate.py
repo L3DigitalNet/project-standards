@@ -19,8 +19,14 @@ def _write_executable(path: Path, body: str) -> None:
     path.chmod(0o755)
 
 
-def _gate_fixture(tmp_path: Path, *, wheel_count: int) -> tuple[Path, Path, dict[str, str]]:
-    """Create a hermetic verify.sh root whose tools expose lane orchestration."""
+def _gate_fixture(
+    tmp_path: Path, *, wheel_count: int, stamp: bool = True
+) -> tuple[Path, Path, dict[str, str]]:
+    """Create a hermetic verify.sh root whose tools expose lane orchestration.
+
+    ``stamp=False`` leaves the extracted runtime unstamped, which is how an
+    extraction predating issue #136 presents itself.
+    """
     repo = tmp_path / "repo"
     scripts = repo / "scripts"
     venv_bin = repo / ".venv" / "bin"
@@ -37,6 +43,20 @@ def _gate_fixture(tmp_path: Path, *, wheel_count: int) -> tuple[Path, Path, dict
     (repo / "tests").mkdir()
     (repo / "src" / "project_standards").mkdir(parents=True)
     shutil.copy2(_ROOT / "scripts" / "verify.sh", scripts / "verify.sh")
+    # The gate's preflight delegates the staleness check, so the fixture needs
+    # the real stamp script rather than a stub: a stub would let the two drift
+    # and this fixture would stop proving the preflight it exists to exercise.
+    shutil.copy2(_ROOT / "scripts" / "wheel-runtime-stamp.sh", scripts / "wheel-runtime-stamp.sh")
+    # Part of the content key, so it must exist before a stamp can be computed.
+    (repo / "pyproject.toml").write_text('[project]\nname = "fixture"\n', encoding="utf-8")
+    (repo / "src" / "project_standards" / "__init__.py").write_text("", encoding="utf-8")
+    if stamp:
+        subprocess.run(
+            [str(scripts / "wheel-runtime-stamp.sh"), "write"],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+        )
 
     for index in range(wheel_count):
         (wheel_dir / f"project_standards-{index}.whl").write_bytes(b"wheel")
@@ -243,6 +263,55 @@ def test_verify_gate__multiple_candidate_wheels__fails_before_lanes(tmp_path: Pa
     assert completed.returncode == 1
     assert "expected exactly one candidate wheel" in completed.stderr
     assert not log.exists()
+
+
+def test_verify_gate__unstamped_runtime__fails_before_lanes(tmp_path: Path) -> None:
+    """An extraction predating the stamp is stale, never assumed current."""
+    repo, log, environment = _gate_fixture(tmp_path, wheel_count=1, stamp=False)
+
+    completed = _run_gate(repo, environment)
+
+    assert completed.returncode == 1
+    assert "carries no stamp" in completed.stderr
+    assert not log.exists()
+
+
+def test_verify_gate__stale_runtime__fails_before_lanes_naming_staleness(tmp_path: Path) -> None:
+    """A source edit after extraction is refused by its actual cause.
+
+    Without this the same state reaches the lanes and surfaces as
+    ``CP-RESOLUTION: unavailable``, which names resolution rather than the
+    out-of-date runtime that produced it.
+    """
+    repo, log, environment = _gate_fixture(tmp_path, wheel_count=1)
+    (repo / "src" / "project_standards" / "__init__.py").write_text("# edited\n", encoding="utf-8")
+
+    completed = _run_gate(repo, environment)
+
+    assert completed.returncode == 1
+    assert "is STALE" in completed.stderr
+    assert "scripts/bootstrap-worktree.sh" in completed.stderr
+    assert not log.exists()
+
+
+def test_verify_gate__restored_content__is_current_again(tmp_path: Path) -> None:
+    """The key is content, not mtime: a reverted edit needs no rebuild."""
+    repo, _log, environment = _gate_fixture(tmp_path, wheel_count=1)
+    source = repo / "src" / "project_standards" / "__init__.py"
+    original = source.read_text(encoding="utf-8")
+    source.write_text("# edited\n", encoding="utf-8")
+    source.write_text(original, encoding="utf-8")
+
+    completed = subprocess.run(
+        [str(repo / "scripts" / "wheel-runtime-stamp.sh"), "check"],
+        cwd=repo,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_verify_gate__tmp_parent__requires_smoke_mode(tmp_path: Path) -> None:

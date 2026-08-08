@@ -22,7 +22,8 @@
 # Environment the script establishes:
 #   PYTHONPATH    the extracted candidate wheel (the dogfood contract; this
 #                 script does not build it — see README.md "Developing this
-#                 repository")
+#                 repository"). The preflight proves it is both present and
+#                 current, via scripts/wheel-runtime-stamp.sh.
 #   PROJECT_STANDARDS_COMPATIBILITY_WHEEL
 #                 the one resolved wheel that compatibility rows extract
 #   TMPDIR        a dedicated 4M-inode tmpfs at /mnt/pytesttmp when mounted,
@@ -106,10 +107,28 @@ cd "$REPO_ROOT" || die "cannot enter $REPO_ROOT"
 
 if [[ ! -d "$WHEEL_RUNTIME" ]]; then
     die "missing $WHEEL_RUNTIME — build the candidate wheel runtime first:
+  scripts/bootstrap-worktree.sh
+or by hand:
   uv build --clear --wheel --out-dir build/release-wheel
   rm -rf -- build/wheel-runtime
-  uv run python -m zipfile -e build/release-wheel/project_standards-X.Y.Z-py3-none-any.whl build/wheel-runtime"
+  uv run python -m zipfile -e build/release-wheel/project_standards-X.Y.Z-py3-none-any.whl build/wheel-runtime
+  scripts/wheel-runtime-stamp.sh write"
 fi
+
+# Existing is not current (issue #136). A stale extraction runs the gate against
+# yesterday's engine, and once this repository's own config selects a family the
+# stale copy lacks, it fails as `CP-RESOLUTION: unavailable` — a message that
+# points at resolution rather than at the runtime. Checking here converts that
+# into its actual cause, before any lane spends time on it.
+#
+# Fail, do not rebuild. This script's contract is that it does not build the
+# runtime (see the header): building here would make the gate's own inputs a
+# side effect of running it, and a rebuild racing the lock-holder's PYTHONPATH
+# is a worse failure than an accurate refusal. `--full` release-prep runs get
+# the same refusal for the same reason.
+STAMP_SCRIPT="$SCRIPT_DIR/wheel-runtime-stamp.sh"
+[[ -x "$STAMP_SCRIPT" ]] || die "missing $STAMP_SCRIPT"
+"$STAMP_SCRIPT" check || die "candidate wheel runtime is not current — see above"
 
 if [[ -d "$RELEASE_WHEEL_DIR" ]]; then
     mapfile -t candidate_wheels < <(

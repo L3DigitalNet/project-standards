@@ -267,7 +267,14 @@ See [`meta/versioning.md`](meta/versioning.md) for the complete classification a
 
 ## Developing this repository
 
-Repository CI is enumerated in [`tests/README.md` § CI relationship](tests/README.md#ci-relationship) — the developer gate, the coherence gate, the standards-graph gate, and the dogfood caller, plus the reusable consumer workflows. Working on the standards or the validator itself, set up once:
+Repository CI is enumerated in [`tests/README.md` § CI relationship](tests/README.md#ci-relationship) — the developer gate, the coherence gate, the standards-graph gate, and the dogfood caller, plus the reusable consumer workflows. Working on the standards or the validator itself, set up with one command:
+
+```bash
+scripts/bootstrap-worktree.sh                # ~10s: sync, npm ci, projection check, build, extract, stamp, go tools
+export PYTHONPATH="$PWD/build/wheel-runtime"
+```
+
+Rerun it after any change under `src/**` or to a payload under `standards/**` — the gate refuses a stale runtime. The steps it performs, should you need one individually:
 
 ```bash
 uv sync --all-groups --locked                                # Python environment
@@ -276,7 +283,7 @@ uv run project-standards standards sync-payload-projection --root . --check --js
 uv build --clear --wheel --out-dir build/release-wheel
 rm -rf -- build/wheel-runtime
 uv run python -m zipfile -e build/release-wheel/project_standards-5.16.0-py3-none-any.whl build/wheel-runtime
-export PYTHONPATH="$PWD/build/wheel-runtime"
+scripts/wheel-runtime-stamp.sh write         # records what the extraction was built from
 ```
 
 Then run the gate:

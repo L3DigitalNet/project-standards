@@ -23,6 +23,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 15 | Go tooling follows the neutral coexistence ADR | Adding or changing Go tooling, CI, or source |
 | 16 | Ownership decides Python lint scope, not byte-locking | Vendoring a file, or triaging a lint finding on immutable bytes |
 | 17 | Naming a supersession replacement pins that task active forever | Retiring a plan task or changing an unfinished acceptance target |
+| 18 | Match verification to the changed surface | Choosing what to run to prove a change |
 
 ## 1. Dogfood the standards
 
@@ -322,3 +323,56 @@ Do not infer permission for Python migration, freeze, retirement, or language pr
 **Sources:** 2026-08-04 session; `scripts/plan.py` `_TRANSITIONS`; plan revision 4.
 
 **Related:** 13, 16.
+
+## 18. Match verification to the changed surface
+
+**Applies when:** deciding what to run to prove a change.
+
+**Rule:** run the minimum that actually proves the surface you changed. This lowers no requirement — a surface's minimum is what proves it, and the full gate stays correct everywhere it is named below.
+
+### Tier 1 — payload, catalog, digest, and manifest edits
+
+The five validators plus the Markdown gate are complete coverage. They run in seconds under plain `uv run`; no wheel, no pytest.
+
+```bash
+uv run project-standards standards validate-packages --root . --json
+uv run project-standards standards validate-graph --root . --require-all-manifests --json
+uv run project-standards standards generate-package-schemas --root . --check
+uv run project-standards standards sync-payload-projection --root . --check
+uv run project-standards standards render-catalog --root . --check
+```
+
+Then the Markdown gate from `AGENTS.md` (Prettier `--check`, then markdownlint-cli2).
+
+### Tier 2 — anything needing the candidate-wheel runtime
+
+`agent-handoff validate|drift-check|shape-check|size-report` and `project-standards validate` **cannot run from the source checkout at all**. `control_plane/distribution.py` rejects `src/project_standards/catalogs/<major>.toml` because it is a symlink there (convention 11) and raises "installed catalog projection is unavailable". For these the wheel build is mandatory, not a preference. The same applies to any pytest run: the bare venv lacks the catalog projection.
+
+```bash
+scripts/bootstrap-worktree.sh              # sync, npm ci, build, extract, stamp
+export PYTHONPATH="$PWD/build/wheel-runtime"
+```
+
+Mid-train these then fail with `CP-RESOLUTION` until the release version bump lands. That is by design, not a fault to debug.
+
+### Tier 3 — engine, control-plane, or test changes
+
+The full battery, `scripts/verify.sh`. Its preflight refuses a missing **or stale** runtime by name (issue #136); rerun `scripts/bootstrap-worktree.sh` after any `src/**` or payload change.
+
+**Why:** the gate is expensive and is not always the right instrument. Measured 2026-08-07 on the 21-core workstation, clean machine:
+
+| Lane | Clean | Under competing load |
+| --- | --- | --- |
+| statics | 3:44 | 5:22 |
+| ordinary | 7:55 | 10:24 |
+| compatibility | **11:53** | **17:09** |
+| performance | 0:23 | 0:32 |
+| **TOTAL** | **12:17** | **17:45** |
+
+Compatibility alone is essentially the whole gate; every other lane finishes inside its shadow. So choosing lanes within the gate buys nothing — that is why a lane-selection flag was deferred — and the only decision that saves real time is not reaching for the gate when a lower tier proves the change. The gate is also highly sensitive to competing load: one concurrent bootstrap inflated it 45%, so never judge a timing taken on a busy machine.
+
+**Gotcha:** these timings are a 2026-08-07 measurement. Re-measure before quoting them if the compatibility matrix has since changed width.
+
+**Sources:** `docs/research/2026-08-07-plan-execution-efficiency.md` (R4, R7); issues #133, #136, #137.
+
+**Related:** 1, 3, 11, 14.
