@@ -452,6 +452,70 @@ def _package_config_digest(
     return semantic_digest(cast(JsonValue, effective)).value, "effective"
 
 
+def catalog_release_skew(
+    repo: Path,
+    *,
+    distribution: InstalledDistribution | None = None,
+) -> tuple[str, str] | None:
+    """Return `(committed, installed)` when the committed catalog predates the install.
+
+    Issue #131: `standard_views` reads the *committed* catalog, which is the
+    correct basis — but before `reconcile --apply` that basis is a release
+    behind, and the pre- and post-refresh renderings are structurally
+    identical. A consumer following the documented upgrade order runs
+    `standards list` at step 4, sees the old release's `default=`, concludes
+    the selection is already current, and skips the adoption guide for the
+    version they are actually about to land on. Returning the skew lets the
+    read-only inspection commands disclose their basis the way
+    `agent-handoff legacy-report` already does for an unlocked read.
+
+    Returns None when the two agree, and — deliberately — also when the
+    installed distribution cannot be identified. An unverifiable installation
+    already degrades to authored-fallback elsewhere in this module rather than
+    failing inspection; a missing note is the same trade, and inspection must
+    not start crashing over a disclosure it only offers as a convenience.
+    """
+    try:
+        _, catalog, _ = load_control_state(repo)
+    except ControlPlaneError, OSError, ValueError:
+        return None
+    return _release_skew(catalog, distribution)
+
+
+def _release_skew(
+    catalog: ConsumerCatalog,
+    distribution: InstalledDistribution | None,
+) -> tuple[str, str] | None:
+    """Compare an already-loaded catalog's release against the installed one."""
+    try:
+        selected = distribution or InstalledDistribution.current()
+    except ControlPlaneError, OSError, ValueError:
+        return None
+    committed = catalog.project_standards.release
+    installed = selected.tool_release.value
+    if committed == installed:
+        return None
+    return committed, installed
+
+
+def standard_inspection(
+    repo: Path,
+    *,
+    distribution: InstalledDistribution | None = None,
+) -> tuple[list[dict[str, object]], tuple[str, str] | None]:
+    """Return package facts and the release skew from one locked read.
+
+    The read-only inspection commands need both, and taking the directory lock
+    twice would let a `reconcile --apply` land between them — reporting a basis
+    that no longer describes the views printed beside it. One read makes the
+    note and the rows describe the same instant.
+    """
+    config, catalog, lock = load_control_state(repo)
+    return _views_from_state(config, catalog, lock, distribution), _release_skew(
+        catalog, distribution
+    )
+
+
 def standard_views(
     repo: Path,
     *,
@@ -459,6 +523,15 @@ def standard_views(
 ) -> list[dict[str, object]]:
     """Return deterministic JSON-safe catalog, desired, and applied package facts."""
     config, catalog, lock = load_control_state(repo)
+    return _views_from_state(config, catalog, lock, distribution)
+
+
+def _views_from_state(
+    config: DesiredConfig,
+    catalog: ConsumerCatalog,
+    lock: CentralLock,
+    distribution: InstalledDistribution | None,
+) -> list[dict[str, object]]:
     schemas = _applied_option_schemas(config, catalog, lock, distribution)
     views: list[dict[str, object]] = []
     for standard_id, standard in catalog.standards.items():

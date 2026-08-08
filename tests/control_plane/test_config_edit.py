@@ -8,6 +8,7 @@ from typing import cast
 
 import pytest
 
+from project_standards._version import package_version
 from project_standards.control_plane.adapters.toml import scan_toml_statements
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.codec import (
@@ -20,6 +21,7 @@ from project_standards.control_plane.codec import (
     semantic_digest,
 )
 from project_standards.control_plane.config_edit import (
+    catalog_release_skew,
     set_standard_enabled,
     set_standard_selection,
     set_standard_version,
@@ -68,14 +70,14 @@ mode = "strict"
 """
 
 
-def _catalog() -> ConsumerCatalog:
+def _catalog(release: str = "5.0.0") -> ConsumerCatalog:
     return bind_catalog_digest(
         ConsumerCatalog.model_validate(
             {
                 "project_standards": {
                     "schema_version": "1.0",
                     "catalog": "5",
-                    "release": "5.0.0",
+                    "release": release,
                     "digest": _DIGEST,
                 },
                 "standards": {
@@ -127,10 +129,12 @@ def _catalog() -> ConsumerCatalog:
     )
 
 
-def _write_control_plane(repo: Path, config_content: str = _PHYSICAL_CONFIG) -> None:
+def _write_control_plane(
+    repo: Path, config_content: str = _PHYSICAL_CONFIG, *, release: str = "5.0.0"
+) -> None:
     control = repo / ".standards"
     control.mkdir()
-    catalog = _catalog()
+    catalog = _catalog(release)
     config = parse_config(config_content.encode())
     config_value = cast(JsonValue, config.model_dump(mode="json"))
     lock = CentralLock.model_validate(
@@ -138,7 +142,7 @@ def _write_control_plane(repo: Path, config_content: str = _PHYSICAL_CONFIG) -> 
             "project_standards": {
                 "schema_version": "1.0",
                 "catalog": "5",
-                "release": "5.0.0",
+                "release": release,
                 "catalog_digest": catalog.project_standards.digest.value,
                 "config_digest": semantic_digest(config_value).value,
             },
@@ -355,6 +359,49 @@ def test_standards_list_and_show_include_catalog_desired_and_applied_state(
     assert shown["standard"]["config_digest"].startswith("sha256:")
     assert shown["standard"]["config_digest_basis"] == "authored-fallback"
     assert "config" not in shown["standard"]
+
+
+@pytest.mark.parametrize("command", [["list"], ["show", "alpha"]])
+@pytest.mark.parametrize("json_mode", [False, True], ids=["human", "json"])
+def test_standard_inspection__catalog_behind_install__discloses_the_basis(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    command: list[str],
+    json_mode: bool,
+) -> None:
+    """Issue #131: the committed basis is correct but must not be silent.
+
+    Pre- and post-refresh renderings are otherwise identical, so a consumer
+    comparing selections at the documented upgrade step reads the previous
+    release's `default=` as current.
+    """
+    _write_control_plane(tmp_path, release="5.0.0")
+    argv = [*command, "--repo", str(tmp_path), *(["--json"] if json_mode else [])]
+
+    assert run(argv) == 0
+
+    captured = capsys.readouterr()
+    assert "note: reading the committed catalog: release 5.0.0" in captured.err
+    assert "reconcile --apply" in captured.err
+    # stdout stays the machine-readable surface in both formats.
+    assert "note:" not in captured.out
+
+
+def test_standard_inspection__catalog_matches_install__stays_quiet(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """No skew, no note — otherwise every ordinary invocation carries noise."""
+    _write_control_plane(tmp_path, release=package_version())
+
+    assert run(["list", "--repo", str(tmp_path)]) == 0
+
+    assert "note:" not in capsys.readouterr().err
+
+
+def test_catalog_release_skew__unreadable_control_state__reports_no_skew(tmp_path: Path) -> None:
+    """Disclosure is a convenience; it never turns inspection into a crash."""
+    assert catalog_release_skew(tmp_path) is None
 
 
 def _apply_resolution(repo: Path, distribution: InstalledDistribution) -> AppliedPackage:

@@ -155,9 +155,22 @@ def _run_control_inspection(command: str, argv: list[str]) -> int:
     parser = _control_parser(command)
     try:
         args = parser.parse_args(argv)
-        from project_standards.control_plane.config_edit import standard_views
+        from project_standards.control_plane.config_edit import standard_inspection
 
-        views = standard_views(cast("Path", args.repo).resolve())
+        views, skew = standard_inspection(cast("Path", args.repo).resolve())
+        # stderr regardless of --json: the note annotates the basis, and
+        # writing it to stdout would corrupt the JSON document. This mirrors
+        # `agent-handoff legacy-report`, which discloses an unlocked read the
+        # same way in both formats.
+        if skew is not None:
+            committed, installed = skew
+            print(
+                f"note: reading the committed catalog: release {committed}; "
+                f"installed release {installed} is not reconciled into this repository "
+                "yet, so a package default may advance on "
+                "project-standards reconcile --apply",
+                file=sys.stderr,
+            )
         if command == "list":
             if cast("bool", args.json):
                 print(json.dumps({"ok": True, "standards": views}, indent=2))
