@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.17.0] — 2026-08-09
+
 ### Added
 
 - **`agent-handoff@1.10` ships the SessionStart launcher as a compiled executable instead of a Python hook.** Through 1.9 the managed registration had to find an interpreter before the hook could run, and a consumer whose first `python3` was a policy rejection shim got exit 1 with no context and no supported remedy: editing the managed hook or its registration would have created drift. 1.8 narrowed that by probing for Python 3.14 and falling back to `uv run`, but the failure class survived because the launcher still had to resolve something on `PATH`. 1.10 removes the class rather than the symptom — the registrations invoke a statically linked `linux/amd64` binary directly, and the only shell involvement left is the expansion the harness already performs for `${CLAUDE_PROJECT_DIR}`. The emitted context is unchanged and proven so: a differential suite runs the 1.9 hook and the 1.10 binary against one fixture repository and compares stdout byte for byte on both harness transports, including UTF-8-boundary state truncation and the output-budget shrink loop. The binary is committed payload bytes built reproducibly by `scripts/build-agent-handoff-session-start.sh`, and `make go-check` rebuilds and byte-compares it, so what consumers receive is provably the reviewed source. The consequence is a narrower platform: consumers who are not `linux/amd64` select manual startup, where 1.9 ran anywhere a supported interpreter did. Upgrading consumers delete the superseded `session_start.py` themselves — the payload contract has no policy for retiring a file an earlier version installed, so reconciliation preserves it. (#138)

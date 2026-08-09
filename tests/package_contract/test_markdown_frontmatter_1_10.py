@@ -11,15 +11,20 @@ empty selection — the default — `run_render_workflow` must still return the
 unmodified `workflow-job.yml` bytes, or reconciliation would rewrite the composed
 job for every consumer that did not select a runner.
 
-Catalog role and root-workflow parity are deliberately absent here; both are
-release-prep contracts that batch with the rest of the release.
+The catalog-role and family-navigation rows below were deferred to release prep
+and landed with the 5.17.0 activation, which is the first commit permitted to
+advance catalogs/5.toml. Root-workflow parity stays with 1.9: `runner_labels`
+reaches caller mode only, so 1.10 supersedes none of the self-hosted bytes this
+repository renders.
 """
 
 from __future__ import annotations
 
 import json
+import tomllib
 from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 import yaml
 
@@ -228,3 +233,36 @@ def test_markdown_frontmatter_1_10__payload_projection__matches_successor() -> N
     for relative, link in projected_links.items():
         assert not link.readlink().is_absolute()
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
+
+
+def test_markdown_frontmatter_1_10__catalog_role__selects_the_successor_as_default() -> None:
+    """Catalog 5 must actually select the successor these tests pin.
+
+    The payload can be complete and valid while the catalog still selects its
+    predecessor; only this row makes the successor the default a consumer on
+    `version = "latest"` resolves to. Landed by the 5.17.0 activation, which is
+    the first commit permitted to advance the catalog role.
+    """
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    roles = {
+        package["version"]: package["role"]
+        for package in cast("list[dict[str, str]]", catalog["packages"])
+        if package["id"] == "markdown-frontmatter"
+    }
+
+    assert roles["1.10"] == "default"
+    assert roles["1.9"] == "retained"
+    assert roles["1.8"] == "retained"
+
+
+def test_markdown_frontmatter_1_10__mutable_navigation__names_the_new_authority() -> None:
+    """Family-level readers must resolve the same current payload as the index."""
+    expected_links = {
+        _FAMILY / "README.md": "versions/1.10/README.md",
+        _FAMILY / "adopt.md": "versions/1.10/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.10/agent-summary.md",
+    }
+    for path, expected_link in expected_links.items():
+        content = path.read_text(encoding="utf-8")
+        assert expected_link in content
+        assert "versions/1.9/" not in content

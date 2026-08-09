@@ -10,15 +10,20 @@ The load-bearing property is that an empty selection — the default — is
 compares bytes, so anything else would rewrite every consumer's managed caller on
 upgrade for a feature it did not select.
 
-Catalog role and root-workflow parity are deliberately absent here; both are
-release-prep contracts that batch with the rest of the release.
+The catalog-role and family-navigation rows below were deferred to release prep
+and landed with the 5.17.0 activation, which is the first commit permitted to
+advance catalogs/5.toml. Root-workflow parity stays with 1.7: `runner_labels`
+reaches caller mode only, so 1.8 supersedes none of the self-hosted bytes this
+repository renders.
 """
 
 from __future__ import annotations
 
 import json
+import tomllib
 from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 import yaml
 
@@ -229,3 +234,36 @@ def test_project_spec_1_8__payload_projection__matches_successor() -> None:
     for relative, link in projected_links.items():
         assert not link.readlink().is_absolute()
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
+
+
+def test_project_spec_1_8__catalog_role__selects_the_successor_as_default() -> None:
+    """Catalog 5 must actually select the successor these tests pin.
+
+    The payload can be complete and valid while the catalog still selects its
+    predecessor; only this row makes the successor the default a consumer on
+    `version = "latest"` resolves to. Landed by the 5.17.0 activation, which is
+    the first commit permitted to advance the catalog role.
+    """
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    roles = {
+        package["version"]: package["role"]
+        for package in cast("list[dict[str, str]]", catalog["packages"])
+        if package["id"] == "project-spec"
+    }
+
+    assert roles["1.8"] == "default"
+    assert roles["1.7"] == "retained"
+    assert roles["1.6"] == "retained"
+
+
+def test_project_spec_1_8__mutable_navigation__names_the_new_authority() -> None:
+    """Family-level readers must resolve the same current payload as the index."""
+    expected_links = {
+        _FAMILY / "README.md": "versions/1.8/README.md",
+        _FAMILY / "adopt.md": "versions/1.8/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.8/agent-summary.md",
+    }
+    for path, expected_link in expected_links.items():
+        content = path.read_text(encoding="utf-8")
+        assert expected_link in content
+        assert "versions/1.7/" not in content

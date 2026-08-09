@@ -8,14 +8,14 @@ Consumer packages are enabled through `.standards/config.toml` and reconciled as
 
 | Standard | What it governs | Package | Catalog role | Bundle | Adopt |
 | --- | --- | --- | --- | --- | --- |
-| Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | 1.7 | default | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) |
-| ADR | Architecture Decision Records (MADR on the frontmatter profile) | 1.3 | default | [adr/](adr/) | [adopt](adr/adopt.md) |
-| Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | 1.10 | default | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
-| Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | 1.11 | default | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
-| Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | 1.5 | default | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
+| Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | 1.10 | default | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) |
+| ADR | Architecture Decision Records (MADR on the frontmatter profile) | 1.4 | default | [adr/](adr/) | [adopt](adr/adopt.md) |
+| Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | 1.12 | default | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
+| Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | 1.14 | default | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
+| Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | 1.8 | default | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
 | CLI Documentation | Language-neutral CLI usage docs: help text, usage references, man pages, shell completion, CI drift checks | 1.6 | default | [cli-documentation/](cli-documentation/) | [adopt](cli-documentation/adopt.md) |
-| Agent Handoff | Repository-local project knowledge, bounded session continuity, repo-local skill and hooks, and conformance tooling | 1.8 | default | [agent-handoff/](agent-handoff/) | [adopt](agent-handoff/adopt.md) |
-| GitHub Workflow | GitHub work discipline for organization-owned repositories: typed issue contracts, PR evidence, an agent skill, and the `gh-workflow` tool | 1.0 | default | [github-workflow/](github-workflow/) | [adopt](github-workflow/adopt.md) |
+| Agent Handoff | Repository-local project knowledge, bounded session continuity, repo-local skill and hooks, and conformance tooling | 1.10 | default | [agent-handoff/](agent-handoff/) | [adopt](agent-handoff/adopt.md) |
+| GitHub Workflow | GitHub work discipline for organization-owned repositories: typed issue contracts, PR evidence, an agent skill, and the `gh-workflow` tool | 1.0 | default | [github-workflow/](github-workflow/) | [adopt](github-workflow/versions/1.0/adopt.md) |
 | Python Coding | Code-shape and agent-behavior rules for Python (companion to Python Tooling SSOT) | 0.6 | reference-only | [python-coding/](python-coding/) | — (**in-development draft**; not released for adoption) |
 | Standard Bundle Authoring | The V2 family, payload, catalog, provider, relationship, and ownership contract | 2.6 | internal | [standard-bundle-authoring/](standard-bundle-authoring/) | — (**internal/reference**; governs this repository's packages) |
 

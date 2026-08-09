@@ -137,12 +137,13 @@ def test_markdown_tooling_1_13__successor__preserves_1_12_and_indexes_complete_p
         } <= set(migration.affected)
 
 
-def test_markdown_tooling_1_13__catalog_role__selects_the_successor_as_default() -> None:
-    """Catalog 5 must actually select the successor these tests pin.
+def test_markdown_tooling_1_13__catalog_role__stays_retained_behind_the_successor() -> None:
+    """1.13 keeps an advertised, non-default row once 1.14 takes the default.
 
-    The payload can be complete and valid while the catalog still selects its
-    predecessor; only this row makes the successor the default a consumer on
-    `version = "latest"` resolves to.
+    `test_markdown_tooling_1_14__catalog_role__selects_the_successor_as_default`
+    owns the default assertion from the 5.17.0 activation onward. What 1.13 owes
+    a consumer holding an exact pin is that promoting its successor neither
+    removes its row nor changes its digest.
     """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
@@ -151,7 +152,7 @@ def test_markdown_tooling_1_13__catalog_role__selects_the_successor_as_default()
         if package["id"] == "markdown-tooling"
     }
 
-    assert roles["1.13"] == "default"
+    assert roles["1.13"] == "retained"
     assert roles["1.12"] == "retained"
     assert roles["1.11"] == "retained"
 
@@ -175,14 +176,16 @@ def test_markdown_tooling_1_13__payload_projection__matches_successor() -> None:
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_markdown_tooling_1_13__mutable_navigation__names_the_new_authority() -> None:
-    """Family-level readers must resolve the same current payload as the index."""
-    expected_links = {
-        _FAMILY / "README.md": "versions/1.13/README.md",
-        _FAMILY / "adopt.md": "versions/1.13/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.13/agent-summary.md",
-    }
-    for path, expected_link in expected_links.items():
-        content = path.read_text(encoding="utf-8")
-        assert expected_link in content
-        assert "versions/1.12/" not in content
+def test_markdown_tooling_1_13__family_index__keeps_the_retained_version_selectable() -> None:
+    """Naming 1.14 as the current authority must not drop 1.13 from the family index.
+
+    Family navigation now points at 1.14 (see `test_markdown_tooling_1_14`); what
+    1.13 still owes a consumer holding an exact pin is an advertised,
+    digest-bound row.
+    """
+    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
+    integrity = validate_payload_integrity(_SUCCESSOR, manifest)
+    family = load_family_manifest(_FAMILY / "standard.toml")
+    indexed = {entry.version.value: entry for entry in family.versions}
+
+    assert indexed["1.13"].digest == integrity.aggregate_digest

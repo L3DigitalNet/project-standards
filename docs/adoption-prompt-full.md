@@ -18,6 +18,7 @@ The agent resolves the package versions from the immutable release selected belo
 - [x] `project-spec` — provides Light, Standard, and Full project-specification formats, tooling, and validation workflows.
 - [x] `cli-documentation` — provides CLI usage-reference/man-page scaffolding and checks for drift from the executable interface.
 - [x] `agent-handoff` — establishes repository-local status, task, and handoff knowledge; it can also install a shared SessionStart hook for supported agent harnesses.
+- [x] `github-workflow` — installs the GitHub work-discipline skill and the static `linux/amd64` `gh-workflow` binary for a repository owned by a GitHub organization whose Issue Fields schema it audits against.
 
 ### Existing V5 repositories (select only when changing its package set)
 

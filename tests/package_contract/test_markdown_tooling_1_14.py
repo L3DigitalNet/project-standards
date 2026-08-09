@@ -9,17 +9,21 @@ a hand-edited managed caller would otherwise be reported as CP-MODIFIED-MANAGED
 drift. `test_markdown_tooling_1_14__empty_selection__renders_the_1_13_bytes`
 holds that line by rendering both payloads and comparing raw bytes.
 
-Catalog role and root-workflow parity are deliberately absent here. Both are
-release-prep contracts: the catalogs/5.toml advance and the producer-mode
-reconcile batch with the other cuts of the release, so asserting them at cut time
-would pin work this commit is not allowed to do.
+The catalog-role and family-navigation rows below were deferred to release prep
+and landed with the 5.17.0 activation: the catalogs/5.toml advance batches with
+the other cuts of the release, so asserting it at cut time would have pinned work
+that commit was not allowed to do. Root-workflow parity stays with 1.13, which
+still owns the bytes this repository's self-hosted workflows are rendered from —
+`runner_labels` reaches caller mode only, so 1.14 supersedes nothing there.
 """
 
 from __future__ import annotations
 
 import json
+import tomllib
 from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 import yaml
 
@@ -219,3 +223,36 @@ def test_markdown_tooling_1_14__payload_projection__matches_successor() -> None:
     for relative, link in projected_links.items():
         assert not link.readlink().is_absolute()
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
+
+
+def test_markdown_tooling_1_14__catalog_role__selects_the_successor_as_default() -> None:
+    """Catalog 5 must actually select the successor these tests pin.
+
+    The payload can be complete and valid while the catalog still selects its
+    predecessor; only this row makes the successor the default a consumer on
+    `version = "latest"` resolves to. Landed by the 5.17.0 activation, which is
+    the first commit permitted to advance the catalog role.
+    """
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    roles = {
+        package["version"]: package["role"]
+        for package in cast("list[dict[str, str]]", catalog["packages"])
+        if package["id"] == "markdown-tooling"
+    }
+
+    assert roles["1.14"] == "default"
+    assert roles["1.13"] == "retained"
+    assert roles["1.12"] == "retained"
+
+
+def test_markdown_tooling_1_14__mutable_navigation__names_the_new_authority() -> None:
+    """Family-level readers must resolve the same current payload as the index."""
+    expected_links = {
+        _FAMILY / "README.md": "versions/1.14/README.md",
+        _FAMILY / "adopt.md": "versions/1.14/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.14/agent-summary.md",
+    }
+    for path, expected_link in expected_links.items():
+        content = path.read_text(encoding="utf-8")
+        assert expected_link in content
+        assert "versions/1.13/" not in content

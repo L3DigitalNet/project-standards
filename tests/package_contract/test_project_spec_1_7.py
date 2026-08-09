@@ -138,8 +138,12 @@ def test_project_spec_1_7__identity_documents_and_schemas__name_the_successor() 
     assert migration_report["properties"]["package"]["properties"]["version"]["const"] == "1.7"
 
 
-def test_project_spec_1_7__catalog_role__selects_the_successor_as_default() -> None:
-    """Catalog 5 must actually select the successor these tests pin."""
+def test_project_spec_1_7__catalog_role__stays_retained_behind_the_successor() -> None:
+    """1.7 keeps an advertised, non-default row once 1.8 takes the default.
+
+    `test_project_spec_1_8__catalog_role__selects_the_successor_as_default` owns
+    the default assertion from the 5.17.0 activation onward.
+    """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
         package["version"]: package["role"]
@@ -147,7 +151,7 @@ def test_project_spec_1_7__catalog_role__selects_the_successor_as_default() -> N
         if package["id"] == "project-spec"
     }
 
-    assert roles["1.7"] == "default"
+    assert roles["1.7"] == "retained"
     assert roles["1.6"] == "retained"
     assert roles["1.5"] == "retained"
 
@@ -171,20 +175,19 @@ def test_project_spec_1_7__payload_projection__matches_successor() -> None:
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_project_spec_1_7__family_navigation__points_to_the_current_authority() -> None:
-    documents = {
-        "README.md": (
-            "project-spec@1.7",
-            "Catalog 5 now selects `project-spec@1.7`",
-        ),
-        "adopt.md": ("project-spec@1.7",),
-        "agent-summary.md": ("project-spec@1.7",),
-    }
+def test_project_spec_1_7__family_index__keeps_the_retained_version_selectable() -> None:
+    """Naming 1.8 as the current authority must not drop 1.7 from the family index.
 
-    for relative, expected_references in documents.items():
-        document = (_FAMILY / relative).read_text(encoding="utf-8")
-        for expected in expected_references:
-            assert expected in document
+    Family navigation now points at 1.8 (see `test_project_spec_1_8`); what 1.7
+    still owes a consumer holding an exact pin is an advertised, digest-bound
+    row.
+    """
+    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
+    integrity = validate_payload_integrity(_SUCCESSOR, manifest)
+    family = load_family_manifest(_FAMILY / "standard.toml")
+    indexed = {entry.version.value: entry for entry in family.versions}
+
+    assert indexed["1.7"].digest == integrity.aggregate_digest
 
 
 def test_project_spec_1_7__migration__recognizes_the_pinned_root_workflow() -> None:

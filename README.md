@@ -4,7 +4,7 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
-- **Adopting or updating with an agent?** Copy the [agent adoption/update prompt](docs/adoption-prompt.md).
+- **Adopting or updating with an agent?** Copy the [agent adoption/update prompt](docs/adoption-prompt-blank.md).
 - **Using the CLI?** See the complete [`project-standards` usage reference](docs/usage.md).
 - **Planning a release?** See the [roadmap](ROADMAP.md).
 
@@ -68,13 +68,13 @@ The standards this repository defines. Each lives in a family under [`standards/
 
 A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation, giving every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, never at the top level.
 
-- **Standard:** [`standards/markdown-frontmatter/versions/1.9/README.md`](standards/markdown-frontmatter/versions/1.9/README.md)
-- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.9/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.9/field-values.md)
-- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.9/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
-- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.9/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
-- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.9/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.9/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.9/adopt.md)
+- **Standard:** [`standards/markdown-frontmatter/versions/1.10/README.md`](standards/markdown-frontmatter/versions/1.10/README.md)
+- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.10/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.10/field-values.md)
+- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.10/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
+- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.10/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
+- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.10/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.10/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.10/adopt.md)
 
-The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.9/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.9/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.9/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
+The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.10/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.10/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.10/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
 
 ### ADR Standard
 
@@ -97,15 +97,15 @@ The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/`
 
 The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The V5 package manages the two configs plus `lint-markdown.yml` and `format.yml` caller/self-hosted workflows while composing only declared units in shared EditorConfig, VS Code, and instruction containers.
 
-- **Standard:** [`standards/markdown-tooling/versions/1.13/README.md`](standards/markdown-tooling/versions/1.13/README.md)
-- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.13/adopt.md)
+- **Standard:** [`standards/markdown-tooling/versions/1.14/README.md`](standards/markdown-tooling/versions/1.14/README.md)
+- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.14/adopt.md)
 
 ### Project Specification Standard
 
 Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and provider-backed `validate`/`lint`/`extract`/`next`/`new`/`upgrade` commands. The selected package manages a reusable or self-hosted validation workflow; authoring writes are applied only from typed plans through the unified executor.
 
-- **Standard:** [`standards/project-spec/versions/1.7/README.md`](standards/project-spec/versions/1.7/README.md)
-- **Templates:** [`templates/`](standards/project-spec/versions/1.7/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.7/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.7/adopt.md)
+- **Standard:** [`standards/project-spec/versions/1.8/README.md`](standards/project-spec/versions/1.8/README.md)
+- **Templates:** [`templates/`](standards/project-spec/versions/1.8/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.8/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.8/adopt.md)
 
 ### CLI Documentation Standard
 
@@ -144,18 +144,18 @@ The "standard for standards" — the V2 family/payload/catalog contract every pa
 
 ## Consuming the standards
 
-Project Standards 5.16.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
+Project Standards 5.17.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
 
 ```bash
-uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.16.0"
+uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.17.0"
 project-standards --version || project-standards --version
 ```
 
-The version command must report `project-standards 5.16.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.17.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
-project-standards standards enable markdown-frontmatter --version 1.9
+project-standards standards enable markdown-frontmatter --version 1.10
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -171,17 +171,17 @@ project-standards reconcile --restore-managed path/to/file --apply
 
 The path must be one exact repo-relative, non-glob path with exclusive whole-file ownership and matching lock authority. The preview is read-only and reports only structural evidence (owner, digests or `absent`, action, and the exact apply command); apply never creates parent directories, and a `noop` writes nothing. This restore path is separate from incomplete-state recovery.
 
-> **Adopting or updating with an agent?** Copy the [agent adoption/update prompt](docs/adoption-prompt.md). It routes fresh adoption, V5 updates, and V4 migration; requires preview-before-apply and preservation checks; and requires sanitized upstream issue reports for irregularities.
+> **Adopting or updating with an agent?** Copy the [agent adoption/update prompt](docs/adoption-prompt-blank.md) and tick the packages you want, or take [the everything-selected variant](docs/adoption-prompt-full.md). It routes fresh adoption, V5 updates, and V4 migration; requires preview-before-apply and preservation checks; and requires sanitized upstream issue reports for irregularities.
 
 ### Current consumer packages
 
 | Package | Current payload | Adoption guide |
 | --- | --- | --- |
-| Markdown Frontmatter | `1.9` | [`standards/markdown-frontmatter/versions/1.9/adopt.md`](standards/markdown-frontmatter/versions/1.9/adopt.md) |
+| Markdown Frontmatter | `1.10` | [`standards/markdown-frontmatter/versions/1.10/adopt.md`](standards/markdown-frontmatter/versions/1.10/adopt.md) |
 | ADR | `1.4` | [`standards/adr/versions/1.4/adopt.md`](standards/adr/versions/1.4/adopt.md) |
 | Python Tooling | `1.12` | [`standards/python-tooling/versions/1.12/adopt.md`](standards/python-tooling/versions/1.12/adopt.md) |
-| Markdown Tooling | `1.13` | [`standards/markdown-tooling/versions/1.13/adopt.md`](standards/markdown-tooling/versions/1.13/adopt.md) |
-| Project Specification | `1.7` | [`standards/project-spec/versions/1.7/adopt.md`](standards/project-spec/versions/1.7/adopt.md) |
+| Markdown Tooling | `1.14` | [`standards/markdown-tooling/versions/1.14/adopt.md`](standards/markdown-tooling/versions/1.14/adopt.md) |
+| Project Specification | `1.8` | [`standards/project-spec/versions/1.8/adopt.md`](standards/project-spec/versions/1.8/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
 | Agent Handoff | `1.10` | [`standards/agent-handoff/versions/1.10/adopt.md`](standards/agent-handoff/versions/1.10/adopt.md) |
 | GitHub Workflow | `1.0` | [`standards/github-workflow/versions/1.0/adopt.md`](standards/github-workflow/versions/1.0/adopt.md) |
@@ -246,7 +246,7 @@ For private standards repos called by private consumers, enable cross-repository
 ```yaml
 repos:
   - repo: https://github.com/L3DigitalNet/project-standards
-    rev: v5.16.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
+    rev: v5.17.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
     hooks:
       - id: format-frontmatter-check
       - id: validate-id-check
@@ -282,7 +282,7 @@ npm ci                                                       # Prettier and mark
 uv run project-standards standards sync-payload-projection --root . --check --json # must pass before the build
 uv build --clear --wheel --out-dir build/release-wheel
 rm -rf -- build/wheel-runtime
-uv run python -m zipfile -e build/release-wheel/project_standards-5.16.0-py3-none-any.whl build/wheel-runtime
+uv run python -m zipfile -e build/release-wheel/project_standards-5.17.0-py3-none-any.whl build/wheel-runtime
 scripts/wheel-runtime-stamp.sh write         # records what the extraction was built from
 ```
 

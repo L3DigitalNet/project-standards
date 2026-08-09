@@ -147,8 +147,12 @@ def test_markdown_frontmatter_1_9__family_index__matches_the_payload_digest() ->
     assert any(migration.id == "legacy-v4-to-1-9" for migration in manifest.migrations)
 
 
-def test_markdown_frontmatter_1_9__catalog_role__selects_the_successor_as_default() -> None:
-    """Catalog 5 must actually select the successor these tests pin."""
+def test_markdown_frontmatter_1_9__catalog_role__stays_retained_behind_the_successor() -> None:
+    """1.9 keeps an advertised, non-default row once 1.10 takes the default.
+
+    `test_markdown_frontmatter_1_10__catalog_role__selects_the_successor_as_default`
+    owns the default assertion from the 5.17.0 activation onward.
+    """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
         package["version"]: package["role"]
@@ -156,7 +160,7 @@ def test_markdown_frontmatter_1_9__catalog_role__selects_the_successor_as_defaul
         if package["id"] == "markdown-frontmatter"
     }
 
-    assert roles["1.9"] == "default"
+    assert roles["1.9"] == "retained"
     assert roles["1.8"] == "retained"
     assert roles["1.7"] == "retained"
 
@@ -180,10 +184,16 @@ def test_markdown_frontmatter_1_9__payload_projection__matches_successor() -> No
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_markdown_frontmatter_1_9__family_navigation__selects_the_successor() -> None:
-    """Mutable family documents identify the versioned authority without catalog edits."""
-    for relative in ("README.md", "adopt.md", "agent-summary.md"):
-        text = (_FAMILY / relative).read_text(encoding="utf-8")
-        assert "markdown-frontmatter@1.9" in text
-        assert "versions/1.9/" in text
-        assert "1.8" not in text
+def test_markdown_frontmatter_1_9__family_index__keeps_the_retained_version_selectable() -> None:
+    """Naming 1.10 as the current authority must not drop 1.9 from the family index.
+
+    Family navigation now points at 1.10 (see `test_markdown_frontmatter_1_10`);
+    what 1.9 still owes a consumer holding an exact pin is an advertised,
+    digest-bound row.
+    """
+    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
+    integrity = validate_payload_integrity(_SUCCESSOR, manifest)
+    family = load_family_manifest(_FAMILY / "standard.toml")
+    indexed = {entry.version.value: entry for entry in family.versions}
+
+    assert indexed["1.9"].digest == integrity.aggregate_digest

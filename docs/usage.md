@@ -350,6 +350,8 @@ project-standards standards list [--repo <dir>] [--json]
 
 Text output includes selection availability, advertised versions, the default, desired selector, and applied version. Use `standards show <standard>` for its configuration-path facts, or `standards list --json` for the complete machine-readable inventory.
 
+When the installed release differs from the release the committed catalog records, both `list` and `show` print a `note:` line on **stderr** naming the two releases and warning that a package default may advance on `reconcile --apply`. The basis they read is the committed catalog either way; stdout is unchanged, in human and `--json` form alike, and an installation that cannot be identified prints no note rather than failing the inspection.
+
 ### `standards show`
 
 Show catalog, desired, applied, and configuration-path facts for one standard.
