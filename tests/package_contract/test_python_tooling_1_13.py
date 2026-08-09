@@ -11,6 +11,7 @@ must not disturb. A hollow fix that widened 1.12 instead of authoring 1.13
 breaks them.
 """
 
+import json
 import os
 import subprocess
 import tomllib
@@ -219,6 +220,27 @@ def test_python_tooling_1_13__released_predecessor__keeps_its_exact_bytes() -> N
 # ---------------------------------------------------------------------------
 # The 1.13 contract: every row below fails on the unauthored payload.
 # ---------------------------------------------------------------------------
+
+
+def test_python_tooling_1_13__provider_input_schema__pins_its_own_payload_identity() -> None:
+    """The render envelope's consts must name the payload that ships them.
+
+    A successor copies the predecessor's schemas forward, and a copy that keeps the
+    predecessor's `version` const fails closed in `_validate_json_schema` on the first
+    render after the version becomes selectable — the payload is unreachable, not
+    merely mislabelled. Both sides are derived from the manifest so a stale copy is
+    visible at cut time rather than at release prep.
+    """
+    _require_payload(_V113)
+    manifest = load_payload_manifest(_V113 / "payload.toml")
+    schema = cast(
+        "JsonObject",
+        json.loads((_V113 / "schemas/provider-input.schema.json").read_text(encoding="utf-8")),
+    )
+    properties = cast("JsonObject", schema["properties"])
+
+    assert cast("JsonObject", properties["version"])["const"] == manifest.payload.version.value
+    assert cast("JsonObject", properties["standard_id"])["const"] == manifest.payload.standard
 
 
 def test_python_tooling_1_13__option_schema__declares_a_closed_glob_to_rule_map() -> None:

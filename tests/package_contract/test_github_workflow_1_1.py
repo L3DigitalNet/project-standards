@@ -1,10 +1,11 @@
 """Contract for the GitHub Workflow 1.1 successor.
 
-1.1 is a tool-behavior cut: the payload's configuration surface, providers, schemas,
-and delivery set are the 1.0 ones byte for byte, and everything that moves is either
-prose or the committed `gh-workflow` binary. That shape is what the first test pins,
-because a "documentation and binary only" claim is only worth something if the files
-it exempts are enumerated rather than assumed.
+1.1 is a tool-behavior cut: the payload's configuration surface, providers, and
+delivery set are the 1.0 ones byte for byte, and everything that moves is either
+prose, the committed `gh-workflow` binary, or the one schema const that has to name
+the version shipping it. That shape is what the first test pins, because a
+"documentation and binary only" claim is only worth something if the files it exempts
+are enumerated rather than assumed.
 
 Three issues ship here. #144 removes the hardcoded Issue-Type count from the tool's
 guidance text; #154 removes the wall-clock read timestamp from the body of the
@@ -27,6 +28,7 @@ so 1.1 is an unadvertised repository payload until then.
 
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 
@@ -46,15 +48,17 @@ _PREDECESSOR_DIGEST = "sha256:65afb66cd3aaf1e0fa9bb896e63b2275290e93aa8fff6d4e0f
 _BINARY = "skills/github-workflow/bin/gh-workflow"
 
 # Every file 1.1 is permitted to change: the four version-bearing documents, the
-# manifest that pins their digests, and the rebuilt binary. Anything else differing
-# between the two trees is an unintended edit, which is precisely what a successor
-# whose payload surface is unchanged has to be able to rule out.
+# manifest that pins their digests, the rebuilt binary, and the provider-input schema
+# whose `version` const names the payload it ships in. Anything else differing between
+# the two trees is an unintended edit, which is precisely what a successor whose
+# payload surface is unchanged has to be able to rule out.
 _SUCCESSOR_CHANGES = frozenset(
     {
         "README.md",
         "adopt.md",
         "agent-summary.md",
         "payload.toml",
+        "schemas/provider-input.schema.json",
         "skills/github-workflow/SKILL.md",
         _BINARY,
     }
@@ -97,6 +101,24 @@ def test_github_workflow_1_1__successor__preserves_1_0_and_indexes_complete_payl
     # The predecessor stays indexed at its published digest: a successor cut may add a
     # row, never rewrite one.
     assert indexed["1.0"].digest.value == _PREDECESSOR_DIGEST
+
+
+def test_github_workflow_1_1__provider_input_schema__pins_its_own_payload_identity() -> None:
+    """The render envelope's consts must name the payload that ships them.
+
+    A successor copies the predecessor's schemas forward, and a copy that keeps the
+    predecessor's `version` const fails closed in `_validate_json_schema` on the first
+    render after the version becomes selectable — the payload is unreachable, not
+    merely mislabelled. Both sides are derived from the manifest so a stale copy is
+    visible at cut time rather than at release prep.
+    """
+    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
+    schema = json.loads(
+        (_SUCCESSOR / "schemas/provider-input.schema.json").read_text(encoding="utf-8")
+    )
+
+    assert schema["properties"]["version"]["const"] == manifest.payload.version.value
+    assert schema["properties"]["standard_id"]["const"] == manifest.payload.standard
 
 
 def test_github_workflow_1_1__delivery_surface__is_unchanged_from_1_0() -> None:

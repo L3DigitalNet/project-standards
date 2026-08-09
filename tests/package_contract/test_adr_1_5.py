@@ -158,10 +158,23 @@ def test_adr_1_5__option_surface_and_provider__are_unchanged_from_1_4() -> None:
         _PREDECESSOR / "providers/adr.py"
     ).read_bytes()
 
-    provider_input = json.loads(
+
+def test_adr_1_5__provider_input_schema__pins_its_own_payload_identity() -> None:
+    """The render envelope's consts must name the payload that ships them.
+
+    A successor copies the predecessor's schemas forward, and a copy that keeps the
+    predecessor's `version` const fails closed in `_validate_json_schema` on the first
+    render after the version becomes selectable — the payload is unreachable, not
+    merely mislabelled. Both sides are derived from the manifest so a stale copy is
+    visible at cut time rather than at release prep.
+    """
+    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
+    schema = json.loads(
         (_SUCCESSOR / "schemas/provider-input.schema.json").read_text(encoding="utf-8")
     )
-    assert provider_input["properties"]["version"]["const"] == "1.5"
+
+    assert schema["properties"]["version"]["const"] == manifest.payload.version.value
+    assert schema["properties"]["standard_id"]["const"] == manifest.payload.standard
 
 
 def test_adr_1_5__every_1_4_record__still_validates_untouched() -> None:

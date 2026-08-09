@@ -19,6 +19,7 @@ role here would pin work this commit is not allowed to do.
 
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 from typing import cast
@@ -86,6 +87,24 @@ def test_agent_handoff_1_11__successor__preserves_1_10_and_indexes_complete_payl
     }
     for migration in manifest.migrations:
         assert migration.to_endpoint.value == "package:1.11"
+
+
+def test_agent_handoff_1_11__provider_input_schema__pins_its_own_payload_identity() -> None:
+    """The render envelope's consts must name the payload that ships them.
+
+    A successor copies the predecessor's schemas forward, and a copy that keeps the
+    predecessor's `version` const fails closed in `_validate_json_schema` on the first
+    render after the version becomes selectable — the payload is unreachable, not
+    merely mislabelled. Both sides are derived from the manifest so a stale copy is
+    visible at cut time rather than at release prep.
+    """
+    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
+    schema = json.loads(
+        (_SUCCESSOR / "schemas/provider-input.schema.json").read_text(encoding="utf-8")
+    )
+
+    assert schema["properties"]["version"]["const"] == manifest.payload.version.value
+    assert schema["properties"]["standard_id"]["const"] == manifest.payload.standard
 
 
 def test_agent_handoff_1_11__launcher__reuses_the_1_10_bytes() -> None:

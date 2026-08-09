@@ -64,7 +64,7 @@ id = "provider-input"
 role = "provider-resource"
 path = "schemas/provider-input.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:2b7e3cdbd956ed15dfe0a0d2d4f32f885d07d30f0e064eaf2eab79dd729283b4"
+digest = "sha256:05dfb2fc33baf962a20b1e30783c5ac58a2c62ea8b6197c6016249a3785c2975"
 
 [[resources]]
 id = "provider-content"
