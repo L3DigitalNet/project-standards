@@ -240,6 +240,9 @@ def sweep_version_references(current: Version) -> StepResult:
     """
     targets: list[Path] = [REPO_ROOT / "README.md"]
     targets.extend(sorted(REPO_ROOT.glob("standards/*/adopt.md")))
+    # Family landing pages carry the current-payload links and version prose; all
+    # four moved in the v5.16.0 release commit 8a2d1b9a.
+    targets.extend(sorted(REPO_ROOT.glob("standards/*/README.md")))
     targets.extend(sorted(REPO_ROOT.glob("meta/*.md")))
     # Release-version pins the battery enforces: the activation constants and
     # the synthetic-repository catalog golden both embed the release literal
@@ -248,6 +251,20 @@ def sweep_version_references(current: Version) -> StepResult:
     targets.append(REPO_ROOT / "tests/fixtures/package_contract/valid/full/expected/catalog.toml")
     # FR-020: the MCP guide must state the exact installed package version.
     targets.append(REPO_ROOT / "docs/mcp-server.md")
+    # versioning.md step 6: the upgrade runbook's install example names one exact
+    # release every cut, not only a MAJOR one.
+    targets.append(REPO_ROOT / "UPGRADING.md")
+    # Consumer-facing guides in the same class as the MCP guide: each quotes an
+    # install pin or a `--version` expectation a reader copies verbatim.
+    targets.append(REPO_ROOT / "docs/adoption-prompt-blank.md")
+    targets.append(REPO_ROOT / "docs/adoption-prompt-full.md")
+    targets.append(REPO_ROOT / "docs/usage.md")
+    # Reported, never rewritten: a roadmap section named for the outgoing release
+    # is the signal that its planned/shipped state needs the judgment edit.
+    targets.append(REPO_ROOT / "ROADMAP.md")
+    # A release that re-renders a digest-pinned managed workflow amends this
+    # ledger per issue; a hit here flags the amendment rather than a stale string.
+    targets.append(REPO_ROOT / "tests/issue_regressions/ledger.toml")
 
     needle = str(current)
     hits: list[str] = []
