@@ -54,10 +54,6 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
-- [ ] Implement the `github-workflow` package via the [format-3 plan](plans/2026-08-06-github-workflow-package-plan.md) (T1–T11).
-
-  SPEC-GHW1 rev 1.6 is the authority; both documents passed two Codex review rounds. OQ-001 (release-train placement) is answered: `github-workflow@1.0` ships in v5.17.0 (owner direction, 2026-08-08).
-
 - [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md).
 
   Remaining work is the feature phase T24–T29 for #62 (conformance linting) and #55 (house-format conversion); T24 is dependency-ready. #116 stays deferred alongside them by owner decision (2026-08-05, defect fixes only). The deferred-tooling phase closed in v5.16.0 — see `docs/handoff/deployed.md` for what shipped.
