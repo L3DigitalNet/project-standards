@@ -3,8 +3,9 @@
 ## Current snapshot
 
 - Project Standards 5.17.0 is the published release at `29c875ab`; signed `v5.17.0` and `v5` tags are live and `uvx` from the tag reports 5.17.0.
-- The release advertises `github-workflow@1.0` as the eighth consumer package and closes #132; follow-ups #143–#147 sit in Inbox awaiting triage.
-- The tracker also holds the v5.18.0 ADR train (#127/#128/#129), the feature deferrals #55, #62, and #116, and the adoption/upgrade findings #130, #139–#142.
+- The release advertises `github-workflow@1.0` as the eighth consumer package and closes #132.
+- The v5.18.0 roadmap covers all 14 P1 issues across ADR, Python Tooling, Agent Handoff, GitHub Workflow, executable adoption guidance, and tests.
+- Only #141 and #147 are Ready; #128 is Blocked by #127 and bug 006; the other P1 issues remain Needs definition.
 - Catalog 5 defaults: markdown-tooling 1.14, markdown-frontmatter 1.10, python-tooling 1.12, project-spec 1.8, agent-handoff 1.10, github-workflow 1.0; every predecessor remains byte-immutable and selectable.
 - The full pre-tag chain including `verify.sh --full` and the complete hosted fleet including `Check` ran green on the tagged commit — no post-tag corrections were needed.
 - Release assets are byte-verified: wheel `36bc8e29…`, sdist `2cfe6fe2…`.

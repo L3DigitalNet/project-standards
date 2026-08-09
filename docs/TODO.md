@@ -56,11 +56,13 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md).
 
-  Remaining work is the feature phase T24–T29 for #62 (conformance linting) and #55 (house-format conversion); T24 is dependency-ready. #116 stays deferred alongside them by owner decision (2026-08-05, defect fixes only). The deferred-tooling phase closed in v5.16.0 — see `docs/handoff/deployed.md` for what shipped.
+  Remaining work is the feature phase T24–T29 for #62 (conformance linting) and #55 (house-format conversion); T24 is dependency-ready. #116 moved to the v5.18.0 release scope by owner triage on 2026-08-09. The deferred-tooling phase closed in v5.16.0 — see `docs/handoff/deployed.md` for what shipped.
 
-- [ ] Deliver the v5.18.0 ADR train: amendment vocabulary (#127) plus corpus remediation (#128).
+- [ ] Deliver the [v5.18.0 roadmap](../ROADMAP.md).
 
-  Owner decision 2026-08-05: bundle both and target **5.18.0** (MINOR — `adr` 1.4 → 1.5 becomes the Catalog 5 default). Ship #127 as `adr` 1.5 first, then the 21 backlog items in the ADR conformance assessment §10 using the 1.5 amendment form.
+  The 14 P1 issues cover the ADR train (#127/#128), Python Tooling (#116), Agent Handoff (#130/#139/#141/#148), GitHub Workflow (#144/#145/#149/#154), executable adoption guidance (#151), and tests (#146/#147).
+
+  Owner decision 2026-08-05: bundle #127/#128 and target **5.18.0** (MINOR — `adr` 1.4 → 1.5 becomes the Catalog 5 default). Ship #127 as `adr` 1.5 first, then the 21 backlog items in the ADR conformance assessment §10 using the 1.5 amendment form.
 
   `adr` 1.5 must stay non-breaking or it cannot become the default within catalog major 5.
 
