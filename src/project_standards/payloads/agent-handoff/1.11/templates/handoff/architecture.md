@@ -1,0 +1,1 @@
+../../../../../../../standards/agent-handoff/versions/1.11/templates/handoff/architecture.md
