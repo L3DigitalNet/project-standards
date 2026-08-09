@@ -48,6 +48,8 @@ _LIVE_SHALLOW_FAMILY_CORPUS = {
     "standards/cli-documentation/adopt.md",
     "standards/cli-documentation/agent-summary.md",
     "standards/github-workflow/README.md",
+    "standards/github-workflow/adopt.md",
+    "standards/github-workflow/agent-summary.md",
     "standards/markdown-frontmatter/README.md",
     "standards/markdown-frontmatter/adopt.md",
     "standards/markdown-frontmatter/agent-summary.md",

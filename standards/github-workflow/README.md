@@ -6,6 +6,7 @@ This is the Catalog 5 family landing page for the consumer package `github-workf
 
 - [GitHub Workflow 1.0 standard](versions/1.0/README.md) — applicability, configuration contract, and ownership boundary
 - [GitHub Workflow 1.0 adoption guide](versions/1.0/adopt.md) — prerequisites, options, apply, and verification
+- [Current family adoption guide](adopt.md) — concise enable/reconcile workflow and consumer-guard exemptions
 - [GitHub Workflow 1.0 agent summary](versions/1.0/agent-summary.md) — compact package behavior
 - [Family index](standard.toml) — indexed payload and digest
 

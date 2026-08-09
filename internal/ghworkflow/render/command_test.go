@@ -189,10 +189,9 @@ func (h *harness) assertReadOnly(t *testing.T) {
 
 var timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`)
 
-// freeze replaces the read timestamp — the one value a live run cannot repeat — with the
-// fixture's, after checking it is a real, recent UTC instant. Everything else must match
-// the golden byte for byte.
-func freeze(t *testing.T, rendered string) string {
+// requireReadTimestamp asserts that rendered carries a read timestamp which is a real,
+// recent UTC instant.
+func requireReadTimestamp(t *testing.T, rendered string) {
 	t.Helper()
 
 	stamps := timestampPattern.FindAllString(rendered, -1)
@@ -206,6 +205,18 @@ func freeze(t *testing.T, rendered string) string {
 	if elapsed := time.Since(read); elapsed < -time.Minute || elapsed > time.Hour {
 		t.Errorf("read timestamp %s is not the time of this run", stamps[0])
 	}
+}
+
+// freeze replaces the read timestamp — the one value a live run cannot repeat — with the
+// fixture's, after checking it is a real, recent UTC instant. Everything else must match
+// the golden byte for byte.
+//
+// Only the summary needs this now: the ledger carries no timestamp, so its live output is
+// compared to its golden unfrozen (issue #154).
+func freeze(t *testing.T, rendered string) string {
+	t.Helper()
+
+	requireReadTimestamp(t, rendered)
 	return timestampPattern.ReplaceAllString(rendered, fixtureRead)
 }
 
@@ -221,7 +232,9 @@ func TestLedgerZeroArgumentRunWritesTheGoldenFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the ledger was not written to %s: %v", ledgerRelPath, err)
 	}
-	if got, want := freeze(t, string(data)), golden(t, "ledger.md"); got != want {
+	// Unfrozen: a live run of an unchanged repository must reproduce the golden exactly,
+	// timestamp substitution included — that is issue #154's whole guarantee.
+	if got, want := string(data), golden(t, "ledger.md"); got != want {
 		t.Errorf("ledger file mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
 	}
 
@@ -231,10 +244,42 @@ func TestLedgerZeroArgumentRunWritesTheGoldenFile(t *testing.T) {
 			t.Errorf("confirmation line %q missing %q", out, want)
 		}
 	}
+	// The read time did not vanish with the file header; it moved to stdout, which the
+	// consumer does not commit.
+	requireReadTimestamp(t, out)
 	if strings.Contains(out, fixtureToken) || strings.Contains(h.stderr.String(), fixtureToken) {
 		t.Error("output contains the token value; IR-002 forbids credential material in output")
 	}
 	h.assertReadOnly(t)
+}
+
+// Issue #154: regenerating against unchanged work state must produce no diff. This is
+// the end-to-end form of the unit-level guarantee — two real runs of the command, minutes
+// or milliseconds apart, writing the same bytes — because the churn the consumer reported
+// was observed here, at `git diff`, not in the renderer.
+func TestLedgerRegeneratedAgainstUnchangedStateWritesIdenticalBytes(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	if got := h.run("ledger"); got != cli.ExitOK {
+		t.Fatalf("first ledger = %d, want %d (stderr: %s)", got, cli.ExitOK, h.stderr)
+	}
+	first, err := os.ReadFile(h.ledgerPath())
+	if err != nil {
+		t.Fatalf("reading the first ledger: %v", err)
+	}
+
+	if got := h.run("ledger"); got != cli.ExitOK {
+		t.Fatalf("second ledger = %d, want %d (stderr: %s)", got, cli.ExitOK, h.stderr)
+	}
+	second, err := os.ReadFile(h.ledgerPath())
+	if err != nil {
+		t.Fatalf("reading the second ledger: %v", err)
+	}
+
+	if !bytes.Equal(first, second) {
+		t.Errorf("regeneration changed the file\n--- first ---\n%s\n--- second ---\n%s", first, second)
+	}
 }
 
 func TestLedgerFailingTransportLeavesThePriorFileIntact(t *testing.T) {

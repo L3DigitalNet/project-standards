@@ -151,8 +151,12 @@ func runLedger(ctx context.Context, env *cli.Env, args []string) error {
 		return err
 	}
 
-	_, err = fmt.Fprintf(env.Stdout, "Wrote %s: %s, %s, %s needing attention.\n",
+	// The read timestamp is reported here and not in the file. It is the one value that
+	// moves on every run, so stdout — which no consumer commits — is where it can be
+	// stated without making the written bytes churn (issue #154).
+	_, err = fmt.Fprintf(env.Stdout, "Wrote %s from a read at %s: %s, %s, %s needing attention.\n",
 		destination,
+		read.Timestamp(),
 		plural(len(read.Issues), "open issue", "open issues"),
 		plural(len(read.PullRequests), "open PR", "open PRs"),
 		plural(len(read.Attention()), "item", "items"))

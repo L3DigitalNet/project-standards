@@ -40,7 +40,11 @@ func runNew(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("new", flag.ContinueOnError)
 	tgt := addTargetFlags(fs, true)
 	title := fs.String("title", "", "issue title")
-	issueType := fs.String("type", "", "Issue Type: one of the five in the organization schema")
+	// The flag's own usage text cannot name the vocabulary: flag usage is fixed when the
+	// flag is registered, and the schema is not read until after parsing. It therefore
+	// says where the vocabulary lives, and the refusal below — which does run with the
+	// schema loaded — enumerates it.
+	issueType := fs.String("type", "", "Issue Type, validated against the organization schema")
 	bodyFile := fs.String("body-file", "", "file holding the authored issue body "+
 		"(default: the canonical heading scaffold)")
 	fields := addFieldFlag(fs, "initial Issue Field assignment as Name=Value; repeat for several fields")
@@ -58,13 +62,16 @@ func runNew(ctx context.Context, env *cli.Env, args []string) error {
 	if *title == "" {
 		return cli.Usagef("pass --title")
 	}
-	if *issueType == "" {
-		return cli.Usagef("pass --type with one of the organization's Issue Types")
-	}
 
+	// The schema is loaded before the missing-flag refusal, not after, so the refusal can
+	// name the vocabulary it is asking for. Loading is offline and already precedes every
+	// mutating call, so moving it earlier costs nothing and reaches nothing.
 	schema, err := tgt.loadSchema(env)
 	if err != nil {
 		return err
+	}
+	if *issueType == "" {
+		return cli.Usagef("pass --type with %s", issueTypeVocabulary(schema))
 	}
 	if err := validateIssueType(schema, *issueType); err != nil {
 		return err

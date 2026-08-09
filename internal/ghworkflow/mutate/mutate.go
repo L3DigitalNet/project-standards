@@ -29,7 +29,7 @@ import (
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 )
 
-// The five subcommands register themselves, so wiring them into the binary is a blank
+// The subcommands here register themselves, so wiring them into the binary is a blank
 // import in cmd/gh-workflow rather than an edit to shared dispatch code.
 func init() {
 	cli.Register(&cli.Command{

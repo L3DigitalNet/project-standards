@@ -39,19 +39,44 @@ func TestLedgerWithNoOpenWorkMatchesGolden(t *testing.T) {
 	}
 }
 
-// FR-019 requires the generated-file header to carry all three of timestamp, tool
-// version, and a do-not-edit notice, and the summary to carry none of them.
-func TestLedgerHeaderCarriesTimestampVersionAndNotice(t *testing.T) {
+// FR-019 requires the generated-file header to carry the tool version and a do-not-edit
+// notice, and the summary to carry neither.
+func TestLedgerHeaderCarriesVersionAndNotice(t *testing.T) {
 	t.Parallel()
 
 	ledger := render.Ledger(fixtureSnapshot(t))
-	for _, want := range []string{fixtureRead, render.Version, "Do not edit"} {
+	for _, want := range []string{render.Version, "Do not edit"} {
 		if !strings.Contains(ledger, want) {
 			t.Errorf("ledger header missing %q:\n%s", want, ledger)
 		}
 	}
 	if summary := render.Summary(fixtureSnapshot(t)); strings.Contains(summary, "Do not edit") {
 		t.Error("summary carries the ledger's generated-file notice; only the written file is generated content")
+	}
+}
+
+// Issue #154: the committed file must be a function of work state alone. The read time
+// is the only input that moves between two reads of an unchanged repository, so a ledger
+// that renders identically across a shifting read timestamp is a ledger that produces no
+// diff on regeneration — which is the property the consumer actually needs.
+//
+// The summary is checked in the same test as the deliberate contrast: it is printed, not
+// committed, so it keeps the timestamp the ledger gave up.
+func TestLedgerBodyIsIndependentOfTheReadTimestamp(t *testing.T) {
+	t.Parallel()
+
+	first := fixtureSnapshot(t)
+	later := render.NewSnapshot(fixtureTarget, fixtureReadAt(t).Add(72*time.Hour),
+		first.Issues, first.PullRequests)
+
+	if got, want := render.Ledger(later), render.Ledger(first); got != want {
+		t.Errorf("the ledger changed with the read timestamp alone\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+	if ledger := render.Ledger(first); strings.Contains(ledger, fixtureRead) {
+		t.Errorf("the ledger body carries the read timestamp:\n%s", ledger)
+	}
+	if summary := render.Summary(first); !strings.Contains(summary, fixtureRead) {
+		t.Errorf("the summary lost its read timestamp:\n%s", summary)
 	}
 }
 

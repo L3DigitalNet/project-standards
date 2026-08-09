@@ -186,6 +186,22 @@ func fieldNames(schema *orgschema.Schema) []string {
 	return names
 }
 
+// issueTypeVocabulary phrases the Issue Type vocabulary for guidance text: how many
+// Types the loaded schema defines, and which ones.
+//
+// Both halves are read from the schema rather than written as literals. The vocabulary
+// is payload data designed to grow by shipping a new payload version, and a count
+// spelled out in prose goes stale silently on the day it does — while the validated list
+// beside it stays correct, which is what makes the stale count credible (issue #144).
+func issueTypeVocabulary(schema *orgschema.Schema) string {
+	types := schema.IssueTypes
+	if len(types) == 1 {
+		return fmt.Sprintf("the one Issue Type the organization schema defines: %s", types[0])
+	}
+	return fmt.Sprintf("one of the %d Issue Types the organization schema defines: %s",
+		len(types), strings.Join(types, ", "))
+}
+
 // validateIssueType refuses a Type outside the baseline vocabulary, which has no local
 // extensions.
 func validateIssueType(schema *orgschema.Schema, issueType string) error {

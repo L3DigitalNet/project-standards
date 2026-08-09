@@ -1,6 +1,10 @@
-// Package orgschema loads the baseline GitHub organization schema — the five Issue
-// Types and seven Issue Fields recorded in the payload's `org-schema.yaml` — that
-// `gh-workflow audit` compares live organization state against (spec FR-016).
+// Package orgschema loads the baseline GitHub organization schema — the Issue Types and
+// Issue Fields recorded in the payload's `org-schema.yaml` — that `gh-workflow audit`
+// compares live organization state against (spec FR-016).
+//
+// Nothing here fixes how many of either the baseline carries. The vocabulary grows by
+// shipping a new payload version, so every count reported to an operator is derived from
+// the parsed file rather than written down beside it (issue #144).
 //
 // The file is a payload-managed artifact with a fixed, tiny shape, so this package
 // carries its own bounded YAML reader instead of a general decoder: the Go standard

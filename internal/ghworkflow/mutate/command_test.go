@@ -16,7 +16,7 @@ import (
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghtest"
 
-	// The five subcommands register themselves; importing the package under test is what
+	// The subcommands register themselves; importing the package under test is what
 	// wires them into the registry, exactly as cmd/gh-workflow does.
 	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/mutate"
 )
@@ -1125,6 +1125,67 @@ func TestNewRefusesAnUnknownIssueType(t *testing.T) {
 	}
 	wants(t, h.stderr.String(), `unknown Issue Type "Chore"`, "Bug", "Feature", "Task", "Initiative", "Research")
 	h.assertNoRequests(t)
+}
+
+// Issue #144: the guidance for a missing --type names the vocabulary, and both the count
+// and the list come from the schema the command loaded.
+func TestNewGuidanceForAMissingTypeEnumeratesTheDeliveredSchema(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	if code := h.run("new", "--title", "x"); code != cli.ExitUsage {
+		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitUsage, h.stderr)
+	}
+	wants(t, h.stderr.String(), "one of the 5 Issue Types", "Bug", "Feature", "Task", "Initiative", "Research")
+	h.assertNoRequests(t)
+}
+
+// The same guidance against a schema of a different size. This is the regression the
+// issue is actually about: the delivered baseline happens to define five Types today, so
+// a hardcoded "five" and a derived count are indistinguishable until the vocabulary
+// moves — which it is designed to do, by shipping a new payload version.
+func TestNewGuidanceForAMissingTypeCountsTheLoadedSchema(t *testing.T) {
+	t.Parallel()
+
+	// Only the type vocabulary varies; the field half of the fixture is reused verbatim so
+	// the schema each case writes is otherwise the delivered one.
+	_, fixtureFields, found := strings.Cut(fixtureSchema, "issue_fields:")
+	if !found {
+		t.Fatal("the fixture schema no longer declares issue_fields")
+	}
+
+	cases := []struct {
+		name  string
+		types string
+		wants []string
+	}{
+		{
+			name:  "three types",
+			types: "issue_types:\n  - Bug\n  - Task\n  - Chore\n\n",
+			wants: []string{"one of the 3 Issue Types", "Bug, Task, Chore"},
+		},
+		{
+			// The degenerate case a count-and-list phrasing gets wrong by default:
+			// "one of the 1 Issue Types" is not a sentence anyone would ship.
+			name:  "a single type",
+			types: "issue_types:\n  - Bug\n\n",
+			wants: []string{"the one Issue Type the organization schema defines: Bug"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			h.write(t, cli.DefaultSchemaPath, tc.types+"issue_fields:"+fixtureFields)
+
+			if code := h.run("new", "--title", "x"); code != cli.ExitUsage {
+				t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitUsage, h.stderr)
+			}
+			wants(t, h.stderr.String(), tc.wants...)
+			h.assertNoRequests(t)
+		})
+	}
 }
 
 func TestNewRefusesAnInvalidInitialFieldValue(t *testing.T) {
