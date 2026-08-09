@@ -30,14 +30,14 @@ The v5 tool keeps a warned fallback for a repository that still has only `.proje
 
 - Upgrade on a branch with a clean, reviewed working tree.
 - Use Python 3.14 or newer.
-- Install or invoke the exact v5 release you intend to pin. For 5.17.0:
+- Install or invoke the exact v5 release you intend to pin. For 5.18.0:
 
   ```bash
-  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.17.0"
+  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.18.0"
   project-standards --version || project-standards --version
   ```
 
-  Confirm that the command reports `project-standards 5.17.0` before continuing. The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real.
+  Confirm that the command reports `project-standards 5.18.0` before continuing. The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real.
 
 - Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
 - Review the current package-specific [adoption guide](standards/README.md) for option and output changes.
@@ -284,6 +284,16 @@ Refreshing onto the 5.16.0 catalog changes bytes in two managed surfaces. Both a
 Refreshing onto the 5.17.0 catalog is byte-neutral for the three package advances and consumer-acted for the fourth. Markdown Tooling 1.14, Project Specification 1.8, and Markdown Frontmatter 1.10 only add the optional top-level `runner_labels` config option; leave it unset and every managed output renders exactly as its predecessor did, so a refresh that touches nothing but these three is expected to produce no diff beyond the lock. Set it to the labels of a self-hosted runner pool and the caller-mode managed workflows pass them through to the reusable workflows' `runner-labels` input as managed content, which is the supported alternative to hand-editing a generated caller and tripping `CP-MODIFIED-MANAGED`.
 
 **The Agent Handoff SessionStart launcher becomes a committed binary (Agent Handoff 1.9 → 1.10).** The Claude Code and Codex registrations now invoke a statically linked `linux/amd64` executable directly instead of resolving an interpreter for `session_start.py`, and the emitted context is byte-identical on both transports. Two consequences need a decision at refresh time. The payload contract has no policy for retiring a file an earlier version installed, so reconciliation preserves the superseded `session_start.py` — delete it yourself once the binary is registered. And 1.10 ships that one platform, so a consumer who is not `linux/amd64` selects manual startup where 1.9 ran anywhere a supported interpreter did.
+
+### What the 5.18.0 defaults rewrite on refresh
+
+Refreshing onto the 5.18.0 catalog rewrites nothing by default. All four package advances — ADR 1.4 → 1.5, Python Tooling 1.12 → 1.13, Agent Handoff 1.10 → 1.11, and GitHub Workflow 1.0 → 1.1 — are additive or documentation-only, so a refresh that touches nothing but these four is expected to produce no diff beyond the lock.
+
+**ADR 1.5** adds an optional amendment vocabulary: reciprocal `project.amends` / `project.amended_by` frontmatter lists, a blockquote amendment note between the title and Context and Problem Statement, and an optional `### Amendments` subsection under Decision Outcome. Both fields default to empty, no section becomes required, `schema_version` stays `1.1`, and the option surface and validator bytes are 1.4's, so every existing ADR validates untouched. The revised `docs/adr/adr.template.md` reaches new consumers automatically: the scaffold is `policy = "create-only"`, so reconcile writes it when it is absent and never touches it again. A repository that already has one and wants the 1.5 prompts refreshes it by **copying `standards/adr/versions/1.5/templates/adr.md` over its scaffold** and reviewing the result like any other change to a file it owns — the sanctioned mechanism as amended in [ADR 0028](docs/adr/adr-0028-create-only-artifact-refresh.md) on 2026-08-09. Do not delete the scaffold expecting reconcile to recreate it: an applied reconcile records the deletion as a permanent `[[create_only_absences]]` entry in `.standards/lock.toml` and no later reconcile recreates the file. After a copy, `.standards/lock.toml` keeps the digest it recorded when the scaffold was created — a create-only unit is not re-digested on later reconciles — so lock and file disagree by design. That is the documented steady state, not drift: reconcile plans the unit as `preserve` and `reconcile --check` stays clean.
+
+**Python Tooling 1.13** adds `ruff.extend_per_file_ignores`, a typed glob-to-rules table that exempts named rules for one path without disabling them repository-wide. Entries compose into the package-owned `[tool.ruff.lint.per-file-ignores]` table rather than replacing it, and the empty default renders the 1.12 bytes. Ruff's own `[tool.ruff.lint.extend-per-file-ignores]` table stays consumer-owned, so the documented pre-1.13 workaround keeps working and does not become `CP-MODIFIED-MANAGED` drift.
+
+**Agent Handoff 1.11** and **GitHub Workflow 1.1** change no option, artifact, contribution, or provider byte; the Agent Handoff launcher is 1.10's exact executable. GitHub Workflow 1.1 rebuilds `gh-workflow`, whose `ledger` subcommand no longer stamps a read timestamp into `docs/GH-WORKFLOWS.md` — the first regeneration after the refresh therefore drops that line, and every later one against unchanged work state produces no diff at all.
 
 ### Comments inside managed TOML regions
 

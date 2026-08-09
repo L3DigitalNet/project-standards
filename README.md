@@ -80,18 +80,20 @@ The standard defines **eleven required fields** plus a recommended optional set.
 
 Architecture Decision Records capture significant, hard-to-reverse decisions, using the [MADR](https://adr.github.io/madr/) format on top of the frontmatter profile above.
 
-- **Standard:** [`standards/adr/versions/1.4/README.md`](standards/adr/versions/1.4/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession workflow.
-- **Templates:** [`templates/adr.md`](standards/adr/versions/1.4/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
-- **Example:** [`examples/adr.example.md`](standards/adr/versions/1.4/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/versions/1.4/adopt.md).
+- **Standard:** [`standards/adr/versions/1.5/README.md`](standards/adr/versions/1.5/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession and amendment workflows.
+- **Templates:** [`templates/adr.md`](standards/adr/versions/1.5/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
+- **Example:** [`examples/adr.example.md`](standards/adr/versions/1.5/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/versions/1.5/adopt.md).
+
+Package 1.5 adds a sanctioned vocabulary for **partial amendment** — reciprocal `project.amends` / `project.amended_by` lists, a blockquote amendment note after the title, and an optional `### Amendments` subsection — for a later change that narrows or restates part of a decision while the rest stays in force. Supersession remains the all-or-nothing relationship. The addition is optional and default-empty, so every record valid under 1.4 validates under 1.5 untouched.
 
 ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` — the **`id`** embeds the repo-name for cross-repo uniqueness, while the **filename** omits it (`adr-0001-short-title.md`). ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, keeping the universal vocabulary small.
 
 ### Python Tooling SSOT Standard
 
-The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration.
+The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration. Package 1.13 adds `ruff.extend_per_file_ignores`, a typed table that exempts named rules for a path glob and composes into the package-owned per-file-ignores table instead of disabling them repository-wide.
 
-- **Standard:** [`standards/python-tooling/versions/1.12/README.md`](standards/python-tooling/versions/1.12/README.md)
-- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.12/adopt.md)
+- **Standard:** [`standards/python-tooling/versions/1.13/README.md`](standards/python-tooling/versions/1.13/README.md)
+- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.13/adopt.md)
 
 ### Markdown Tooling Standard
 
@@ -118,17 +120,17 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 
 Repository-local project knowledge and bounded session continuity for coding agents. Agent Handoff creates consumer-owned status, task, and lifetime-routed knowledge under `docs/`; installs a repo-local `agent-handoff` skill; optionally registers one shared SessionStart hook for Claude Code and Codex; and validates layout, drift, provenance, document budgets, and credential references without owning workstation-global state.
 
-- **Standard:** [`standards/agent-handoff/versions/1.10/README.md`](standards/agent-handoff/versions/1.10/README.md)
-- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.10/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
-- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.10/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.10/resources/legacy-migration.md)
+- **Standard:** [`standards/agent-handoff/versions/1.11/README.md`](standards/agent-handoff/versions/1.11/README.md)
+- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.11/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
+- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.11/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.11/resources/legacy-migration.md)
 
 ### GitHub Workflow Standard
 
 GitHub work discipline for organization-owned repositories: typed issue contracts, field vocabulary, pull-request evidence, review expectations, and an attention-first operator summary. The package installs a mandatory repo-local `github-workflow` skill that keeps judgment with the agent, plus `gh-workflow` — a committed, reproducibly built static `linux/amd64` Go binary whose nine subcommands audit the organization schema, maintain the human-facing ledger at `docs/GH-WORKFLOWS.md`, and apply validated issue mutations. The organization schema itself is skill-audited and human-applied; the tool never creates or retires an issue type, field, or value.
 
-- **Standard:** [`standards/github-workflow/versions/1.0/README.md`](standards/github-workflow/versions/1.0/README.md)
-- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.0/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
-- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.0/adopt.md)
+- **Standard:** [`standards/github-workflow/versions/1.1/README.md`](standards/github-workflow/versions/1.1/README.md)
+- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.1/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
+- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.1/adopt.md)
 
 ### Python Coding Standard (draft)
 
@@ -144,14 +146,14 @@ The "standard for standards" — the V2 family/payload/catalog contract every pa
 
 ## Consuming the standards
 
-Project Standards 5.17.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
+Project Standards 5.18.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
 
 ```bash
-uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.17.0"
+uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.18.0"
 project-standards --version || project-standards --version
 ```
 
-The version command must report `project-standards 5.17.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.18.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
@@ -178,13 +180,13 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | Package | Current payload | Adoption guide |
 | --- | --- | --- |
 | Markdown Frontmatter | `1.10` | [`standards/markdown-frontmatter/versions/1.10/adopt.md`](standards/markdown-frontmatter/versions/1.10/adopt.md) |
-| ADR | `1.4` | [`standards/adr/versions/1.4/adopt.md`](standards/adr/versions/1.4/adopt.md) |
-| Python Tooling | `1.12` | [`standards/python-tooling/versions/1.12/adopt.md`](standards/python-tooling/versions/1.12/adopt.md) |
+| ADR | `1.5` | [`standards/adr/versions/1.5/adopt.md`](standards/adr/versions/1.5/adopt.md) |
+| Python Tooling | `1.13` | [`standards/python-tooling/versions/1.13/adopt.md`](standards/python-tooling/versions/1.13/adopt.md) |
 | Markdown Tooling | `1.14` | [`standards/markdown-tooling/versions/1.14/adopt.md`](standards/markdown-tooling/versions/1.14/adopt.md) |
 | Project Specification | `1.8` | [`standards/project-spec/versions/1.8/adopt.md`](standards/project-spec/versions/1.8/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
-| Agent Handoff | `1.10` | [`standards/agent-handoff/versions/1.10/adopt.md`](standards/agent-handoff/versions/1.10/adopt.md) |
-| GitHub Workflow | `1.0` | [`standards/github-workflow/versions/1.0/adopt.md`](standards/github-workflow/versions/1.0/adopt.md) |
+| Agent Handoff | `1.11` | [`standards/agent-handoff/versions/1.11/adopt.md`](standards/agent-handoff/versions/1.11/adopt.md) |
+| GitHub Workflow | `1.1` | [`standards/github-workflow/versions/1.1/adopt.md`](standards/github-workflow/versions/1.1/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
 
@@ -246,7 +248,7 @@ For private standards repos called by private consumers, enable cross-repository
 ```yaml
 repos:
   - repo: https://github.com/L3DigitalNet/project-standards
-    rev: v5.17.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
+    rev: v5.18.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
     hooks:
       - id: format-frontmatter-check
       - id: validate-id-check
@@ -282,7 +284,7 @@ npm ci                                                       # Prettier and mark
 uv run project-standards standards sync-payload-projection --root . --check --json # must pass before the build
 uv build --clear --wheel --out-dir build/release-wheel
 rm -rf -- build/wheel-runtime
-uv run python -m zipfile -e build/release-wheel/project_standards-5.17.0-py3-none-any.whl build/wheel-runtime
+uv run python -m zipfile -e build/release-wheel/project_standards-5.18.0-py3-none-any.whl build/wheel-runtime
 scripts/wheel-runtime-stamp.sh write         # records what the extraction was built from
 ```
 

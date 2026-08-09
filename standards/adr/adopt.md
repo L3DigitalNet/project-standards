@@ -1,16 +1,18 @@
 # Adopt the ADR Standard
 
-The current consumer package is [`adr@1.4`](versions/1.4/adopt.md). Use it for MADR decision records, a create-only ADR scaffold, optional required-section validation, and explicit decision-boundary authoring guidance. Markdown Frontmatter is a companion, not a dependency; enable it separately when ADR metadata also needs schema and ID validation.
+The current consumer package is [`adr@1.5`](versions/1.5/adopt.md). Use it for MADR decision records, a create-only ADR scaffold, optional required-section validation, and explicit decision-boundary authoring guidance. Markdown Frontmatter is a companion, not a dependency; enable it separately when ADR metadata also needs schema and ID validation.
 
 ## Configure and reconcile
 
 ```bash
-project-standards standards enable adr --version 1.4
+project-standards standards enable adr --version 1.5
 project-standards reconcile
 project-standards reconcile --apply
 ```
 
-Package options live under `[standards.adr.config]`: `contract_version = "1.0"` retains the fundamental MADR document/body contract, and `require_sections` enables the three required MADR headings. Package 1.4 adds no required scope heading and does not infer semantic scope from prose.
+Package options live under `[standards.adr.config]`: `contract_version = "1.0"` retains the fundamental MADR document/body contract, and `require_sections` enables the three required MADR headings. Package 1.5 adds no required scope heading and does not infer semantic scope from prose.
+
+Upgrading from 1.4 changes nothing a consumer must edit: 1.5's amendment vocabulary is two optional, default-empty `project` frontmatter lists plus optional body content, and its option surface and validator bytes are 1.4's. A repository that invented its own amendment banner before 1.5 converts each occurrence once — see the conversion procedure in the [version-specific guide](versions/1.5/adopt.md); an unconverted banner is documentation debt, not a finding.
 
 Reconciliation creates `docs/adr/adr.template.md` only when absent and never replaces consumer ADRs or an existing create-only scaffold. An existing scaffold receives the revised prompts only through a separate reviewed refresh.
 

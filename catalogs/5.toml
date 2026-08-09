@@ -23,6 +23,12 @@ role = "retained"
 id = "adr"
 version = "1.4"
 digest = "sha256:d23b7f6c66d7684f716ef2f3dd778d9be3de39e5914d91d6481997cc9d5184e3"
+role = "retained"
+
+[[packages]]
+id = "adr"
+version = "1.5"
+digest = "sha256:52be37d8f0d26ed41971de6a508dae5a6a4cd796c8e31945f06e000a11c31b92"
 role = "default"
 
 [[packages]]
@@ -83,6 +89,12 @@ role = "retained"
 id = "agent-handoff"
 version = "1.10"
 digest = "sha256:ea1fbc843a8d9bb627dda4c4c8d12d15b59be9361ae5c312dac3101e01c8d56f"
+role = "retained"
+
+[[packages]]
+id = "agent-handoff"
+version = "1.11"
+digest = "sha256:570cc7cf345fc953d535e1fab8f7ad52bcea5d81eaf3d5a3641d1b40580c9ea2"
 role = "default"
 
 [[packages]]
@@ -125,6 +137,12 @@ role = "default"
 id = "github-workflow"
 version = "1.0"
 digest = "sha256:65afb66cd3aaf1e0fa9bb896e63b2275290e93aa8fff6d4e0fb5129b9fb99d86"
+role = "retained"
+
+[[packages]]
+id = "github-workflow"
+version = "1.1"
+digest = "sha256:a6ad7da622a3f7f56f87521be787c7f36761e476029ed2ac009c32db82a5fad6"
 role = "default"
 
 [[packages]]
@@ -389,6 +407,12 @@ role = "retained"
 id = "python-tooling"
 version = "1.12"
 digest = "sha256:7595019e39b209fb700817b0563aa2e5db50d368c3c5042eeb714e234076de5f"
+role = "retained"
+
+[[packages]]
+id = "python-tooling"
+version = "1.13"
+digest = "sha256:1bb7b7d11e41fccb6faa658d97130b01c754b36faf69cff508a6908c199e36d8"
 role = "default"
 
 [[packages]]

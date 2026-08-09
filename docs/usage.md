@@ -259,7 +259,7 @@ Exit status: `0` success · `2` registry/bundle drift · `3` a bundle manifest i
 
 ### `agent-handoff`
 
-Command group for validating and maintaining an Agent Handoff repository. Unified authority routes the selected Agent Handoff 1.2 package; when unified state is absent, the command emits the V5 migration warning and uses the packaged V1 provider fallback. Running the group with no verb or with `--help` prints the group help and exits 0; an unknown verb exits 2.
+Command group for validating and maintaining an Agent Handoff repository. Unified authority routes whichever Agent Handoff package `.standards/config.toml` selects; when unified state is absent, the command emits the V5 migration warning and uses the packaged V1 provider fallback. Running the group with no verb or with `--help` prints the group help and exits 0; an unknown verb exits 2.
 
 ```text
 project-standards agent-handoff {validate | drift-check | size-report | shape-check | legacy-report | upgrade} [--repo <dir>] [--json]
@@ -279,6 +279,10 @@ All verbs accept **`--repo <dir>`** (default: current directory). Read-only repo
 Exit status: `0` clean/success · `1` findings or recoverable apply failure · `2` usage/config error · `3` package/provider prerequisite or internal failure.
 
 `legacy-report` is the report-only exception: a successfully emitted inventory exits `0` even when it contains findings. Human and JSON output retain every finding; `validate` and `drift-check` continue to exit `1` when their findings require failure.
+
+`legacy-report` is also the only verb that answers before the package is selected. The inventory is computed from repository bytes, so it resolves the installed catalog's default payload — the version `version = "latest"` would pick — discloses that basis on stderr, and writes and locks nothing. The other verbs report on units an unselected package owns none of, so they still exit `3` rather than returning a green report that would be a false negative.
+
+`validate` and `drift-check` additionally probe the interpreter a pre-1.8 selection's launcher would resolve, because those payloads register `session_start.py` by bare path and its `#!/usr/bin/env python3` shebang picks whatever is first on `PATH`. Where that is a policy shim, a missing interpreter, or one below 3.14, SessionStart injects nothing while every managed byte still matches; the probe emits `AH-LAUNCHER-INTERPRETER` and directs an upgrade to 1.10 or newer, which has no interpreter prerequisite. It never prescribes editing the managed hook or its registration — both are centrally locked, so such an edit would be reported as drift.
 
 ### `agent-handoff validate`
 

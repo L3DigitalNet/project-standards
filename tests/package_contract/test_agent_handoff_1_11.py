@@ -11,10 +11,10 @@ option, provider, template, and the committed launcher bytes are 1.10's, so a 1.
 consumer selecting 1.11 reconciles nothing. `_SUCCESSOR_CHANGES` is the whole
 permitted delta and the byte comparison below is what holds that line.
 
-The catalog-role row is deliberately absent. The `catalogs/5.toml` advance batches at
-release prep with the rest of the train — the same practice the 5.17.0 cuts followed —
-so 1.11 renders as `unadvertised` in `standards/catalog.md` until then, and asserting a
-role here would pin work this commit is not allowed to do.
+The catalog-role row was deferred. The `catalogs/5.toml` advance batches at release prep
+with the rest of the train — the same practice the 5.17.0 cuts followed — so 1.11
+rendered as `unadvertised` in `standards/catalog.md` until the 5.18.0 activation, which
+is the first commit permitted to advance the role and the family navigation.
 """
 
 from __future__ import annotations
@@ -181,8 +181,14 @@ def test_agent_handoff_1_11__payload_projection__matches_successor() -> None:
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_agent_handoff_1_11__catalog__is_not_advertised_before_release_prep() -> None:
-    """Advertisement is the release's decision, not the cut's."""
+def test_agent_handoff_1_11__catalog_role__selects_the_successor_as_default() -> None:
+    """Advertisement is the release's decision, not the cut's.
+
+    The payload can be complete and valid while the catalog still selects its
+    predecessor; only this row makes 1.11 the default a consumer on
+    `version = "latest"` resolves to. Landed by the 5.18.0 activation, which is
+    the first commit permitted to advance the catalog role.
+    """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
         package["version"]: package["role"]
@@ -190,5 +196,18 @@ def test_agent_handoff_1_11__catalog__is_not_advertised_before_release_prep() ->
         if package["id"] == "agent-handoff"
     }
 
-    assert "1.11" not in roles
-    assert roles["1.10"] == "default"
+    assert roles["1.11"] == "default"
+    assert roles["1.10"] == "retained"
+
+
+def test_agent_handoff_1_11__mutable_navigation__names_the_new_authority() -> None:
+    """Family-level readers must resolve the same current payload as the index."""
+    expected_links = {
+        _FAMILY / "README.md": "versions/1.11/README.md",
+        _FAMILY / "adopt.md": "versions/1.11/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.11/agent-summary.md",
+    }
+    for path, expected_link in expected_links.items():
+        content = path.read_text(encoding="utf-8")
+        assert expected_link in content
+        assert "versions/1.10/" not in content

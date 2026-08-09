@@ -11,11 +11,15 @@ This file tracks work planned for upcoming Project Standards releases. It is for
       - [GitHub Workflow follow-ups](#github-workflow-follow-ups)
       - [Executable payload adoption guidance](#executable-payload-adoption-guidance)
       - [Test reliability and contract cleanup](#test-reliability-and-contract-cleanup)
+    - [5.19.0](#5190)
+      - [Project Toolbox standards](#project-toolbox-standards)
   - [Beyond](#beyond)
 
 ## Planned releases
 
 ### 5.18.0
+
+**Shipped as v5.18.0.** Kept for the planning record; [CHANGELOG.md](CHANGELOG.md) is what actually landed. Every item below shipped: `adr` 1.5, `python-tooling` 1.13, `agent-handoff` 1.11, and `github-workflow` 1.1 are the release's four Catalog 5 defaults.
 
 #### ADR v1.5 and corpus remediation
 
@@ -44,5 +48,11 @@ This file tracks work planned for upcoming Project Standards releases. It is for
 
 - Collapse the duplicated retained-version digest assertions tracked in [#146](https://github.com/L3DigitalNet/project-standards/issues/146), preserving the promotion-contract documentation without changing payload or catalog bytes.
 - Resolve the gate-parallelism failures tracked in [#147](https://github.com/L3DigitalNet/project-standards/issues/147) so the MCP timing and determinism tests pass reliably under the ordinary verification lane.
+
+### 5.19.0
+
+#### Project Toolbox standards
+
+- Develop and release the `project-toolbox` standards. Owner direction, 2026-08-09.
 
 ## Beyond

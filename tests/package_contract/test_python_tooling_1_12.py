@@ -983,12 +983,13 @@ def test_python_tooling_1_12__managed_workflow__carries_the_reviewed_setup_uv_pi
 _PROJECTION = _ROOT / "src/project_standards/payloads/python-tooling/1.12"
 
 
-def test_python_tooling_1_12__catalog_role__selects_the_successor_as_default() -> None:
-    """Catalog 5 must actually select the successor these tests pin.
+def test_python_tooling_1_12__catalog_role__stays_retained_behind_the_successor() -> None:
+    """1.12 keeps an advertised, non-default row once 1.13 takes the default.
 
-    The payload can be complete and valid while the catalog still selects its
-    predecessor; only this row makes the successor the default a consumer on
-    `version = "latest"` resolves to.
+    `test_python_tooling_1_13__catalog_role__selects_the_successor_as_default`
+    owns the default assertion from the 5.18.0 activation onward. What 1.12 owes
+    a consumer holding an exact pin is that promoting its successor neither
+    removes its row nor changes its digest.
     """
     _require_payload(_V112)
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
@@ -998,7 +999,7 @@ def test_python_tooling_1_12__catalog_role__selects_the_successor_as_default() -
         if package["id"] == "python-tooling"
     }
 
-    assert roles["1.12"] == "default"
+    assert roles["1.12"] == "retained"
     assert roles["1.11"] == "retained"
     assert roles["1.10"] == "retained"
 
@@ -1024,10 +1025,20 @@ def test_python_tooling_1_12__payload_projection__matches_successor() -> None:
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_python_tooling_1_12__family_navigation__selects_the_successor() -> None:
-    """Mutable family documents identify the versioned authority without catalog edits."""
+def test_python_tooling_1_12__family_index__keeps_the_retained_version_selectable() -> None:
+    """Naming 1.13 as the current authority must not drop 1.12 from the family index.
+
+    Family navigation now points at 1.13 (see `test_python_tooling_1_13`); what
+    1.12 still owes a consumer holding an exact pin is an advertised,
+    digest-bound row.
+    """
     _require_payload(_V112)
-    for relative in ("README.md", "adopt.md", "agent-summary.md"):
-        text = (_FAMILY / relative).read_text(encoding="utf-8")
-        assert "python-tooling@1.12" in text
-        assert "versions/1.12/" in text
+    manifest = load_payload_manifest(_V112 / "payload.toml")
+    integrity = validate_payload_integrity(_V112, manifest)
+    family = tomllib.loads((_FAMILY / "standard.toml").read_text(encoding="utf-8"))
+    indexed = {
+        entry["version"]: entry["digest"]
+        for entry in cast("list[dict[str, str]]", family["versions"])
+    }
+
+    assert indexed["1.12"] == integrity.aggregate_digest.value

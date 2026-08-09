@@ -51,7 +51,10 @@ def test_agent_handoff_1_10__registration__is_default_and_integrity_bound() -> N
 
     assert manifest.payload.version.value == "1.10"
     assert indexed["1.10"].digest == integrity.aggregate_digest
-    assert roles["1.10"] == "default"
+    # 1.10 keeps an advertised, non-default row once the 5.18.0 activation gave the
+    # default to 1.11. `test_agent_handoff_1_11__catalog_role__selects_the_successor_as_default`
+    # owns the default assertion; what 1.10 owes an exact pin is an unchanged digest.
+    assert roles["1.10"] == "retained"
     assert roles["1.9"] == "retained"
     assert any(migration.id == "legacy-v4-to-1-10" for migration in manifest.migrations)
     assert any(migration.to_endpoint.value == "package:1.10" for migration in manifest.migrations)

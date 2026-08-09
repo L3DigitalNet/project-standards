@@ -21,9 +21,10 @@ what only the payload can answer: that the shipped bytes are the ones the digest
 chain pins, that they are not the predecessor's, and that the guide a consumer reads
 matches what the tool now does.
 
-The catalog role and the family landing-page repoint are deliberately absent. Both
-batch with the release-prep activation, as they did for the markdown-tooling 1.14 cut,
-so 1.1 is an unadvertised repository payload until then.
+The catalog role and the family landing-page repoint were deferred to release prep and
+landed with the 5.18.0 activation, as they did for the markdown-tooling 1.14 cut: the
+catalogs/5.toml advance batches with the other cuts of the release, so asserting either
+at cut time would have pinned work that commit was not allowed to do.
 """
 
 from __future__ import annotations
@@ -219,8 +220,11 @@ def test_github_workflow_1_1__family_root__carries_the_sibling_navigation_docume
         document = _FAMILY / name
         assert document.is_file()
         # Family-root documents are mutable navigation pointing at the current payload,
-        # exactly as the agent-handoff and markdown-tooling roots do.
-        assert "versions/1.0/" in document.read_text(encoding="utf-8")
+        # exactly as the agent-handoff and markdown-tooling roots do. The 5.18.0
+        # activation repointed them off the predecessor.
+        content = document.read_text(encoding="utf-8")
+        assert "versions/1.1/" in content
+        assert "versions/1.0/" not in content
 
 
 def test_github_workflow_1_1__payload_projection__matches_successor() -> None:
@@ -238,13 +242,18 @@ def test_github_workflow_1_1__payload_projection__matches_successor() -> None:
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_github_workflow_1_1__catalog_5__still_advertises_only_the_predecessor() -> None:
+def test_github_workflow_1_1__catalog_role__selects_the_successor_as_default() -> None:
     """The cut adds a payload; release prep decides what the catalog offers.
 
     Asserted rather than left implicit because the alternative — advertising at cut
-    time — would freeze 1.1's bytes before the release train has verified them.
+    time — would freeze 1.1's bytes before the release train has verified them. The
+    5.18.0 activation is the first commit permitted to advance the role, and it must
+    retain 1.0 rather than remove it: every advertised version is permanent.
     """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     rows = [entry for entry in catalog["packages"] if entry["id"] == "github-workflow"]
 
-    assert [(entry["version"], entry["role"]) for entry in rows] == [("1.0", "default")]
+    assert [(entry["version"], entry["role"]) for entry in rows] == [
+        ("1.0", "retained"),
+        ("1.1", "default"),
+    ]

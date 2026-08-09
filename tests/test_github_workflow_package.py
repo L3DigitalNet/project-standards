@@ -528,10 +528,16 @@ def test_github_workflow__catalog_5__advertises_1_0_at_the_pinned_digest() -> No
     family = load_family_manifest(_FAMILY / "standard.toml")
     (pinned,) = [entry for entry in family.versions if entry.version.value == _VERSION]
 
-    (advertised,) = [entry for entry in catalog.packages if entry.id == "github-workflow"]
+    rows = [entry for entry in catalog.packages if entry.id == "github-workflow"]
+    (advertised,) = [entry for entry in rows if entry.version.value == _VERSION]
 
     assert advertised.version.value == _VERSION
-    assert advertised.role is CatalogRole.DEFAULT
+    # 1.0 keeps an advertised, digest-bound row once the 5.18.0 activation gave the
+    # default to 1.1: advertisement is permanent, and what 1.0 owes a consumer on an
+    # exact pin is that promoting its successor neither removes its row nor moves its
+    # digest. `test_github_workflow_1_1__catalog_role__selects_the_successor_as_default`
+    # owns the default assertion from that release onward.
+    assert advertised.role is CatalogRole.RETAINED
     assert advertised.digest == pinned.digest == _integrity().aggregate_digest
 
 

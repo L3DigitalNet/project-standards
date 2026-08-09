@@ -1,22 +1,22 @@
 [project_standards]
 schema_version = "1.1"
 catalog = "5"
-release = "5.17.0"
-catalog_digest = "sha256:b56c986f12c04761ee88504d6fa184ecb61e025278d31843c59c3973c1044780"
+release = "5.18.0"
+catalog_digest = "sha256:eab100a8918d87575a11f3b41084300336a9da3bbf5f961ec83e6c532e5d4dff"
 config_digest = "sha256:faebef3855b9c1f5cf47966661f16dd227250652f874bcacf05173926c2586db"
 
 [standards.adr]
 requested = "latest"
-resolved = "1.4"
+resolved = "1.5"
 selection = "stable"
-payload_digest = "sha256:d23b7f6c66d7684f716ef2f3dd778d9be3de39e5914d91d6481997cc9d5184e3"
+payload_digest = "sha256:52be37d8f0d26ed41971de6a508dae5a6a4cd796c8e31945f06e000a11c31b92"
 effective_config_digest = "sha256:7ddd7f39d1a9bff9867c1cfd91e6abb614e4e1efecf3574789161ff92c89dd38"
 
 [standards.agent-handoff]
 requested = "latest"
-resolved = "1.10"
+resolved = "1.11"
 selection = "stable"
-payload_digest = "sha256:ea1fbc843a8d9bb627dda4c4c8d12d15b59be9361ae5c312dac3101e01c8d56f"
+payload_digest = "sha256:570cc7cf345fc953d535e1fab8f7ad52bcea5d81eaf3d5a3641d1b40580c9ea2"
 effective_config_digest = "sha256:7d8ffcf355d1948151d6988e6b8cb809fcbeae2cc28cd3cd0bcd665563eef80f"
 
 [standards.cli-documentation]
@@ -28,9 +28,9 @@ effective_config_digest = "sha256:f468155ebc87979f1dbad12ae07ad3424eaf9122664df4
 
 [standards.github-workflow]
 requested = "latest"
-resolved = "1.0"
+resolved = "1.1"
 selection = "stable"
-payload_digest = "sha256:65afb66cd3aaf1e0fa9bb896e63b2275290e93aa8fff6d4e0fb5129b9fb99d86"
+payload_digest = "sha256:a6ad7da622a3f7f56f87521be787c7f36761e476029ed2ac009c32db82a5fad6"
 effective_config_digest = "sha256:f675a924a3693ca08c4e132725a702344200b5988aee13f9062f10b8e3412238"
 
 [standards.markdown-frontmatter]
@@ -56,17 +56,17 @@ effective_config_digest = "sha256:6e15b50e2d3aa39645f42b7a105e40b5d8907b43c78923
 
 [standards.python-tooling]
 requested = "latest"
-resolved = "1.12"
+resolved = "1.13"
 selection = "stable"
-payload_digest = "sha256:7595019e39b209fb700817b0563aa2e5db50d368c3c5042eeb714e234076de5f"
-effective_config_digest = "sha256:fbb8a2878955325c7ef6bce0884ad5c4496072d27c88e567b40f585f693648a6"
+payload_digest = "sha256:1bb7b7d11e41fccb6faa658d97130b01c754b36faf69cff508a6908c199e36d8"
+effective_config_digest = "sha256:176294a0fa53906d0ca76cac69883fac59d05116191ad62d5e1e5b6479029946"
 
 [[artifacts]]
 path = ".agents/hooks/agent-handoff/session-start"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:a5391567cf81d92580679ba30bf6af641e4e265044ba0753b834220cdb2b215e"
@@ -79,7 +79,7 @@ path = ".agents/skills/agent-handoff/SKILL.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:054cdd0fc75400d65caf01da74d489fa4d02d077ac1b760536bbd91b48e19842"
@@ -91,7 +91,7 @@ path = ".agents/skills/agent-handoff/agents/openai.yaml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:1b78fb94b81aad4df0bbf149a6d4c47b887fbe31e19818723bde5579ec33413c"
@@ -103,11 +103,11 @@ path = ".agents/skills/github-workflow/SKILL.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "source"
 policy = "managed"
-semantic_digest = "sha256:626dbadffe7cd6747cf246123302843bd8311589a5c7b178a2df033e653efd55"
-content_digest = "sha256:626dbadffe7cd6747cf246123302843bd8311589a5c7b178a2df033e653efd55"
+semantic_digest = "sha256:5e38eb41266a47857ffe688393b0b9db0c86c1a63e0eb06d903d7fd31bdfebb3"
+content_digest = "sha256:5e38eb41266a47857ffe688393b0b9db0c86c1a63e0eb06d903d7fd31bdfebb3"
 created_container = true
 
 [[artifacts]]
@@ -115,7 +115,7 @@ path = ".agents/skills/github-workflow/agents/openai.yaml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:6afe771c87e108d8a46dc00380365f1b1793891e3c57544a188e0b37d28a4f42"
@@ -127,11 +127,11 @@ path = ".agents/skills/github-workflow/bin/gh-workflow"
 adapter = "whole-file"
 scope = "$file"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "source"
 policy = "managed"
-semantic_digest = "sha256:47c8899a50c9e7f5992017d27715e84c80e79faaa7e0e1761f74735be3105343"
-content_digest = "sha256:47c8899a50c9e7f5992017d27715e84c80e79faaa7e0e1761f74735be3105343"
+semantic_digest = "sha256:cdabc3801b6e6c6871de09b340ddc0a56297e9e47b9abc7766e7673b2a9c10d8"
+content_digest = "sha256:cdabc3801b6e6c6871de09b340ddc0a56297e9e47b9abc7766e7673b2a9c10d8"
 mode = "0755"
 created_container = true
 
@@ -140,7 +140,7 @@ path = ".agents/skills/github-workflow/references/field-vocabulary.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:ac2e0f732debf847433aaa22cf6162c227eef0ad1aed7a3d859a40ffd937c719"
@@ -152,7 +152,7 @@ path = ".agents/skills/github-workflow/references/issue-structure.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:1d98d69b6e36b36b73b90452b0bcaed65f93dddc8dab41e6f6e50a85110164a4"
@@ -164,7 +164,7 @@ path = ".agents/skills/github-workflow/references/org-schema.yaml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:b8170049e40fd944a3dd78a8b7ab9d153feda90b6df42445863fae5ece03da99"
@@ -176,7 +176,7 @@ path = ".agents/skills/github-workflow/references/pr-standard.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:ae439d69f58ab2dca808495abcd6868f71fd74ba367d7774c40940083bb98aed"
@@ -188,7 +188,7 @@ path = ".agents/skills/github-workflow/references/review-checklist.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:6028ea271a4251241189b9ffd6c28fbb0bee7856374b413ae781007f32866e03"
@@ -200,7 +200,7 @@ path = ".agents/skills/github-workflow/references/summary-format.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:20fcc966d222774c05001dfccde4fbcd8155c974ca575aab4178aed94e6140a6"
@@ -249,7 +249,7 @@ path = ".claude/settings.json"
 adapter = "jsonc"
 scope = "keyed-set:/hooks/SessionStart#matcher=startup|resume|clear|compact"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:86c0a62eb0efcfc7dd62b639b088f79629886f867c567a6e2eaf18b9062ff736"
@@ -261,7 +261,7 @@ path = ".codex/config.toml"
 adapter = "toml"
 scope = "keyed-set:/hooks/SessionStart#matcher=startup|resume|clear|compact"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:b730710515d57f945b9541a89d2ee3c2482a37b4f1781c09fa6b9763ce6bef05"
@@ -274,7 +274,7 @@ adapter = "editorconfig"
 scope = "property:$global#root"
 owners = ["markdown-tooling", "python-tooling"]
 shared_identity = "editorconfig/root"
-versions = { markdown-tooling = "1.14", python-tooling = "1.12" }
+versions = { markdown-tooling = "1.14", python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:18d10c7d2b4b04aaf04254d1ae5d655a5dc0407cbcdd5a8c3986e985370f36ee"
@@ -287,7 +287,7 @@ adapter = "editorconfig"
 scope = "property:*#charset"
 owners = ["markdown-tooling", "python-tooling"]
 shared_identity = "editorconfig/global-charset"
-versions = { markdown-tooling = "1.14", python-tooling = "1.12" }
+versions = { markdown-tooling = "1.14", python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:d98383a6cb0943d0f3b771d8bf29de73aac12e12bdcea69140c3cdc493f55b30"
@@ -300,7 +300,7 @@ adapter = "editorconfig"
 scope = "property:*#end_of_line"
 owners = ["markdown-tooling", "python-tooling"]
 shared_identity = "editorconfig/global-end-of-line"
-versions = { markdown-tooling = "1.14", python-tooling = "1.12" }
+versions = { markdown-tooling = "1.14", python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:c8b65fc15ea0c7911e3abe010ae974bab6d9db25ee4a6a7b4e6adc430f37985b"
@@ -313,7 +313,7 @@ adapter = "editorconfig"
 scope = "property:*#indent_size"
 owners = ["markdown-tooling", "python-tooling"]
 shared_identity = "editorconfig/global-indent-size"
-versions = { markdown-tooling = "1.14", python-tooling = "1.12" }
+versions = { markdown-tooling = "1.14", python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:cc11310c456c3690d5a74c23aa31cc25b4e74cdae146c71e54ad9dbc1d109fde"
@@ -326,7 +326,7 @@ adapter = "editorconfig"
 scope = "property:*#indent_style"
 owners = ["markdown-tooling", "python-tooling"]
 shared_identity = "editorconfig/global-indent-style"
-versions = { markdown-tooling = "1.14", python-tooling = "1.12" }
+versions = { markdown-tooling = "1.14", python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:6845cfa533c61a5eafa685e996c9ea37d2c6443cacedb28c3eed0156fcdbc488"
@@ -339,7 +339,7 @@ adapter = "editorconfig"
 scope = "property:*#insert_final_newline"
 owners = ["markdown-tooling", "python-tooling"]
 shared_identity = "editorconfig/global-final-newline"
-versions = { markdown-tooling = "1.14", python-tooling = "1.12" }
+versions = { markdown-tooling = "1.14", python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:18d10c7d2b4b04aaf04254d1ae5d655a5dc0407cbcdd5a8c3986e985370f36ee"
@@ -352,7 +352,7 @@ adapter = "editorconfig"
 scope = "property:*#trim_trailing_whitespace"
 owners = ["markdown-tooling", "python-tooling"]
 shared_identity = "editorconfig/global-trailing-whitespace"
-versions = { markdown-tooling = "1.14", python-tooling = "1.12" }
+versions = { markdown-tooling = "1.14", python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:18d10c7d2b4b04aaf04254d1ae5d655a5dc0407cbcdd5a8c3986e985370f36ee"
@@ -400,7 +400,7 @@ path = ".editorconfig"
 adapter = "editorconfig"
 scope = "property:*.py#indent_size"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:2bf175f9655e7bb7357b9f0a7c6051465a5ae701104ffe741b98e852c0e4d460"
@@ -412,7 +412,7 @@ path = ".editorconfig"
 adapter = "editorconfig"
 scope = "property:*.py#indent_style"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:85bd93ed6b151e5258fb73c81c18d745d1a1b1c418eed9b32f6bba00a75a326a"
@@ -424,7 +424,7 @@ path = ".editorconfig"
 adapter = "editorconfig"
 scope = "property:*.toml#indent_size"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:2bf175f9655e7bb7357b9f0a7c6051465a5ae701104ffe741b98e852c0e4d460"
@@ -436,7 +436,7 @@ path = ".editorconfig"
 adapter = "editorconfig"
 scope = "property:*.toml#indent_style"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:85bd93ed6b151e5258fb73c81c18d745d1a1b1c418eed9b32f6bba00a75a326a"
@@ -594,7 +594,7 @@ path = ".python-version"
 adapter = "whole-file"
 scope = "$file"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:a876e0b10411037a012498b9fe18d9bc1df32ed8b722a13564dc944ddcfd9135"
@@ -606,7 +606,7 @@ path = ".standards/packages/agent-handoff/policy.toml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:ca67fa9232375073d9dec834af6053057f31069ca83054e61948d2738a6e3e92"
@@ -618,11 +618,11 @@ path = ".standards/packages/github-workflow/policy.toml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:17e024863f1a5b4bcf643cc6a5b2f2ef7d88ec69c2597eb164e6eb3052d1d32b"
-content_digest = "sha256:17e024863f1a5b4bcf643cc6a5b2f2ef7d88ec69c2597eb164e6eb3052d1d32b"
+semantic_digest = "sha256:097debfe32f5d06da5daa0c4fce27e62036747a491812cdcbbf3aeefbcf01547"
+content_digest = "sha256:097debfe32f5d06da5daa0c4fce27e62036747a491812cdcbbf3aeefbcf01547"
 created_container = true
 
 [[artifacts]]
@@ -655,7 +655,7 @@ path = ".vscode/extensions.json"
 adapter = "jsonc"
 scope = "set:/recommendations#value=charliermarsh.ruff"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:26aa9300e53b8ad76104b957913a31f265ad0d68457f50990eeb418c5b8abcf9"
@@ -667,7 +667,7 @@ path = ".vscode/extensions.json"
 adapter = "jsonc"
 scope = "set:/recommendations#value=detachhead.basedpyright"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:d74ce569828a4901afe81bfeae8db4b934eb140cf8f647fb3f7478e3e66cc98f"
@@ -679,7 +679,7 @@ path = ".vscode/extensions.json"
 adapter = "jsonc"
 scope = "set:/recommendations#value=editorconfig.editorconfig"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:2958cf4436185c867cb841b536da88d4ba531608b45eb9a0228bb185980cfd49"
@@ -704,7 +704,7 @@ path = ".vscode/extensions.json"
 adapter = "jsonc"
 scope = "set:/recommendations#value=github.vscode-github-actions"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:24a9f4a729004ef1149afedf6d8f79f860ac6bd5274333b691500bf9ba9c8009"
@@ -716,7 +716,7 @@ path = ".vscode/extensions.json"
 adapter = "jsonc"
 scope = "set:/recommendations#value=ms-python.python"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:5716cd59c10c4299dba311790d7896a6b73a4692743b39f81e69e4fe803b217d"
@@ -728,7 +728,7 @@ path = ".vscode/extensions.json"
 adapter = "jsonc"
 scope = "set:/recommendations#value=redhat.vscode-yaml"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:1d0b063d17a552ab6585adfa6109ffa4777d8ff0e4cbc0b7512131014cd9fb97"
@@ -740,7 +740,7 @@ path = ".vscode/extensions.json"
 adapter = "jsonc"
 scope = "set:/recommendations#value=tamasfe.even-better-toml"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:ca5edff0e5ff7953f95c49eb09d7a7debae822e66f8e92eb2e5f71f889e0a363"
@@ -800,7 +800,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/[python]/editor.codeActionsOnSave"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:92f8ef99544180499fdd0bd5f4b1a63f47db1786d0b13ffde701c9d31d497c41"
@@ -812,7 +812,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/[python]/editor.defaultFormatter"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:26aa9300e53b8ad76104b957913a31f265ad0d68457f50990eeb418c5b8abcf9"
@@ -824,7 +824,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/[python]/editor.formatOnSave"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
@@ -848,7 +848,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/basedpyright.analysis.typeCheckingMode"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:eff4de313d407ce043152fe4e47b90c07a40fd69e060faef88306b653c2df7ca"
@@ -860,7 +860,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/files.exclude/**~1.coverage"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
@@ -872,7 +872,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/files.exclude/**~1.pytest_cache"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
@@ -884,7 +884,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/files.exclude/**~1.ruff_cache"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
@@ -896,7 +896,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/files.exclude/**~1__pycache__"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
@@ -908,7 +908,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/python.analysis.typeCheckingMode"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:9f3becba6e4b1583b3e19441dde4d59622537d9bd54a94d22262785e485384d0"
@@ -920,7 +920,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/python.defaultInterpreterPath"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:2d3d3f05ddcf0042b10e3d624e66f10ea8327c7bc0fde7b7e4be3bc72bc32f1c"
@@ -932,7 +932,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/python.testing.pytestArgs"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:af7f0b2bd342822f2fa8e6a9fda610570f911f30d3108379ea4184c0866727c3"
@@ -944,7 +944,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/python.testing.pytestEnabled"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
@@ -956,7 +956,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/python.testing.unittestEnabled"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
@@ -968,7 +968,7 @@ path = ".vscode/settings.json"
 adapter = "jsonc"
 scope = "key:/ruff.nativeServer"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:990c23868b965814b117cf9a6c4dfe45452eadc2171e1f981865ebfc84f10724"
@@ -980,7 +980,7 @@ path = ".vscode/tasks.json"
 adapter = "jsonc"
 scope = "key:/version"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:0175d86befbe75525f132794baff42abbf4e2a659aa20f2baec341740a9573e7"
@@ -992,7 +992,7 @@ path = ".vscode/tasks.json"
 adapter = "jsonc"
 scope = "keyed-set:/tasks#label=audit"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:3266291539b0148eece97d6671b6a038ddd8dff48b3af0e4afb8156ce7564e5d"
@@ -1004,7 +1004,7 @@ path = ".vscode/tasks.json"
 adapter = "jsonc"
 scope = "keyed-set:/tasks#label=check"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:bf8c1b10505e0b5f52859b35e9f18dc502e2b5ed4a71c43ffd9aa03c6333d45d"
@@ -1016,7 +1016,7 @@ path = ".vscode/tasks.json"
 adapter = "jsonc"
 scope = "keyed-set:/tasks#label=fix"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:8b237daf26b4009f0d98f9a11c1098f5107ec53a36e9632f4497f1b31d93ef6c"
@@ -1028,7 +1028,7 @@ path = ".vscode/tasks.json"
 adapter = "jsonc"
 scope = "keyed-set:/tasks#label=test"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:a48b5a69752a6cb4753bcbae1dd4fdea332c16e7e788f901455ddfe05cb48d20"
@@ -1040,7 +1040,7 @@ path = ".vscode/tasks.json"
 adapter = "jsonc"
 scope = "keyed-set:/tasks#label=typecheck"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:5775bd9b3e14be9f5607456d450b83e679c0cded9c86678bb0b108af38b99cc0"
@@ -1052,7 +1052,7 @@ path = "AGENTS.md"
 adapter = "markdown-block"
 scope = "block:agent-handoff"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:632f927e3f1b4e9b02ab5d86cfbd4d802fe8079db8bfd77f42a63a92fbdb095d"
@@ -1064,7 +1064,7 @@ path = "AGENTS.md"
 adapter = "markdown-block"
 scope = "block:github-workflow"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:a64b7c954376b7773f747018836d856c9be62c039de45bea849781fbf0f5dcff"
@@ -1088,7 +1088,7 @@ path = "AGENTS.md"
 adapter = "markdown-block"
 scope = "block:python-tooling"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:4a1e5fb84a6679556f66b8bbb193d91ca5041bd76c1e3875554c967c72383351"
@@ -1100,7 +1100,7 @@ path = "CLAUDE.md"
 adapter = "markdown-block"
 scope = "block:agent-handoff"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:632f927e3f1b4e9b02ab5d86cfbd4d802fe8079db8bfd77f42a63a92fbdb095d"
@@ -1112,7 +1112,7 @@ path = "CLAUDE.md"
 adapter = "markdown-block"
 scope = "block:github-workflow"
 owners = ["github-workflow"]
-versions = { github-workflow = "1.0" }
+versions = { github-workflow = "1.1" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:a64b7c954376b7773f747018836d856c9be62c039de45bea849781fbf0f5dcff"
@@ -1136,7 +1136,7 @@ path = "CLAUDE.md"
 adapter = "markdown-block"
 scope = "block:python-tooling"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:4a1e5fb84a6679556f66b8bbb193d91ca5041bd76c1e3875554c967c72383351"
@@ -1148,7 +1148,7 @@ path = "docs/STATUS.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:9fdf203c0676749cb86cc125891c4a2370fd763d6b7524e8a7fc9b822c2dfc2b"
@@ -1160,7 +1160,7 @@ path = "docs/TODO.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:6c48a00a7f5d9a067b4a2afa6dd935b80188088ac5fb8be11a4e5c04ff0a9ea3"
@@ -1172,7 +1172,7 @@ path = "docs/adr/adr.template.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["adr"]
-versions = { adr = "1.4" }
+versions = { adr = "1.5" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:f6ac2567ea1116a1596ecf0477f194d8ad360401e06a64f6a5d2f1b09f3135d7"
@@ -1184,7 +1184,7 @@ path = "docs/handoff/architecture.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:7171be6b164ff146eeea45a290e1fac14325e6749bc1e58b46fea1ae01f84865"
@@ -1196,7 +1196,7 @@ path = "docs/handoff/bugs/.gitkeep"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
@@ -1208,7 +1208,7 @@ path = "docs/handoff/conventions.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:623e17e93a9a05f3f20aec0cda2e14264973b67653dbd08bd859d94630877494"
@@ -1220,7 +1220,7 @@ path = "docs/handoff/credentials.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:c74a663b902d14e5a28686ff9cbb9a22853f5bc0834de4b18e05415e467f29e8"
@@ -1232,7 +1232,7 @@ path = "docs/handoff/deployed.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:aca21ef703073ed26866875c197c5d7529ae5e5d711f57f5f6618ac329b488cc"
@@ -1244,7 +1244,7 @@ path = "docs/handoff/sessions/.gitkeep"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
@@ -1256,7 +1256,7 @@ path = "docs/handoff/specs-plans.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:bc9bd77c76a636b627df3b51e1921ea3f47527abe133b551eb347a2725bb9405"
@@ -1268,7 +1268,7 @@ path = "docs/handoff/state.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.10" }
+versions = { agent-handoff = "1.11" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:a509f70983a3f770632fd79c513dba072355188a5d90ddcb7f35dbf02cc9cd69"
@@ -1292,7 +1292,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/dependency-groups/dev"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:fbb151376cca1bc5b9daa93b45247089cc50da186ba2f38da63751c468db5b21"
@@ -1304,7 +1304,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/basedpyright/extraPaths"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:8a5ddc82a12b33bd1f871e54d98212e1e63dc8150e183c40b0c2d6086f41cd8c"
@@ -1316,7 +1316,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/basedpyright/failOnWarnings"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
@@ -1328,7 +1328,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/basedpyright/include"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:87640c19e0e551ec9d755a833b649b1f2753b049d9848f5e86c3b900aad15f0f"
@@ -1340,7 +1340,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/basedpyright/pythonPlatform"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:663175a9c461a96d6f0252fc22dbb8ed4951e7a6fc0e31546823bcc69d6021d1"
@@ -1352,7 +1352,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/basedpyright/pythonVersion"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:4abcdd30bedbd46f74e90fe4981097181da5ea847e8fcde4d5585034dadbd885"
@@ -1364,7 +1364,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/basedpyright/typeCheckingMode"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:eff4de313d407ce043152fe4e47b90c07a40fd69e060faef88306b653c2df7ca"
@@ -1376,7 +1376,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/pytest/ini_options/addopts"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:3cc10869984e83cd949eb464774ad190fee5b38cf003859d4d200088a7b2cd1b"
@@ -1388,7 +1388,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/pytest/ini_options/markers"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:2a3cc44733b5980e4904ea26e95121a0d1fffc2984e05650f5ad18e805dca864"
@@ -1400,7 +1400,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/pytest/ini_options/minversion"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:ed6cca0a64012053f167c68379c763281ad76b98b00398321fcc47a0f4f93c02"
@@ -1412,7 +1412,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/pytest/ini_options/testpaths"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:af7f0b2bd342822f2fa8e6a9fda610570f911f30d3108379ea4184c0866727c3"
@@ -1424,7 +1424,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/ruff/extend-exclude"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:6ec33373a8e1f67f049d91e1b4e92c46cf84114d755af6f3f927bd3f0ddd9677"
@@ -1436,7 +1436,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/ruff/extend-include"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
@@ -1448,7 +1448,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/ruff/line-length"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:ad57366865126e55649ecb23ae1d48887544976efea46a48eb5d85a6eeb4d306"
@@ -1460,7 +1460,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/ruff/lint/extend-ignore"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
@@ -1472,7 +1472,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/ruff/lint/extend-select"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
@@ -1484,7 +1484,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/ruff/lint/ignore"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:017f844c6f4c30718855ce6d53f531e9b9aa29fcbd7a3b9095b71f6da7419728"
@@ -1496,7 +1496,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/ruff/lint/select"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:25db6ae90a21e5fe2b4bdceff1e39550282754b0896ba6d9b4450bccff39d577"
@@ -1508,7 +1508,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/ruff/src"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:87640c19e0e551ec9d755a833b649b1f2753b049d9848f5e86c3b900aad15f0f"
@@ -1520,7 +1520,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "key:/tool/ruff/target-version"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:13f2b5af591a160a65e8d5ab9ebb28ecfbd15ebf874da81e398bd1b6e7b9f264"
@@ -1532,7 +1532,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "table:/build-system"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:5154a4bf4845afa7647ec95d7953c788d8bbfee0ba3789a2d5127ba8c4b7d9c0"
@@ -1544,7 +1544,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "table:/tool/coverage/report"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:b07e4a26bc410cc5ea3ff8c7b84bb83eb3342795e18dd233552d2b5d22cd7695"
@@ -1556,7 +1556,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "table:/tool/coverage/run"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:6fc5718b0801bc98b8bafcf3b5f16914f9934194008ab2e4fd26f7ce9e9adfc9"
@@ -1568,7 +1568,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "table:/tool/ruff/format"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:ceb37f0aa9ccf991fc3bf4eb6901953925bf4cf46e2366d2cf9e69257b26b9e0"
@@ -1580,7 +1580,7 @@ path = "pyproject.toml"
 adapter = "toml"
 scope = "table:/tool/ruff/lint/per-file-ignores"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:aa004a2fd53d4960634405b8e283a43e32b0f5d720ee1367dbed4aa6b80ab83e"
@@ -1592,7 +1592,7 @@ path = "scripts/check.py"
 adapter = "whole-file"
 scope = "$file"
 owners = ["python-tooling"]
-versions = { python-tooling = "1.12" }
+versions = { python-tooling = "1.13" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:04930fcc2fc4f9f82af40591a1ea68e8a791c9bc0c8732749439b34afe04091a"

@@ -2,7 +2,7 @@
 schema_version: '1.1'
 id: 'adr-0028-project-standards-create-only-artifact-refresh'
 title: 'ADR 0028: Create-Only Artifact Refresh'
-description: 'Selects a documented manual delete-and-reconcile step as the supported way a consumer repository refreshes an installed create-only package artifact.'
+description: 'Selects a documented manual refresh as the supported way a consumer repository refreshes an installed create-only package artifact, amended once when the originally selected delete-and-reconcile step proved not to exist.'
 doc_type: 'adr'
 status: 'active'
 created: '2026-08-09'
@@ -43,6 +43,8 @@ project:
 # ADR 0028: Create-Only Artifact Refresh
 
 MADR status: **accepted**.
+
+> **Amended 2026-08-09 (v5.18.0 release preparation, refutation of the selected mechanism).** The delete-and-reconcile step chosen below does not exist in the executor, so the sanctioned refresh is now a manual copy of the selected payload's artifact over the installed one. The problem, the applicability, and the exclusion of automatic refresh are unchanged. See [Amendments](#amendments).
 
 ## Context and Problem Statement
 
@@ -101,9 +103,19 @@ Reserved authority: an automated path — a reconcile-time refresh rule, a dedic
 
 Applicability is determined first: the artifact must be declared create-only in the selected payload and already present in the consumer repository. For such an artifact, the refresh is confirmed when the installed bytes match the selected payload's declared source digest and `.standards/lock.toml` records that same digest under the selected package version. Artifacts that are not create-only receive no finding under this ADR.
 
+### Amendments
+
+**Amended 2026-08-09 (v5.18.0 release preparation, refutation of the selected mechanism).** The chosen option above rests on a factual claim about the executor that release preparation disproved when it tried to perform the very refresh the Consequences section sequences for this release. Deleting `docs/adr/adr.template.md` and running `project-standards reconcile` does not recreate it. Reconcile reports `CP-CREATE-ONLY-ABSENT` — _create-only unit is absent from the repository; reconciliation records the removal in the lock and never recreates it_ — and an applied reconcile moves the unit out of `[[artifacts]]` into a permanent `[[create_only_absences]]` record in `.standards/lock.toml`. A second applied reconcile then reports the control plane as already reconciled and the file stays deleted. The "existing capability" this record selected is therefore not an existing capability, and a consumer who follows the procedure as written loses the artifact rather than refreshing it.
+
+The sanctioned refresh is now a **manual copy**: the consumer copies the selected payload's artifact over the installed one and reviews the result as an ordinary change in its own version control. This is the same act create-only already exists to protect — an edit to a consumer-owned scaffold — so it needs no executor behavior, no absence record, and no deletion. Nothing else in this decision moves: the governed population, the applicability condition, the exclusion of automatic refresh, and the reservation of an automated path to a control-plane ADR all stand as accepted.
+
+One consequence stated above is withdrawn with the mechanism. "The recreated artifact and the lock digest agree afterwards, so provenance stops being false" does not hold for a manual copy: `.standards/lock.toml` records a create-only unit's digest at creation time and does not recompute it on later reconciles, so after a refresh the lock keeps the creation digest while the file carries the new bytes. That disagreement is the documented steady state for a create-only artifact, not drift — reconcile plans the unit as `preserve consumer bytes outside managed changes`, `reconcile --check` stays clean, and no gate reports it. It is the same false-provenance condition this record's Context names, now understood as inherent to create-only rather than as something the refresh closes. Closing it requires the automated path this record reserves.
+
+The Confirmation clause above is restated accordingly: the refresh is confirmed when the installed bytes match the selected payload's declared source bytes. The clause requiring `.standards/lock.toml` to record that same digest is withdrawn, because no supported operation produces it.
+
 ## More Information
 
-Sequencing for this repository's own scaffold: `docs/adr/adr.template.md` is refreshed by this procedure during release preparation for v5.18.0, **after** the Catalog 5 default for `adr` moves to 1.5. Performing it earlier would recreate the 1.4 template, because reconcile recreates from the payload the repository currently resolves — which is exactly the behavior this record relies on, and exactly why the order matters.
+Sequencing for this repository's own scaffold: `docs/adr/adr.template.md` was refreshed during release preparation for v5.18.0, **after** the Catalog 5 default for `adr` moved to 1.5, by the manual copy the amendment above sanctions. Performing it earlier would have copied the 1.4 template, because the source is whichever payload the repository currently resolves — which is why the order matters. The original wording of this paragraph attributed the copy to reconcile; that attribution is what the amendment refutes.
 
 - Conformance assessment recording finding F1: [`2026-08-05-1941-adr-1-4-conformance-assessment.md`](../reviews/adr-conformance/2026-08-05-1941-adr-1-4-conformance-assessment.md)
 - Control plane, reconcile, and lock authority: [`adr-0023-unified-consumer-standards-control-plane.md`](adr-0023-unified-consumer-standards-control-plane.md)

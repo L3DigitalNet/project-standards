@@ -516,3 +516,35 @@ def test_python_tooling_1_13__ruff_oracle__scopes_the_exemption_without_a_global
     # Scoped exemption plus surviving package default.
     assert "ANN401" not in tested_output, tested_output
     assert "S101" not in tested_output, tested_output
+
+
+def test_python_tooling_1_13__catalog_role__selects_the_successor_as_default() -> None:
+    """Catalog 5 must actually select the successor these tests pin.
+
+    The payload can be complete and valid while the catalog still selects its
+    predecessor; only this row makes 1.13 the default a consumer on
+    `version = "latest"` resolves to. Landed by the 5.18.0 activation, which is
+    the first commit permitted to advance the catalog role.
+    """
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    roles = {
+        package["version"]: package["role"]
+        for package in cast("list[dict[str, str]]", catalog["packages"])
+        if package["id"] == "python-tooling"
+    }
+
+    assert roles["1.13"] == "default"
+    assert roles["1.12"] == "retained"
+
+
+def test_python_tooling_1_13__mutable_navigation__names_the_new_authority() -> None:
+    """Family-level readers must resolve the same current payload as the index."""
+    expected_links = {
+        _FAMILY / "README.md": "versions/1.13/README.md",
+        _FAMILY / "adopt.md": "versions/1.13/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.13/agent-summary.md",
+    }
+    for path, expected_link in expected_links.items():
+        content = path.read_text(encoding="utf-8")
+        assert expected_link in content
+        assert "versions/1.12/" not in content

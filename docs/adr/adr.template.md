@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'adr-0000-repo-name-short-title' # globally unique: adr-NNNN-<repo>-<title>. Save file as adr-0000-short-title.md (filename omits the repo-name)
+id: 'adr-0000-repo-name-short-title' # globally unique; filename omits repo-name
 title: 'ADR 0000: Short Title'
 description: 'Decision record for a significant architectural or project decision.'
 doc_type: 'adr'
@@ -23,22 +23,43 @@ project:
   decision_makers: []
   consulted: []
   informed: []
+  amends: [] # IDs of ADRs this record partially amends; reciprocal with their amended_by
+  amended_by: [] # filled in later, by whoever amends this record
 ---
 
-# {short title, representative of solved problem and found solution}
+# {short title, representative of the bounded decision}
+
+<!--
+An amendment note belongs here, immediately after the title, once this record has
+been amended — not while it is being drafted. Several notes share one blockquote,
+oldest first, separated by a bare `>` line; each opens
+`> **Amended by ADR NNNN (YYYY-MM-DD).**` or, for a change made from a
+post-acceptance review, `> **Amended YYYY-MM-DD ({review}, {finding}).**`.
+An amendment leaves `status` unchanged and never rewrites the accepted outcome in
+place. See the Amendment workflow section of the standard.
+-->
 
 ## Context and Problem Statement
 
-{Describe the context and problem statement, e.g., in free form using two to three sentences or in the form of an illustrative story. You may want to articulate the problem in the form of a question. Make the scope of the decision explicit.}
+{Describe the circumstances that require a decision. Make the boundary explicit:
+
+- Governed concern: what exact choice is being made?
+- Applies to: which systems, components, environments, or classes of change?
+- Applies when: what conditions bring something within scope?
+- Does not apply to: which realistic adjacent cases are excluded?
+- Remains undecided: which related concerns require a separate decision?
+
+End with one question no broader than this boundary.}
 
 <!-- Optional. Remove if unused. -->
 
 ## Decision Drivers
 
-- {decision driver 1, e.g., a desired quality, constraint, or force}
-- {decision driver 2}
+- {quality, constraint, or force that applies within the stated boundary}
 
 ## Considered Options
+
+{List meaningful alternatives that answer the same bounded question for the same governed population. Do not mix differently scoped policies unless scope itself is the decision.}
 
 - {title of option 1}
 - {title of option 2}
@@ -46,20 +67,24 @@ project:
 
 ## Decision Outcome
 
-Chosen option: "{title of option 1}", because {justification — e.g., the only option meeting a k.o. criterion, resolves a key force, or comes out best (see below)}.
+Chosen option: "{title of option 1}", because {justification}.
 
-<!-- Optional. Remove if unused. -->
+This decision governs {concern} for {population} when {applicability condition}.
+
+It does not govern {explicit exclusions}. Those concerns remain undecided or are governed by {specific related ADR, if one exists}.
+
+<!-- Optional. Describe effects only; do not add requirements or expand scope. -->
 
 ### Consequences
 
 - Good, because {positive consequence}
 - Bad, because {negative consequence}
 
-<!-- Optional. Remove if unused. -->
+<!-- Optional. Determine applicability first, then verify in-scope conformance. -->
 
 ### Confirmation
 
-{How is compliance with this decision confirmed? A review, a test, an automated fitness function?}
+{Describe how a change is determined to be within this ADR's boundary, then how conformance is confirmed for in-scope changes. Out-of-scope changes receive no finding under this ADR.}
 
 <!-- Optional. Remove if unused. -->
 
@@ -76,8 +101,8 @@ Chosen option: "{title of option 1}", because {justification — e.g., the only 
 - Good, because {argument}
 - Bad, because {argument}
 
-<!-- Optional. Remove if unused. -->
+<!-- Optional. Supporting context only; do not introduce new policy. -->
 
 ## More Information
 
-{Additional evidence/confidence, team agreement, when/how to realize the decision, when to revisit it, and links to related decisions.}
+{Additional evidence, agreement, revisit conditions, and links to related decisions.}

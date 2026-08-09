@@ -16,17 +16,19 @@ set, and `schema_version`. A record written against 1.4 has to validate under 1.
 untouched, and the suite proves that by running the 1.5 provider over 1.4's own
 example and templates.
 
-The catalog-role advance and the family landing pages are release-prep decisions that
-batch with the rest of the train, so 1.5 enters the generated catalog as an
-`unadvertised` row and nothing here asserts a role.
+The catalog-role advance and the family landing pages were release-prep decisions that
+batched with the rest of the train and landed with the 5.18.0 activation; the two rows
+at the end of this file are the deferred assertions that commit was free to make.
 """
 
 from __future__ import annotations
 
 import base64
 import re
+import tomllib
 from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.providers import ProviderInvocation, invoke_provider
@@ -327,3 +329,35 @@ def test_adr_1_5__payload_projection__matches_successor() -> None:
     for relative, link in projected_links.items():
         assert not link.readlink().is_absolute()
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
+
+
+def test_adr_1_5__catalog_role__selects_the_successor_as_default() -> None:
+    """Catalog 5 must actually select the successor these tests pin.
+
+    The payload can be complete and valid while the catalog still selects its
+    predecessor; only this row makes 1.5 the default a consumer on
+    `version = "latest"` resolves to. Landed by the 5.18.0 activation, which is
+    the first commit permitted to advance the catalog role.
+    """
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    roles = {
+        package["version"]: package["role"]
+        for package in cast("list[dict[str, str]]", catalog["packages"])
+        if package["id"] == "adr"
+    }
+
+    assert roles["1.5"] == "default"
+    assert roles["1.4"] == "retained"
+
+
+def test_adr_1_5__mutable_navigation__names_the_new_authority() -> None:
+    """Family-level readers must resolve the same current payload as the index."""
+    expected_links = {
+        _FAMILY / "README.md": "versions/1.5/README.md",
+        _FAMILY / "adopt.md": "versions/1.5/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.5/agent-summary.md",
+    }
+    for path, expected_link in expected_links.items():
+        content = path.read_text(encoding="utf-8")
+        assert expected_link in content
+        assert "versions/1.4/" not in content
