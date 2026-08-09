@@ -18,7 +18,6 @@ tags:
 aliases:
   - 'EV-133'
 related:
-  - 'docs/plans/2026-08-06-github-workflow-package-plan.md'
   - 'docs/reference/session-export-gh-workflows-implementation.md'
   - 'docs/handoff/conventions.md'
 source: []

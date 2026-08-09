@@ -18,7 +18,7 @@ related: []
 
 | id | title | created | updated | status | confidence | tags | related |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| research-pe7k2m-plan-execution-efficiency | Plan-Execution Efficiency: Measured Costs and Ranked Remedies | 2026-08-07 | 2026-08-07 | active | high | plan-execution process-efficiency verification-gate worktree-bootstrap | docs/plans/2026-08-06-github-workflow-package-plan.md |
+| research-pe7k2m-plan-execution-efficiency | Plan-Execution Efficiency: Measured Costs and Ranked Remedies | 2026-08-07 | 2026-08-07 | active | high | plan-execution process-efficiency verification-gate worktree-bootstrap | docs/reference/session-export-gh-workflows-implementation.md |
 | research-by2ect-self-dogfooding-version-skew-producer-mode | Self-Dogfooding Version Skew: Producer-Mode Exemptions For A Consumer Lineage Guard | 2026-08-04 | 2026-08-04 | active | medium | dogfooding version-skew bootstrapping lineage-guard producer-consumer | docs/TODO.md |
 | research-g8t3vx-release-gate-wall-clock-spike | Release-Gate Wall-Clock Spike | 2026-07-31 | 2026-07-31 | active | high | release-gate pytest-xdist coverage sysmon performance | docs/handoff/conventions.md |
 | reference-k4n2pw-self-hosted-runner-security-review | Self-Hosted Runner Security Review | 2026-07-31 | 2026-07-31 | active | high | ci self-hosted-runner security migration deferral | docs/TODO.md |

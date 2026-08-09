@@ -17,7 +17,6 @@ aliases:
   - 'EV-001'
 related:
   - 'docs/specs/2026-08-06-github-workflow-package-spec.md'
-  - 'docs/plans/2026-08-06-github-workflow-package-plan.md'
 source: []
 confidence: 'high'
 visibility: 'internal'
