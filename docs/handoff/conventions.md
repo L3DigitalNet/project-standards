@@ -25,6 +25,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 17 | Naming a supersession replacement pins that task active forever | Retiring a plan task or changing an unfinished acceptance target |
 | 18 | Match verification to the changed surface | Choosing what to run to prove a change |
 | 19 | Enumerate a new family's declaration sites before authoring | Adopting a family into this repository, or wiring one into a new layer |
+| 20 | A green gate cannot see an unstaged executable | Adding an executable file to the repository |
 
 ## 1. Dogfood the standards
 
@@ -81,9 +82,11 @@ scripts/verify.sh --full   # legacy serial battery / release-prep cross-check
 
 Direct commands used to keep the lanes visible without a repository-specific orchestrator, but the 2026-07-31 wall-clock spike made concurrency worth 5.3× and the environment it needs (§14, per-lane basetemps, lane ordering) too easy to get wrong by hand.
 
+**Gotcha:** a green gate does not prove a new executable is allowlisted — see #20.
+
 **Sources:** pre-v3 `AGENTS.md`.
 
-**Related:** 4.
+**Related:** 4, 20.
 
 ## 4. The schema is a versioned contract
 
@@ -402,3 +405,19 @@ Nine hand-maintained collections declare a family beyond its own payload tree. T
 **Sources:** `docs/research/2026-08-07-plan-execution-efficiency.md` (R1, R6); issues #133, #134.
 
 **Related:** 6, 10, 11, 18.
+
+## 20. A green gate cannot see an unstaged executable
+
+**Applies when:** adding an executable file to the repository.
+
+**Rule:** add the path to `_POST_ANCHOR_TOOLING_EXECUTABLES` in `tests/test_repository_hygiene.py` in the same change that adds the file, or `git add` the file before running the gate.
+
+**Why:** `test_git_mode_policy` reads the index through `git ls-files -s`, not the working tree. A file still untracked when the gate runs is invisible to that assertion and enters the index at mode `100755` only on the commit that follows, so the failure appears on the next run, attached to an unrelated change.
+
+`ba83cbc1` left `testing` HEAD red exactly this way: its gate run was honest, and the two scripts it added became executable in the index after that run finished.
+
+**Gotcha:** the sibling `_EXECUTABLE_ALLOWLIST` is pinned to the mode-policy anchor tree by its own equality assertion, so a new path added there fails the anchor inventory instead. Post-anchor tooling belongs in `_POST_ANCHOR_TOOLING_EXECUTABLES`.
+
+**Sources:** commits `ba83cbc1`, `b8e1216d`.
+
+**Related:** 3, 16.
