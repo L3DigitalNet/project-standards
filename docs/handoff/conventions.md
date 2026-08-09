@@ -24,6 +24,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 16 | Ownership decides Python lint scope, not byte-locking | Vendoring a file, or triaging a lint finding on immutable bytes |
 | 17 | Naming a supersession replacement pins that task active forever | Retiring a plan task or changing an unfinished acceptance target |
 | 18 | Match verification to the changed surface | Choosing what to run to prove a change |
+| 19 | Enumerate a new family's declaration sites before authoring | Adopting a family into this repository, or wiring one into a new layer |
 
 ## 1. Dogfood the standards
 
@@ -376,3 +377,28 @@ Compatibility alone is essentially the whole gate; every other lane finishes ins
 **Sources:** `docs/research/2026-08-07-plan-execution-efficiency.md` (R4, R7); issues #133, #136, #137.
 
 **Related:** 1, 3, 11, 14.
+
+## 19. Enumerate a new family's declaration sites before authoring
+
+**Applies when:** adopting a family into this repository, or wiring an existing one into a layer it does not yet reach.
+
+**Rule:** run the preflight first and author every reported site in one pass.
+
+```bash
+uv run python scripts/family_preflight.py <family-id>          # human table
+uv run python scripts/family_preflight.py <family-id> --json   # machine report
+```
+
+Exit `0` means every applicable site is declared, `1` means at least one is missing, and `2` means an unknown family id or a site inventory that no longer matches the tree. The tool is stdlib-only and imports nothing from `project_standards`, so it runs in a bare checkout before any environment or candidate wheel exists — which is the point, since it is meant to be run at task-claim time.
+
+Nine hand-maintained collections declare a family beyond its own payload tree. Two further sites named in issue #134's opening list are already derived (`tests/package_compatibility/test_performance.py` from `catalog_default_ids()`, `tests/package_contract/test_current_catalog_activation.py` from `repository.families`) and need no per-family edit.
+
+**Why:** each of the nine is enforced by an independent fail-closed gate, and each was historically discovered only by running the previous layer's gate and reading its failure. That cascade cost eight serial worker dispatches — roughly 2–3 hours of the five-hour 2026-08-06/07 `github-workflow` execution, and the single largest measured time sink in the #133 findings.
+
+**Gotcha:** a `declared` verdict means only that the family id appears in the right collection, never that the value there is correct. The preflight predicts the gates and replaces none of them; the layered redundancy is what caught the original omissions and was deliberately kept (findings R6). Always still run the gate that owns the surface.
+
+**Gotcha:** whether the seam sites (5 and 7) apply is **not** derivable from `payload.toml`. `python-tooling` declares the same provider shape as `adr` and is deliberately not a seam family. The check reads that decision from site 6, `AUTHORITATIVE_INPUT_OWNER`: a family is seam-served when it holds at least one `family` authority row. Record the census row first, and the seam sites then report correctly. While the census has no row for the family the seam sites are reported as applicable rather than hidden, because a spurious line costs seconds and a silent omission costs hours.
+
+**Sources:** `docs/research/2026-08-07-plan-execution-efficiency.md` (R1, R6); issues #133, #134.
+
+**Related:** 6, 10, 11, 18.

@@ -19,6 +19,16 @@ Single authority for the content key over resolved `src/**` plus `pyproject.toml
 scripts/wheel-runtime-stamp.sh compute | write | check
 ```
 
+## `family_preflight.py` — new-family declaration-site preflight
+
+Reports, for one catalog family id, which of the nine hand-maintained declaration sites already mention it — `declared`, `missing`, or `not applicable` per site. Run it at task-claim time so adopting a family lands in one authored pass instead of eight serial gate-driven corrections. It predicts those gates and replaces none of them: a `declared` verdict means the id appears in the right collection, never that the value is correct. Stdlib-only and free of any `project_standards` import, so it runs in a bare checkout with no environment.
+
+```bash
+uv run python scripts/family_preflight.py <family-id> [--json] [--root PATH]
+```
+
+Exit `0` every applicable site declared, `1` at least one missing, `2` unknown family id or a stale site inventory. See convention 19 for the site list and the seam-applicability rule.
+
 ## `verify.sh` — the repository release gate
 
 Runs the repository's own verification as three concurrent lanes (statics through the non-uv path, the ordinary suite under coverage with pytest-xdist, and the compatibility matrix), then the timing-sensitive performance lane alone, then `coverage combine` and the report. `--full` reproduces the legacy serial battery for release-prep cross-checks. Expects the candidate wheel runtime on `PYTHONPATH` prerequisites and refuses to start without them; see the script header for the environment it establishes.
