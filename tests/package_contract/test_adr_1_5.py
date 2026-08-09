@@ -40,7 +40,7 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
-from tests.package_contract.helpers import assert_schema_identity_pins
+from tests.package_contract.helpers import assert_schema_payload_references
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/adr"
@@ -167,11 +167,13 @@ def test_adr_1_5__payload_schemas__pin_their_own_payload_identity() -> None:
     render after the version becomes selectable — the payload is unreachable, not
     merely mislabelled. The sweep covers input and output schemas alike, at any depth,
     because the validator treats them identically; scoping it to the render envelope
-    is what let a stale output-schema const reach release prep once already.
+    is what let a stale output-schema const reach release prep once already, and
+    scoping it to `version` consts is what let a stale migration-id enum reach it a
+    third time. It now checks every payload reference a schema pins, not just identity.
     """
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
 
-    assert "schemas/provider-input.schema.json#/properties" in assert_schema_identity_pins(
+    assert "schemas/provider-input.schema.json#/properties" in assert_schema_payload_references(
         _SUCCESSOR, manifest
     )
 

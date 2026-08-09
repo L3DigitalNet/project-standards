@@ -26,7 +26,7 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
-from tests.package_contract.helpers import assert_schema_identity_pins
+from tests.package_contract.helpers import assert_schema_payload_references
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/agent-handoff"
@@ -101,9 +101,11 @@ def test_agent_handoff_1_11__payload_schemas__pin_their_own_payload_identity() -
     render envelope and so missed the migration report, whose stale `1.10` broke every
     `plan_legacy_migration` call under 1.11 with `provider output violates its declared
     schema`. Output schemas run through the same validator; the sweep now covers both.
+    Its second cut read only `version` consts and so missed python-tooling 1.13's stale
+    `migration_id` enum, so it now checks every payload reference a schema pins.
     """
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
-    checked = assert_schema_identity_pins(_SUCCESSOR, manifest)
+    checked = assert_schema_payload_references(_SUCCESSOR, manifest)
 
     # Both defects this guard was widened for, named explicitly: the render envelope
     # at the document root, and the migration report's pin nested under `package`.

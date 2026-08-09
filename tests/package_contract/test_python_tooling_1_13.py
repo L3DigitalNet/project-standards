@@ -40,7 +40,7 @@ from project_standards.package_contract.payload import (
 )
 from tests.control_plane.planner_helpers import resolution_request
 from tests.package_contract.helpers import (
-    assert_schema_identity_pins,
+    assert_schema_payload_references,
     ruff_declarations,
     ruff_source,
     selects_ruff,
@@ -227,21 +227,29 @@ def test_python_tooling_1_13__released_predecessor__keeps_its_exact_bytes() -> N
 
 
 def test_python_tooling_1_13__payload_schemas__pin_their_own_payload_identity() -> None:
-    """Every schema const that names a payload must name *this* payload.
+    """Every schema literal that names a payload must name *this* payload.
 
     A successor copies the predecessor's schemas forward, and a copy that keeps the
-    predecessor's `version` const fails closed in `_validate_json_schema` on the first
-    render after the version becomes selectable — the payload is unreachable, not
-    merely mislabelled. The sweep covers input and output schemas alike, at any depth,
-    because the validator treats them identically; scoping it to the render envelope
-    is what let a stale output-schema const reach release prep once already.
+    predecessor's literals fails closed in `_validate_json_schema` on the first render
+    after the version becomes selectable — the payload is unreachable, not merely
+    mislabelled. Scoping the sweep to `version` consts is what let this cut ship a
+    correctly-versioned configuration-transform schema whose `migration_id` enum still
+    listed the eleven `-to-1-12` edges, so release prep rejected the very migration the
+    payload declares. The sweep now covers migration ids and endpoints too, and the
+    provider-scoped assertions below prove it reached them here rather than passing
+    vacuously on a payload that happens to declare no migrations.
     """
     _require_payload(_V113)
     manifest = load_payload_manifest(_V113 / "payload.toml")
 
-    assert "schemas/provider-input.schema.json#/properties" in assert_schema_identity_pins(
-        _V113, manifest
+    checked = assert_schema_payload_references(_V113, manifest)
+
+    assert "schemas/provider-input.schema.json#/properties" in checked
+    transform = (
+        "schemas/config-transform-input.schema.json#/$defs/configurationTransform/properties"
     )
+    assert f"{transform}/migration_id@migrate-config" in checked
+    assert f"{transform}/source@migrate-config" in checked
 
 
 def test_python_tooling_1_13__option_schema__declares_a_closed_glob_to_rule_map() -> None:

@@ -143,53 +143,106 @@ def ruff_source(render: ScopeRenderer, manifest: PayloadManifest, config: JsonOb
     )
 
 
-def _walk_identity_pins(node: object, pointer: str, found: list[tuple[str, str, object]]) -> None:
-    """Collect every `properties` map that pins `standard_id` to a constant.
+def _walk_property_scopes(
+    node: object, pointer: str, found: list[tuple[str, dict[str, object]]]
+) -> None:
+    """Collect every `properties` map in a schema document, with its JSON pointer.
 
-    The pin is a JSON Schema subschema, so it can sit at any depth: the render
-    envelopes pin at the document root, while the migration report pins inside a
-    nested `package` object. Keying on `standard_id`-with-`const` rather than on a
-    fixed path is what makes the two shapes one rule. `schema_version` is a
-    different axis — the envelope's own format version — and is never a sibling of
-    a `standard_id` const, so it is exempt by construction rather than by exclusion.
+    A payload reference is a JSON Schema subschema, so it can sit at any depth: the
+    render envelopes pin identity at the document root, the migration report pins it
+    inside a nested `package` object, and the configuration-transform input pins
+    migration edges inside `$defs` and again inside each `oneOf` branch. Keying on
+    the enclosing `properties` map rather than on fixed paths is what makes those
+    shapes one rule.
     """
     if isinstance(node, list):
         for index, item in enumerate(cast("list[object]", node)):
-            _walk_identity_pins(item, f"{pointer}/{index}", found)
+            _walk_property_scopes(item, f"{pointer}/{index}", found)
         return
     if not isinstance(node, dict):
         return
     mapping = cast("dict[str, object]", node)
     properties = mapping.get("properties")
     if isinstance(properties, dict):
-        subschemas = cast("dict[str, object]", properties)
-        standard_id = subschemas.get("standard_id")
-        if isinstance(standard_id, dict) and "const" in cast("dict[str, object]", standard_id):
-            found.append(
-                (
-                    f"{pointer}/properties",
-                    cast("str", cast("dict[str, object]", standard_id)["const"]),
-                    subschemas.get("version"),
-                )
-            )
+        found.append((f"{pointer}/properties", cast("dict[str, object]", properties)))
     for key, value in mapping.items():
-        _walk_identity_pins(value, f"{pointer}/{key}", found)
+        _walk_property_scopes(value, f"{pointer}/{key}", found)
 
 
-def assert_schema_identity_pins(payload_root: Path, manifest: PayloadManifest) -> list[str]:
-    """Assert every declared JSON schema that pins an identity names its own payload.
+def _literal_values(node: object) -> list[str]:
+    """Return every string literal a subschema admits, across `const`, `enum`, and branches.
 
-    A successor is cut by copying the predecessor's payload forward, so any schema
-    carrying the predecessor's `version` const is unreachable rather than merely
-    mislabelled: `_validate_json_schema` fails closed the first time the version is
-    selected. Restricting the check to the provider *input* schema left the failure
-    class alive on every other schema in the payload — the output schemas are
-    validated by the same code path and break the same way, one provider deeper.
-    Iterating the manifest's own JSON resources means a schema added to a later cut
-    is covered without anyone remembering to extend this guard.
-
-    Returns the pointers checked so a caller can assert the guard had a corpus.
+    A payload reference is pinned three different ways in the shipped schemas — a bare
+    `const`, a closed `enum`, and an `anyOf` branch set (the migration report's selector)
+    — and a guard that reads only one of them is a guard that misses the other two.
+    Nested `properties` are deliberately not followed: those literals belong to a
+    different property and the caller's own walk visits them under their own key.
+    Non-string literals (`declared_pointers` pins a list) are not payload references
+    and are dropped rather than compared.
     """
+    if not isinstance(node, dict):
+        return []
+    mapping = cast("dict[str, object]", node)
+    values: list[object] = []
+    if "const" in mapping:
+        values.append(mapping["const"])
+    enum = mapping.get("enum")
+    if isinstance(enum, list):
+        values.extend(cast("list[object]", enum))
+    for keyword in ("anyOf", "oneOf", "allOf"):
+        branches = mapping.get(keyword)
+        if isinstance(branches, list):
+            for branch in cast("list[object]", branches):
+                values.extend(_literal_values(branch))
+    return [value for value in values if isinstance(value, str)]
+
+
+def _endpoint_reference(value: str) -> bool:
+    """Report whether a literal names a migration endpoint rather than ordinary content.
+
+    `source` and `target` are overloaded across the payload's schemas: in the mutation
+    plan `target` is a repository path, and only the `package:`/`legacy:` grammar marks
+    a literal as an edge of the migration graph. Filtering here keeps the endpoint rule
+    from firing on schemas that merely reuse the property name.
+    """
+    return value.startswith(("package:", "legacy:"))
+
+
+def assert_schema_payload_references(payload_root: Path, manifest: PayloadManifest) -> list[str]:
+    """Assert every payload reference a declared JSON schema pins matches this payload.
+
+    A successor is cut by copying the predecessor's payload forward, so any literal the
+    copy carries over is unreachable rather than merely mislabelled: `_validate_json_schema`
+    fails closed the first time the payload is selected. Three release-prep failures came
+    from exactly that, each on a different literal — a stale `version` const in a provider
+    input schema, a stale `version` const nested in a migration report, and a stale
+    `migration_id`/`source` enum pair in a configuration-transform input. A guard scoped to
+    one literal kind is therefore too narrow by construction; this one sweeps every
+    identity, migration id, endpoint, and selector literal in every JSON resource the
+    manifest declares, so a schema added to a later cut is covered without anyone
+    remembering to extend it.
+
+    Every expectation is derived from the manifest, never from the schema being checked:
+
+    - `standard_id`/`version` consts must name this payload.
+    - Every `migration_id` literal must be a migration the manifest declares.
+    - Every `package:`/`legacy:` `source` or `target` literal must be an endpoint some
+      declared migration actually references.
+    - Every `selector` literal must be `latest` or this payload's own version.
+    - Where a subschema also pins `provider_id`, its `migration_id`, `source`, and
+      `target` literals must be *exactly* the declared migrations for that provider —
+      the completeness half, which membership alone cannot catch when a successor drops
+      or gains an edge.
+
+    Returns the locations checked so a caller can assert the guard had a corpus.
+    """
+    declared_ids = {migration.id for migration in manifest.migrations}
+    declared_endpoints = {
+        endpoint.value
+        for migration in manifest.migrations
+        for endpoint in (migration.from_endpoint, migration.to_endpoint)
+    }
+    own_selectors = {"latest", manifest.payload.version.value}
     checked: list[str] = []
     for resource in manifest.resources:
         relative = resource.path.normalized.as_posix()
@@ -199,16 +252,112 @@ def assert_schema_identity_pins(payload_root: Path, manifest: PayloadManifest) -
             "object",
             json.loads((payload_root / relative).read_text(encoding="utf-8")),
         )
-        pins: list[tuple[str, str, object]] = []
-        _walk_identity_pins(document, "", pins)
-        for pointer, standard_id, version in pins:
+        scopes: list[tuple[str, dict[str, object]]] = []
+        _walk_property_scopes(document, "", scopes)
+        for pointer, properties in scopes:
             location = f"{relative}#{pointer}"
-            assert standard_id == manifest.payload.standard, location
-            assert isinstance(version, dict), f"{location} pins standard_id without a version"
-            assert cast("dict[str, object]", version).get("const") == (
-                manifest.payload.version.value
-            ), location
-            checked.append(location)
+            checked.extend(_check_identity_pin(location, properties, manifest))
+            checked.extend(
+                _check_migration_references(
+                    location,
+                    properties,
+                    declared_ids=declared_ids,
+                    declared_endpoints=declared_endpoints,
+                    own_selectors=own_selectors,
+                )
+            )
+            checked.extend(_check_provider_closure(location, properties, manifest))
+    return checked
+
+
+def _check_identity_pin(
+    location: str, properties: dict[str, object], manifest: PayloadManifest
+) -> list[str]:
+    """Assert a scope that pins `standard_id` also pins this payload's own version.
+
+    `schema_version` is a different axis — the envelope's own format version — and is
+    never a sibling of a `standard_id` const, so it is exempt by construction rather
+    than by exclusion.
+    """
+    standard_id = properties.get("standard_id")
+    if not isinstance(standard_id, dict) or "const" not in cast("dict[str, object]", standard_id):
+        return []
+    assert cast("dict[str, object]", standard_id)["const"] == manifest.payload.standard, location
+    version = properties.get("version")
+    assert isinstance(version, dict), f"{location} pins standard_id without a version"
+    assert cast("dict[str, object]", version).get("const") == manifest.payload.version.value, (
+        location
+    )
+    return [location]
+
+
+def _check_migration_references(
+    location: str,
+    properties: dict[str, object],
+    *,
+    declared_ids: set[str],
+    declared_endpoints: set[str],
+    own_selectors: set[str],
+) -> list[str]:
+    """Assert every migration id, endpoint, and selector literal in one scope is reachable."""
+    checked: list[str] = []
+    ids = _literal_values(properties.get("migration_id"))
+    if ids:
+        unknown = sorted(set(ids) - declared_ids)
+        assert not unknown, f"{location}/migration_id names undeclared migrations {unknown}"
+        checked.append(f"{location}/migration_id")
+    for key in ("source", "target"):
+        endpoints = [
+            value for value in _literal_values(properties.get(key)) if _endpoint_reference(value)
+        ]
+        if not endpoints:
+            continue
+        unknown = sorted(set(endpoints) - declared_endpoints)
+        assert not unknown, f"{location}/{key} names unreferenced endpoints {unknown}"
+        checked.append(f"{location}/{key}")
+    selectors = _literal_values(properties.get("selector"))
+    if selectors:
+        unknown = sorted(set(selectors) - own_selectors)
+        assert not unknown, f"{location}/selector names foreign selectors {unknown}"
+        checked.append(f"{location}/selector")
+    return checked
+
+
+def _check_provider_closure(
+    location: str, properties: dict[str, object], manifest: PayloadManifest
+) -> list[str]:
+    """Assert a provider-pinned scope enumerates exactly that provider's declared edges.
+
+    Membership alone accepts a schema that silently omits a declared migration, which is
+    the same unreachable-payload failure seen from the other side. The `provider_id` const
+    is what makes the expected set derivable: the configuration-transform input pins
+    `migrate-config`, so its enums must be that provider's migrations and no others —
+    the legacy edge belongs to a different provider and is correctly absent.
+    """
+    provider = properties.get("provider_id")
+    if not isinstance(provider, dict):
+        return []
+    provider_id = cast("dict[str, object]", provider).get("const")
+    if not isinstance(provider_id, str):
+        return []
+    edges = [migration for migration in manifest.migrations if migration.provider == provider_id]
+    if not edges:
+        return []
+    expected: dict[str, set[str]] = {
+        "migration_id": {migration.id for migration in edges},
+        "source": {migration.from_endpoint.value for migration in edges},
+        "target": {migration.to_endpoint.value for migration in edges},
+    }
+    checked: list[str] = []
+    for key, wanted in expected.items():
+        if key not in properties:
+            continue
+        actual = set(_literal_values(properties[key]))
+        assert actual == wanted, (
+            f"{location}/{key} does not enumerate provider {provider_id!r}: "
+            f"missing {sorted(wanted - actual)}, unexpected {sorted(actual - wanted)}"
+        )
+        checked.append(f"{location}/{key}@{provider_id}")
     return checked
 
 

@@ -85,7 +85,7 @@ id = "config-transform-input"
 role = "provider-resource"
 path = "schemas/config-transform-input.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:125b63357d3dcc24e7d9fb834dee7c26f02973898076ab713e4db4d081175069"
+digest = "sha256:d779ac15c07d3e0d9b4b48f0cb04291ca57135d5282a971c7711d9c66c9f9aef"
 
 [[resources]]
 id = "config-transform-report"
