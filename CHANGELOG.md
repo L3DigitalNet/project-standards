@@ -37,6 +37,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added
+
+- **Python Tooling 1.13 adds `ruff.extend_per_file_ignores`, a typed table that exempts named Ruff rules for a path glob without disabling them anywhere else (issue #116).** Before it, the only reachable answer for a repository that permits `Any` at dynamic test boundaries was `ruff.extend_ignore`, which drops `ANN401` for shipped code as well. Each key is a Ruff glob and each value a nonempty list of rule selectors, both validated at option resolution rather than at Ruff runtime. Entries compose into the package-owned `[tool.ruff.lint.per-file-ignores]` table instead of replacing it — `"tests/**/*.py" = ["ANN401"]` renders as `["S101", "ANN401"]`, keeping the package default — and consumer globs and rules emit in sorted order, so the rendered unit is a function of the option's value and not of the order it was written in. Removing an entry removes exactly that entry. The empty default renders the 1.12 bytes, so nothing changes for a consumer that does not opt in and no 1.12→1.13 migration edge is declared. Ruff's own `[tool.ruff.lint.extend-per-file-ignores]` table is deliberately not claimed: 1.12's ownership decomposition made it consumer-owned by construction and it was the documented pre-1.13 workaround, so declaring it here would have turned those consumers' existing bytes into `CP-MODIFIED-MANAGED` drift. Both routes stay valid and Ruff unions them.
+
 ### Fixed
 
 - **The predecessor contract tests for Markdown Tooling 1.13, Project Specification 1.7, and Markdown Frontmatter 1.9 no longer duplicate their retained-version digest assertion.** Each `family_index__keeps_the_retained_version_selectable` test added at v5.17.0 release prep repeated an `indexed[…].digest` assertion already present earlier in the same file; each file now carries exactly one assertion site, and the promotion-contract docstring is preserved. (#146)
