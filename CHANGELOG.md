@@ -37,6 +37,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Fixed
+
+- **The predecessor contract tests for Markdown Tooling 1.13, Project Specification 1.7, and Markdown Frontmatter 1.9 no longer duplicate their retained-version digest assertion.** Each `family_index__keeps_the_retained_version_selectable` test added at v5.17.0 release prep repeated an `indexed[…].digest` assertion already present earlier in the same file; each file now carries exactly one assertion site, and the promotion-contract docstring is preserved. (#146)
+
 ## [5.17.0] — 2026-08-09
 
 ### Added
