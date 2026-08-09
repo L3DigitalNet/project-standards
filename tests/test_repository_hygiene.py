@@ -74,9 +74,15 @@ _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
 # Repository tooling that became executable after the mode-policy anchor. It cannot
 # join `_EXECUTABLE_ALLOWLIST`: that set is pinned to the anchor tree by the equality
 # above it, so anything added there would fail the anchor-inventory assertion instead.
+#
+# This assertion reads the INDEX (`git ls-files -s`), so a new executable is invisible
+# to it until it is staged: a gate run that is green on an untracked script goes red on
+# the next run, after the commit. Add the entry in the same change that adds the script.
 _POST_ANCHOR_TOOLING_EXECUTABLES = frozenset(
     {
+        "scripts/bootstrap-worktree.sh",
         "scripts/build-gh-workflow.sh",
+        "scripts/wheel-runtime-stamp.sh",
     }
 )
 

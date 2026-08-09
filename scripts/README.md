@@ -2,6 +2,23 @@
 
 Developer helpers for `project-standards`.
 
+## `bootstrap-worktree.sh` — one-command worktree setup
+
+Runs the whole preflight a fresh checkout or detached worktree needs before any gate: locked `uv sync`, `npm ci`, the read-only projection check, an isolated candidate-wheel build with a one-wheel assertion, extraction to `build/wheel-runtime`, the staleness stamp, and `make go-tools`. Every step re-runs rather than being skipped, so it is safe to repeat after any `src/**` or payload change. `--no-go` skips the Go toolchain.
+
+```bash
+scripts/bootstrap-worktree.sh
+scripts/bootstrap-worktree.sh --no-go
+```
+
+## `wheel-runtime-stamp.sh` — candidate-wheel staleness stamp
+
+Single authority for the content key over resolved `src/**` plus `pyproject.toml`, so the builder and the gate cannot drift. `check` exits `0` current, `1` stale or missing, `2` error; the `verify.sh` preflight calls it and refuses a stale runtime by name. The key is content-based, not mtime-based, so a `git checkout` round-trip that restores identical bytes leaves the runtime current.
+
+```bash
+scripts/wheel-runtime-stamp.sh compute | write | check
+```
+
 ## `verify.sh` — the repository release gate
 
 Runs the repository's own verification as three concurrent lanes (statics through the non-uv path, the ordinary suite under coverage with pytest-xdist, and the compatibility matrix), then the timing-sensitive performance lane alone, then `coverage combine` and the report. `--full` reproduces the legacy serial battery for release-prep cross-checks. Expects the candidate wheel runtime on `PYTHONPATH` prerequisites and refuses to start without them; see the script header for the environment it establishes.
