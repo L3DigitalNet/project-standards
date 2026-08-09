@@ -6,7 +6,7 @@
 - The release advertises `github-workflow@1.0` as the eighth consumer package and closes #132; follow-ups #143–#147 sit in Inbox awaiting triage.
 - The tracker also holds the v5.18.0 ADR train (#127/#128/#129), the feature deferrals #55, #62, and #116, and the adoption/upgrade findings #130, #139–#142.
 - Catalog 5 defaults: markdown-tooling 1.14, markdown-frontmatter 1.10, python-tooling 1.12, project-spec 1.8, agent-handoff 1.10, github-workflow 1.0; every predecessor remains byte-immutable and selectable.
-- The full pre-tag chain including `verify.sh --full` ran green on the tagged commit; seven hosted workflows are green there and the hosted `Check` battery is in flight.
+- The full pre-tag chain including `verify.sh --full` and the complete hosted fleet including `Check` ran green on the tagged commit — no post-tag corrections were needed.
 - Release assets are byte-verified: wheel `36bc8e29…`, sdist `2cfe6fe2…`.
 - The open-issue program has T16, T19, and T36 terminal (checkpoints `50d0c364`, `229a4bc1`, `e13e1a66`; EV-008); the feature phase T24–T29 remains, with T24 ready.
 - All four reusable workflows accept an optional `runner-labels` input for private same-organization callers.
