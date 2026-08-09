@@ -135,6 +135,40 @@ func (c *Client) SetIssueState(ctx context.Context, owner, repo string, number i
 	return &updated, nil
 }
 
+// SetIssueType assigns the issue's Issue Type, leaving every other attribute untouched.
+//
+// It shares the PATCH endpoint with SetIssueState rather than extending that call's
+// payload, because the two answer to different subcommands: folding the type in there
+// would make every terminal transition carry a type it was never asked to change, and an
+// omitted-but-present member is exactly the kind of accidental write the typed payloads
+// here exist to prevent.
+//
+// The updated issue is returned because on this member the status code is not the oracle.
+// GitHub documents the type as settable only by a caller with push access and states that
+// "without push access to the repository, type changes are silently dropped" — a 200
+// carrying the issue's previous type. Only the caller comparing the response against the
+// request can tell that write from an applied one.
+//
+// An empty type is refused rather than sent, matching AddIssueFieldValues: GitHub clears
+// the type with a null, and `{"type": ""}` is an undefined request no caller here means.
+func (c *Client) SetIssueType(ctx context.Context, owner, repo string, number int,
+	issueType string,
+) (*Issue, error) {
+	if issueType == "" {
+		return nil, fmt.Errorf("no Issue Type to set for %s/%s#%d", owner, repo, number)
+	}
+	payload := struct {
+		Type string `json:"type"`
+	}{Type: issueType}
+
+	var updated Issue
+	if err := c.send(ctx, http.MethodPatch,
+		fmt.Sprintf("%s/issues/%d", repoPath(owner, repo), number), payload, &updated); err != nil {
+		return nil, err
+	}
+	return &updated, nil
+}
+
 // send performs one write. The body is always produced by the JSON encoder from a typed
 // value, never assembled as text, so no field value an operator supplies can reshape the
 // request it travels in.

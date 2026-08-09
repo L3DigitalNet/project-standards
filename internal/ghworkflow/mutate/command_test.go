@@ -164,6 +164,18 @@ const issueCreated = `{"number":31,"title":"Record the frozen flag surface",
 		{"issue_field_name":"Workflow","data_type":"single_select","value":"Inbox","single_select_option":{"name":"Inbox"}},
 		{"issue_field_name":"Priority","data_type":"single_select","value":"P1 — Next","single_select_option":{"name":"P1 — Next"}}]}`
 
+// issueUntyped carries a null type, which is what GitHub stores for an issue opened
+// anywhere the Issue Type is optional — the web UI, or any tool that omits it. It is the
+// state `set --type` exists to leave, and the only one that exercises an absent type on
+// both sides of the read-back.
+const issueUntyped = `{"number":20,"title":"Triage the untyped backlog",
+	"html_url":"https://github.com/L3DigitalNet/example-repo/issues/20",
+	"state":"open","state_reason":null,
+	"body":"## Outcome\n\nEverything carries a Type.\n",
+	"type":null,
+	"issue_field_values":[
+		{"issue_field_name":"Workflow","data_type":"single_select","value":"Inbox","single_select_option":{"name":"Inbox"}}]}`
+
 // call is one recorded HTTP request including its body, which the ghtest transport does
 // not retain: proving "validation precedes any mutating call" needs the payload, not just
 // the method and path.
@@ -216,14 +228,25 @@ func (r *recorder) mutations() []call {
 	return writes
 }
 
-// patchModel reproduces the one piece of GitHub's `PATCH /issues/{n}` semantics the
-// terminal sequence depends on: state_reason is applied only when the state itself
-// changes, and the no-op still answers 200. A fake that echoed the request back instead
-// would report an in-place reclassification as applied — the exact answer the tool must
-// not believe, and therefore the one this suite has to be able to produce.
+// patchModel reproduces the two pieces of GitHub's `PATCH /issues/{n}` semantics the
+// mutation surface depends on: state_reason is applied only when the state itself
+// changes, and a `type` sent without push access to the repository is dropped. Both no-ops
+// still answer 200. A fake that echoed the request back instead would report an in-place
+// reclassification, or a dropped type, as applied — the exact answers the tool must not
+// believe, and therefore the ones this suite has to be able to produce.
+//
+// The type behavior is GitHub's documented contract, not an inferred one: the `type` body
+// parameter of "Update an issue" states that "only users with push access can set the type
+// for issues" and that "without push access to the repository, type changes are silently
+// dropped" (docs.github.com/en/rest/issues/issues, read 2026-08-08).
 type patchModel struct {
 	mu     sync.Mutex
 	issues map[int]map[string]any
+
+	// dropTypeChanges makes this fake answer as GitHub does for a token without push
+	// access: 200, and the type left as it was. Read under the same lock as issues so a
+	// test may flip it between calls.
+	dropTypeChanges bool
 }
 
 func newPatchModel(t *testing.T, bodies map[int]string) *patchModel {
@@ -251,6 +274,7 @@ func (m *patchModel) apply(number int, body string) (ghtest.Response, bool) {
 	var requested struct {
 		State  string `json:"state"`
 		Reason string `json:"state_reason"`
+		Type   string `json:"type"`
 	}
 	if err := json.Unmarshal([]byte(body), &requested); err != nil {
 		return ghtest.Response{Status: http.StatusBadRequest, Body: `{"message":"Invalid request"}`}, true
@@ -258,6 +282,9 @@ func (m *patchModel) apply(number int, body string) (ghtest.Response, bool) {
 	if requested.State != "" && requested.State != issue["state"] {
 		issue["state"] = requested.State
 		issue["state_reason"] = requested.Reason
+	}
+	if requested.Type != "" && !m.dropTypeChanges {
+		issue["type"] = map[string]any{"name": requested.Type}
 	}
 	encoded, err := json.Marshal(issue)
 	if err != nil {
@@ -322,6 +349,9 @@ type harness struct {
 	stderr    *bytes.Buffer
 	transport *recorder
 	routes    map[string]ghtest.Response
+	// patch is the PATCH model, exposed so a test can put GitHub into the states only it
+	// can produce — currently a token without push access, which drops type changes.
+	patch *patchModel
 }
 
 // newHarness builds a consumer checkout carrying the delivered artifacts and an origin
@@ -361,11 +391,13 @@ func newHarness(t *testing.T) *harness {
 			Body: `[{"number":9,"title":"Land the transport","state":"open",
 				"html_url":"https://github.com/L3DigitalNet/example-repo/issues/9"}]`},
 		"GET " + fixtureRepo + "/issues/18":                     {Status: http.StatusOK, Body: issueDropped},
+		"GET " + fixtureRepo + "/issues/20":                     {Status: http.StatusOK, Body: issueUntyped},
 		"POST " + fixtureRepo + "/issues":                       {Status: http.StatusCreated, Body: issueCreated},
 		"POST " + fixtureRepo + "/issues/12/issue-field-values": {Status: http.StatusOK, Body: "[]"},
 		"POST " + fixtureRepo + "/issues/14/issue-field-values": {Status: http.StatusOK, Body: "[]"},
 		"POST " + fixtureRepo + "/issues/16/issue-field-values": {Status: http.StatusOK, Body: "[]"},
 		"POST " + fixtureRepo + "/issues/18/issue-field-values": {Status: http.StatusOK, Body: "[]"},
+		"POST " + fixtureRepo + "/issues/20/issue-field-values": {Status: http.StatusOK, Body: "[]"},
 	}
 
 	// PATCH is served by the model rather than by a canned body, so a response reports the
@@ -373,7 +405,8 @@ func newHarness(t *testing.T) *harness {
 	// answer — a rejection, or a server that drops the write — registers an explicit route,
 	// which wins.
 	model := newPatchModel(t, map[int]string{
-		12: issueReady, 14: issueNotReady, 16: issueClosed, 18: issueDropped, 31: issueCreated,
+		12: issueReady, 14: issueNotReady, 16: issueClosed, 18: issueDropped,
+		20: issueUntyped, 31: issueCreated,
 	})
 	inner := &ghtest.Transport{Routes: routes}
 	inner.RouteFunc = func(req *http.Request) (ghtest.Response, bool) {
@@ -410,6 +443,7 @@ func newHarness(t *testing.T) *harness {
 		stderr:    stderr,
 		transport: transport,
 		routes:    routes,
+		patch:     model,
 	}
 }
 
@@ -555,16 +589,23 @@ func TestSetAppliesValidatedValues(t *testing.T) {
 	wants(t, h.stdout.String(), "#12", "Workflow = Ready", "Priority = P1 — Next")
 }
 
-func TestSetRequiresAnIssueAndAtLeastOneField(t *testing.T) {
+func TestSetRequiresAnIssueAndSomethingToWrite(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
 		name string
 		args []string
+		want []string
 	}{
-		{name: "no issue", args: []string{"set", "--field", "Workflow=Ready"}},
-		{name: "no field", args: []string{"set", "--issue", "12"}},
-		{name: "no pair", args: []string{"set", "--issue", "12", "--field", "Workflow"}},
+		{name: "no issue", args: []string{"set", "--field", "Workflow=Ready"},
+			want: []string{"--issue"}},
+		// Neither flag names anything to write, and the refusal has to name both routes:
+		// --field alone would send an operator holding an untyped issue back to a raw `gh`
+		// call, which is the very thing --type exists to make unnecessary.
+		{name: "no field and no type", args: []string{"set", "--issue", "12"},
+			want: []string{"--field Name=Value", "--type"}},
+		{name: "no pair", args: []string{"set", "--issue", "12", "--field", "Workflow"},
+			want: []string{"Name=Value"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -573,8 +614,173 @@ func TestSetRequiresAnIssueAndAtLeastOneField(t *testing.T) {
 			if code := h.run(tc.args...); code != cli.ExitUsage {
 				t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitUsage, h.stderr)
 			}
+			wants(t, h.stderr.String(), tc.want...)
 			h.assertNoMutations(t)
 		})
+	}
+}
+
+// An issue created outside this tool — the web UI leaves the type optional — can only be
+// typed here, so a type-only invocation is complete on its own and must reach GitHub as
+// the single PATCH that assigns it. Issue 20 is the untyped fixture, which makes this the
+// end-to-end run of the case the flag exists for rather than a retype of a typed issue.
+func TestSetAssignsAnIssueTypeOnItsOwn(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	if code := h.run("set", "--issue", "20", "--type", "Feature"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
+	}
+
+	writes := h.transport.mutations()
+	if len(writes) != 1 {
+		t.Fatalf("want exactly one mutating request, got %+v", writes)
+	}
+	if writes[0].Method != http.MethodPatch || writes[0].Path != fixtureRepo+"/issues/20" {
+		t.Errorf("wrote to %s %s, want PATCH %s/issues/20", writes[0].Method, writes[0].Path, fixtureRepo)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(writes[0].Body), &payload); err != nil {
+		t.Fatalf("request body is not the documented shape: %v\n%s", err, writes[0].Body)
+	}
+	if payload["type"] != "Feature" {
+		t.Errorf("request body = %s, want type Feature", writes[0].Body)
+	}
+	// Nothing else may ride along on the PATCH: the type change must not restate the
+	// issue's state, which would make `set` a lifecycle command by accident.
+	if len(payload) != 1 {
+		t.Errorf("the type write carried more than the type: %s", writes[0].Body)
+	}
+	wants(t, h.stdout.String(), "#20", "Type = Feature")
+}
+
+func TestSetAssignsAnIssueTypeAndFieldsInOneInvocation(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	code := h.run("set", "--issue", "12", "--type", "Feature", "--field", "Workflow=Ready")
+	if code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
+	}
+
+	writes := h.transport.mutations()
+	if len(writes) != 2 {
+		t.Fatalf("want exactly two mutating requests, got %+v", writes)
+	}
+	// The type is written first, so the field values never land against a classification
+	// GitHub declined to record.
+	if writes[0].Method != http.MethodPatch || writes[0].Path != fixtureRepo+"/issues/12" {
+		t.Errorf("first write = %s %s, want the type PATCH", writes[0].Method, writes[0].Path)
+	}
+	if writes[1].Method != http.MethodPost || writes[1].Path != fixtureRepo+"/issues/12/issue-field-values" {
+		t.Errorf("second write = %s %s, want the field POST", writes[1].Method, writes[1].Path)
+	}
+	wants(t, writes[0].Body, `"type":"Feature"`)
+	wants(t, writes[1].Body, `"field_id":101`, `"value":"Ready"`)
+	wants(t, h.stdout.String(), "#12", "Type = Feature", "Workflow = Ready")
+}
+
+func TestSetRefusesAnUnknownIssueTypeOffline(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	if code := h.run("set", "--issue", "12", "--type", "Epic", "--field", "Workflow=Ready"); code != cli.ExitUsage {
+		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitUsage, h.stderr)
+	}
+	wants(t, h.stderr.String(), `unknown Issue Type "Epic"`,
+		"Bug", "Feature", "Task", "Initiative", "Research")
+	h.assertNoRequests(t)
+	h.assertNoMutations(t)
+}
+
+// GitHub drops a type change from a token without push access and answers 200, so the
+// status code cannot be the oracle here — the response body is the only evidence the write
+// landed. The refusal must name the issue's actual type, and the pending field values must
+// not be written on the strength of a classification that never took.
+func TestSetReportsATypeChangeGitHubSilentlyDropped(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.patch.dropTypeChanges = true
+
+	if code := h.run("set", "--issue", "12", "--type", "Feature", "--field", "Workflow=Ready"); code != cli.ExitFailure {
+		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	}
+	wants(t, h.stderr.String(), `"Bug"`, `"Feature"`, "no field values were written", "push access")
+	if h.stdout.Len() != 0 {
+		t.Errorf("a dropped write printed a receipt: %s", h.stdout)
+	}
+	for _, write := range h.transport.mutations() {
+		if write.Method == http.MethodPost {
+			t.Errorf("field values were written against a type that never took: %+v", write)
+		}
+	}
+}
+
+// The same drop against the untyped fixture, with no fields pending: the refusal has to
+// report an absent type as "unset" rather than as empty quotes, and must not claim field
+// values were withheld when none were asked for.
+func TestSetReportsADroppedTypeOnAnUntypedIssue(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.patch.dropTypeChanges = true
+
+	if code := h.run("set", "--issue", "20", "--type", "Feature"); code != cli.ExitFailure {
+		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	}
+	wants(t, h.stderr.String(), "unset", `"Feature"`, "push access")
+	if strings.Contains(h.stderr.String(), "no field values were written") {
+		t.Errorf("the refusal withheld field values the invocation never requested: %s", h.stderr)
+	}
+}
+
+// A failed type write is the one outcome the tool cannot characterize: the PATCH may have
+// been applied and its answer lost. The message must therefore claim only what is provable
+// — that no field values were written — and say the rest is unknown rather than assert an
+// untouched issue the operator would then not think to check.
+func TestSetDoesNotClaimAnUntouchedIssueWhenTheTypeWriteFails(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.routes["PATCH "+fixtureRepo+"/issues/12"] = ghtest.Response{
+		Status: http.StatusServiceUnavailable, Body: `{"message":"Service unavailable"}`}
+
+	if code := h.run("set", "--issue", "12", "--type", "Feature", "--field", "Workflow=Ready"); code != cli.ExitFailure {
+		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	}
+	wants(t, h.stderr.String(), "#12", "no field values were written", "unknown")
+	if strings.Contains(h.stderr.String(), "nothing changed") {
+		t.Errorf("the failure claimed an untouched issue it cannot prove: %s", h.stderr)
+	}
+	for _, write := range h.transport.mutations() {
+		if write.Method == http.MethodPost {
+			t.Errorf("field values were written after the type write failed: %+v", write)
+		}
+	}
+}
+
+// The one genuinely half-applied outcome: the type landed and the field write that follows
+// it failed. The message is the operator's only account of what changed, so it has to name
+// the applied type and the rerun that converges.
+func TestSetReportsTheAppliedTypeWhenTheFieldWriteFails(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.routes["POST "+fixtureRepo+"/issues/12/issue-field-values"] = ghtest.Response{
+		Status: http.StatusServiceUnavailable, Body: `{"message":"Service unavailable"}`}
+
+	if code := h.run("set", "--issue", "12", "--type", "Feature", "--field", "Workflow=Ready"); code != cli.ExitFailure {
+		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	}
+	wants(t, h.stderr.String(), "#12", "Issue Type is now", `"Feature"`, "rerun")
+
+	writes := h.transport.mutations()
+	if len(writes) != 2 {
+		t.Fatalf("want the type PATCH followed by the failing field POST, got %+v", writes)
+	}
+	if writes[0].Method != http.MethodPatch {
+		t.Errorf("the type write did not precede the field write: %+v", writes)
 	}
 }
 

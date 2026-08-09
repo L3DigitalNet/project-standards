@@ -39,7 +39,7 @@ func init() {
 	})
 	cli.Register(&cli.Command{
 		Name:    "set",
-		Summary: "set Issue Field values, validated against the baseline organization schema",
+		Summary: "set the Issue Type and Issue Field values, validated against the baseline schema",
 		Run:     runSet,
 	})
 	cli.Register(&cli.Command{
