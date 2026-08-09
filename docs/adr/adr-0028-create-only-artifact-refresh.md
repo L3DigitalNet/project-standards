@@ -52,7 +52,7 @@ The policy has a consequence nobody decided. A package whose managed output is a
 
 This repository is the worked example. The [ADR 1.4 conformance assessment](../reviews/adr-conformance/2026-08-05-1941-adr-1-4-conformance-assessment.md) finding F1 records that `docs/adr/adr.template.md` holds the ADR 1.3 template bytes while `.standards/lock.toml` records the file under `versions = { adr = "1.4" }`. Every ADR authored here from that scaffold started from a template without the boundary prompts 1.4 introduced — which is the mechanical root cause of the boundary gap the same assessment found across the corpus.
 
-This decision applies to create-only artifacts declared in a selected package payload and already installed in a consumer repository that adopts these standards. It does not apply to managed artifacts, whose refresh reconcile already owns, nor to consumer-owned files no payload declares. Whether the platform should ever refresh a create-only artifact *without* the consumer asking remains undecided and is reserved to the control plane.
+This decision applies to create-only artifacts declared in a selected package payload and already installed in a consumer repository that adopts these standards. It does not apply to managed artifacts, whose refresh reconcile already owns, nor to consumer-owned files no payload declares. Whether the platform should ever refresh a create-only artifact _without_ the consumer asking remains undecided and is reserved to the control plane.
 
 How should a consumer repository obtain a revised version of a create-only artifact it already has installed?
 

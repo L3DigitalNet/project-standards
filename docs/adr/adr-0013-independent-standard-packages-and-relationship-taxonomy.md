@@ -6,8 +6,8 @@ description: 'Records the decision to treat standards as independently adoptable
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-09'
-reviewed: '2026-07-07'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -24,6 +24,8 @@ related:
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
   - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
   - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
+  - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
+  - 'meta/versioning.md'
 supersedes: []
 superseded_by: null
 source: []
@@ -35,11 +37,15 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends: []
+  amended_by: []
 ---
 
 # ADR 0013: Independent Standard Packages and Relationship Taxonomy
 
 MADR status: **accepted**. Records decision D-013 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings §4 and O5).** The outcome now states the governed population, the applicability condition, and the exclusions, and records explicitly that this record's `companion` relationship carries no version constraint. The taxonomy and the independent-by-default posture are unchanged.
 
 ## Context and Problem Statement
 
@@ -53,6 +59,10 @@ Standards could be modeled as independent packages a consumer picks and chooses 
 ## Decision Outcome
 
 Chosen option: **treat standards as independent packages by default, model relationships with an explicit taxonomy (independent, companion, extends, conflicts, consumes_platform), and treat standard groups as recommendation profiles rather than hidden dependency suites**, because arbitrary adoption of standards fails if standards secretly require one another, and hidden hard dependencies push dependency resolution into agents instead of graph validation ([ADR 0007](adr-0007-standard-graph-validation-gate.md)). Modeling standards as suites with implicit dependencies was rejected because it harms composability and future MCP scalability, and conflicts with the conflict-free composition model already established in [ADR 0004](adr-0004-authority-map-and-conflict-free-composition.md). This is the through-line principle of the whole meta-repo effort.
+
+This decision governs how standard packages relate to one another and how independently a consumer may adopt them, and applies to every package published from this repository and to every relationship it declares. Within that population, a package is independently adoptable by default, its relationships are declared explicitly in the taxonomy above, and a group is a recommendation profile rather than a dependency suite.
+
+A declared `companion` is a non-binding recommendation. It carries **no version constraint**: this record does not decide version-level compatibility between two related packages, and no such constraint may be inferred from a `companion`, `extends`, or `conflicts` edge alone. Introducing a binding version constraint between two packages would enlarge this decision's governed concern, so it is a new decision requiring its own ADR — not an exception to this one. This decision also does not govern the resolution order of a consumer's selections, catalog channel roles ([ADR 0024](adr-0024-catalog-scoped-package-version-channels.md)), or the contract-plane compatibility gates the retained legacy frontmatter validator applies inside its own registry.
 
 ### Consequences
 

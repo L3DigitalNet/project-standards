@@ -6,8 +6,8 @@ description: 'Records the decision to treat per-standard agent summaries as deri
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-09'
-reviewed: '2026-07-07'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -30,11 +30,15 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends: []
+  amended_by: []
 ---
 
 # ADR 0009: Agent Summary and Canonical Standard Split
 
 MADR status: **accepted**. Records decision D-009 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings §4 B1–B3).** The outcome now states the governed population, the applicability condition, and the exclusions this record has operated under since acceptance. The companion-not-replacement decision is unchanged.
 
 ## Context and Problem Statement
 
@@ -49,6 +53,10 @@ Agents consuming a standard need compact, low-token context, but the canonical s
 ## Decision Outcome
 
 Chosen option: **require agent summaries as companions to, never replacements for, the canonical standard** ([ADR 0010](adr-0010-standard-resource-uris-and-index.md) governs how both are addressed as resources). Agents need compact context, but canonical standards must keep full evidence and rationale, so a summary is only useful if it derives from and stays subordinate to the full text. Shipping only full standards was rejected because it forces every agent interaction to pay the token cost of the complete document. Shipping only summaries was rejected because auto-generating summaries from full standards is a useful future step, but summaries must remain reviewed, non-authoritative artifacts — treating a summary as authoritative risks silently weakening the canonical rules.
+
+This decision governs the relationship between a standard package's canonical text and its agent summary, and applies to every consumer-facing standard package version published from this repository. Within that population, the canonical text is the authority and the summary is a derived, reviewed companion that cannot narrow or override it.
+
+It does not decide how a summary is produced, how long it may be, how either document is addressed as a resource — [ADR 0010](adr-0010-standard-resource-uris-and-index.md) governs that — or whether documents outside standard packages carry summaries. A reference-only or internal package that reaches no consumer is outside this decision, and a compact document that is not a standard's agent summary requires no exception to it.
 
 ### Consequences
 

@@ -6,8 +6,8 @@ description: 'Records the decision to require dogfood consumer-repo fixtures tha
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-09'
-reviewed: '2026-07-07'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -32,11 +32,15 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends: []
+  amended_by: []
 ---
 
 # ADR 0011: Dogfood Consumer Fixtures for Standards Composition
 
 MADR status: **accepted**. Records decision D-011 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings §4 B1–B3).** The outcome now states the governed population, the applicability condition, and the exclusions this record has operated under since acceptance. The fixture requirement is unchanged.
 
 ## Context and Problem Statement
 
@@ -50,6 +54,10 @@ Standards can each pass their own unit tests while still failing when adopted to
 ## Decision Outcome
 
 Chosen option: **require dogfood consumer fixtures that exercise pairwise and profile-based standard composition**, because pairwise and fixture tests catch composition failures that per-standard unit tests miss, giving the authority map and conflict-free composition model in [ADR 0004](adr-0004-authority-map-and-conflict-free-composition.md) and the graph validation gate in [ADR 0007](adr-0007-standard-graph-validation-gate.md) a real, adopted-repository surface to validate against. Testing standards only in isolation was rejected because it would let conflicting or incompatible standards pass CI individually while still failing for real consumers.
+
+This decision governs how this repository proves that its own standard packages compose for a consumer, and applies to changes to a standard package that can affect co-adoption — authorities, relationships, shared destinations, or profiles. Within that population, composition must be exercised by consumer fixtures rather than inferred from per-standard unit tests passing.
+
+It does not govern the test strategy of repositories that adopt these standards, the internal coverage any individual package maintains for its own behavior, or which specific combinations must exist as fixtures. A change confined to one package's internals, touching no shared surface, is outside this decision and requires no exception to it.
 
 ### Consequences
 
