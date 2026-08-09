@@ -1,0 +1,1 @@
+../../../../../../standards/project-spec/versions/1.8/templates/spec-full-template.md
