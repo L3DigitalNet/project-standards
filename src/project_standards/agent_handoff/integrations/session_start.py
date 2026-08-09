@@ -31,7 +31,18 @@ MANAGED_EVENTS = frozenset(MANAGED_MATCHER.split("|"))
 # Retired engine identities are matched by name because their hook paths moved
 # between the v3 layouts; the current shared hook is matched by its own file
 # name, so a second copy of the managed handler counts as injection too.
-_INJECTION_NEEDLES = ("session_start.py", "handoff-system-v3", "agent-handoff-v3")
+#
+# Both launcher file names are listed because this detector spans the whole
+# catalog: 1.1 through 1.9 register `session_start.py`, 1.10 and newer register the
+# compiled `session-start`. Dropping either one silently stops counting the managed
+# handler for half the catalog, and #102's duplicate-injection refusal degrades to a
+# green report — the failure is invisible because a count of 1 looks correct.
+_INJECTION_NEEDLES = (
+    "session_start.py",
+    "session-start",
+    "handoff-system-v3",
+    "agent-handoff-v3",
+)
 
 Syntax = Literal["jsonc", "toml"]
 

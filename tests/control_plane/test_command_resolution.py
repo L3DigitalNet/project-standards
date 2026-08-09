@@ -353,6 +353,9 @@ _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 # copy relocates out of `agent_handoff/cli.py` in T15.3, so the oracle keeps its
 # own and fails loudly if the declared set ever changes shape.
 _HANDOFF_DECLARED_PATHS = (
+    # 1.10 replaced the Python hook with the compiled `session-start`; the read set is
+    # the union across every selectable version, not the newest one's alone.
+    ".agents/hooks/agent-handoff/session-start",
     ".agents/hooks/agent-handoff/session_start.py",
     ".agents/skills/agent-handoff/SKILL.md",
     ".agents/skills/agent-handoff/agents/openai.yaml",

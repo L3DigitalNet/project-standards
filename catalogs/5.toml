@@ -77,6 +77,12 @@ role = "retained"
 id = "agent-handoff"
 version = "1.9"
 digest = "sha256:4ee3187635bada1fdf9a1fcb5966fbbe5eecc56c84a2ccce220adfa595edbc99"
+role = "retained"
+
+[[packages]]
+id = "agent-handoff"
+version = "1.10"
+digest = "sha256:ea1fbc843a8d9bb627dda4c4c8d12d15b59be9361ae5c312dac3101e01c8d56f"
 role = "default"
 
 [[packages]]

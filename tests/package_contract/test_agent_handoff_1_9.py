@@ -368,7 +368,10 @@ def test_agent_handoff_1_9__registration__is_default_and_integrity_bound() -> No
 
     assert manifest.payload.version.value == "1.9"
     assert indexed["1.9"].digest == integrity.aggregate_digest
-    assert roles["1.9"] == "default"
+    # 1.10 took the default when it replaced the Python hook with a compiled launcher.
+    # 1.9 stays advertised and integrity-bound: retiring an advertised version is a
+    # catalog-major transition (ADR 0024), not a side effect of a successor landing.
+    assert roles["1.9"] == "retained"
     assert roles["1.8"] == "retained"
     assert any(migration.id == "legacy-v4-to-1-9" for migration in manifest.migrations)
     assert any(migration.to_endpoint.value == "package:1.9" for migration in manifest.migrations)

@@ -2,7 +2,7 @@
 schema_version = "1.1"
 catalog = "5"
 release = "5.16.0"
-catalog_digest = "sha256:50b625b47a8fd1852be9fa60a4fbc376e59d31efdc07fd48aaf0d87b1994d302"
+catalog_digest = "sha256:b4bfe4e21bd5227084386c32e315768c8d32ff1a45b677032e50eddce9189421"
 config_digest = "sha256:d6cd1a4aa1fb4122ac3bfacc8ce4f2c3914b5a16e5bce9fb38c92463865c67e3"
 
 [standards.adr]
@@ -14,9 +14,9 @@ effective_config_digest = "sha256:7ddd7f39d1a9bff9867c1cfd91e6abb614e4e1efecf357
 
 [standards.agent-handoff]
 requested = "latest"
-resolved = "1.9"
+resolved = "1.10"
 selection = "stable"
-payload_digest = "sha256:4ee3187635bada1fdf9a1fcb5966fbbe5eecc56c84a2ccce220adfa595edbc99"
+payload_digest = "sha256:ea1fbc843a8d9bb627dda4c4c8d12d15b59be9361ae5c312dac3101e01c8d56f"
 effective_config_digest = "sha256:7d8ffcf355d1948151d6988e6b8cb809fcbeae2cc28cd3cd0bcd665563eef80f"
 
 [standards.cli-documentation]
@@ -62,28 +62,28 @@ payload_digest = "sha256:7595019e39b209fb700817b0563aa2e5db50d368c3c5042eeb714e2
 effective_config_digest = "sha256:fbb8a2878955325c7ef6bce0884ad5c4496072d27c88e567b40f585f693648a6"
 
 [[artifacts]]
-path = ".agents/hooks/agent-handoff/session_start.py"
+path = ".agents/hooks/agent-handoff/session-start"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "managed"
-semantic_digest = "sha256:db2aad1965561c9d491eff3dc99520768bc4b3f89c2ee7e15ac922381bf15780"
-content_digest = "sha256:db2aad1965561c9d491eff3dc99520768bc4b3f89c2ee7e15ac922381bf15780"
+semantic_digest = "sha256:a5391567cf81d92580679ba30bf6af641e4e265044ba0753b834220cdb2b215e"
+content_digest = "sha256:a5391567cf81d92580679ba30bf6af641e4e265044ba0753b834220cdb2b215e"
 mode = "0755"
-created_container = false
+created_container = true
 
 [[artifacts]]
 path = ".agents/skills/agent-handoff/SKILL.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "managed"
-semantic_digest = "sha256:946542a565303426fd4b28d1b138fadde942bd43c00e26bf06f77f9f1a553896"
-content_digest = "sha256:946542a565303426fd4b28d1b138fadde942bd43c00e26bf06f77f9f1a553896"
+semantic_digest = "sha256:054cdd0fc75400d65caf01da74d489fa4d02d077ac1b760536bbd91b48e19842"
+content_digest = "sha256:054cdd0fc75400d65caf01da74d489fa4d02d077ac1b760536bbd91b48e19842"
 created_container = false
 
 [[artifacts]]
@@ -91,7 +91,7 @@ path = ".agents/skills/agent-handoff/agents/openai.yaml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:1b78fb94b81aad4df0bbf149a6d4c47b887fbe31e19818723bde5579ec33413c"
@@ -249,11 +249,11 @@ path = ".claude/settings.json"
 adapter = "jsonc"
 scope = "keyed-set:/hooks/SessionStart#matcher=startup|resume|clear|compact"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:6d4ad30a733c3c42bfb5cab5bf5806765d7c4ce56330c4786a470b23329f127d"
-content_digest = "sha256:1b939965f08c3f6c6b3614266101c2b79790c4626381d839b4f7dc4ae90a11f3"
+semantic_digest = "sha256:86c0a62eb0efcfc7dd62b639b088f79629886f867c567a6e2eaf18b9062ff736"
+content_digest = "sha256:e5ccb6658efe86fd59f2a0bf4021616ee171a73de0c6214808e2f342bf90979e"
 created_container = false
 
 [[artifacts]]
@@ -261,11 +261,11 @@ path = ".codex/config.toml"
 adapter = "toml"
 scope = "keyed-set:/hooks/SessionStart#matcher=startup|resume|clear|compact"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:b2dafbe17f72bb6abedc913eb831559f9287357f60755a5c3f9460a80057563c"
-content_digest = "sha256:4c760982a32a385a51f68c95ebc3bad748e4163bf620efac563f274214ba9e94"
+semantic_digest = "sha256:b730710515d57f945b9541a89d2ee3c2482a37b4f1781c09fa6b9763ce6bef05"
+content_digest = "sha256:4e1b562dc3968d2e8f409a9227ccb02341b95bea18bc1de1f3c48d35fa89f99b"
 created_container = false
 
 [[artifacts]]
@@ -606,7 +606,7 @@ path = ".standards/packages/agent-handoff/policy.toml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:ca67fa9232375073d9dec834af6053057f31069ca83054e61948d2738a6e3e92"
@@ -1052,7 +1052,7 @@ path = "AGENTS.md"
 adapter = "markdown-block"
 scope = "block:agent-handoff"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:632f927e3f1b4e9b02ab5d86cfbd4d802fe8079db8bfd77f42a63a92fbdb095d"
@@ -1100,7 +1100,7 @@ path = "CLAUDE.md"
 adapter = "markdown-block"
 scope = "block:agent-handoff"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:632f927e3f1b4e9b02ab5d86cfbd4d802fe8079db8bfd77f42a63a92fbdb095d"
@@ -1148,7 +1148,7 @@ path = "docs/STATUS.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:9fdf203c0676749cb86cc125891c4a2370fd763d6b7524e8a7fc9b822c2dfc2b"
@@ -1160,7 +1160,7 @@ path = "docs/TODO.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:6c48a00a7f5d9a067b4a2afa6dd935b80188088ac5fb8be11a4e5c04ff0a9ea3"
@@ -1184,7 +1184,7 @@ path = "docs/handoff/architecture.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:7171be6b164ff146eeea45a290e1fac14325e6749bc1e58b46fea1ae01f84865"
@@ -1196,7 +1196,7 @@ path = "docs/handoff/bugs/.gitkeep"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
@@ -1208,7 +1208,7 @@ path = "docs/handoff/conventions.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:623e17e93a9a05f3f20aec0cda2e14264973b67653dbd08bd859d94630877494"
@@ -1220,7 +1220,7 @@ path = "docs/handoff/credentials.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:c74a663b902d14e5a28686ff9cbb9a22853f5bc0834de4b18e05415e467f29e8"
@@ -1232,7 +1232,7 @@ path = "docs/handoff/deployed.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:aca21ef703073ed26866875c197c5d7529ae5e5d711f57f5f6618ac329b488cc"
@@ -1244,7 +1244,7 @@ path = "docs/handoff/sessions/.gitkeep"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
@@ -1256,7 +1256,7 @@ path = "docs/handoff/specs-plans.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:bc9bd77c76a636b627df3b51e1921ea3f47527abe133b551eb347a2725bb9405"
@@ -1268,7 +1268,7 @@ path = "docs/handoff/state.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["agent-handoff"]
-versions = { agent-handoff = "1.9" }
+versions = { agent-handoff = "1.10" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:a509f70983a3f770632fd79c513dba072355188a5d90ddcb7f35dbf02cc9cd69"

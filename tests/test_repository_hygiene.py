@@ -56,7 +56,9 @@ _IMMUTABLE_PROJECTION_EXCLUSIONS = frozenset(
 
 _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
     {
+        ".agents/hooks/agent-handoff/session-start",
         ".agents/skills/github-workflow/bin/gh-workflow",
+        "standards/agent-handoff/versions/1.10/hooks/session-start/session-start",
         "standards/github-workflow/versions/1.0/skills/github-workflow/bin/gh-workflow",
         "standards/markdown-frontmatter/versions/1.8/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/markdown-frontmatter/versions/1.9/skills/markdown-frontmatter/scripts/new-doc-id",
@@ -81,6 +83,7 @@ _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
 _POST_ANCHOR_TOOLING_EXECUTABLES = frozenset(
     {
         "scripts/bootstrap-worktree.sh",
+        "scripts/build-agent-handoff-session-start.sh",
         "scripts/build-gh-workflow.sh",
         "scripts/wheel-runtime-stamp.sh",
     }

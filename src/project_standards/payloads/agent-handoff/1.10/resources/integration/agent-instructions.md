@@ -1,0 +1,1 @@
+../../../../../../../standards/agent-handoff/versions/1.10/resources/integration/agent-instructions.md

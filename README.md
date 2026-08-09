@@ -118,9 +118,9 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 
 Repository-local project knowledge and bounded session continuity for coding agents. Agent Handoff creates consumer-owned status, task, and lifetime-routed knowledge under `docs/`; installs a repo-local `agent-handoff` skill; optionally registers one shared SessionStart hook for Claude Code and Codex; and validates layout, drift, provenance, document budgets, and credential references without owning workstation-global state.
 
-- **Standard:** [`standards/agent-handoff/versions/1.9/README.md`](standards/agent-handoff/versions/1.9/README.md)
-- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.9/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
-- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.9/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.9/resources/legacy-migration.md)
+- **Standard:** [`standards/agent-handoff/versions/1.10/README.md`](standards/agent-handoff/versions/1.10/README.md)
+- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.10/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
+- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.10/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.10/resources/legacy-migration.md)
 
 ### GitHub Workflow Standard
 
@@ -183,7 +183,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | Markdown Tooling | `1.13` | [`standards/markdown-tooling/versions/1.13/adopt.md`](standards/markdown-tooling/versions/1.13/adopt.md) |
 | Project Specification | `1.7` | [`standards/project-spec/versions/1.7/adopt.md`](standards/project-spec/versions/1.7/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
-| Agent Handoff | `1.9` | [`standards/agent-handoff/versions/1.9/adopt.md`](standards/agent-handoff/versions/1.9/adopt.md) |
+| Agent Handoff | `1.10` | [`standards/agent-handoff/versions/1.10/adopt.md`](standards/agent-handoff/versions/1.10/adopt.md) |
 | GitHub Workflow | `1.0` | [`standards/github-workflow/versions/1.0/adopt.md`](standards/github-workflow/versions/1.0/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:

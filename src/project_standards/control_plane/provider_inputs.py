@@ -133,6 +133,12 @@ _CONSUMER_STATE_PATHS: dict[str, _ConsumerStateRead] = {
 # Relocated from `agent_handoff/cli.py` with `_walk_handoff_paths`: the declared
 # handoff read set is selection, and selection is half of this seam.
 _HANDOFF_READ_PATHS = (
+    # Both launcher paths stay in the read set because one control plane serves every
+    # selectable Agent Handoff version: 1.1 through 1.9 install the Python hook, while
+    # 1.10 and newer install the compiled `session-start`. A path the version does not own
+    # snapshots as missing and is ignored by that version's provider, so the union is
+    # safe; dropping either one would blind the seam for half the catalog.
+    ".agents/hooks/agent-handoff/session-start",
     ".agents/hooks/agent-handoff/session_start.py",
     ".agents/skills/agent-handoff/SKILL.md",
     ".agents/skills/agent-handoff/agents/openai.yaml",

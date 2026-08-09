@@ -42,14 +42,19 @@ go-mod-check:
 	go mod tidy -diff
 	go mod verify
 
-# The github-workflow payload ships gh-workflow as committed bytes, so the source in this
-# commit and the committed binary must never diverge (spec NFR-005). The rebuild-compare
-# runs here in the Go gate rather than in reconcile (plan decision D-004): consumers get
-# bytes only, and this repository owns the proof that they match reviewed source.
+# Payloads ship these binaries as committed bytes, so the source in this commit and the
+# committed binaries must never diverge (spec NFR-005). The rebuild-compare runs here in
+# the Go gate rather than in reconcile (plan decision D-004): consumers get bytes only,
+# and this repository owns the proof that they match reviewed source.
+#
+# Every committed Go artifact belongs in both lists. A binary built but not verified
+# would let the payload drift from its source with a green gate.
 go-binary:
 	scripts/build-gh-workflow.sh
+	scripts/build-agent-handoff-session-start.sh
 
 go-verify-binary:
 	scripts/build-gh-workflow.sh --verify
+	scripts/build-agent-handoff-session-start.sh --verify
 
 go-check: go-format-check go-mod-check go-vet go-lint go-test go-build go-audit go-verify-binary

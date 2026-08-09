@@ -12,6 +12,20 @@ linters:
   disable:
     # `make go-vet` owns vet output so local and CI runs use the declared Go toolchain's analyzer version.
     - govet
+  exclusions:
+    rules:
+      # gosec models a program that handles untrusted input and ships to production.
+      # Test files here build hermetic fixture repositories under `t.TempDir()` and
+      # execute the binary under test against them, which trips the subprocess (G204),
+      # file-inclusion (G304/G703), and permission (G301/G306) rules by construction:
+      # every "tainted" path is test-authored, and the launcher fixture must be written
+      # 0755 precisely because the property under test is that it is executable.
+      #
+      # Scoped to tests only. Production code keeps the full gosec gate, and the two
+      # deliberate `#nosec` annotations there carry their own justification inline.
+      - path: _test\.go
+        linters:
+          - gosec
 
 issues:
   max-issues-per-linter: 0

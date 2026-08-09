@@ -2,7 +2,7 @@
 schema_version = "1.0"
 catalog = "5"
 release = "5.16.0"
-digest = "sha256:50b625b47a8fd1852be9fa60a4fbc376e59d31efdc07fd48aaf0d87b1994d302"
+digest = "sha256:b4bfe4e21bd5227084386c32e315768c8d32ff1a45b677032e50eddce9189421"
 
 [standards.adr]
 status = "active"
@@ -32,8 +32,8 @@ payload_digest = "sha256:d23b7f6c66d7684f716ef2f3dd778d9be3de39e5914d91d6481997c
 
 [standards.agent-handoff]
 status = "active"
-available = ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9"]
-default = "1.9"
+available = ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "1.10"]
+default = "1.10"
 candidates = []
 
 [standards.agent-handoff.versions."1.1"]
@@ -77,9 +77,14 @@ availability = "consumer"
 payload_digest = "sha256:65eccfe9b6b51f39ade2c3c45d9a01b4cb2b5c86557c848e3000b736707de6ce"
 
 [standards.agent-handoff.versions."1.9"]
-channel = "stable"
+channel = "retained"
 availability = "consumer"
 payload_digest = "sha256:4ee3187635bada1fdf9a1fcb5966fbbe5eecc56c84a2ccce220adfa595edbc99"
+
+[standards.agent-handoff.versions."1.10"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:ea1fbc843a8d9bb627dda4c4c8d12d15b59be9361ae5c312dac3101e01c8d56f"
 
 [standards.cli-documentation]
 status = "active"

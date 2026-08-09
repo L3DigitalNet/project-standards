@@ -372,15 +372,25 @@ def legacy_report(repository: RepositoryRoot) -> tuple[Finding, ...]:
             )
         )
 
-    try:
-        canonical_hook = _path_exists(repository, ".agents/hooks/agent-handoff/session_start.py")
-    except RepositoryBoundaryError:
-        canonical_hook = False
-    if canonical_hook and legacy_hook_evidence:
+    # Either launcher counts as the canonical hook: 1.1 through 1.9 install
+    # `session_start.py`, 1.10 and newer install the compiled `session-start`. The
+    # finding names whichever one is actually present so its path points at a real file.
+    canonical_hook = None
+    for candidate in (
+        ".agents/hooks/agent-handoff/session-start",
+        ".agents/hooks/agent-handoff/session_start.py",
+    ):
+        try:
+            if _path_exists(repository, candidate):
+                canonical_hook = candidate
+                break
+        except RepositoryBoundaryError:
+            continue
+    if canonical_hook is not None and legacy_hook_evidence:
         findings.append(
             _finding(
                 "AH-LEGACY-DUPLICATE-HOOK",
-                ".agents/hooks/agent-handoff/session_start.py",
+                canonical_hook,
                 "current and legacy startup injection evidence coexist",
                 "Disable legacy registrations before enabling or trusting the v1 hook.",
                 severity="error",

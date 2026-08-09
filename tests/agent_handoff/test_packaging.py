@@ -135,17 +135,19 @@ def test_repository_dogfoods_agent_handoff_v5() -> None:
     }
     assert lock["standards"]["agent-handoff"]["resolved"] == default_version
     assert not (_REPO / ".agents/agent-handoff/manifest.json").exists()
-    assert (_REPO / ".agents/hooks/agent-handoff/session_start.py").read_bytes() == (
-        _V2_MANAGED / "hook.py"
+    # 1.10 ships the launcher as a compiled binary with no provider-resource byte copy,
+    # so the payload artifact source is the only thing to compare it against.
+    assert (_REPO / ".agents/hooks/agent-handoff/session-start").read_bytes() == (
+        _SOURCE / f"versions/{default_version}/hooks/session-start/session-start"
     ).read_bytes()
     assert (_REPO / ".agents/skills/agent-handoff/SKILL.md").read_bytes() == (
-        _V2_MANAGED / "skill.md"
+        _SOURCE / f"versions/{default_version}/provider-resources/managed/skill.md"
     ).read_bytes()
     assert (_REPO / ".standards/packages/agent-handoff/policy.toml").read_bytes() == (
         _V2_MANAGED / "policy.toml"
     ).read_bytes()
-    assert ".agents/hooks/agent-handoff/session_start.py" in claude
-    assert ".agents/hooks/agent-handoff/session_start.py" in codex
+    assert ".agents/hooks/agent-handoff/session-start" in claude
+    assert ".agents/hooks/agent-handoff/session-start" in codex
     assert "handoff-system-v3" not in claude + codex
     assert {"AGENTS.md", "CLAUDE.md", "docs/STATUS.md", "docs/TODO.md"} <= prettier_ignores
     assert not (_REPO / ".agents/skills/handoff-system-v3").exists()
@@ -168,7 +170,10 @@ def test_automatic_adoption_preserves_executable_hook_mode(tmp_path: Path) -> No
         == 0
     )
 
-    hook = tmp_path / ".agents/hooks/agent-handoff/session_start.py"
+    # 1.10 replaced the Python hook with the compiled `session-start`. The property under
+    # test is unchanged: adoption must deliver the launcher executable, because the
+    # harness invokes it directly and a 0644 delivery fails the session start.
+    hook = tmp_path / ".agents/hooks/agent-handoff/session-start"
     assert stat.S_IMODE(hook.stat().st_mode) == 0o755
     assert main(["agent-handoff", "validate", "--repo", str(tmp_path)]) == 0
 
