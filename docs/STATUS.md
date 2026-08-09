@@ -14,7 +14,8 @@
 - Dependabot stays disabled by decision; dependency currency moves through the payload cycle under the pin and width-table guards.
 - The `js-yaml` override remains until `markdownlint-cli2-action` ships >= 0.23.2 (v24 still bundles 0.23.1).
 - The ADR corpus was assessed against ADR 1.4: 11 of 23 active records state no boundary, five authorities contested, five boundaries unowned. See `docs/reviews/adr-conformance/`.
-- v5.17.0 is scoped as the ADR train: #127 ships as `adr` 1.5, then the 21-item corpus backlog in #128. MINOR; 1.5 must stay non-breaking to become the Catalog 5 default.
+- v5.17.0 ships `github-workflow@1.0` (first advertisement, `gh-workflow set --type`) and the issue #132 `runner_labels` fix.
+- The ADR train — #127 as `adr` 1.5, then the #128 corpus backlog — moves to v5.18.0 by owner direction 2026-08-08.
 - The repository's `docs/adr/adr.template.md` is still the 1.3 template because create-only artifacts are invisible to drift-check (bug 006).
 - All four issue #133 follow-ups are delivered: #135 (`scripts/bootstrap-worktree.sh`), #136 (candidate-wheel staleness stamp enforced in the `verify.sh` preflight), #137 (`conventions.md` #18 surface-to-verification map), and #134 (`scripts/family_preflight.py` nine-site enumerating preflight, `conventions.md` #19), plus #131 (`standards list`/`show` disclose the committed-catalog basis).
 - The preflight reports `declared`/`missing`/`not applicable` per site and runs clean on all ten catalog-5 families; seam applicability is read from `AUTHORITATIVE_INPUT_OWNER`, because no `payload.toml` field separates `python-tooling` from `adr`.

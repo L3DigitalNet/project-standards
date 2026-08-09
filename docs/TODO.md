@@ -62,9 +62,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   Remaining work is the feature phase T24–T29 for #62 (conformance linting) and #55 (house-format conversion); T24 is dependency-ready. #116 stays deferred alongside them by owner decision (2026-08-05, defect fixes only). The deferred-tooling phase closed in v5.16.0 — see `docs/handoff/deployed.md` for what shipped.
 
-- [ ] Deliver the v5.17.0 ADR train: amendment vocabulary (#127) plus corpus remediation (#128).
+- [ ] Deliver the v5.18.0 ADR train: amendment vocabulary (#127) plus corpus remediation (#128).
 
-  Owner decision 2026-08-05: bundle both and target **5.17.0** (MINOR — `adr` 1.4 → 1.5 becomes the Catalog 5 default). Ship #127 as `adr` 1.5 first, then the 21 backlog items in the ADR conformance assessment §10 using the 1.5 amendment form.
+  Owner decision 2026-08-05: bundle both and target **5.18.0** (MINOR — `adr` 1.4 → 1.5 becomes the Catalog 5 default). Ship #127 as `adr` 1.5 first, then the 21 backlog items in the ADR conformance assessment §10 using the 1.5 amendment form.
 
   `adr` 1.5 must stay non-breaking or it cannot become the default within catalog major 5.
 

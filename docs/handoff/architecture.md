@@ -34,5 +34,5 @@
 - ADR 0027 adopts Go alongside Python under neutral tooling: an independent gate, no shared toolchain, and no language preference in the standards.
 - **Create-only delivery gap:** a create-only artifact cannot be revised for an existing consumer, and drift-check cannot see it. Bug 006; decision owed under #128.
 - Bug 006 stays a platform constraint, not a `github-workflow` one: that package ships zero create-only artifacts and a guard test enforces it.
-- **`github-workflow@1.0` release placement:** OQ-001, owner decision, post-v5.17.0. Execution-discovered follow-ups sit in the plan §13 close-out register.
-- **ADR corpus conformance:** 11 of 23 active ADRs state no boundary; five authorities contested, five unowned. See `docs/reviews/adr-conformance/`; scheduled as v5.17.0.
+- **`github-workflow@1.0` release placement:** OQ-001 answered — ships in v5.17.0. Execution-discovered follow-ups sit in the plan §13 close-out register.
+- **ADR corpus conformance:** 11 of 23 active ADRs state no boundary; five authorities contested, five unowned. See `docs/reviews/adr-conformance/`; scheduled as v5.18.0.
