@@ -188,6 +188,69 @@ def test_legacy_report_before_catalog_refresh_reads_the_applied_lock(
     assert _control_bytes(repo) == control
 
 
+def _catalog_default_version(distribution: InstalledDistribution, standard_id: str) -> str:
+    installed = distribution.load_catalog("5")
+    return next(
+        entry.version.value
+        for entry in installed.source.packages
+        if entry.id == standard_id and entry.role.value == "default"
+    )
+
+
+def test_legacy_report_before_the_package_is_selected_reads_the_catalog_default(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Issue #130: the pre-enable inventory runs in the order the runbook gives it.
+
+    The migration runbook's first step is a read-only inventory, and its result is
+    what decides whether and how to enable the package. Refusing until the package
+    was already enabled inverted that: a consumer had to commit the selection to
+    see the evidence that adopting it was safe. Nothing is written, nothing is
+    locked, and the basis the report used is disclosed.
+    """
+    command_resolution.reset_legacy_authority_warning()
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    (repo / "STATUS.md").write_text("legacy\n", encoding="utf-8")
+    control = _control_bytes(repo)
+    default = _catalog_default_version(distribution, "agent-handoff")
+
+    assert run(["legacy-report", "--repo", str(repo), "--json"], distribution=distribution) == 0
+
+    captured = capsys.readouterr()
+    report = json.loads(captured.out)
+    assert report["standard_version"] == default
+    assert report["findings"][0]["code"] == "AH-LEGACY-ROOT-STATUS"
+    assert f"agent-handoff@{default}" in captured.err
+    assert "not selected in .standards/config.toml" in captured.err
+    assert _control_bytes(repo) == control
+    assert not (repo / ".agents").exists()
+
+
+@pytest.mark.parametrize("command", ["validate", "drift-check", "size-report", "shape-check"])
+def test_conformance_commands_still_refuse_an_unselected_package(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+    command: str,
+) -> None:
+    """The pre-enable read is an inventory, not a blanket exemption (#130).
+
+    These commands report on units an unselected package owns none of, so a green
+    report from them would be a false negative rather than evidence.
+    """
+    command_resolution.reset_legacy_authority_warning()
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+
+    assert run([command, "--repo", str(repo), "--json"], distribution=distribution) == 3
+    assert "package is not present in unified config: agent-handoff" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize(
     ("command", "expected_code"),
     [("size-report", "AH-SIZE-CAP"), ("shape-check", "AH-SHAPE")],

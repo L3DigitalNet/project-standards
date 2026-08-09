@@ -18,6 +18,10 @@ from project_standards.agent_handoff.integrations.session_start import (
     Syntax,
     duplicate_startup_injection,
 )
+from project_standards.agent_handoff.launcher import (
+    path_interpreter_starts_the_hook,
+    resolves_interpreter_from_path,
+)
 from project_standards.agent_handoff.legacy import legacy_report
 from project_standards.agent_handoff.model import (
     ChangeKind,
@@ -375,6 +379,48 @@ def _duplicate_startup_findings(snapshots: JsonObject) -> list[Finding]:
     return findings
 
 
+_PRE_1_8_HOOK_PATH = ".agents/hooks/agent-handoff/session_start.py"
+
+
+def _launcher_interpreter_findings(selected: SelectedCommandPackage) -> list[Finding]:
+    """Refuse a green report for a pre-1.8 launcher that cannot start (#141).
+
+    Every check a selected payload can make passes here: the hook bytes, its
+    mode, and both harness registrations match the pre-1.8 payload exactly. What
+    is broken is outside the repository — the `python3` the shebang resolves —
+    so the whole composition reports clean while automatic startup injects
+    nothing. 1.1 through 1.7 are immutable, so the diagnostic can only be raised
+    from the engine, and only against a runtime it observes for itself.
+
+    The finding names the upgrade and nothing else. Editing the managed
+    registration to name another interpreter is the one repair a consumer must
+    not attempt: it is centrally locked, so it would be reported as drift and
+    reverted by the next reconciliation.
+    """
+    if not resolves_interpreter_from_path(selected.resolved):
+        return []
+    if selected.effective_config.get("startup") != "automatic":
+        return []
+    if path_interpreter_starts_the_hook():
+        return []
+    return [
+        Finding(
+            code="AH-LAUNCHER-INTERPRETER",
+            severity="error",
+            path=_PRE_1_8_HOOK_PATH,
+            locus="startup launcher",
+            message=(
+                f"selected package {selected.resolved.value} starts SessionStart through "
+                "python3 on PATH, and this environment's python3 cannot run the hook"
+            ),
+            guidance=(
+                "Select Agent Handoff 1.10 or newer, whose launcher needs no interpreter, "
+                "and reconcile. Do not edit the managed hook or its harness registration."
+            ),
+        )
+    ]
+
+
 def _provider_findings(
     selected: SelectedCommandPackage, operation: V2ProviderOperation
 ) -> tuple[Finding, ...]:
@@ -497,7 +543,14 @@ def _run_read_command(
             return 0
         emit_report(evidence, as_json=False)
         return 0
-    findings = _provider_findings(selected, operation)
+    # Raised beside the provider's findings rather than inside their enrichment: this
+    # one is derived from the selection and the host runtime, not from any snapshot.
+    # The view filters below drop it from the size and shape views, which report on
+    # documents only.
+    findings = (
+        *_launcher_interpreter_findings(selected),
+        *_provider_findings(selected, operation),
+    )
     if view == "size":
         findings = tuple(item for item in findings if item.code.startswith("AH-SIZE"))
     elif view == "shape":
@@ -671,6 +724,13 @@ def run(
             "agent-handoff",
             distribution,
             mode=mode,
+            # `legacy-report` inventories the repository, not the selection: its
+            # evidence is computed here from repository bytes and the payload only
+            # serializes it. The migration runbook runs it before the enable/route
+            # decision, so it must answer before the package is selected (#130).
+            # No other subcommand qualifies — each of the others reports on units
+            # an unselected package does not own.
+            unselected_inventory=operation is LegacyProviderOperation.EXTRACT,
         ) as selected:
             if selected is None:
                 return _run_provider(operation, provider_args)

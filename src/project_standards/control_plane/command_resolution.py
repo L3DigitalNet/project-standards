@@ -37,6 +37,7 @@ from project_standards.control_plane.state import (
     detect_control_plane_state,
     load_locked_control_plane_state,
 )
+from project_standards.package_contract.catalog import CatalogRole
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.paths import PackageVersion, SafeRelativePath
 from project_standards.package_contract.payload import (
@@ -316,6 +317,74 @@ def resolve_locked_authority(
     )
 
 
+def _resolve_catalog_default(
+    state: ControlPlaneState,
+    installed: InstalledDistribution,
+    standard_id: str,
+) -> SelectedCommandPackage | None:
+    """Resolve the catalog default for a package the repository has not selected.
+
+    This is the pre-enable inventory authority (issue #130). A repository-wide
+    read-only inventory — Agent Handoff's `legacy-report` is the whole class —
+    answers a question about the *repository*, not about a selection: the
+    migration runbook prescribes it before the enable/route decision precisely
+    so the evidence can inform that decision. Refusing until the package is
+    enabled inverted that order and made a consumer commit to the package to
+    see whether adopting it was safe.
+
+    Only the serializer comes from the payload, so the version that formats the
+    report is the version `version = "latest"` would resolve to: the catalog
+    default for the configured major. Nothing is written, nothing is locked, and
+    the basis is disclosed. Any failure to reach that payload returns None so the
+    caller falls through to the existing absent-package refusal — the fallback
+    must never be a *different* diagnostic for the same broken state.
+    """
+    config = state.config
+    catalog = state.catalog
+    lock = state.lock
+    if config is None or catalog is None or lock is None:
+        return None
+    try:
+        installed_catalog = installed.load_catalog(
+            config.project_standards.catalog,
+            recorded_release=catalog.project_standards.release,
+        )
+    except PackageContractError:
+        return None
+    default = next(
+        (
+            entry
+            for entry in installed_catalog.source.packages
+            if entry.id == standard_id and entry.role is CatalogRole.DEFAULT
+        ),
+        None,
+    )
+    if default is None:
+        return None
+    payload = installed_catalog.payload_map.get((standard_id, default.version.value))
+    if payload is None:
+        return None
+    try:
+        schema = load_option_schema(payload.root, payload.manifest)
+        effective = schema.resolve_options({})
+    except PackageContractError:
+        return None
+    _disclose_read_basis(
+        f"reading the installed catalog default: {standard_id}@{default.version.value}; "
+        "the package is not selected in .standards/config.toml, so this report is "
+        "repository evidence only and applies nothing"
+    )
+    return SelectedCommandPackage(
+        state.repo,
+        payload,
+        default.version,
+        effective,
+        lock,
+        state,
+        installed,
+    )
+
+
 def _resolve_state(
     state: ControlPlaneState,
     installed: InstalledDistribution,
@@ -324,6 +393,7 @@ def _resolve_state(
     *,
     require_reconciled: bool,
     read_authority: bool,
+    unselected_inventory: bool = False,
 ) -> SelectedCommandPackage | None:
     if state.kind is StateKind.LEGACY_ONLY:
         emit_legacy_authority_warning()
@@ -361,6 +431,15 @@ def _resolve_state(
         )
     desired = state.config.standards.get(standard_id)
     if desired is None:
+        # `read_authority` is the writer test, not a preference: an unselected
+        # package owns no lock entry, so nothing could authenticate a write.
+        unselected = (
+            _resolve_catalog_default(state, installed, standard_id)
+            if unselected_inventory and read_authority
+            else None
+        )
+        if unselected is not None:
+            return unselected
         raise _CompanionAbsentError(f"package is not present in unified config: {standard_id}")
     if not desired.enabled:
         raise _CompanionAbsentError(f"package is disabled in unified config: {standard_id}")
@@ -457,6 +536,7 @@ def _resolve_state_for_command(
     *,
     require_reconciled: bool,
     read_authority: bool = False,
+    unselected_inventory: bool = False,
 ) -> SelectedCommandPackage | None:
     """Normalize package/config failures at every public command boundary."""
     try:
@@ -467,6 +547,7 @@ def _resolve_state_for_command(
             explicit_legacy,
             require_reconciled=require_reconciled,
             read_authority=read_authority,
+            unselected_inventory=unselected_inventory,
         )
     except CommandResolutionError:
         raise
@@ -527,6 +608,7 @@ def selected_command(
     mode: LockMode,
     explicit_legacy: Path | None = None,
     require_reconciled: bool = True,
+    unselected_inventory: bool = False,
 ) -> Generator[SelectedCommandPackage | None]:
     """Resolve and retain one authority generation for a complete public command.
 
@@ -535,6 +617,13 @@ def selected_command(
     those may resolve from the applied lock (see `resolve_locked_authority`).
     A writer keeps requiring a fully reconciled selection, because it renders
     repository bytes and must not do so from a superseded basis.
+
+    `unselected_inventory` opts one command into answering for a package the
+    repository has not selected (see `_resolve_catalog_default`). It is valid
+    only where the answer is derived from repository state rather than from the
+    selection, so a caller that reports on managed artifacts must leave it off:
+    a package that owns no locked units cannot be conformant or drifted, and
+    reporting it as clean would be a false negative, not an inventory.
     """
     installed = distribution or InstalledDistribution.current()
     try:
@@ -550,6 +639,7 @@ def selected_command(
             explicit_legacy,
             require_reconciled=require_reconciled,
             read_authority=read_authority,
+            unselected_inventory=unselected_inventory,
         )
         return
     with control_plane_lock(initial.repo, mode) as control:
@@ -565,6 +655,7 @@ def selected_command(
             explicit_legacy,
             require_reconciled=require_reconciled,
             read_authority=read_authority,
+            unselected_inventory=unselected_inventory,
         )
 
 
