@@ -424,24 +424,19 @@ Nine hand-maintained collections declare a family beyond its own payload tree. T
 
 ## 21. Renaming a managed artifact is a cross-cutting change
 
-**Applies when:** a new payload version moves, renames, or retypes an artifact an earlier version installed — not only when the file's bytes change.
+**Applies when:** a new payload version moves or renames an artifact an earlier version installed — not only when its bytes change.
 
-**Rule:** before authoring, grep the whole tree for the old target's *file name*, and treat every hit outside the payload as a site that needs the union of both names.
+**Rule:** grep the tree for the old target's file name first, and give every hit outside the payload the union of both names.
 
-Six independent registries identified the Agent Handoff hook by name, and each failed a different gate several layers apart when 1.10 renamed `session_start.py` to `session-start`:
+Six registries named the Agent Handoff hook; each failed a different gate when 1.10 renamed `session_start.py` to `session-start`:
 
-| Site | Consequence of missing it |
-| --- | --- |
-| `control_plane/provider_inputs.py` read set | provider snapshots the wrong path; validate reports clean |
-| `agent_handoff/integrations/session_start.py` `_INJECTION_NEEDLES` | duplicate-startup refusal (#102) **fails open** — two live handlers count as one |
-| `agent_handoff/legacy.py` canonical-hook probe | `AH-LEGACY-DUPLICATE-HOOK` stops firing |
-| the payload's own `provider-input.schema.json` `version` const | copied from the predecessor; every provider dispatch fails schema validation |
-| `tests/control_plane/test_command_resolution.py` frozen oracle | test-owned copy of the read set diverges |
-| release-consistency doc corpus + `meta/versioning.md` | `PC-RELEASE-PACKAGE-CURRENT` on stale authority docs |
+- the `provider_inputs.py` read set and its oracle in `tests/control_plane/test_command_resolution.py`
+- `_INJECTION_NEEDLES` in `integrations/session_start.py` and the canonical-hook probe in `legacy.py`
+- the payload's own `provider-input.schema.json` version const, and the release-consistency corpus
 
-**Why:** none of these is reachable by the type checker, and only the schema `const` fails loudly. The needle case is the dangerous one: the count-based check degrades to a green report rather than an error, so the safety property disappears silently. Because 1.1 through 1.9 payload bytes are immutable, every fix is a *union* of old and new names, never a substitution — one control plane serves the whole catalog at once.
+**Why:** only the schema const fails loudly. The needle fails *open* — it counts groups whose command contains the launcher name, so a missed rename makes two live handlers count as one and #102's refusal reports green.
 
-**Gotcha:** forking a payload directory copies version literals that are not in `payload.toml`. Grep the new payload for the predecessor's version string before computing digests; `schemas/provider-input.schema.json` and `schemas/migration-report.schema.json` both carry one.
+**Gotcha:** forking a payload copies version literals `payload.toml` does not own. Since 1.1–1.9 bytes are immutable, each fix is a union, never a substitution.
 
 **Sources:** `agent-handoff@1.10`, issues #138, #140.
 
