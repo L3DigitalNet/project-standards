@@ -44,6 +44,7 @@ Route every routine mechanical action through its subcommand instead of a hand-b
 | --- | --- | --- |
 | Create a typed issue | `new` | Issue Type, body content, acceptance criteria, initial field values, whether it duplicates existing work |
 | Update issue field values | `set` | which value each field should carry |
+| Assign or correct an Issue Type on an existing issue | `set` | which of the five Types the work actually is |
 | Apply a terminal transition | `close` | whether the work is Done or Dropped, and the matching close reason |
 | Return an issue to active work | `reopen` | the nonterminal `Workflow` value it returns to |
 | Validate Ready preconditions | `check` | whether to admit the issue to the executable queue |
@@ -69,7 +70,7 @@ Shared flags, each with a working default so ordinary invocations carry no flags
 | `summary` | `[--output human\|json]` | Read-only. Relay the human output verbatim. |
 | `receipt` | `--issue N \| --pr N [--output human\|json]` | Read-only. Exactly one of `--issue` and `--pr`; supplying both or neither is a usage error. |
 | `new` | `--type T --title S [--body-file PATH] [--field Name=Value ...] [--output human\|json]` | Scaffolds the canonical body headings (or takes yours from `--body-file`), applies the `--field` assignments, and prints the creation receipt. Type and every value are validated before anything is created. |
-| `set` | `--issue N --field Name=Value ...` | At least one `--field`; repeat it per field. An invalid value is refused with the valid set and nothing reaches GitHub. A terminal `Workflow` value is refused here — that transition belongs to `close`. |
+| `set` | `--issue N [--type T] [--field Name=Value ...]` | At least one of `--type` and `--field`; repeat `--field` per field. `--type` assigns or corrects the Issue Type, which is the only route for an issue created without one. Type and every value are validated first: an invalid one is refused with the valid set and nothing reaches GitHub. A terminal `Workflow` value is refused here — that transition belongs to `close`. |
 | `close` | `--issue N --as done\|dropped` | Ordered failure-safe terminal pairing: native close reason first, then the `Workflow` value. Partial failure reports the exact divergence; rerunning converges. |
 | `reopen` | `--issue N --workflow VALUE` | Same protocol in reverse; `VALUE` must be nonterminal and is your judgment, so it is required. |
 | `check` | `--issue N [--output human\|json]` | Read-only Ready preconditions, itemized finding by finding. |

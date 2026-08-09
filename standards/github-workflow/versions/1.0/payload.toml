@@ -91,7 +91,7 @@ digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57f
 id = "skill"
 target = ".agents/skills/github-workflow/SKILL.md"
 source = "skills/github-workflow/SKILL.md"
-digest = "sha256:7d302c2fb9b3cf37ca09242e012077198ad4ce3cde1599d4f0036ecec44c4d23"
+digest = "sha256:626dbadffe7cd6747cf246123302843bd8311589a5c7b178a2df033e653efd55"
 policy = "managed"
 
 [[artifacts]]
@@ -106,7 +106,7 @@ when_any = [{ option = "harnesses", contains = "codex" }]
 id = "tool-binary"
 target = ".agents/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:b0a8712d6fe6019794498b5961ae0ca571a000b61eafa1d7f835a387db0f7551"
+digest = "sha256:47c8899a50c9e7f5992017d27715e84c80e79faaa7e0e1761f74735be3105343"
 policy = "managed"
 mode = "0755"
 
