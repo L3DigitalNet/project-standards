@@ -54,9 +54,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
-- [ ] Implement the `github-workflow` package via the [format-3 plan](plans/2026-08-06-github-workflow-package-plan.md) (T1–T11; T1 ready).
+- [ ] Implement the `github-workflow` package via the [format-3 plan](plans/2026-08-06-github-workflow-package-plan.md) (T1–T11).
 
-  SPEC-GHW1 rev 1.2 is the authority; both documents passed two Codex review rounds. Release-train placement stays an owner decision (OQ-001, post-v5.17.0), surfaced again at T11.
+  SPEC-GHW1 rev 1.6 is the authority; both documents passed two Codex review rounds. OQ-001 (release-train placement) is answered: `github-workflow@1.0` ships in v5.17.0 (owner direction, 2026-08-08).
 
 - [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md).
 

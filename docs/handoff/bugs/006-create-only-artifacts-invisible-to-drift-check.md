@@ -8,7 +8,7 @@ status: 'open'
 
 # 006 — Create-only artifacts are invisible to drift-check
 
-**Status:** open. Diagnosed during the ADR 1.4 conformance assessment; tracked as item 1 of issue #128 for v5.17.0.
+**Status:** open. Diagnosed during the ADR 1.4 conformance assessment; tracked as item 1 of issue #128 for v5.18.0.
 
 ## Symptom
 

@@ -42,6 +42,7 @@ related:
 | 1.4 | 2026-08-07 | Claude with owner decision | DR-001 amended: the baseline `org-schema.yaml` adopts the live organization's plain-space forms for the thirteen indexed values of `Priority`, `Change risk`, and `Severity` (`P0 Immediate`, `R1 Low`, `S0 Critical`) in place of the design input's em-dash separators, per owner decision 2026-08-07. The `P`/`R`/`S` index prefixes are retained deliberately: they carry ordering the bare labels do not. A live audit now reports zero mismatches. |
 | 1.5 | 2026-08-07 | Claude, implementation close-out | OQ-002 **Answered**: the frozen stdlib-`flag` CLI surface — nine subcommands, shared `--repo`/`--policy`/`--schema` defaults, and the three-value exit-code contract — is recorded inline in the packaged `SKILL.md`, and GitHub access is REST only. §17.3 completed: all 36 requirement rows Passing with their real proving commands. Live-run evidence recorded: one live read-only `audit` plus a scratch-checkout `ledger` run against the organization. OQ-001 (release placement) deliberately remains Open — an owner decision. |
 | 1.6 | 2026-08-08 | Claude, owner direction | OQ-001 **Answered**: `github-workflow` 1.0 ships in v5.17.0, per owner direction 2026-08-08, which also moves the ADR train (#127/#128) to v5.18.0. |
+| 1.7 | 2026-08-09 | Claude, documentation correction | Align §18.3 deployment trigger with the answered OQ-001 (ships in v5.17.0). |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -564,7 +565,7 @@ Environment matrix: not applicable — one delivery environment (the consumer re
 
 ### 18.3 Deployment Flow
 
-1. Trigger: inclusion in a `project-standards` release train (placement decided by the owner; after v5.17.0).
+1. Trigger: inclusion in the v5.17.0 `project-standards` release train (OQ-001 answered; owner direction 2026-08-08).
 2. CI checks: the repository's standard gate (validators, package-contract tests, coherence, markdown gates) plus the Go gate for the audit tool.
 3. Release per the repository release contract; consumers adopt by selecting the package and reconciling.
 4. Rollback: consumers reselect the prior payload version; the control plane repairs artifacts.

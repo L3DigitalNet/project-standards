@@ -210,10 +210,15 @@ def test_markdown_frontmatter_1_10__identity_references__name_the_successor() ->
             assert fragment in document, (relative, fragment)
 
     # The distributed artifact and skill link into this exact payload directory.
+    #
+    # The permalinks these two ship are fixed `blob/vN.N.N` references, so they
+    # name the release that first carries this payload, not a moving major.
     for relative in ("artifacts/agent-summary.md", "skills/markdown-frontmatter/SKILL.md"):
         document = (_SUCCESSOR / relative).read_text(encoding="utf-8")
         assert "markdown-frontmatter/versions/1.9" not in document
         assert "markdown-frontmatter/versions/1.10" in document
+        assert "/v5.16.0/" not in document
+        assert "/v5.17.0/" in document
 
 
 def test_markdown_frontmatter_1_10__payload_projection__matches_successor() -> None:
