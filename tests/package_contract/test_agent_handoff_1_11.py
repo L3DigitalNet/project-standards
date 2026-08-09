@@ -19,7 +19,6 @@ role here would pin work this commit is not allowed to do.
 
 from __future__ import annotations
 
-import json
 import tomllib
 from pathlib import Path
 from typing import cast
@@ -27,6 +26,7 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
+from tests.package_contract.helpers import assert_schema_identity_pins
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/agent-handoff"
@@ -40,7 +40,10 @@ _SUCCESSOR_CHANGES = frozenset(
         "README.md",
         "adopt.md",
         "payload.toml",
+        # Both identity-bearing schemas: the render envelope and the migration
+        # report. A copied-forward payload has to retitle every const that names it.
         "schemas/provider-input.schema.json",
+        "schemas/migration-report.schema.json",
     }
 )
 
@@ -89,22 +92,23 @@ def test_agent_handoff_1_11__successor__preserves_1_10_and_indexes_complete_payl
         assert migration.to_endpoint.value == "package:1.11"
 
 
-def test_agent_handoff_1_11__provider_input_schema__pins_its_own_payload_identity() -> None:
-    """The render envelope's consts must name the payload that ships them.
+def test_agent_handoff_1_11__payload_schemas__pin_their_own_payload_identity() -> None:
+    """Every schema const that names a payload must name *this* payload.
 
     A successor copies the predecessor's schemas forward, and a copy that keeps the
-    predecessor's `version` const fails closed in `_validate_json_schema` on the first
-    render after the version becomes selectable — the payload is unreachable, not
-    merely mislabelled. Both sides are derived from the manifest so a stale copy is
-    visible at cut time rather than at release prep.
+    predecessor's `version` const fails closed in `_validate_json_schema` — the payload
+    is unreachable, not merely mislabelled. The first cut of this guard read only the
+    render envelope and so missed the migration report, whose stale `1.10` broke every
+    `plan_legacy_migration` call under 1.11 with `provider output violates its declared
+    schema`. Output schemas run through the same validator; the sweep now covers both.
     """
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
-    schema = json.loads(
-        (_SUCCESSOR / "schemas/provider-input.schema.json").read_text(encoding="utf-8")
-    )
+    checked = assert_schema_identity_pins(_SUCCESSOR, manifest)
 
-    assert schema["properties"]["version"]["const"] == manifest.payload.version.value
-    assert schema["properties"]["standard_id"]["const"] == manifest.payload.standard
+    # Both defects this guard was widened for, named explicitly: the render envelope
+    # at the document root, and the migration report's pin nested under `package`.
+    assert "schemas/provider-input.schema.json#/properties" in checked
+    assert "schemas/migration-report.schema.json#/properties/package/properties" in checked
 
 
 def test_agent_handoff_1_11__launcher__reuses_the_1_10_bytes() -> None:

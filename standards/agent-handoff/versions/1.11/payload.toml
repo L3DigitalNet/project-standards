@@ -218,7 +218,7 @@ id = "provider-migration-report"
 role = "provider-resource"
 path = "schemas/migration-report.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:20251644e5d9ebe1223fca892076c04f753cd3821a406d08c77d0410e5bbad6f"
+digest = "sha256:e6db4418b9ebfdc69fb63c47194eacfe70dc583428b73bc5f1985ec68ccace64"
 
 [[artifacts]]
 id = "status"

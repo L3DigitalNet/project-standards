@@ -11,7 +11,6 @@ must not disturb. A hollow fix that widened 1.12 instead of authoring 1.13
 breaks them.
 """
 
-import json
 import os
 import subprocess
 import tomllib
@@ -40,7 +39,12 @@ from project_standards.package_contract.payload import (
     load_payload_manifest,
 )
 from tests.control_plane.planner_helpers import resolution_request
-from tests.package_contract.helpers import ruff_declarations, ruff_source, selects_ruff
+from tests.package_contract.helpers import (
+    assert_schema_identity_pins,
+    ruff_declarations,
+    ruff_source,
+    selects_ruff,
+)
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/python-tooling"
@@ -222,25 +226,22 @@ def test_python_tooling_1_13__released_predecessor__keeps_its_exact_bytes() -> N
 # ---------------------------------------------------------------------------
 
 
-def test_python_tooling_1_13__provider_input_schema__pins_its_own_payload_identity() -> None:
-    """The render envelope's consts must name the payload that ships them.
+def test_python_tooling_1_13__payload_schemas__pin_their_own_payload_identity() -> None:
+    """Every schema const that names a payload must name *this* payload.
 
     A successor copies the predecessor's schemas forward, and a copy that keeps the
     predecessor's `version` const fails closed in `_validate_json_schema` on the first
     render after the version becomes selectable — the payload is unreachable, not
-    merely mislabelled. Both sides are derived from the manifest so a stale copy is
-    visible at cut time rather than at release prep.
+    merely mislabelled. The sweep covers input and output schemas alike, at any depth,
+    because the validator treats them identically; scoping it to the render envelope
+    is what let a stale output-schema const reach release prep once already.
     """
     _require_payload(_V113)
     manifest = load_payload_manifest(_V113 / "payload.toml")
-    schema = cast(
-        "JsonObject",
-        json.loads((_V113 / "schemas/provider-input.schema.json").read_text(encoding="utf-8")),
-    )
-    properties = cast("JsonObject", schema["properties"])
 
-    assert cast("JsonObject", properties["version"])["const"] == manifest.payload.version.value
-    assert cast("JsonObject", properties["standard_id"])["const"] == manifest.payload.standard
+    assert "schemas/provider-input.schema.json#/properties" in assert_schema_identity_pins(
+        _V113, manifest
+    )
 
 
 def test_python_tooling_1_13__option_schema__declares_a_closed_glob_to_rule_map() -> None:

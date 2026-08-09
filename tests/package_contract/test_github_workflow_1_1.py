@@ -28,7 +28,6 @@ so 1.1 is an unadvertised repository payload until then.
 
 from __future__ import annotations
 
-import json
 import tomllib
 from pathlib import Path
 
@@ -38,6 +37,7 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
+from tests.package_contract.helpers import assert_schema_identity_pins
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/github-workflow"
@@ -103,22 +103,21 @@ def test_github_workflow_1_1__successor__preserves_1_0_and_indexes_complete_payl
     assert indexed["1.0"].digest.value == _PREDECESSOR_DIGEST
 
 
-def test_github_workflow_1_1__provider_input_schema__pins_its_own_payload_identity() -> None:
-    """The render envelope's consts must name the payload that ships them.
+def test_github_workflow_1_1__payload_schemas__pin_their_own_payload_identity() -> None:
+    """Every schema const that names a payload must name *this* payload.
 
     A successor copies the predecessor's schemas forward, and a copy that keeps the
     predecessor's `version` const fails closed in `_validate_json_schema` on the first
     render after the version becomes selectable — the payload is unreachable, not
-    merely mislabelled. Both sides are derived from the manifest so a stale copy is
-    visible at cut time rather than at release prep.
+    merely mislabelled. The sweep covers input and output schemas alike, at any depth,
+    because the validator treats them identically; scoping it to the render envelope
+    is what let a stale output-schema const reach release prep once already.
     """
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
-    schema = json.loads(
-        (_SUCCESSOR / "schemas/provider-input.schema.json").read_text(encoding="utf-8")
-    )
 
-    assert schema["properties"]["version"]["const"] == manifest.payload.version.value
-    assert schema["properties"]["standard_id"]["const"] == manifest.payload.standard
+    assert "schemas/provider-input.schema.json#/properties" in assert_schema_identity_pins(
+        _SUCCESSOR, manifest
+    )
 
 
 def test_github_workflow_1_1__delivery_surface__is_unchanged_from_1_0() -> None:

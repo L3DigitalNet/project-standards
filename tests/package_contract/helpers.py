@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import shutil
 import tomllib
@@ -140,6 +141,75 @@ def ruff_source(render: ScopeRenderer, manifest: PayloadManifest, config: JsonOb
     return compose_toml(
         [render(declaration.scope) for declaration in ruff_declarations(manifest, config)]
     )
+
+
+def _walk_identity_pins(node: object, pointer: str, found: list[tuple[str, str, object]]) -> None:
+    """Collect every `properties` map that pins `standard_id` to a constant.
+
+    The pin is a JSON Schema subschema, so it can sit at any depth: the render
+    envelopes pin at the document root, while the migration report pins inside a
+    nested `package` object. Keying on `standard_id`-with-`const` rather than on a
+    fixed path is what makes the two shapes one rule. `schema_version` is a
+    different axis — the envelope's own format version — and is never a sibling of
+    a `standard_id` const, so it is exempt by construction rather than by exclusion.
+    """
+    if isinstance(node, list):
+        for index, item in enumerate(cast("list[object]", node)):
+            _walk_identity_pins(item, f"{pointer}/{index}", found)
+        return
+    if not isinstance(node, dict):
+        return
+    mapping = cast("dict[str, object]", node)
+    properties = mapping.get("properties")
+    if isinstance(properties, dict):
+        subschemas = cast("dict[str, object]", properties)
+        standard_id = subschemas.get("standard_id")
+        if isinstance(standard_id, dict) and "const" in cast("dict[str, object]", standard_id):
+            found.append(
+                (
+                    f"{pointer}/properties",
+                    cast("str", cast("dict[str, object]", standard_id)["const"]),
+                    subschemas.get("version"),
+                )
+            )
+    for key, value in mapping.items():
+        _walk_identity_pins(value, f"{pointer}/{key}", found)
+
+
+def assert_schema_identity_pins(payload_root: Path, manifest: PayloadManifest) -> list[str]:
+    """Assert every declared JSON schema that pins an identity names its own payload.
+
+    A successor is cut by copying the predecessor's payload forward, so any schema
+    carrying the predecessor's `version` const is unreachable rather than merely
+    mislabelled: `_validate_json_schema` fails closed the first time the version is
+    selected. Restricting the check to the provider *input* schema left the failure
+    class alive on every other schema in the payload — the output schemas are
+    validated by the same code path and break the same way, one provider deeper.
+    Iterating the manifest's own JSON resources means a schema added to a later cut
+    is covered without anyone remembering to extend this guard.
+
+    Returns the pointers checked so a caller can assert the guard had a corpus.
+    """
+    checked: list[str] = []
+    for resource in manifest.resources:
+        relative = resource.path.normalized.as_posix()
+        if not relative.endswith(".json"):
+            continue
+        document = cast(
+            "object",
+            json.loads((payload_root / relative).read_text(encoding="utf-8")),
+        )
+        pins: list[tuple[str, str, object]] = []
+        _walk_identity_pins(document, "", pins)
+        for pointer, standard_id, version in pins:
+            location = f"{relative}#{pointer}"
+            assert standard_id == manifest.payload.standard, location
+            assert isinstance(version, dict), f"{location} pins standard_id without a version"
+            assert cast("dict[str, object]", version).get("const") == (
+                manifest.payload.version.value
+            ), location
+            checked.append(location)
+    return checked
 
 
 def ruff_value(render: ScopeRenderer, manifest: PayloadManifest, config: JsonObject) -> JsonObject:
