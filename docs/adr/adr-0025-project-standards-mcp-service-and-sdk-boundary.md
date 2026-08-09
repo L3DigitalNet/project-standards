@@ -6,8 +6,8 @@ description: 'Freezes the exact official MCP SDK dependency, the one-way adapter
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-28'
-updated: '2026-07-31'
-reviewed: '2026-07-31'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -23,6 +23,7 @@ related:
   - 'docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md'
   - 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
   - 'docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md'
+  - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
   - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
   - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
@@ -38,6 +39,8 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends: []
+  amended_by: []
 ---
 
 # ADR 0025: MCP Service and SDK Boundary
@@ -77,6 +80,8 @@ Chosen option: **depend on the official `mcp` Python SDK at an exact stable pin,
 The repository depends on the official `mcp` Python SDK with the exact pin `mcp==2.0.0`, declared in the main runtime dependency group of `pyproject.toml`: the PEP 621 `[project].dependencies` array, **not** the PEP 735 `[dependency-groups]` table and not an optional extra. The licence is MIT and has been reviewed. Prereleases of the SDK are prohibited, and no alternative or vendored protocol implementation is permitted.
 
 The owner recorded approval on 2026-07-28, so the pin is declared in `pyproject.toml` as well as in this record and the evidence matrix.
+
+The frozen facade below keeps the property [ADR 0005](adr-0005-stable-generic-agent-tooling-interface.md) protected: every facade method is generic over standard identity and version, so the service surface does not grow when the catalog gains a standard. ADR 0005 constrains growth **per standard**; it does not require one entry point per provider operation, so naming specific methods here is not a departure from it and needs no exception to it.
 
 ### Adapter direction and import boundary
 
@@ -173,6 +178,7 @@ An IPC-cleanup test asserts that after each of the four completion paths — suc
 - Evidence register: [`2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md`](../research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md)
 - Transport, scope, and registry decision: [`adr-0026-project-standards-mcp-local-read-only-transport.md`](adr-0026-project-standards-mcp-local-read-only-transport.md)
 - Sequencing precedent: [`adr-0012-mcp-readiness-before-server-implementation.md`](adr-0012-mcp-readiness-before-server-implementation.md)
+- Generic tool-surface constraint this facade satisfies: [`adr-0005-stable-generic-agent-tooling-interface.md`](adr-0005-stable-generic-agent-tooling-interface.md)
 - Dispatcher and control-plane authority: [`adr-0023-unified-consumer-standards-control-plane.md`](adr-0023-unified-consumer-standards-control-plane.md)
 - Server contract: [`SPEC-MS01`](../specs/2026-07-07-project-standards-mcp-server-implementation-spec.md)
 - Operator reference: [`docs/mcp-server.md`](../mcp-server.md)

@@ -6,8 +6,8 @@ description: 'Records the decision that standard package lifecycle changes are g
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-18'
-reviewed: '2026-07-18'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -51,13 +51,20 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends:
+    - 'adr-0002-project-standards-manifest-first-standard-discovery'
+  amended_by:
+    - 'adr-0023-project-standards-unified-consumer-standards-control-plane'
+    - 'adr-0024-project-standards-catalog-scoped-package-version-channels'
 ---
 
 # ADR 0018: Standard Package Lifecycle Methodology
 
 MADR status: **accepted**.
 
-> **Amended by ADRs 0023 and 0024.** The lifecycle principles in this ADR remain active, but Catalog 5/V2 supersedes the original copy-adopt and adoption-mode mechanics. Package-family lifecycle (`draft`, `active`, `deprecated`, and related states) remains distinct from per-release catalog channels. Immutable payload availability and catalog role govern current consumer exposure.
+> **Amended by ADR 0023 (2026-07-10) and ADR 0024 (2026-07-10).** The lifecycle principles in this ADR remain active, but Catalog 5/V2 supersedes the original copy-adopt and adoption-mode mechanics. Package-family lifecycle (`draft`, `active`, `deprecated`, and related states) remains distinct from per-release catalog channels. Immutable payload availability and catalog role govern current consumer exposure.
+>
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, finding O2).** The escalation clause is restated to distinguish an **exception** — an in-population package permitted to depart from the lifecycle contract — from an **out-of-scope case**, which this record never governed and which needs no waiver. An amendment threshold is stated on the form [ADR 0027](adr-0027-adopt-go-alongside-python-with-neutral-tooling.md) uses. The lifecycle states, the transition checklist, and the surfaces that must agree are unchanged.
 
 ## Context and Problem Statement
 
@@ -110,6 +117,8 @@ Lifecycle state and catalog availability are related but separate. A family may 
 `active` consumer-facing standards must satisfy ADR 0023 and SPEC-BA02. ADR 0017 remains historical context for the superseded V1 adoption model. A `deprecated`, `archived`, or `superseded` standard may keep documentation and historical resources, but must not be surfaced as a recommended default. A `superseded` standard must name its successor through machine-readable relationships where the schema supports it and through human-readable migration guidance.
 
 Exceptions to this lifecycle methodology require an ADR. A one-off README note or TODO item is not enough when a package deliberately diverges from the lifecycle contract.
+
+That requirement applies only to an **exception**: a standard package family within this population that is permitted to depart from the lifecycle contract. It does not apply to a case this record never governed. An artifact that is not a standard package family, a repository that merely adopts these standards, and a release-classification question owned by [ADR 0024](adr-0024-catalog-scoped-package-version-channels.md) are all out of scope here, and none of them needs an exception, waiver, or superseding ADR under this record. Adding a lifecycle state, changing what a state means for consumer exposure, or changing which surfaces a transition must update is an amendment to this record; correcting the wording of a surface in the checklist, or adding a surface that follows from an existing rule, is ordinary reviewed maintenance and requires none.
 
 ### Consequences
 

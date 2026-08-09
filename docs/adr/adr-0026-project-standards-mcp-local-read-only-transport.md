@@ -6,8 +6,8 @@ description: 'Freezes the v1 local stdio read-only scope, CLI form, resource URI
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-28'
-updated: '2026-07-31'
-reviewed: '2026-07-31'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -23,6 +23,7 @@ related:
   - 'docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md'
   - 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
   - 'docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md'
+  - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
   - 'docs/adr/adr-0010-standard-resource-uris-and-index.md'
   - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
@@ -41,11 +42,21 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends: []
+  amended_by: []
 ---
 
 # ADR 0026: MCP Local Read-Only Transport
 
 MADR status: **accepted** (2026-07-28; owner approval recorded in the T1 session for the owner-owned decisions). This decision record was prepared at the `SPEC-RD01` Step 09 gate. The owner recorded approval on 2026-07-28, so the whole record is in force and binding on an implementer — not merely the CLI form and the generic-dispatch disposition, but equally the resource URI grammar, the root rules, the capability semantics, the adapter configuration, and the tool and prompt registry. The named owner questions inside it are `SPEC-MS01 OQ-002` (CLI form) and `SPEC-MS01 OQ-007` (generic dispatch tool).
+
+> **Amended 2026-07-29 (T5 RED review, finding F6).** The frozen instructions text becomes binding at the plan task that completes the six-tool registry it describes; until then the server serves a static, era-stable string that must stay truthful for its phase. See [Amendments](#amendments).
+>
+> **Amended 2026-07-30 (T9 RED review, finding F2).** The frozen instructions text binds per session registry, so the string never names a tool the session does not register. See [Amendments](#amendments).
+>
+> **Amended 2026-07-30 (T10 RED review, finding F3; record queued at the T3, T5, and T6 close-out harvests).** The v1 error taxonomy and its per-revision JSON-RPC wire mapping are frozen as enumerated below. See [Amendments](#amendments).
+>
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings §4 and C4).** The three amendments above were previously inline paragraphs inside `### Frozen adapter configuration`; their text is unchanged and now lives under [Amendments](#amendments), so a reader meets them before the decision text as the amendment form requires. The outcome also records why the omitted generic provider-dispatch tool is consistent with [ADR 0005](adr-0005-stable-generic-agent-tooling-interface.md) rather than a departure from it. No frozen commitment changes.
 
 ## Context and Problem Statement
 
@@ -147,6 +158,8 @@ These declarations are accurate under `2026-07-28` and under every earlier revis
 
 A generic provider-dispatch tool is **omitted** from v1. `McpServiceFacade.invoke_read_provider` remains facade-internal and is reached only through `validate_repo` and `drift_check`. This is the recorded disposition of `SPEC-MS01 OQ-007`; owner approval was recorded on 2026-07-28.
 
+That omission is consistent with [ADR 0005](adr-0005-stable-generic-agent-tooling-interface.md) rather than a departure from it, and needs no exception to it. ADR 0005 rejected **a tool per standard**, because that surface grows linearly with the catalog. The registry frozen above is six tools regardless of how many standards the catalog carries: `standards_list` and `standard_read` take the standard and version as parameters, which is exactly the property ADR 0005 protected. Declining a generic dispatch tool constrains a different axis — one entry point per provider **operation** — which ADR 0005 never governed.
+
 Prompts are registered only from declared prompt-role resources. The server invents no prompts of its own.
 
 ### Frozen adapter configuration
@@ -161,12 +174,6 @@ Prompts are registered only from declared prompt-role resources. The server inve
 
 > Project Standards is a read-only, local standards server. It exposes the installed Catalog 5 standard packages and reports on a consumer repository; it never writes to any repository. Standard content is addressed under the `standards://` URI scheme as `standards://catalog/{catalog_major}`, `standards://{standard_id}/{version}`, and `standards://{standard_id}/{version}/resources/{resource_id}`, using ids and versions exactly as the installed catalog declares them. Six tools are available: `standards_list`, `standard_read`, `repo_inspect`, `reconcile_preview`, `validate_repo`, and `drift_check`. Every repository-scoped tool requires an explicit `repo_root` argument; the server does not infer the repository from the working directory or from client roots.
 
-Amendment (2026-07-29, from the T5 RED review, finding F6): the frozen draft text above becomes binding at the implementation-plan task that completes the six-tool registry it describes (T9) and is pinned verbatim by the T10 contract suite. Until that registry exists, the server serves a static, era-stable instructions string that must stay truthful for its phase: it must not name tools, prompts, or URIs that are not registered. This phase rule resolves the conflict between the frozen text and the plan's T5 empty-registry boundary without weakening either.
-
-Amendment (2026-07-30, from the T9 RED review, finding F2): the frozen text binds per session registry. A server process whose recorded client matrix registers all six tools serves the six-tool text; a process whose matrix omits the `standard_read` fallback serves the same text with the tool enumeration reduced to its actual registry — the count word and the enumeration shrink, nothing else changes — so the instructions never name a tool the session does not register. The string remains static and non-tunable: it is fixed at process construction from the T1 evidence matrix, which is recorded evidence rather than configuration. The T10 contract suite pins each rendering the matrix can produce. This keeps the truthfulness rule — name nothing unregistered, deny nothing registered, promise nothing unimplemented — true in every configuration.
-
-Amendment (2026-07-30, from the T10 RED review, finding F3; record queued at the T3, T5, and T6 close-out harvests): the v1 error taxonomy and its per-revision JSON-RPC mapping are frozen. The stable `ServiceError` code strings in service and adapter use are exactly `catalog-invalid`, `catalog-not-found`, `consumer-services-unavailable`, `control-plane-busy`, `control-plane-unavailable`, `installed-distribution-invalid`, `internal-error`, `prompt-derivation-unavailable`, `provider-cancelled`, `provider-effect-refused`, `provider-frame-invalid`, `provider-input-invalid`, `provider-invocation-failed`, `provider-not-found`, `provider-not-selected`, `provider-operation-refused`, `provider-result-invalid`, `provider-result-too-large`, `provider-timeout`, `provider-worker-failed`, `provider-worker-unavailable`, `reconciliation-unavailable`, `repo-root-invalid`, `repo-root-out-of-bounds`, `resource-integrity`, `resource-not-found`, `resource-registration-invalid`, `resource-uri-invalid`, `root-boundary-invalid`, `standard-not-found`, `tool-arguments-invalid`, and `tool-not-found` (inventory corrected 2026-07-30 at T10 GREEN, finding F1: the initial enumeration missed nine pre-existing provider and repository codes; `internal-error` was minted at T10 GREEN for the unexpected-handler class under the additive clause below and is ratified here); adding a code is a reviewed additive change, while renaming or removing one breaks this record. The wire mapping has three classes and only one revision-dependent member: the transport's declared server-fault set (`resource-integrity`, `catalog-invalid`) answers `-32603` under every revision; the not-found set (`catalog-not-found`, `standard-not-found`, `resource-not-found`) answers `-32002` under the pre-2026 revisions that define that code and `-32602` under `2026-07-28`; every other refusal answers `-32602` under every revision. A refusal carries the service's own message with the published `code`, `severity`, `remediation`, and optional identity fields in `error.data` — nothing invented, nothing dropped — and is delivered as a JSON-RPC error, never as a successful `isError` result. An unexpected handler exception is mapped by the adapter to a structured `-32603` refusal in both eras; the SDK's generic path (classic `code: 0` carrying raw exception text, modern `-32603` with no `data`) is never served, and raw exception text never reaches the wire.
-
 ### Consequences
 
 - Good, because the v1 surface is provable end to end on both installed clients with no client-specific code path.
@@ -180,6 +187,14 @@ Amendment (2026-07-30, from the T10 RED review, finding F3; record queued at the
 ### Confirmation
 
 Contract tests assert the declared capability set equals the registration set, that `subscribe` is absent, that `listChanged` is false on all three of the resources, tools, and prompts capabilities, and that prompts are declared only when prompt-role resources exist. Further contract tests pin the server name, the instructions string, and the absence of any non-protocol output on `stdout`. Parametrized tests cover URI canonicalization, rejection of non-canonical and undeclared URIs, rejection of the three-segment index form, and root containment including symlinked and out-of-bounds inputs. Security tests assert that no registered tool writes to the repository. The client smoke matrix exercises the registry against Claude Code and Codex CLI from an installed wheel.
+
+### Amendments
+
+**Amended 2026-07-29 (T5 RED review, finding F6).** The frozen draft text above becomes binding at the implementation-plan task that completes the six-tool registry it describes (T9) and is pinned verbatim by the T10 contract suite. Until that registry exists, the server serves a static, era-stable instructions string that must stay truthful for its phase: it must not name tools, prompts, or URIs that are not registered. This phase rule resolves the conflict between the frozen text and the plan's T5 empty-registry boundary without weakening either.
+
+**Amended 2026-07-30 (T9 RED review, finding F2).** The frozen text binds per session registry. A server process whose recorded client matrix registers all six tools serves the six-tool text; a process whose matrix omits the `standard_read` fallback serves the same text with the tool enumeration reduced to its actual registry — the count word and the enumeration shrink, nothing else changes — so the instructions never name a tool the session does not register. The string remains static and non-tunable: it is fixed at process construction from the T1 evidence matrix, which is recorded evidence rather than configuration. The T10 contract suite pins each rendering the matrix can produce. This keeps the truthfulness rule — name nothing unregistered, deny nothing registered, promise nothing unimplemented — true in every configuration.
+
+**Amended 2026-07-30 (T10 RED review, finding F3; record queued at the T3, T5, and T6 close-out harvests).** The v1 error taxonomy and its per-revision JSON-RPC mapping are frozen. The stable `ServiceError` code strings in service and adapter use are exactly `catalog-invalid`, `catalog-not-found`, `consumer-services-unavailable`, `control-plane-busy`, `control-plane-unavailable`, `installed-distribution-invalid`, `internal-error`, `prompt-derivation-unavailable`, `provider-cancelled`, `provider-effect-refused`, `provider-frame-invalid`, `provider-input-invalid`, `provider-invocation-failed`, `provider-not-found`, `provider-not-selected`, `provider-operation-refused`, `provider-result-invalid`, `provider-result-too-large`, `provider-timeout`, `provider-worker-failed`, `provider-worker-unavailable`, `reconciliation-unavailable`, `repo-root-invalid`, `repo-root-out-of-bounds`, `resource-integrity`, `resource-not-found`, `resource-registration-invalid`, `resource-uri-invalid`, `root-boundary-invalid`, `standard-not-found`, `tool-arguments-invalid`, and `tool-not-found` (inventory corrected 2026-07-30 at T10 GREEN, finding F1: the initial enumeration missed nine pre-existing provider and repository codes; `internal-error` was minted at T10 GREEN for the unexpected-handler class under the additive clause below and is ratified here); adding a code is a reviewed additive change, while renaming or removing one breaks this record. The wire mapping has three classes and only one revision-dependent member: the transport's declared server-fault set (`resource-integrity`, `catalog-invalid`) answers `-32603` under every revision; the not-found set (`catalog-not-found`, `standard-not-found`, `resource-not-found`) answers `-32002` under the pre-2026 revisions that define that code and `-32602` under `2026-07-28`; every other refusal answers `-32602` under every revision. A refusal carries the service's own message with the published `code`, `severity`, `remediation`, and optional identity fields in `error.data` — nothing invented, nothing dropped — and is delivered as a JSON-RPC error, never as a successful `isError` result. An unexpected handler exception is mapped by the adapter to a structured `-32603` refusal in both eras; the SDK's generic path (classic `code: 0` carrying raw exception text, modern `-32603` with no `data`) is never served, and raw exception text never reaches the wire.
 
 ## Pros and Cons of the Options
 

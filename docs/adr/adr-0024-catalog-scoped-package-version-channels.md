@@ -6,8 +6,8 @@ description: 'Defines non-breaking catalog defaults, opt-in breaking package can
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-10'
-updated: '2026-08-01'
-reviewed: '2026-08-01'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -21,10 +21,13 @@ aliases:
 related:
   - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
   - 'meta/versioning.md'
+  - 'docs/adr/adr-0002-manifest-first-standard-discovery.md'
   - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
+  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
 supersedes:
   - 'adr-0020-project-standards-standard-package-versioning-methodology'
 superseded_by: null
@@ -39,11 +42,18 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends:
+    - 'adr-0002-project-standards-manifest-first-standard-discovery'
+    - 'adr-0018-project-standards-standard-package-lifecycle-methodology'
+    - 'adr-0019-project-standards-packaged-artifact-parity-and-provenance'
+  amended_by: []
 ---
 
 # ADR 0024: Catalog-Scoped Package Version Channels
 
 MADR status: **accepted**.
+
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, finding C5).** The three amendments this record makes to earlier active decisions are now recorded reciprocally in `project.amends`: it narrows [ADR 0002](adr-0002-manifest-first-standard-discovery.md) by holding permanent per-release advertisement centrally rather than per family, and it carries the catalog-channel half of the lifecycle and provenance amendments already banner-noted on [ADR 0018](adr-0018-standard-package-lifecycle-methodology.md) and [ADR 0019](adr-0019-packaged-artifact-parity-and-provenance.md). Nothing this record decided changes.
 
 ## Context and Problem Statement
 

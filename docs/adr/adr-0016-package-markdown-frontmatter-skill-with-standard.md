@@ -6,8 +6,8 @@ description: 'Records the decision that the Markdown Frontmatter Standard owns a
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-18'
-reviewed: '2026-07-18'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -44,13 +44,21 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends: []
+  amended_by:
+    - 'adr-0021-project-standards-standard-packaged-skill-installation-methodology'
+    - 'adr-0023-project-standards-unified-consumer-standards-control-plane'
 ---
 
 # ADR 0016: Package Markdown Frontmatter Skill with Standard
 
 MADR status: **accepted**.
 
-> **Amended by ADR 0023.** The Markdown Frontmatter package remains the skill's canonical owner and `.agents/skills/markdown-frontmatter/` remains its consumer destination. Selection, installation, payload provenance, drift, update, and removal move from package-specific adoption behavior to the unified control plane and central lock.
+> **Amended by ADR 0021 (2026-07-09).** This record is the **special case** ADR 0021 generalizes. ADR 0021 decides installation destination and the global-install prohibition for skills shipped by standard packages **as a class**, and its class rules now carry those parts of this decision for this skill as well. What remains in force here is the ownership decision: the Markdown Frontmatter package, not `agent-configs`, owns the skill. A future change to the class rule in ADR 0021 moves this skill with it; this record must not be read as pinning the old destination rule for one skill.
+>
+> **Amended by ADR 0023 (2026-07-10).** The Markdown Frontmatter package remains the skill's canonical owner and `.agents/skills/markdown-frontmatter/` remains its consumer destination. Selection, installation, payload provenance, drift, update, and removal move from package-specific adoption behavior to the unified control plane and central lock.
+>
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings O1, O4, and B4).** The consumer-repository validation-scope sentence in the outcome is narrowed to the population this record can bind — the installed skill's own path — and scope authority for a consumer's managed Markdown corpus is deferred to that consumer's configuration, with [ADR 0021](adr-0021-standard-packaged-skill-installation-methodology.md) stating the class rule. The ownership decision is unchanged.
 
 ## Context and Problem Statement
 
@@ -74,7 +82,9 @@ The canonical source lives under `standards/markdown-frontmatter/versions/1.2/sk
 
 The `.agents/` destination is intentional: both Claude Code and Codex CLI can discover repo-local shared skills there. The consuming repo must keep `.agents/**` excluded from managed-document frontmatter validation, because the skill's `SKILL.md` carries agent-skill metadata, not this standard's document metadata.
 
-The old `agent-configs` copy is retired. Historical logs may still mention it, but `agent-configs` no longer owns, tests, inventories, or deploys this skill.
+The exclusion this record binds is exactly the path it installs — `.agents/skills/markdown-frontmatter/` — and the reason is that the installed `SKILL.md` is agent-harness metadata rather than a managed project document. The class rule for every standard-packaged skill is stated by [ADR 0021](adr-0021-standard-packaged-skill-installation-methodology.md); the managed Markdown corpus of a consuming repository is that consumer's own configuration decision, which this record neither sets nor widens. A consumer document outside the installed skill path is outside this decision and requires no exception to it.
+
+The old `agent-configs` copy is retired. Historical logs may still mention it, but `agent-configs` no longer owns, tests, inventories, or deploys this skill. That statement records the disposition of the copy this decision replaced; it is not a rule this record imposes on another repository's future contents.
 
 ### Consequences
 

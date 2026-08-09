@@ -6,8 +6,8 @@ description: 'Records the decision that skills shipped by standard packages inst
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-18'
-reviewed: '2026-07-18'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -33,6 +33,7 @@ related:
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
+  - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
 supersedes: []
 superseded_by: null
@@ -59,13 +60,19 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends:
+    - 'adr-0016-project-standards-package-markdown-frontmatter-skill-with-standard'
+  amended_by:
+    - 'adr-0023-project-standards-unified-consumer-standards-control-plane'
 ---
 
 # ADR 0021: Standard-Packaged Skill Installation Methodology
 
 MADR status: **accepted**.
 
-> **Amended by ADR 0023.** The project-local `.agents/skills/<skill-id>/` destination and standard ownership remain in force. The unified control plane becomes the installation entry point, and the central lock owns applied provenance, drift, update, shared references, and safe removal instead of package-specific adoption state.
+> **Amended by ADR 0023 (2026-07-10).** The project-local `.agents/skills/<skill-id>/` destination and standard ownership remain in force. The unified control plane becomes the installation entry point, and the central lock owns applied provenance, drift, update, shared references, and safe removal instead of package-specific adoption state.
+>
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings O1, O2, O3, and O4).** Three narrowings and no new authority. The validation-exclusion rule loses its open-ended "or other standards" tail and now binds only the paths this record declares. The escalation clause distinguishes an in-population exception from an out-of-scope case. The outcome states explicitly that this record reserves `.agents/skills/` only and does not own the `.agents/` root. This record is also the class rule that generalizes [ADR 0016](adr-0016-package-markdown-frontmatter-skill-with-standard.md); that relationship is now recorded on both records.
 
 ## Context and Problem Statement
 
@@ -101,13 +108,19 @@ Standard adoption tooling must not install standard-packaged skills into user-gl
 
 If a future supported agent requires a different project-local skill path, that destination may be added only when it remains inside the consumer repository or project and is declared explicitly in the selected payload manifest. The policy is project-local installation, not one hard-coded directory name forever.
 
+This record reserves `.agents/skills/` and nothing more. It does not own the `.agents/` root: it does not decide who creates that directory, what else may live directly under it, whether a future artifact class may claim a sibling subtree such as `.agents/<something-new>/`, or who adjudicates two packages wanting the same subtree. [ADR 0022](adr-0022-standard-packaged-hook-installation-methodology.md) reserves `.agents/hooks/` on the same terms. Ownership of the root itself is **reserved authority**: it is undecided, it requires its own decision record before any package claims a new subtree, and until then a new artifact class is governed by neither this record nor ADR 0022.
+
 The standard package remains the canonical owner of the skill. Under Catalog 5, a standard-owned skill lives under `standards/<id>/versions/<version>/skills/<skill-id>/`; the version's `payload.toml` declares its source, digest, policy, and project-local destination. The symlink-only `src/project_standards/payloads/<id>/<version>/` projection carries those canonical bytes into built distributions and must pass projection and package-parity checks. Historical V1 copies under unversioned family roots or `src/project_standards/bundles/<id>/` remain migration evidence only and do not define the current package.
 
 Installed skills are agent harness artifacts, not managed project documents. A consumer repository must exclude installed skill paths from managed Markdown frontmatter validation, formatting, linting, type checking, or other standards when those tools would interpret the skill files as ordinary project content. The adopting standard may seed those exclusions when needed.
 
+That requirement binds exactly the installed skill paths this record declares. It is not a rule about the consumer's managed corpus generally: which other paths a consumer governs, and under which standards, is the consumer's own configuration decision. A standard this record does not name is not bound by it, and a consumer document outside an installed skill path requires no exception here.
+
 Global or home-level skill installation may still exist as a separate workstation convenience. That operation must be opt-in, documented outside the standard adoption path, and never required for a repository to comply with a standard. A global copy must not be treated as the source of truth for a standard-packaged skill.
 
 Graph validation, payload-manifest validation, projection checks, and package tests should enforce this boundary where possible. A standard package that declares a skill artifact with a global destination is invalid unless a later ADR creates a narrow exception.
+
+That exception path exists for an **in-population** case: a standard-packaged skill that must, for a stated reason, install somewhere this record prohibits. It is not required for a case this record never governed. A skill that no standard package ships, a personal global skill a user maintains outside standard adoption, and an artifact that is not a skill are all out of scope, and none of them needs an ADR, exception, or waiver under this record. Changing the project-local policy, the declared destination form, or the global-installation prohibition is an amendment to this record; adding a project-local destination for a newly supported agent under the rule already stated above is ordinary reviewed work and requires none.
 
 ### Consequences
 

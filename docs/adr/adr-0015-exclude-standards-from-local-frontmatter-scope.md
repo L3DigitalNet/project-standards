@@ -6,8 +6,8 @@ description: 'Records the decision to exclude standards/** from project-standard
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-18'
-reviewed: '2026-07-18'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -38,13 +38,16 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends: []
+  amended_by:
+    - 'adr-0023-project-standards-unified-consumer-standards-control-plane'
 ---
 
 # ADR 0015: Exclude Standards from Local Frontmatter Scope
 
 MADR status: **accepted**.
 
-> **Amended by ADR 0023.** The published `standards/**` exclusion remains in force. Package-managed resources under `.standards/packages/**` are also outside ordinary consumer-managed Markdown policy unless a package explicitly declares a document as consumer-owned input. `.standards/config.toml` is the current scope authority.
+> **Amended by ADR 0023 (2026-07-10).** The published `standards/**` exclusion remains in force. Package-managed resources under `.standards/packages/**` are also outside ordinary consumer-managed Markdown policy unless a package explicitly declares a document as consumer-owned input. `.standards/config.toml` is the current scope authority.
 
 ## Context and Problem Statement
 

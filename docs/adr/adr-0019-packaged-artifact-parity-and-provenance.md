@@ -6,8 +6,8 @@ description: 'Records the decision that standard package artifacts must declare 
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-18'
-reviewed: '2026-07-18'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -50,13 +50,19 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends: []
+  amended_by:
+    - 'adr-0023-project-standards-unified-consumer-standards-control-plane'
+    - 'adr-0024-project-standards-catalog-scoped-package-version-channels'
 ---
 
 # ADR 0019: Packaged Artifact Parity and Provenance
 
 MADR status: **accepted**.
 
-> **Amended by ADRs 0023 and 0024.** Provenance now applies to each immutable versioned payload and to semantic units recorded in the central consumer lock. The lock replaces package-specific provenance locks. Explicitly referenced consumer inputs carry path and digest evidence without transferring managed ownership.
+> **Amended by ADR 0023 (2026-07-10) and ADR 0024 (2026-07-10).** Provenance now applies to each immutable versioned payload and to semantic units recorded in the central consumer lock. The lock replaces package-specific provenance locks. Explicitly referenced consumer inputs carry path and digest evidence without transferring managed ownership.
+>
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, finding O2).** The escalation clause is restated to distinguish an in-population **exception** from an **out-of-scope case** that needs no waiver, and an amendment threshold is stated. The manifest-backed exception form this record introduced is deliberately kept, because it is the only escalation in the corpus that graph validation can surface. The four provenance classes and their required proofs are unchanged.
 
 ## Context and Problem Statement
 
@@ -105,7 +111,9 @@ The versioned `payload.toml` declares what the control plane can materialize int
 
 When ownership of an artifact moves into a standard package, the old source copy must be retired or converted into a documented consumer mirror. Parallel unsynchronized source copies are drift, even if they are temporarily identical.
 
-Exceptions to this provenance methodology require an ADR or an explicit manifest-backed exception that graph validation can surface. A one-off comment is not enough for a durable package artifact.
+Exceptions to this provenance methodology require an ADR or an explicit manifest-backed exception that graph validation can surface. A one-off comment is not enough for a durable package artifact. The manifest-backed form is preferred over an ADR wherever it fits, because it is the only escalation here that a machine can report.
+
+That requirement applies only to an **exception**: a reusable standard artifact within this population that is permitted to depart from its declared provenance class. It does not apply to a case this record never governed. A file that is not a reusable standard artifact, a consumer-owned file the control plane preserves without claiming, and build scratch or generated output that no manifest declares are all out of scope, and none of them needs an exception, waiver, or superseding ADR under this record. Adding a provenance class, changing what proof a class requires, or removing the one-declared-source rule is an amendment to this record; declaring a new artifact under an existing class, or adding a test that enforces an existing proof, is ordinary reviewed work and requires none.
 
 ### Consequences
 

@@ -6,8 +6,8 @@ description: 'Establishes one neutral .standards control plane with explicit rec
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-10'
-updated: '2026-07-19'
-reviewed: '2026-07-12'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -26,11 +26,18 @@ related:
   - 'docs/adr/adr-0006-standard-provider-plugin-model.md'
   - 'docs/adr/adr-0008-consumer-config-namespace-registry.md'
   - 'docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md'
+  - 'docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md'
+  - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
+  - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
+  - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
   - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
   - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
+  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+  - 'docs/adr/adr-0028-create-only-artifact-refresh.md'
   - 'docs/research/2026-07-12-python-tooling-consumer-owned-workflow-migration.md'
 supersedes:
   - 'adr-0003-project-standards-separate-standard-and-artifact-manifests'
@@ -49,11 +56,23 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends:
+    - 'adr-0006-project-standards-standard-provider-plugin-model'
+    - 'adr-0014-project-standards-markdown-frontmatter-field-value-policy'
+    - 'adr-0015-project-standards-exclude-standards-from-local-frontmatter-scope'
+    - 'adr-0016-project-standards-package-markdown-frontmatter-skill-with-standard'
+    - 'adr-0018-project-standards-standard-package-lifecycle-methodology'
+    - 'adr-0019-project-standards-packaged-artifact-parity-and-provenance'
+    - 'adr-0021-project-standards-standard-packaged-skill-installation-methodology'
+    - 'adr-0022-project-standards-standard-packaged-hook-installation-methodology'
+  amended_by: []
 ---
 
 # ADR 0023: Unified Consumer Standards Control Plane
 
 MADR status: **accepted**.
+
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings C2 and C3).** The outcome now names the plane this record governs — write-time ownership of bytes inside a consumer repository's files — and excludes the standards-graph plane [ADR 0004](adr-0004-authority-map-and-conflict-free-composition.md) governs, so the two conflict-freedom guarantees stop reading as rivals. The eight amendments this record makes to earlier active decisions, previously carried only as banners on those records, are now recorded reciprocally in `project.amends`. No control-plane behavior changes.
 
 ## Context and Problem Statement
 
@@ -107,6 +126,8 @@ Required integration artifacts remain at conventional paths. A shared container 
 The control plane owns the merge mechanism, not the surrounding content. It preserves every undeclared unit and blocks overlapping or ambiguous claims before writes. Identical shared units use a stable content-addressed identity and reference counting. No standard has precedence. Whole-file ownership is allowed only for exclusive declared destinations.
 
 Semantic adapters must preserve unowned comments, ordering, quoting, and formatting. Physical-formatting authority is distinct from semantic ownership. A formatter may change bytes only through its explicit operation and must preserve normalized semantic values.
+
+This ownership model governs **write-time ownership of bytes inside a consumer repository's files**, and applies whenever the control plane plans or applies a change to a consumer file. It does not govern authoring-time conflicts between standard packages in this repository's standards graph. Whether two packages may declare overlapping claims over the same tooling concern at all is decided by [ADR 0004](adr-0004-authority-map-and-conflict-free-composition.md) through its `(domain, target, concern, owner, mutability)` authority tuples, which graph validation checks before any package is published. The two planes are complementary and their guarantees are different: ADR 0004 proves that two packages do not claim one concern, and this record decides what happens to a consumer's file when two installed packages touch it. A graph-level authority conflict is outside this decision and requires no exception to it.
 
 ### Package and extension state
 

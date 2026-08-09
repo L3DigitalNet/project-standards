@@ -6,8 +6,8 @@ description: 'Decision record for how project-standards applies and demonstrates
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-08-01'
-reviewed: '2026-07-18'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -27,6 +27,9 @@ related:
   - '.standards/config.toml'
   - 'docs/adr/README.md'
   - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
+  - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
+  - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
+  - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
 supersedes: []
 superseded_by: null
@@ -43,13 +46,18 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends: []
+  amended_by:
+    - 'adr-0023-project-standards-unified-consumer-standards-control-plane'
 ---
 
 # ADR 0014: Markdown Frontmatter Field Value Policy
 
 MADR status: **accepted**.
 
-> **Amended by ADR 0023.** This repository-local field-value policy remains in force. `.standards/config.toml` is the current consumer configuration authority; `.project-standards.yml` is legacy migration input only. Managed project documentation includes `docs/workflows/**`.
+> **Amended by ADR 0023 (2026-07-10).** This repository-local field-value policy remains in force. `.standards/config.toml` is the current consumer configuration authority; `.project-standards.yml` is legacy migration input only. Managed project documentation includes `docs/workflows/**`.
+>
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings F4 and O1).** The governed population drops `docs/adr-library/**`, which does not exist in the working tree; reusable ADR template material now lives under `standards/adr/library/`, which ADR 0015 excludes from this repository's local frontmatter scope. The outcome also states explicitly that this record is the scope authority for this repository and what it leaves to the packages whose own destinations it does not name. No field, value, or lifecycle rule changes.
 
 ## Context and Problem Statement
 
@@ -79,9 +87,11 @@ This decision does not change `schema_version`, the JSON schema, or validator be
 
 ### Governed scope
 
-The `standards.markdown-frontmatter.config` table in `.standards/config.toml` is the source of truth for this repository's managed Markdown scope. It includes the release and upgrade documents, usage and MCP-readiness documentation, workflow documentation, `meta/**/*.md`, `docs/adr/**/*.md`, and `docs/adr-library/**/*.md`.
+The `standards.markdown-frontmatter.config` table in `.standards/config.toml` is the source of truth for this repository's managed Markdown scope. It includes the release and upgrade documents, usage and MCP-readiness documentation, workflow documentation, `meta/**/*.md`, and `docs/adr/**/*.md`.
 
 ADR 0015 excludes `standards/**` from this repository's local frontmatter scope so standard-package content is not required to carry repo-local metadata. The current config also excludes templates, the root README, agent-instruction and agent-configuration files, and handoff documents. This ADR does not widen that scope.
+
+This section is **this repository's** scope authority, and only this repository's. It applies to documents in the `project-standards` working tree; it decides nothing for a repository that adopts these standards. Where a standard package installs artifacts into a consumer — installed skills under [ADR 0021](adr-0021-standard-packaged-skill-installation-methodology.md), installed hooks under [ADR 0022](adr-0022-standard-packaged-hook-installation-methodology.md) — that package's own record states the exclusion its artifacts need, bounded to the paths it declares. A consumer repository's managed scope is that consumer's decision to make in its own `.standards/config.toml`, and needs no exception here.
 
 ### Frontmatter profile
 
@@ -131,8 +141,6 @@ If a file has a more specific maintainer in the future, record the long-lived ro
 | `docs/usage.md`, operational procedures | `runbook` |
 | `docs/adr/adr-*.md` | `adr` |
 | `docs/adr/README.md` | `index` |
-| `docs/adr-library/README.md` | `index` |
-| `docs/adr-library/**/*.md` entries | `template` |
 | `CHANGELOG.md` | `log` |
 | Metadata/schema documents | `schema` when the document is primarily a schema reference; otherwise `reference` |
 

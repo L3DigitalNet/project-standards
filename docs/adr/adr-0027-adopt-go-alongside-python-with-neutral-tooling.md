@@ -46,6 +46,8 @@ project:
   consulted:
     - 'Codex'
   informed: []
+  amends: []
+  amended_by: []
 ---
 
 # ADR 0027: Adopt Go Alongside Python with Neutral Tooling

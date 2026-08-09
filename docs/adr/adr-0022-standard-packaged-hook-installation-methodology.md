@@ -6,8 +6,8 @@ description: 'Records the project-local source and installation convention for h
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-18'
-reviewed: '2026-07-18'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -54,13 +54,18 @@ project:
     - 'chris'
   consulted: []
   informed: []
+  amends: []
+  amended_by:
+    - 'adr-0023-project-standards-unified-consumer-standards-control-plane'
 ---
 
 # ADR 0022: Standard-Packaged Hook Installation Methodology
 
 MADR status: **accepted**.
 
-> **Amended by ADR 0023.** The project-local `.agents/hooks/<standard-id>/` destination and harness trust boundary remain in force. The unified control plane installs and updates the hook, semantically composes only declared harness registrations, and records ownership and drift in the central lock.
+> **Amended by ADR 0023 (2026-07-10).** The project-local `.agents/hooks/<standard-id>/` destination and harness trust boundary remain in force. The unified control plane installs and updates the hook, semantically composes only declared harness registrations, and records ownership and drift in the central lock.
+>
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings O1, O2, and O3).** Two narrowings and no new authority. The escalation clause distinguishes an in-population exception from an out-of-scope case and adds an amendment threshold, and the outcome states explicitly that this record reserves `.agents/hooks/` only and does not own the `.agents/` root. The destination, the trust boundary, and the registration rules are unchanged.
 
 ## Context and Problem Statement
 
@@ -87,13 +92,17 @@ Under Catalog 5, a standard-owned hook's canonical authored source lives under `
 
 Standard adoption installs hook files under `.agents/hooks/<standard-id>/` at the consuming project root. Harness-specific project configuration may reference that shared installed path. A package with multiple hook entrypoints may place them together under the standard's directory, while filenames remain part of that standard's declared contract.
 
-Standard adoption must not install or inspect standard-packaged hooks in user-global, agent-global, home-directory, machine-level, filesystem-root, or sibling-repository locations. A future alternative destination requires another ADR or a superseding decision and must remain project-local unless the standard-adoption authority model itself changes.
+Standard adoption must not install or inspect standard-packaged hooks in user-global, agent-global, home-directory, machine-level, filesystem-root, or sibling-repository locations. A future alternative destination requires an amendment to this record or a superseding decision, and must remain project-local unless the standard-adoption authority model itself changes.
+
+That requirement is about an **in-population** case: a hook shipped by a standard package and installed through standard adoption. It does not reach a case this record never governed. A hook a consumer writes and maintains itself, a harness hook no standard package ships, and a personal workstation hook outside the adoption path are all out of scope, and none of them needs an amendment, exception, or superseding ADR under this record. Changing the destination form, the trust boundary, or the containment rule is an amendment; adding a hook entrypoint under the standard's existing directory, or updating a registration adapter within the declared contract, is ordinary reviewed work and requires none.
+
+This record reserves `.agents/hooks/` and nothing more. It does not own the `.agents/` root — who creates it, what else may live directly under it, and whether a future artifact class may claim a sibling subtree are undecided. [ADR 0021](adr-0021-standard-packaged-skill-installation-methodology.md) reserves `.agents/skills/` on the same terms. Ownership of the root is **reserved authority** requiring its own decision record before any package claims a new subtree.
 
 Installed hooks are managed standard-owned artifacts. Their payload manifest records source, destination, digest, install policy, and executable mode. Drift validation identifies changed or stale installed hooks, and the package's owned upgrade path refreshes them only after its normal precondition and ambiguity checks. Consumer project knowledge is not a hook artifact and receives no overwrite authority from this decision.
 
 The consuming harness retains control of registration, project trust, hook review, approval, enablement, and execution. Adoption may create or structurally merge only the exact declared project-level registration. It must not modify global trust, global hook approval, or machine policy to make the hook run.
 
-Installed hook paths are agent harness configuration, not managed Markdown documents or consumer project knowledge. Consumer tooling should exclude them from unrelated content-management rules where appropriate.
+Installed hook paths are agent harness configuration, not managed Markdown documents or consumer project knowledge. Consumer tooling should exclude them from unrelated content-management rules where appropriate. That guidance is bounded to the installed hook paths this record declares; which other paths a consumer governs, and under which standards, is the consumer's own configuration decision and needs no exception here.
 
 ### Consequences
 
