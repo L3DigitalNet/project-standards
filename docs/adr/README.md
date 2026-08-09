@@ -65,3 +65,4 @@ ADRs **0001–0013** capture the original meta-repository readiness decisions fr
 | [0025](adr-0025-project-standards-mcp-service-and-sdk-boundary.md) | MCP Service and SDK Boundary | local | active |
 | [0026](adr-0026-project-standards-mcp-local-read-only-transport.md) | MCP Local Read-Only Transport | local | active |
 | [0027](adr-0027-adopt-go-alongside-python-with-neutral-tooling.md) | Adopt Go Alongside Python with Neutral Tooling | local | active |
+| [0028](adr-0028-create-only-artifact-refresh.md) | Create-Only Artifact Refresh | local | active |
