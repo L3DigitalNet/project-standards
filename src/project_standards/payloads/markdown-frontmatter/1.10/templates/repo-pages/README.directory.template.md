@@ -1,0 +1,1 @@
+../../../../../../../standards/markdown-frontmatter/versions/1.10/templates/repo-pages/README.directory.template.md
