@@ -1,0 +1,1 @@
+../../../../../../standards/adr/versions/1.5/templates/adr-bare-minimal.md

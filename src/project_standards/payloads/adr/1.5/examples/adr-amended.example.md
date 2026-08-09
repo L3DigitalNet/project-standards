@@ -1,0 +1,1 @@
+../../../../../../standards/adr/versions/1.5/examples/adr-amended.example.md
