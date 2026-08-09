@@ -111,11 +111,32 @@ FROZEN_V1_TOOLS = frozenset(
     }
 )
 
+# ADR 0025 fixes the service's per-invocation provider bound at 30 seconds. It is
+# restated rather than imported because this suite's RED contract forbids
+# importing ``project_standards.mcp_services`` at module scope (see
+# ``tests.mcp_services.helpers.import_mcp_services``); it is the same declared
+# figure ``tests.mcp_services.test_providers.ADR_TIMEOUT_SECONDS`` pins.
+ADR_PROVIDER_BOUND_SECONDS = 30.0
+
 # Wall-clock bounds. Every read, write, and exit is bounded, so a server that
 # never answers fails the test instead of stalling the suite.
-FRAME_DEADLINE = 15.0
-WRITE_DEADLINE = 15.0
-EXIT_DEADLINE = 15.0
+#
+# They are watchdogs and nothing else: nothing here is proven by how long a frame
+# took, only by what the frame contained. Their size therefore has exactly one
+# requirement — a server must never lose a race it was entitled to win. A single
+# tool call may legitimately spend the whole provider bound above inside a bounded
+# worker, and that worker's cold interpreter start sits on top of it, so a
+# deadline below that sum stops bounding a hung server and starts racing a busy
+# one. At 15 s this suite failed under gate parallelism with the server healthy
+# and its previous frame already complete on stdout (issue #147), which is a
+# statement about the machine rather than about the adapter. Sizing them off the
+# service's own bound keeps the two from drifting apart again.
+#
+# Nothing is spent when a server is well behaved: reads return on the frame,
+# writes on completion, and ``drain`` exits as soon as both streams reach EOF.
+FRAME_DEADLINE = ADR_PROVIDER_BOUND_SECONDS + 60.0
+WRITE_DEADLINE = FRAME_DEADLINE
+EXIT_DEADLINE = FRAME_DEADLINE
 QUIET_WINDOW = 1.0
 
 _PACKAGE_FILE = project_standards.__file__

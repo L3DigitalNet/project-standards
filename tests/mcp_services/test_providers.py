@@ -56,7 +56,8 @@ import stat
 import sys
 import time
 import tomllib
-from dataclasses import fields
+from collections.abc import Callable
+from dataclasses import dataclass, fields
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -125,6 +126,38 @@ OVERSIZE_LENGTH = 4_000_000
 # The deliberately slow provider used for the bidirectional bound proof. It must
 # be long enough that spawn latency cannot be mistaken for the provider itself.
 MEDIUM_SLEEP_SECONDS = 3.0
+
+# What every provider that must outlive its own invocation sleeps for. Named so
+# the watchdogs below are derived from it rather than from a second literal that
+# could drift past it and stop meaning "sooner than the provider's own course".
+HAZARD_SLEEP_SECONDS = 300
+
+# Why no bound in this suite is a fixed number (issue #147).
+#
+# ``_run_worker`` starts its deadline when ``Popen`` returns, not when the
+# provider's first statement runs, so every injected bound has to outlast a cold
+# interpreter that imports the whole installed distribution before the payload is
+# even loaded. That start-up costs a few tenths of a second on an idle machine
+# and was measured between 1.2 s and 10 s while the gate ran this suite at
+# ``-n 16`` beside its two other lanes. A bound picked to fire *during* a
+# provider therefore fires during the worker's own import instead, and the
+# fixture never installs the signal handler — or writes the sentinel — that the
+# assertion afterwards is about. That is a race with the scheduler, not a
+# statement about the service, and it is why this set failed nondeterministically
+# under gate parallelism while passing serially.
+#
+# The remedy is not a bigger constant. Each bounded proof escalates its own bound
+# until the fixture's own "I started" sentinel shows the worker got far enough
+# for the proof to mean anything, and every claim that used to be read off the
+# wall clock is now read off a sentinel instead. What remains in seconds is a
+# watchdog against hanging, never an oracle about speed.
+FIRST_BOUND_SECONDS = 2.0
+BOUND_CEILING_SECONDS = 64.0
+
+# Comfortably beyond any escalation and any teardown, and still far short of the
+# course a hazard provider would run if nothing bounded it — so "finished before
+# this" still means "the service, not the provider, ended the invocation".
+WATCHDOG_SECONDS = HAZARD_SLEEP_SECONDS / 3
 
 PROBE_PATTERN = re.compile(r"WORKER-PROBE pid=(\d+) exe=(\S+)")
 
@@ -285,14 +318,18 @@ def huge(_request, _resources):
 def slow(_request, _resources):
     import time
 
-    time.sleep(300)
+    time.sleep(HAZARD_SLEEP_LITERAL)
     return {"findings": [], "checked": 0, "profile": "strict"}
 
 
 def medium(_request, _resources):
     import time
 
+    # Written before the sleep and after it, so a caller can tell "this provider
+    # never ran" from "this provider ran to completion" without timing anything.
+    _sentinel("MEDIUM-STARTED")
     time.sleep(MEDIUM_SLEEP_LITERAL)
+    _sentinel("MEDIUM-COMPLETED")
     _probe()
     return {"findings": [], "checked": 0, "profile": "strict"}
 
@@ -308,6 +345,10 @@ def stubborn(_request, _resources):
 
     signal.signal(signal.SIGTERM, _received)
     signal.signal(signal.SIGINT, _received)
+    # Strictly after both handlers are armed: its presence is what licenses a
+    # caller to read a missing SIGTERM sentinel as "the polite signal was never
+    # sent" rather than "the bound fired before this process could handle one".
+    _sentinel("STUBBORN-ARMED")
     while True:
         time.sleep(0.05)
 
@@ -317,7 +358,7 @@ def ready(_request, _resources):
     import time
 
     _sentinel("WORKER-READY", str(os.getpid()))
-    time.sleep(300)
+    time.sleep(HAZARD_SLEEP_LITERAL)
     return {"findings": [], "checked": 0, "profile": "strict"}
 
 
@@ -329,10 +370,10 @@ def forker(_request, _resources):
     # outlives its parent: only group termination can end it.
     child = os.fork()
     if child == 0:
-        time.sleep(300)
+        time.sleep(HAZARD_SLEEP_LITERAL)
         os._exit(0)
     _sentinel("FORKED-CHILD", str(child))
-    time.sleep(300)
+    time.sleep(HAZARD_SLEEP_LITERAL)
     return {"findings": [], "checked": 0, "profile": "strict"}
 
 
@@ -342,7 +383,7 @@ def forker_exit(_request, _resources):
 
     child = os.fork()
     if child == 0:
-        time.sleep(300)
+        time.sleep(HAZARD_SLEEP_LITERAL)
         os._exit(0)
     _sentinel("FORKED-CHILD", str(child))
     return {"findings": [], "checked": 0, "profile": "strict"}
@@ -362,6 +403,10 @@ def cooperative(_request, _resources):
         os._exit(0)
 
     signal.signal(signal.SIGTERM, _received)
+    # As with `stubborn`: armed first, announced second, so the caller can
+    # distinguish a parent that stopped draining from a worker that was killed
+    # before it had a handler at all.
+    _sentinel("COOPERATIVE-ARMED")
     while True:
         time.sleep(0.05)
 
@@ -470,6 +515,16 @@ READY_SENTINEL = "WORKER-READY"
 FORKED_SENTINEL = "FORKED-CHILD"
 COOPERATIVE_SENTINEL = "COOPERATIVE-EXIT"
 
+# "The worker reached the provider" sentinels. Each is written by its fixture at
+# the exact point that makes the assertion after it meaningful — after a signal
+# handler is armed, or before a sleep whose completion is the thing in question —
+# so a bound that expired during interpreter start-up is distinguishable from the
+# service defect the test exists to catch.
+MEDIUM_STARTED_SENTINEL = "MEDIUM-STARTED"
+MEDIUM_COMPLETED_SENTINEL = "MEDIUM-COMPLETED"
+STUBBORN_ARMED_SENTINEL = "STUBBORN-ARMED"
+COOPERATIVE_ARMED_SENTINEL = "COOPERATIVE-ARMED"
+
 # Phrases a termination failure may never use. Killing a worker ends execution;
 # it does not undo a write, and ADR 0025 buys fault isolation rather than
 # rollback (T4.4 Codex GREEN review F1, disposition REJECT-AS-WRITTEN /
@@ -559,6 +614,7 @@ def build_provider_tree(tmp_path: Path, *, hazards: tuple[str, ...] = ()) -> Pat
         _PROVIDER_SOURCE.replace("NOISE_LENGTH_LITERAL", str(NOISE_LENGTH))
         .replace("OVERSIZE_LENGTH_LITERAL", str(OVERSIZE_LENGTH))
         .replace("MEDIUM_SLEEP_LITERAL", str(MEDIUM_SLEEP_SECONDS))
+        .replace("HAZARD_SLEEP_LITERAL", str(HAZARD_SLEEP_SECONDS))
     )
     code_path.write_text(original.decode("utf-8") + source, encoding="utf-8")
 
@@ -645,6 +701,71 @@ def build_facade(services: ModuleType, distribution: InstalledDistribution) -> A
 def payload_sentinel(distribution: InstalledDistribution, name: str) -> Path | None:
     """Return the payload-side sentinel one fixture provider writes, if it ran."""
     return next(iter(sorted(distribution.package_root.rglob(name))), None)
+
+
+def clear_sentinels(distribution: InstalledDistribution, *names: str) -> None:
+    """Remove the named sentinels so the next attempt observes only its own run."""
+    for name in names:
+        existing = payload_sentinel(distribution, name)
+        if existing is not None:
+            existing.unlink()
+
+
+@dataclass(frozen=True)
+class BoundedTermination:
+    """One invocation the injected bound ended after its provider had started."""
+
+    error: Any
+    bound: float
+    elapsed: float
+
+
+def terminate_after_provider_starts(
+    call: Callable[[], Any],
+    *,
+    services: ModuleType,
+    providers: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    distribution: InstalledDistribution,
+    started: str,
+    clear: tuple[str, ...] = (),
+) -> BoundedTermination:
+    """Bound one hazard provider, escalating until the provider itself ran.
+
+    Every caller here wants the same precondition and none of them can state it
+    in seconds: the bound must expire while the *provider* is executing, but the
+    same bound also covers the worker's interpreter start-up, whose cost varies
+    by an order of magnitude with machine load (see the note beside
+    ``FIRST_BOUND_SECONDS``). A fixed bound therefore encodes an assumption about
+    the scheduler, and under gate parallelism that assumption is simply false.
+
+    The precondition is instead *observed*: after each attempt the fixture's own
+    ``started`` sentinel says whether the worker reached the provider, and the
+    bound doubles until it did. Escalating cannot mask a service defect, because
+    the property each caller asserts afterwards — SIGTERM before SIGKILL, a
+    parent that keeps draining, a descendant that dies with its group — is
+    unaffected by how long the bound was; only the guarantee that the provider
+    was alive to exhibit it depends on this loop.
+
+    ``clear`` names further sentinels this provider writes later in its life, so
+    a retry cannot inherit an earlier attempt's evidence.
+    """
+    bound = FIRST_BOUND_SECONDS
+    while True:
+        clear_sentinels(distribution, started, *clear)
+        monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", bound)
+        began = time.monotonic()
+        with pytest.raises(services.ServiceError) as raised:
+            call()
+        elapsed = time.monotonic() - began
+        if payload_sentinel(distribution, started) is not None:
+            return BoundedTermination(raised.value, bound, elapsed)
+        assert bound * 2 <= BOUND_CEILING_SECONDS, (
+            f"no worker reached {started!r} within a {bound:.1f}s bound, so this machine "
+            "cannot start a provider worker inside any bound this suite is willing to "
+            "inject; the service was never exercised"
+        )
+        bound *= 2
 
 
 def mutating_provider_ran(distribution: InstalledDistribution) -> bool:
@@ -1022,13 +1143,55 @@ def open_descriptors() -> dict[int, str]:
     return descriptors
 
 
+def child_processes() -> dict[int, str]:
+    """Return every child of this process — running or zombie — described.
+
+    Read from procfs rather than through ``os.waitpid(-1, os.WNOHANG)``, which is
+    wrong here twice over (issue #147). It reports pid ``0`` when this process
+    merely has a child that has not exited, which is indistinguishable in its
+    return value from a real surviving worker; and it *reaps* whatever it finds,
+    destroying an exit status that its actual owner — any other test sharing this
+    xdist worker process — still has to collect. Procfs answers the question the
+    confirmation clause actually asks, observes it without consuming it, and can
+    name the survivor when there is one.
+
+    A zombie is still listed as a child, so an unreaped worker is caught exactly
+    as before; only the reaping side effect and the false pid ``0`` are gone.
+    """
+    children: dict[int, str] = {}
+    for task in Path("/proc/self/task").iterdir():
+        try:
+            entries = (task / "children").read_text(encoding="utf-8").split()
+        except OSError:  # pragma: no cover - the thread exited mid-scan
+            continue
+        for entry in entries:
+            pid = int(entry)
+            children[pid] = _describe_process(pid)
+    return children
+
+
+def _describe_process(pid: int) -> str:
+    """Return one child's state letter and command line, for a failure message."""
+    root = Path("/proc") / str(pid)
+    try:
+        state = root.joinpath("stat").read_text(encoding="utf-8").rpartition(") ")[2][:1]
+    except OSError:  # pragma: no cover - the child was reaped mid-scan
+        state = "?"
+    try:
+        command = (
+            root.joinpath("cmdline").read_bytes().replace(b"\0", b" ").decode(errors="replace")
+        )
+    except OSError:  # pragma: no cover - the child was reaped mid-scan
+        command = ""
+    return f"state={state or '?'} cmd={command.strip() or '<gone>'}"
+
+
 def assert_no_unreaped_children() -> None:
     """Fail if any child process of this process survives the invocation."""
-    try:
-        pid, _ = os.waitpid(-1, os.WNOHANG)
-    except ChildProcessError:
-        return
-    raise AssertionError(f"a worker process survived the invocation (waitpid returned {pid})")
+    surviving = child_processes()
+    assert not surviving, "a worker process survived the invocation: " + ", ".join(
+        f"pid {pid} ({description})" for pid, description in sorted(surviving.items())
+    )
 
 
 def worker_identity(result: Any) -> tuple[int, str]:
@@ -1100,8 +1263,14 @@ def assert_error_is_content_safe(
         assert error.version == SELECTED_VERSION
 
 
-def assert_process_gone(pid: int, *, timeout: float = 10.0) -> None:
-    """Wait briefly for one pid to disappear, then require that it has."""
+def assert_process_gone(pid: int, *, timeout: float = WATCHDOG_SECONDS) -> None:
+    """Poll until one pid disappears, then require that it has.
+
+    Already a behaviour-based wait, so the deadline is only a watchdog: it costs
+    nothing when the process is gone immediately, which is the passing case, and
+    a descendant that outlives its group is still sleeping for
+    ``HAZARD_SLEEP_SECONDS`` when this gives up.
+    """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
@@ -1504,6 +1673,14 @@ def test_slow_provider_returns_bounded_diagnostic_and_worker_is_reaped(
     bound is some other number fails one of the two directions. The shipped value
     is separately asserted against the ADR, which keeps the suite off a literal
     30-second wait (plan sub-task T4.4).
+
+    Both directions are read off the fixture's own sentinels rather than off the
+    clock (issue #147). "It completed" is the completion sentinel and a result;
+    "it was terminated" is a structured failure with that sentinel *absent*. Those
+    are the facts the ADR bound is about, and unlike an elapsed-time comparison
+    they cannot be flipped by a loaded machine — the previous form compared
+    elapsed time against the provider's own 3-second sleep, a margin smaller than
+    the worker start-up cost this suite sees under gate parallelism.
     """
     services = import_mcp_services()
     providers = require_service_module("providers")
@@ -1528,34 +1705,63 @@ def test_slow_provider_returns_bounded_diagnostic_and_worker_is_reaped(
     before = tree_state(repo)
 
     # Above the provider's duration: it completes, so the effective bound is not
-    # some smaller hidden constant.
-    monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", MEDIUM_SLEEP_SECONDS + 12.0)
+    # some smaller hidden constant. The bound is generous because its *size* is
+    # not the claim — that it exceeds the provider's duration is — and a bound
+    # only a few seconds clear of the provider is a bound the worker's own
+    # start-up can consume on a loaded machine.
+    monkeypatch.setattr(
+        providers, "PROVIDER_TIMEOUT_SECONDS", MEDIUM_SLEEP_SECONDS + BOUND_CEILING_SECONDS
+    )
     started = time.monotonic()
     completed = call("medium-alpha")
     elapsed = time.monotonic() - started
     assert elapsed >= MEDIUM_SLEEP_SECONDS
-    assert elapsed < MEDIUM_SLEEP_SECONDS + 12.0
+    assert elapsed < WATCHDOG_SECONDS
+    assert payload_sentinel(distribution, MEDIUM_COMPLETED_SENTINEL) is not None, (
+        "the provider returned without reaching the end of its own body"
+    )
     assert_ran_in_worker(completed)
 
     # Below it: the same provider is terminated, so the effective bound is not
-    # some larger hidden constant either.
+    # some larger hidden constant either. A bound the provider outlives can only
+    # end this call by expiring, and the absent completion sentinel is what says
+    # the provider did not simply finish first.
+    clear_sentinels(distribution, MEDIUM_STARTED_SENTINEL, MEDIUM_COMPLETED_SENTINEL)
     monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", 1.0)
     started = time.monotonic()
     with pytest.raises(services.ServiceError) as raised:
         call("medium-alpha")
-    elapsed = time.monotonic() - started
-    assert elapsed < MEDIUM_SLEEP_SECONDS, "the injected bound did not decide termination"
+    assert time.monotonic() - started < WATCHDOG_SECONDS
+    assert payload_sentinel(distribution, MEDIUM_COMPLETED_SENTINEL) is None, (
+        "the injected bound did not decide termination; the provider ran to completion"
+    )
     assert_error_is_content_safe(raised.value, repo, distribution)
 
-    # A provider that never returns, and one that refuses SIGTERM: the sentinel
-    # proves the polite signal was delivered first and forced termination
-    # followed (ADR 0025; T4.2 review F11).
-    for provider_id in ("slow-alpha", "stubborn-alpha"):
-        started = time.monotonic()
-        with pytest.raises(services.ServiceError) as raised:
-            call(provider_id)
-        assert time.monotonic() - started < 20, f"{provider_id} was not bounded"
-        assert_error_is_content_safe(raised.value, repo, distribution)
+    # A provider that never returns: bounded at all is the whole claim, and it
+    # sleeps far longer than this watchdog, so returning proves the service ended
+    # it rather than waiting it out.
+    monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", FIRST_BOUND_SECONDS)
+    started = time.monotonic()
+    with pytest.raises(services.ServiceError) as raised:
+        call("slow-alpha")
+    assert time.monotonic() - started < WATCHDOG_SECONDS, "slow-alpha was not bounded"
+    assert_error_is_content_safe(raised.value, repo, distribution)
+
+    # One that refuses SIGTERM: the sentinel proves the polite signal was
+    # delivered first and forced termination followed (ADR 0025; T4.2 review
+    # F11). Its bound is escalated until the fixture reports its handlers armed,
+    # so a missing SIGTERM sentinel can only mean the signal was never sent.
+    stubborn = terminate_after_provider_starts(
+        lambda: call("stubborn-alpha"),
+        services=services,
+        providers=providers,
+        monkeypatch=monkeypatch,
+        distribution=distribution,
+        started=STUBBORN_ARMED_SENTINEL,
+        clear=(SIGTERM_SENTINEL,),
+    )
+    assert stubborn.elapsed < WATCHDOG_SECONDS, "stubborn-alpha was not bounded"
+    assert_error_is_content_safe(stubborn.error, repo, distribution)
 
     assert payload_sentinel(distribution, SIGTERM_SENTINEL) is not None, (
         "the stubborn worker was killed without first receiving SIGTERM"
@@ -1573,6 +1779,13 @@ def test_cancelled_invocation_terminates_and_releases_the_worker(
     the wait rather than an invented async API (T4.2 review F12, disposition
     ACCEPT-AMENDED). The worker announces its pid through a payload-side sentinel
     before sleeping, so the test can prove the exact process is gone.
+
+    Cancellation has to arrive while the worker is *running the provider*, and
+    the interval that guarantees that is a property of the machine rather than a
+    constant (issue #147): a cold worker takes a few tenths of a second to reach
+    its provider when idle and seconds when the gate is saturated. The interval
+    is therefore doubled until the fixture's own pid sentinel proves the worker
+    got there, exactly as the bounded-termination proofs escalate their bound.
     """
     import signal
 
@@ -1582,7 +1795,7 @@ def test_cancelled_invocation_terminates_and_releases_the_worker(
     facade = build_facade(services, distribution)
     repo = build_provider_repo(tmp_path, "consumer", distribution=distribution)
     invoke = require_operation(facade, "invoke_read_provider")
-    monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", 300.0)
+    monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", float(HAZARD_SLEEP_SECONDS))
 
     before = tree_state(repo)
     descriptors = open_descriptors()
@@ -1590,25 +1803,38 @@ def test_cancelled_invocation_terminates_and_releases_the_worker(
     def interrupt(*_args: object) -> None:
         raise KeyboardInterrupt("cancelled")
 
-    previous = signal.signal(signal.SIGALRM, interrupt)
-    try:
-        signal.setitimer(signal.ITIMER_REAL, 4.0)
-        with pytest.raises(services.ServiceError) as raised:
-            invoke(
-                repo,
-                standard_id=SELECTED_STANDARD,
-                version=SELECTED_VERSION,
-                provider_id="ready-alpha",
-                operation="validate",
-                provider_input={},
-            )
-    finally:
-        signal.setitimer(signal.ITIMER_REAL, 0.0)
-        signal.signal(signal.SIGALRM, previous)
+    def cancel_after(interval: float) -> Any:
+        clear_sentinels(distribution, READY_SENTINEL)
+        previous = signal.signal(signal.SIGALRM, interrupt)
+        try:
+            signal.setitimer(signal.ITIMER_REAL, interval)
+            with pytest.raises(services.ServiceError) as raised:
+                invoke(
+                    repo,
+                    standard_id=SELECTED_STANDARD,
+                    version=SELECTED_VERSION,
+                    provider_id="ready-alpha",
+                    operation="validate",
+                    provider_input={},
+                )
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0.0)
+            signal.signal(signal.SIGALRM, previous)
+        return raised.value
 
-    assert_error_is_content_safe(raised.value, repo, distribution)
+    interval = FIRST_BOUND_SECONDS
+    error = cancel_after(interval)
+    while payload_sentinel(distribution, READY_SENTINEL) is None:
+        assert interval * 2 <= BOUND_CEILING_SECONDS, (
+            "the cancellation fixture never reached its worker within any interval this "
+            f"test is willing to wait ({interval:.1f}s)"
+        )
+        interval *= 2
+        error = cancel_after(interval)
+
+    assert_error_is_content_safe(error, repo, distribution)
     sentinel = payload_sentinel(distribution, READY_SENTINEL)
-    assert sentinel is not None, "the cancellation fixture never reached its worker"
+    assert sentinel is not None
     worker_pid = int(sentinel.read_text(encoding="utf-8"))
     assert worker_pid != os.getpid()
     with pytest.raises(ProcessLookupError):
@@ -1907,14 +2133,19 @@ def test_termination_failures_never_claim_the_repository_is_unchanged(
 def test_worker_group_termination_leaves_no_descendant(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """F3: a provider-forked descendant dies with the group, on both leader paths."""
+    """F3: a provider-forked descendant dies with the group, on both leader paths.
+
+    Both halves need the provider to have *forked* before anything is asserted
+    about the descendant, which the fork sentinel reports directly; the bound and
+    the watchdogs are sized off that observation rather than off a constant that
+    a loaded machine can invalidate (issue #147).
+    """
     services = import_mcp_services()
     providers = require_service_module("providers")
     distribution = build_provider_distribution(tmp_path, hazards=("forker", "forker-exit"))
     facade = build_facade(services, distribution)
     repo = build_provider_repo(tmp_path, "consumer", distribution=distribution)
     invoke = require_operation(facade, "invoke_read_provider")
-    monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", 4.0)
 
     descriptors = open_descriptors()
     before = tree_state(repo)
@@ -1931,11 +2162,16 @@ def test_worker_group_termination_leaves_no_descendant(
 
     # The leader hangs: the invocation ends at the bound and the descendant must
     # die with the group rather than being orphaned holding the pipes.
-    started = time.monotonic()
-    with pytest.raises(services.ServiceError) as raised:
-        call("forker-alpha")
-    assert time.monotonic() - started < 20
-    assert_error_is_content_safe(raised.value, repo, distribution, identified=True)
+    hung = terminate_after_provider_starts(
+        lambda: call("forker-alpha"),
+        services=services,
+        providers=providers,
+        monkeypatch=monkeypatch,
+        distribution=distribution,
+        started=FORKED_SENTINEL,
+    )
+    assert hung.elapsed < WATCHDOG_SECONDS
+    assert_error_is_content_safe(hung.error, repo, distribution, identified=True)
     forked = int(_require_sentinel(distribution, FORKED_SENTINEL).read_text(encoding="utf-8"))
     assert_process_gone(forked)
     assert open_descriptors() == descriptors
@@ -1945,10 +2181,16 @@ def test_worker_group_termination_leaves_no_descendant(
 
     # The leader exits normally while the descendant still holds every inherited
     # pipe open: the result must still arrive, promptly, and the descendant must
-    # still be reaped.
+    # still be reaped. "Promptly" is against the descendant's own course, which is
+    # what a parent waiting on the inherited pipes would sit through — not against
+    # the leader's start-up, which is not this test's subject. The bound sits above
+    # the watchdog and far below that course, so this half cannot be decided by the
+    # bound, and a parent that did wait on the pipes still ends in about a minute
+    # rather than five.
+    monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", 2 * BOUND_CEILING_SECONDS)
     started = time.monotonic()
     result = call("forker-exit-alpha")
-    assert time.monotonic() - started < 20
+    assert time.monotonic() - started < WATCHDOG_SECONDS
     assert result.status
     survivor = int(_require_sentinel(distribution, FORKED_SENTINEL).read_text(encoding="utf-8"))
     assert_process_gone(survivor)
@@ -1972,6 +2214,13 @@ def test_cooperative_shutdown_is_drained_instead_of_escalated(
     parent that stopped reading while waiting for the worker to die would block
     that handler and escalate to SIGKILL for its own inaction, and the sentinel
     written after the flood would never appear.
+
+    A worker killed before it ever installed that handler would leave the same
+    missing sentinel while proving nothing about draining, and under gate
+    parallelism a short bound expires during interpreter start-up often enough to
+    make that the usual outcome (issue #147). The bound is therefore escalated
+    until the fixture reports its handler armed, which is the precondition this
+    assertion has always silently assumed.
     """
     services = import_mcp_services()
     providers = require_service_module("providers")
@@ -1979,18 +2228,24 @@ def test_cooperative_shutdown_is_drained_instead_of_escalated(
     facade = build_facade(services, distribution)
     repo = build_provider_repo(tmp_path, "consumer", distribution=distribution)
     invoke = require_operation(facade, "invoke_read_provider")
-    monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", 1.0)
 
-    with pytest.raises(services.ServiceError) as raised:
-        invoke(
+    attempt = terminate_after_provider_starts(
+        lambda: invoke(
             repo,
             standard_id=SELECTED_STANDARD,
             version=SELECTED_VERSION,
             provider_id="cooperative-alpha",
             operation="validate",
             provider_input={},
-        )
-    assert_error_is_content_safe(raised.value, repo, distribution, identified=True)
+        ),
+        services=services,
+        providers=providers,
+        monkeypatch=monkeypatch,
+        distribution=distribution,
+        started=COOPERATIVE_ARMED_SENTINEL,
+        clear=(COOPERATIVE_SENTINEL,),
+    )
+    assert_error_is_content_safe(attempt.error, repo, distribution, identified=True)
     assert payload_sentinel(distribution, COOPERATIVE_SENTINEL) is not None, (
         "the cooperative handler never finished; the parent stopped draining during "
         "the termination grace"
@@ -2001,7 +2256,16 @@ def test_cooperative_shutdown_is_drained_instead_of_escalated(
 def test_execution_bound_is_not_extended_after_the_streams_close(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """F8: no bonus wait past the deadline, only the termination grace."""
+    """F8: no bonus wait past the deadline, only the termination grace.
+
+    "Never the provider's own duration" is asserted through the fixture's own
+    completion sentinel rather than through elapsed time (issue #147). Elapsed
+    time carries a term this claim is not about — the worker's cold start, which
+    the bound covers but the ceiling below did not account for, and which under
+    gate parallelism is larger than the provider's whole sleep. The sentinel says
+    directly whether the provider ran to completion, so a parent that waited for
+    it is caught on any machine at any speed.
+    """
     services = import_mcp_services()
     providers = require_service_module("providers")
     distribution = build_provider_distribution(tmp_path, hazards=("medium",))
@@ -2009,24 +2273,40 @@ def test_execution_bound_is_not_extended_after_the_streams_close(
     repo = build_provider_repo(tmp_path, "consumer", distribution=distribution)
     invoke = require_operation(facade, "invoke_read_provider")
 
+    def call(provider_id: str) -> Any:
+        return invoke(
+            repo,
+            standard_id=SELECTED_STANDARD,
+            version=SELECTED_VERSION,
+            provider_id=provider_id,
+            operation="validate",
+            provider_input={},
+        )
+
+    # The fixed cost of one whole invocation on this machine, right now: a cold
+    # interpreter that imports the installed distribution before the payload is
+    # loaded at all. It sits inside every elapsed measurement and outside every
+    # injected bound, so the ceiling below has to be told what it currently is
+    # instead of assuming a figure from an idle machine.
+    monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", float(HAZARD_SLEEP_SECONDS))
+    measured = time.monotonic()
+    call("validate-alpha")
+    overhead = time.monotonic() - measured
+
     bound = 1.0
     monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", bound)
     grace = require_attribute(providers, "TERMINATION_GRACE_SECONDS", "T4 module constant")
     started = time.monotonic()
     with pytest.raises(services.ServiceError) as raised:
-        invoke(
-            repo,
-            standard_id=SELECTED_STANDARD,
-            version=SELECTED_VERSION,
-            provider_id="medium-alpha",
-            operation="validate",
-            provider_input={},
-        )
+        call("medium-alpha")
     elapsed = time.monotonic() - started
-    # The bound, plus at most the declared termination grace applied a bounded
-    # number of times, plus scheduling slack — never the provider's own duration.
-    assert elapsed < bound + 4 * float(grace) + 1.0, f"termination took {elapsed:.2f}s"
-    assert elapsed < MEDIUM_SLEEP_SECONDS
+    # Worker start-up, plus the bound, plus at most the declared termination grace
+    # applied a bounded number of times, plus scheduling slack.
+    ceiling = 3 * overhead + bound + 4 * float(grace) + 1.0
+    assert elapsed < ceiling, f"termination took {elapsed:.2f}s against a {ceiling:.2f}s ceiling"
+    assert payload_sentinel(distribution, MEDIUM_COMPLETED_SENTINEL) is None, (
+        "the invocation waited for the provider's own duration instead of ending at the bound"
+    )
     assert_error_is_content_safe(raised.value, repo, distribution, identified=True)
     assert_no_unreaped_children()
 

@@ -9,5 +9,4 @@
 
 ## Active incidents
 
-- `test_slow_provider_..._is_reaped` fails in the ordinary lane on a clean gate run; two neighbours fail only under load. Not a regression.
-- MCP determinism and frozen-bounds tests are load-sensitive: six fail under gate parallelism; all 57 pass serially (#147).
+- None. #147 is fixed: MCP bounds now escalate until the provider starts, and client frame deadlines outlast the service's own bound.
