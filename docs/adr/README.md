@@ -6,8 +6,8 @@ description: 'Index of the project-standards Architecture Decision Records, incl
 doc_type: 'index'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-08-01'
-reviewed: '2026-08-01'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -17,7 +17,8 @@ tags:
 aliases: []
 related:
   - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
-  - 'standards/adr/versions/1.3/README.md'
+  - 'standards/adr/versions/1.5/README.md'
+  - 'docs/reviews/adr-conformance/2026-08-05-1941-adr-1-4-conformance-assessment.md'
   - 'standards/standard-bundle-authoring/versions/2.0/README.md'
   - 'standards/markdown-frontmatter/versions/1.2/field-values.md'
   - '.standards/config.toml'
@@ -32,9 +33,17 @@ related:
 
 # Architecture Decision Records
 
-Decisions governing the `project-standards` repository, recorded in [MADR](https://adr.github.io/madr/) form. See the [ADR 1.3 standard](../../standards/adr/versions/1.3/README.md) for the format and the id/filename convention (the `id` embeds the repo name; the filename omits it).
+Decisions governing the `project-standards` repository, recorded in [MADR](https://adr.github.io/madr/) form. See the [ADR 1.5 standard](../../standards/adr/versions/1.5/README.md) for the format, the id/filename convention (the `id` embeds the repo name; the filename omits it), the decision-boundary rules every record here is authored to, and the amendment vocabulary this corpus uses. The [family landing page](../../standards/adr/README.md) always names the version this repository currently resolves.
 
-ADRs **0001–0013** capture the original meta-repository readiness decisions from [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3. They were accepted on 2026-07-07; later decisions preserve that history through explicit amendment or supersession. ADRs **0014–0022** record repository field-value policy, local scope, packaged skills and hooks, adoption, lifecycle, provenance, and package versioning. ADR **0023** establishes the unified consumer control plane and supersedes ADRs 0003, 0008, and 0017. ADR **0024** establishes catalog-scoped package channels and supersedes ADR 0020. ADRs **0025** and **0026** record the MCP-server decisions (SPEC-MS01 §8.3): the service and SDK boundary, and the v1 local read-only transport surface. Both were accepted on 2026-07-28 at the `SPEC-RD01` Step 09 decision gate. ADR **0027** adopts a neutral Go tooling lane alongside Python.
+ADRs **0001–0013** capture the original meta-repository readiness decisions from [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3, accepted on 2026-07-07. ADRs **0014–0022** record repository field-value policy, local scope, packaged skills and hooks, adoption, lifecycle, provenance, and package versioning. ADR **0023** establishes the unified consumer control plane and supersedes ADRs 0003, 0008, and 0017. ADR **0024** establishes catalog-scoped package channels and supersedes ADR 0020. ADRs **0025** and **0026** record the MCP-server decisions (SPEC-MS01 §8.3): the service and SDK boundary, and the v1 local read-only transport surface. Both were accepted on 2026-07-28 at the `SPEC-RD01` Step 09 decision gate. ADR **0027** adopts a neutral Go tooling lane alongside Python. ADR **0028** records how a create-only package artifact is refreshed in a consumer repository.
+
+## Reading this corpus
+
+**Amendment and supersession.** A record that was replaced outright carries `status: superseded` and `superseded_by`. A record whose decision was only partly changed stays `active` and carries the change as an amendment: a blockquote note between the title and Context and Problem Statement, plus reciprocal `project.amends` and `project.amended_by` entries when a later ADR is the source. Several notes share one blockquote, oldest first. Amendments are cumulative and are never edited away, so an amended record reads as what was accepted plus what changed afterwards.
+
+That discipline is now applied rather than merely intended. The [2026-08-05 conformance assessment](../reviews/adr-conformance/2026-08-05-1941-adr-1-4-conformance-assessment.md) found three substantive changes to active decisions — ADR 0006's mechanism replaced, ADR 0004's guarantee duplicated by a different model, ADR 0002's claim narrowed twice — that had been made through neither amendment nor supersession, because no sanctioned form for partial amendment existed before `adr` 1.5. All three are now recorded on both records.
+
+**Evidence versus current authority.** A record's `source` list and its More Information links are the evidence the decision was made against, frozen at the version cited; advertised payloads are permanent, so those links keep resolving. They are not a recommendation to read that version now. `related` and body prose point at current authority. Where an older version is cited as evidence, prefer the family landing page for what to read today.
 
 | ADR | Title | Decision | Status |
 | --- | --- | --- | --- |

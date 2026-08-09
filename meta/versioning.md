@@ -91,7 +91,13 @@ A package release may expose one or more internal contract versions. Those selec
 
 ### FM→ADR compatibility
 
-The resolved ADR payload declares the Frontmatter contract versions it supports. Selection remains independent **subject to declared compatibility**, not arbitrary combination; the resolver and validator fail closed on an incompatible pair. This subject-level compatibility is separate from package release identity and catalog-channel selection.
+A fail-closed compatibility gate exists, on the contract plane rather than the catalog plane, and the distinction is load-bearing.
+
+The bundled `registry.json` declares which Frontmatter contract versions each **ADR contract version** supports. The retained `validate_frontmatter` entry point checks the configured pair through `frontmatter_adr_incompatibility` and exits `2` with a message naming both versions when they are incompatible — a real fail-closed gate, covered by test. It applies only when the ADR keys are set and `--schema` is not used to bypass it, and it reads the registry, which `meta/versioning.md` above records as a retained V5 migration input.
+
+Nothing equivalent exists on the Catalog 5 plane. An `adr` `payload.toml` declares `companions = ["markdown-frontmatter"]` with no version constraint of any kind, and `markdown-frontmatter` declares `adr` symmetrically. Under [ADR 0013](../docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md) a companion is a non-binding recommendation, so package selection of `adr` and `markdown-frontmatter` is genuinely independent: the resolver enforces no version pairing between them and nothing fails closed at reconcile time. Introducing one would be a new decision requiring its own ADR and a manifest declaration, not an inference from the companion edge.
+
+This subject-level compatibility is separate from package release identity and catalog-channel selection.
 
 ## Component-level version markers
 

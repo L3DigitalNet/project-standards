@@ -6,8 +6,8 @@ description: 'Read-only assessment of all 23 active project-standards ADRs again
 doc_type: 'reference'
 status: 'active'
 created: '2026-08-05'
-updated: '2026-08-05'
-reviewed: '2026-08-05'
+updated: '2026-08-09'
+reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
 tags:
@@ -53,7 +53,9 @@ Read-only assessment. No ADR, configuration, or payload file was modified.
 
 This report covers two passes. **Pass 1** (§1–§8) grades each active ADR individually against the 1.4 decision-boundary rubric. **Pass 2** (§9) treats the corpus as a graph and examines inter-ADR conflicts, overlapping ownership, and internal consistency. The consolidated backlog in §10 covers both.
 
-**Status.** The full §10 backlog is tracked by [issue #128](https://github.com/L3DigitalNet/project-standards/issues/128) and the amendment-vocabulary gap in §6 by [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127). Owner decision of 2026-08-05: both are bundled into **v5.17.0** — MINOR, carrying `adr` 1.4 → 1.5. #127 ships first as `adr` 1.5 so backlog items 4, 14, and 16 can use the sanctioned amendment form directly. `adr` 1.5 must stay non-breaking to become the ordinary Catalog 5 default.
+**Status.** The full §10 backlog is tracked by [issue #128](https://github.com/L3DigitalNet/project-standards/issues/128) and the amendment-vocabulary gap in §6 by [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127). Owner decision of 2026-08-05: both are bundled into **v5.18.0** — MINOR, carrying `adr` 1.4 → 1.5. #127 ships first as `adr` 1.5 so backlog items 4, 14, and 16 can use the sanctioned amendment form directly. `adr` 1.5 must stay non-breaking to become the ordinary Catalog 5 default.
+
+**The backlog has since been worked.** See [§12, Closing status](#12-closing-status-2026-08-09) for the per-item disposition and the post-remediation verification. Sections 1–11 are preserved as taken on 2026-08-05 and describe the corpus **before** remediation; do not read them as current state.
 
 ## 1. Scope and method
 
@@ -540,7 +542,7 @@ Ordered by value per unit of effort, covering both passes. None of this was appl
 | 20 | Reconcile bundle/package/family/payload terminology in ADRs 0001–0010 | S3 | 5 ADRs | Active normative sentences use a vocabulary the V1→V2 rename retired |
 | 21 | Rename ADR 0025 and 0026 files to omit the repository name | F2 | 2 files + inbound references | Cosmetic; touches the index, five frontmatter references, and inline links |
 
-**Scheduled.** This backlog is [issue #128](https://github.com/L3DigitalNet/project-standards/issues/128) and the amendment-vocabulary gap (§6) is [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127). Owner decision of 2026-08-05: both ship in **v5.17.0**, a MINOR release carrying `adr` 1.4 → 1.5.
+**Scheduled.** This backlog is [issue #128](https://github.com/L3DigitalNet/project-standards/issues/128) and the amendment-vocabulary gap (§6) is [issue #127](https://github.com/L3DigitalNet/project-standards/issues/127). Owner decision of 2026-08-05: both ship in **v5.18.0**, a MINOR release carrying `adr` 1.4 → 1.5. Per-item disposition is recorded in [§12](#12-closing-status-2026-08-09).
 
 Sequencing follows from that. #127 lands first as `adr` 1.5; items 4, 14, and 16 then use the sanctioned amendment form directly rather than the interim banner notes this report previously assumed; item 1 lands last so this repository's scaffold arrives as the 1.5 template. Prose touched twice accumulates two vintages of wording, which is why the ordering matters more here than it would for code.
 
@@ -555,3 +557,51 @@ One constraint carries into #127's design: a `1.4 → 1.5` advance may become th
 - Prettier and markdownlint conformance of the ADR corpus, which the repository gate already owns.
 - Whether a fail-closed FM→ADR compatibility check exists in the control plane (O5) — searched and not located, not proven absent.
 - Conflicts between the ADR corpus and the specifications under `docs/specs/`. Pass 2 checked ADR-to-ADR and ADR-to-implementation consistency only; the specs are a third authority plane and were out of scope.
+
+## 12. Closing status (2026-08-09)
+
+The §10 backlog was worked against `adr` 1.5 as part of the v5.18.0 train under [issue #128](https://github.com/L3DigitalNet/project-standards/issues/128). **Sections 1–11 above are the assessment as taken on 2026-08-05 and are unchanged.** This section records disposition only.
+
+Eighteen of twenty-one items are complete. Three are deliberate deferrals with recorded reasoning, and one completed item carries a release-prep dependency.
+
+### Disposition
+
+| # | Item | Disposition |
+| --- | --- | --- |
+| 1 | Refresh the ADR scaffold (F1) | **Done in part.** [ADR 0028](../../adr/adr-0028-create-only-artifact-refresh.md) records the sanctioned refresh mechanism: a documented manual delete-and-reconcile, changing no reconcile behavior. The mechanical refresh of `docs/adr/adr.template.md` and its lock digest is **sequenced into release prep**, after the Catalog 5 default for `adr` moves to 1.5 — reconcile recreates from the resolved payload, so doing it earlier would reinstate the 1.4 template |
+| 2 | Reciprocate substantive `related` edges (S1) | **Done.** Fifteen edges reciprocated across 0001–0028; every ADR named in a C-finding now points back |
+| 3 | Retarget the index (F3, S4) | **Done.** `docs/adr/README.md` points at 1.5 and at the family landing page for the resolved version; the supersession-discipline claim is replaced by an accurate account naming C2, C3, and C5 as the counterexamples |
+| 4 | ADR 0006 mechanism note (C2) | **Done.** Recorded as an external amendment: `0023 amends 0006`, reciprocal fields plus a note stating that the principle survives and the mechanism was replaced |
+| 5 | ADR 0014 population and dead include (F4) | **Done.** `docs/adr-library/**` removed from the governed scope, the document-type mapping, and `.standards/config.toml`; `reconcile --apply` refreshed the two lock digests that edit implies |
+| 6 | Reciprocal 0004/0023 exclusions (C3) | **Done.** 0004 names the standards-graph plane, 0023 names the consumer-file plane, and each states the other is out of scope |
+| 7 | Cite ADR 0005 from 0025/0026 (C4) | **Done.** Both records now carry the per-standard-versus-per-operation reasoning in prose and cite 0005 in `related` and More Information; 0005 states the same axis distinction from its side |
+| 8 | ADR 0010 exclusion for the MCP grammar (C1) | **Done.** 0010 excludes the wire grammar and points at 0026; the divergence remains an open alignment item, now explicitly not an exception |
+| 9 | FM→ADR compatibility claim (O5) | **Done — the assessment's "not located" is resolved as located.** A fail-closed gate does exist: `frontmatter_adr_incompatibility` in `src/project_standards/validate_frontmatter.py`, exiting `2` on an incompatible pair, with test coverage. `meta/versioning.md` overstated it in one respect — the constraint is declared in the bundled `registry.json` against ADR **contract** versions, not by the resolved payload — and the gate is on the retained contract plane, not the catalog plane, where payloads declare `companions` with no version constraint. The section now says exactly that; ADR 0013 records that a companion carries no version constraint |
+| 10 | Move five requirements out of Consequences (B6) | **Done.** 0001, 0002, 0004, 0006, 0007; each requirement moved verbatim in substance into its bounded Decision Outcome, each vacated bullet rewritten as an effect |
+| 11 | Boundary paragraph per Cohort A record | **Done as one pass.** All eleven state population, applicability, and at least one realistic exclusion in Decision Outcome. The §8 exclusion-language scan now returns ≥1 for every active record; the 0013/0014 cliff is gone |
+| 12 | Harmonize frontmatter-scope claims (O1) | **Done.** 0016, 0021, and 0022 narrowed to the paths each declares; 0021's open-ended trailing clause removed; 0014 states that it is this repository's scope authority and decides nothing for a consumer |
+| 13 | `.agents/` root ownership (O3) | **Partially done, remainder deferred with reasoning.** 0021 and 0022 each now state that they reserve one subtree and that the root is unassigned **reserved authority** requiring its own record. Assigning affirmative ownership was not done here: under 1.5's rule that an amendment may not enlarge the governed concern, a rule about the container would widen both records beyond skills and beyond hooks, so it needs its own ADR. The silence O3 identified is closed; the affirmative decision is follow-up work |
+| 14 | Harmonize exception clauses (O2) | **Done.** 0018, 0019, 0021, and 0022 each distinguish an in-population exception from an out-of-scope case and state an amendment threshold on 0027's form. 0019's manifest-backed variant is kept deliberately and marked preferred, as the only machine-surfaceable escalation in the corpus |
+| 15 | Mark 0016 as 0021's special case (O4) | **Done.** Recorded as `0021 amends 0016` with reciprocal fields and a note stating which part of 0016 the class rule now carries |
+| 16 | ADR 0002's claim is lifecycle-scoped (C5) | **Done.** Two external amendments recorded reciprocally: `0018 amends 0002` (narrowed to lifecycle) and `0024 amends 0002` (central advertisement reintroduced for a concern 0002 never evaluated) |
+| 17 | ADR 0012's lifecycle | **Done as a self-amendment.** The record stays `active` and historical; the note and outcome record that the gate passed and the deferral is **discharged**, so it withholds nothing. The least-invasive expression that keeps the sequencing precedent intact |
+| 18 | Split ADR 0024 | **Deferred deliberately.** The two populations are real and the split case is sound, but a split mints a new ADR and rewrites an accepted record's structure — larger than the rest of this pass and independently reversible. 0024's own boundary work in this pass does not depend on it. Follow-up |
+| 19 | Evidence-versus-authority convention (S2) | **Convention adopted; application deferred.** `docs/adr/README.md` now states the rule under "Reading this corpus". Reframing every existing More Information list is corpus-wide prose work and is not done |
+| 20 | Bundle/package terminology (S3) | **Materially mitigated; historical prose unchanged.** Every new boundary paragraph in 0001–0013 uses "standard package" and pins the population to `standards/`, so the normative plane is unambiguous. The accepted 2026-07-07 outcome sentences keep "bundle": 1.5 forbids rewriting accepted Decision Outcome prose in place, so a vocabulary sweep would have to be an amendment per record for no governance change |
+| 21 | Rename ADR 0025/0026 files (F2) | **Deferred deliberately, as the assessment recommended.** Cosmetic, and it touches the index, five inbound frontmatter references, and several inline links |
+
+### Verification after remediation
+
+- `uv run project-standards validate` exits `0` over 37 files under the candidate-wheel runtime.
+- Prettier and markdownlint are clean over the Git-tracked scope.
+- The §8 required-sections loop is unchanged: every record still has exactly one each of the three MADR level-2 headings.
+- The §8 exclusion-language scan returns at least one match for **every** active record, including all of 0001–0013.
+- Amendment reciprocity was checked mechanically: every `project.amends` entry has a matching `project.amended_by` on the named record and vice versa. The four superseded records carry neither field, which 1.5 requires — an amendment must not be recorded against a superseded ADR.
+
+### Known follow-ups
+
+1. Assign affirmative ownership of the `.agents/` root (item 13 remainder) in its own ADR.
+2. Split ADR 0024's release-classification rules from its consumer selector rules (item 18).
+3. Reconcile the resource-URI grammar across `catalog.py:172`, `render_catalog` at `catalog.py:330`, `SPEC-MS01`, and ADR 0010 (C1, still open by design and now explicitly bounded on both sides).
+4. Apply the evidence-versus-authority convention to existing body link lists (item 19 remainder).
+5. Rename the ADR 0025 and 0026 files (item 21).
