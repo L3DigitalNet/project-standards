@@ -409,6 +409,7 @@ class _DesiredGroup:
 
 
 type _OwnedNaturalKey = tuple[str, str, str]
+type _SelectedDeclarationKey = tuple[str, str, AdapterKind, str]
 type _HistoricalAddress = tuple[str, str, AdapterKind, str]
 
 
@@ -505,6 +506,51 @@ def _selected_payloads(
             )
         selected.append((package, payload))
     return tuple(sorted(selected, key=lambda item: item[0].standard_id.encode("utf-8")))
+
+
+def _selected_declaration_governing_options(
+    selected: tuple[tuple[ResolvedPackage, InstalledPayload], ...],
+) -> dict[_SelectedDeclarationKey, tuple[str, ...] | None]:
+    """Index unambiguous governing metadata by package-owned semantic address."""
+    candidates: dict[
+        _SelectedDeclarationKey,
+        set[tuple[str, ...] | None],
+    ] = defaultdict(set)
+    for package, payload in selected:
+        for contribution in payload.manifest.contributions:
+            key = (
+                package.standard_id,
+                contribution.target.original,
+                contribution.adapter,
+                contribution.scope,
+            )
+            # Inactive declarations remain diagnostic authority for locked units
+            # that the selected configuration has de-declared. Reading their
+            # manifest metadata never invokes an inactive render provider.
+            declared = (
+                tuple(contribution.governing_options)
+                if contribution.governing_options is not None
+                else None
+            )
+            candidates[key].add(declared)
+    return {
+        key: next(iter(declared)) if len(declared) == 1 else None
+        for key, declared in candidates.items()
+    }
+
+
+def _locked_governing_options(
+    locked: LockedUnit,
+    selected_declarations: Mapping[
+        _SelectedDeclarationKey,
+        tuple[str, ...] | None,
+    ],
+) -> tuple[str, ...] | None:
+    declared = {
+        selected_declarations.get((owner, locked.path.original, locked.adapter, locked.scope))
+        for owner in locked.owners
+    }
+    return next(iter(declared)) if len(declared) == 1 else None
 
 
 def _read_payload_file(
@@ -1500,6 +1546,7 @@ def _classify_desired(
             standard_id=group.owners[0],
             version=group.versions[0][1],
             message="previously managed semantic unit is missing",
+            governing_options=group.governing_options,
         )
     if previous.mode is not None and entry.mode != previous.mode:
         return None, _finding(
@@ -1531,6 +1578,7 @@ def _classify_removed(
     previous: LockedUnit,
     current: AdapterUnit | None,
     entry: SnapshotEntry,
+    governing_options: tuple[str, ...] | None,
 ) -> tuple[PlannedUnit | None, ControlFinding | None]:
     versions = tuple((owner, version.value) for owner, version in previous.versions.items())
     unit = PlannedUnit(
@@ -1557,6 +1605,7 @@ def _classify_removed(
             standard_id=previous.owners[0],
             version=versions[0][1],
             message="previously managed semantic unit is missing from its container",
+            governing_options=governing_options,
         )
     if current.semantic_digest != previous.semantic_digest:
         return None, _finding(
@@ -1775,6 +1824,10 @@ def _render_targets(
     transitions: frozenset[DeclaredTransition],
     migration_catalog: CatalogMajor | None,
     historical_create_only: Mapping[_HistoricalAddress, tuple[_HistoricalCreateOnlyUnit, ...]],
+    selected_declarations: Mapping[
+        _SelectedDeclarationKey,
+        tuple[str, ...] | None,
+    ],
 ) -> tuple[
     tuple[ControlAction, ...],
     tuple[PlannedUnit, ...],
@@ -1882,6 +1935,7 @@ def _render_targets(
                 locked,
                 current_units.get(locked.scope),
                 entry,
+                _locked_governing_options(locked, selected_declarations),
             )
             if finding is not None:
                 target_findings.append(finding)
@@ -2668,6 +2722,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         payloads,
     )
     selected = _selected_payloads(resolution, payloads)
+    selected_declarations = _selected_declaration_governing_options(selected)
     paths = _target_paths(selected, request.resolution.previous_lock)
     if prepared_transform is not None:
         paths = tuple(
@@ -2819,6 +2874,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         transitions=request.resolution.transition_paths,
         migration_catalog=request.migration_catalog,
         historical_create_only=historical_create_only,
+        selected_declarations=selected_declarations,
     )
     findings.extend(target_findings)
     if request.catalog_refresh is not None and request.catalog_refresh.changed:

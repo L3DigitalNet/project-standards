@@ -1665,6 +1665,246 @@ def _consumer_conflict(plan: ReconciliationPlan) -> ControlFinding:
     return next(finding for finding in plan.findings if finding.code == "CP-CONSUMER-CONFLICT")
 
 
+def _missing_managed_finding(
+    plan: ReconciliationPlan,
+    identity: str,
+) -> ControlFinding:
+    return next(
+        finding
+        for finding in plan.findings
+        if finding.code == "CP-MODIFIED-MANAGED" and finding.identity == identity
+    )
+
+
+def _assert_governing_options_rendered(
+    finding: ControlFinding,
+    expected: tuple[str, ...] | None,
+) -> None:
+    from project_standards.control_plane.cli import (
+        _format_human_finding,  # pyright: ignore[reportPrivateUsage]  # focused renderer contract
+    )
+
+    assert finding.governing_options == expected
+    [jsonable] = findings_to_jsonable((finding,))
+    rendered = _format_human_finding(finding)
+    if expected is None:
+        assert "governing_options" not in jsonable
+        assert "governing options:" not in rendered
+    else:
+        assert jsonable["governing_options"] == list(expected)
+        expected_human = ", ".join(expected) or "none declared"
+        assert f"governing options: {expected_human}" in rendered
+
+
+def test_missing_active_managed_unit__reports_selected_declaration_governing_options(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "value",
+                "target": "settings.json",
+                "adapter": "json",
+                "scope": "key:/value",
+                "content": b'{"value": 1}\n',
+                "governing_options": ["/vscode/task_prefix"],
+            }
+        ],
+        option_properties={
+            "vscode": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"task_prefix": {"type": "string"}},
+                "required": ["task_prefix"],
+            }
+        },
+    )
+    configs: Mapping[str, Mapping[str, JsonValue]] = {
+        "demo": {"vscode": {"task_prefix": "python: "}}
+    }
+    initial = plan_reconciliation(_request(repo, (payload,), configs=configs))
+    (repo / "settings.json").write_bytes(initial.proposed_content("settings.json"))
+    lock = initial.next_lock
+    lock_bytes = render_lock(lock)
+    (repo / "settings.json").write_bytes(b"{}\n")
+
+    plan = plan_reconciliation(_request(repo, (payload,), lock=lock, configs=configs))
+
+    finding = _missing_managed_finding(plan, "key:/value")
+    assert not plan.applicable
+    assert finding.severity == "error"
+    assert finding.standard_id == "demo"
+    assert finding.version == "1.0"
+    assert finding.message == "previously managed semantic unit is missing"
+    _assert_governing_options_rendered(finding, ("/vscode/task_prefix",))
+    assert render_lock(plan.next_lock) == lock_bytes
+
+
+@pytest.mark.parametrize(
+    ("declared", "expected"),
+    [
+        pytest.param(None, None, id="absent-is-unknown"),
+        pytest.param(((),), (), id="explicit-empty"),
+        pytest.param(
+            (("mode",), ("mode",)),
+            ("mode",),
+            id="agreeing-declarations",
+        ),
+        pytest.param(
+            (("mode",), ("profile",)),
+            None,
+            id="conflicting-declarations-are-unknown",
+        ),
+    ],
+)
+def test_missing_removed_managed_unit__uses_unambiguous_inactive_declaration_metadata(
+    tmp_path: Path,
+    declared: tuple[tuple[str, ...], ...] | None,
+    expected: tuple[str, ...] | None,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "settings.json").write_bytes(b"{}\n")
+    declarations = [None] if declared is None else declared
+    payloads: list[InstalledPayload] = []
+    owners: list[str] = []
+    for index, governing in enumerate(declarations):
+        owner = "demo" if len(declarations) == 1 else f"demo-{index}"
+        owners.append(owner)
+        contribution: ContributionFixture = {
+            "id": f"legacy-{index}",
+            "target": "settings.json",
+            "adapter": "json",
+            "scope": "key:/tool/demo/legacy",
+            "content": b'{"tool": {"demo": {"legacy": true}}}\n',
+            "when_any": [{"option": "profile", "equals": f"legacy-{index}"}],
+        }
+        if len(declarations) > 1:
+            contribution["shared_identity"] = "demo-legacy"
+        if governing is not None:
+            contribution["governing_options"] = list(governing)
+        payloads.append(
+            write_payload(
+                tmp_path / f"payload-{index}",
+                owner,
+                contributions=[contribution],
+                option_properties={
+                    "mode": {"type": "string", "default": "managed"},
+                    "profile": {"type": "string", "default": "current"},
+                },
+            )
+        )
+    locked = locked_unit(
+        path="settings.json",
+        adapter="json",
+        scope="key:/tool/demo/legacy",
+        owners=owners,
+        semantic_digest=digest(b"true"),
+        content_digest=digest(b"true"),
+        created_container=False,
+    )
+    if len(owners) > 1:
+        locked["shared_identity"] = "demo-legacy"
+    lock = previous_lock(locked)
+    lock_bytes = render_lock(lock)
+
+    plan = plan_reconciliation(_request(repo, payloads, lock=lock))
+
+    finding = _missing_managed_finding(plan, "key:/tool/demo/legacy")
+    assert not plan.applicable
+    assert finding.severity == "error"
+    assert finding.standard_id == owners[0]
+    assert finding.version == "1.0"
+    assert finding.message == "previously managed semantic unit is missing from its container"
+    _assert_governing_options_rendered(finding, expected)
+    assert render_lock(plan.next_lock) == lock_bytes
+
+
+def test_missing_removed_managed_unit__does_not_borrow_other_owners_metadata(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "settings.json").write_bytes(b"{}\n")
+    other = write_payload(
+        tmp_path / "other",
+        "other",
+        contributions=[
+            {
+                "id": "legacy",
+                "target": "settings.json",
+                "adapter": "json",
+                "scope": "key:/tool/demo/legacy",
+                "content": b'{"tool": {"demo": {"legacy": true}}}\n',
+                "when_any": [{"option": "profile", "equals": "legacy"}],
+                "governing_options": ["profile"],
+            }
+        ],
+        option_properties={"profile": {"type": "string", "default": "current"}},
+    )
+    lock = previous_lock(
+        locked_unit(
+            path="settings.json",
+            adapter="json",
+            scope="key:/tool/demo/legacy",
+            owners=["demo"],
+            semantic_digest=digest(b"true"),
+            content_digest=digest(b"true"),
+            created_container=False,
+        )
+    )
+
+    plan = plan_reconciliation(_request(repo, (other,), lock=lock))
+
+    finding = _missing_managed_finding(plan, "key:/tool/demo/legacy")
+    assert finding.standard_id == "demo"
+    _assert_governing_options_rendered(finding, None)
+
+
+def test_missing_removed_managed_unit__does_not_borrow_other_address_metadata(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "settings.json").write_bytes(b"{}\n")
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "other",
+                "target": "settings.json",
+                "adapter": "json",
+                "scope": "key:/tool/demo/other",
+                "content": b'{"tool": {"demo": {"other": true}}}\n',
+                "when_any": [{"option": "profile", "equals": "legacy"}],
+                "governing_options": ["profile"],
+            }
+        ],
+        option_properties={"profile": {"type": "string", "default": "current"}},
+    )
+    lock = previous_lock(
+        locked_unit(
+            path="settings.json",
+            adapter="json",
+            scope="key:/tool/demo/legacy",
+            owners=["demo"],
+            semantic_digest=digest(b"true"),
+            content_digest=digest(b"true"),
+            created_container=False,
+        )
+    )
+
+    plan = plan_reconciliation(_request(repo, (payload,), lock=lock))
+
+    finding = _missing_managed_finding(plan, "key:/tool/demo/legacy")
+    _assert_governing_options_rendered(finding, None)
+
+
 def test_consumer_conflict_finding_carries_expected_actual_values_and_digests(
     tmp_path: Path,
 ) -> None:
