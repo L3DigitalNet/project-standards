@@ -16,6 +16,8 @@ Use version 2.6 when authoring or reviewing package families, immutable payloads
 
 The package is `internal`: it declares no consumer outputs or executable providers and has no adoption guide. Follow the [versioned author workflow](versions/2.6/README.md#author-workflow) and start from the [versioned templates](versions/2.6/templates/).
 
+When cutting a successor, run `uv run project-standards standards validate-graph --root . --require-all-manifests` and proceed only when it is clean. The graph validator automatically checks every manifest-declared JSON schema against manifest-derived package identity, migration endpoints, selectors, and provider closure; it neither regex-scans files nor executes providers.
+
 ## Released-version errata
 
 The immutable 2.3 README's author-workflow command block omits two repository gates. Run the complete current package, graph, schema, projection, and catalog set before the release check:
