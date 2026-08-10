@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 
 @dataclass(frozen=True)
@@ -19,6 +19,7 @@ class Registry:
     tier_prefixes: dict[str, frozenset[str]]
     sentinel: str
     spec_id_pattern: str
+    canonical_surfaces: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

@@ -159,6 +159,24 @@ def appendix_pattern(letter: str) -> str:
     return rf"{_APPENDIX_HEADING}{re.escape(letter)}:.*?(?=^## |\Z)"
 
 
+def conformance_surfaces(body: str) -> dict[str, str]:
+    """Return the exact canonical boilerplate surfaces structurally present in a body."""
+    structural_body = _masked_structural_view(body)
+    surfaces: dict[str, str] = {}
+    for locus, prefix in (
+        ("Lifecycle", "**Spec lifecycle:**"),
+        ("Quality", "> **Quality rule:**"),
+    ):
+        match = re.search(rf"^{re.escape(prefix)}.*$", structural_body, re.M)
+        if match:
+            surfaces[locus] = body[match.start() : match.end()]
+    for letter in ("A", "B", "D"):
+        match = re.search(appendix_pattern(letter), structural_body, re.M | re.S)
+        if match:
+            surfaces[f"Appendix {letter}"] = body[match.start() : match.end()]
+    return surfaces
+
+
 def declared_prefixes(body: str) -> dict[str, str]:
     """Return Appendix-A prefix declarations from template/spec Markdown."""
     structural_body = _masked_structural_view(body)
@@ -200,6 +218,7 @@ def registry_from_templates(templates: Mapping[str, str]) -> Registry:
     appendices = {tier: frozenset(appendix_letters(body)) for tier, body in tier_body.items()}
     tier_prefixes = {tier: frozenset(declared_prefixes(body)) for tier, body in tier_body.items()}
     prefix_defined_in = declared_prefixes(full)
+    canonical_surfaces = {tier: conformance_surfaces(body) for tier, body in tier_body.items()}
 
     return Registry(
         canonical_sections=canonical,
@@ -212,6 +231,7 @@ def registry_from_templates(templates: Mapping[str, str]) -> Registry:
         tier_prefixes=tier_prefixes,
         sentinel=SENTINEL,
         spec_id_pattern=SPEC_ID_PATTERN,
+        canonical_surfaces=canonical_surfaces,
     )
 
 

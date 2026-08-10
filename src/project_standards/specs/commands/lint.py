@@ -16,6 +16,7 @@ from project_standards.specs.model import (
 )
 from project_standards.specs.registry import (
     _masked_structural_view,  # pyright: ignore[reportPrivateUsage]
+    conformance_surfaces,
 )
 
 _ANGLE = re.compile(r"<[^>\n]+>")
@@ -86,7 +87,7 @@ def _w(code: str, message: str, line: int | None = None, locus: str | None = Non
     return Finding(code=code, severity="warning", message=message, line=line, locus=locus)
 
 
-def lint_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
+def lint_document(doc: SpecDocument, reg: Registry, *, conformance: bool = False) -> list[Finding]:
     """Return advisory findings; callers decide whether warnings are strict."""
     out: list[Finding] = []
     # Authoring quality presupposes a recognizable specification: the traceability
@@ -107,7 +108,66 @@ def lint_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
             out.append(_w("SL-GUIDANCE", "template guidance not deleted", line=i))
     if doc.frontmatter.get("status") == "approved":
         out += _traceability(doc, reg)
+    if conformance:
+        out += _conformance(doc, reg)
     return absolute_finding_lines(out, body_line_offset=doc.body_line_offset)
+
+
+def _conformance(doc: SpecDocument, reg: Registry) -> list[Finding]:
+    profile = doc.profile or ""
+    canonical = reg.canonical_surfaces.get(profile)
+    if canonical is None:
+        return []
+
+    actual = conformance_surfaces(doc.body)
+    findings = [
+        _w(
+            "SL-BOILERPLATE",
+            "restore the canonical template surface",
+            locus=locus,
+        )
+        for locus, expected in canonical.items()
+        if actual.get(locus) != expected
+    ]
+    findings.extend(_requirement_phrasing(doc))
+    return findings
+
+
+_REQUIREMENT_ID = re.compile(r"^(?:FR|NFR|IR|DR)-\d+$")
+
+
+def _table_cells(line: str) -> list[str]:
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+
+def _requirement_phrasing(doc: SpecDocument) -> list[Finding]:
+    findings: list[Finding] = []
+    requirement_column: int | None = None
+    for line_number, line in enumerate(_masked_structural_view(doc.body).splitlines(), start=1):
+        if not line.lstrip().startswith("|"):
+            requirement_column = None
+            continue
+        cells = _table_cells(line)
+        normalized = [cell.lower() for cell in cells]
+        if "id" in normalized and "requirement" in normalized:
+            requirement_column = normalized.index("requirement")
+            continue
+        if requirement_column is None or len(cells) <= requirement_column:
+            continue
+        requirement_id = cells[0].strip("`")
+        if not _REQUIREMENT_ID.fullmatch(requirement_id):
+            continue
+        if cells[requirement_column].startswith("The system shall"):
+            continue
+        findings.append(
+            _w(
+                "SL-REQUIREMENT-PHRASING",
+                "requirement must start with `The system shall`",
+                line=line_number,
+                locus=requirement_id,
+            )
+        )
+    return findings
 
 
 def _must_frs(doc: SpecDocument) -> list[str]:
