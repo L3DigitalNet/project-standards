@@ -1,0 +1,49 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"findings": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"properties": {
+					"code": { "type": "string" },
+					"severity": { "enum": ["error", "warning"] },
+					"path": { "type": "string" },
+					"identity": { "type": "string" },
+					"message": { "type": "string" },
+					"hint": { "type": "string" },
+					"line": {
+						"description": "Absolute one-based physical file line, including frontmatter, or null when no line applies.",
+						"type": ["integer", "null"],
+						"minimum": 1
+					},
+					"locus": { "type": ["string", "null"] }
+				},
+				"required": [
+					"code",
+					"severity",
+					"path",
+					"identity",
+					"message",
+					"hint",
+					"line",
+					"locus"
+				]
+			}
+		},
+		"checks": {
+			"type": "array",
+			"prefixItems": [
+				{ "const": "shared-boilerplate" },
+				{ "const": "mandatory-phrasing" }
+			],
+			"items": false,
+			"minItems": 2,
+			"maxItems": 2
+		}
+	},
+	"required": ["findings", "checks"]
+}
