@@ -6,8 +6,8 @@ description: 'Defines non-breaking catalog defaults, opt-in breaking package can
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-10'
-updated: '2026-08-09'
-reviewed: '2026-08-09'
+updated: '2026-08-10'
+reviewed: '2026-08-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -54,6 +54,8 @@ project:
 MADR status: **accepted**.
 
 > **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, finding C5).** The three amendments this record makes to earlier active decisions are now recorded reciprocally in `project.amends`: it narrows [ADR 0002](adr-0002-manifest-first-standard-discovery.md) by holding permanent per-release advertisement centrally rather than per family, and it carries the catalog-channel half of the lifecycle and provenance amendments already banner-noted on [ADR 0018](adr-0018-standard-package-lifecycle-methodology.md) and [ADR 0019](adr-0019-packaged-artifact-parity-and-provenance.md). Nothing this record decided changes.
+>
+> **Amended 2026-08-10 (#160 catalog-channel coupling).** This remains one active record: advertisement, selectors and authorization, promotion and release classification, and forbidden transitions were jointly determined because permanent advertisement is the shared substrate for each. Consumer and configuration readers should use [Catalog channels](#catalog-channels), [Candidate entry and retained tracks](#candidate-entry-and-retained-tracks), and [Candidate exit and transition](#candidate-exit-and-transition); release and operator readers should use [Catalog channels](#catalog-channels), [Catalog-major promotion](#catalog-major-promotion), and [Tool release classification](#tool-release-classification). The review coupling among those existing outcome subsections is accepted so their shared assumptions remain aligned. See [Amendments](#amendments).
 
 ## Context and Problem Statement
 
@@ -149,6 +151,10 @@ Forbidden transitions are independent of release-level selection. Every advertis
 ### Confirmation
 
 Resolver and release-policy tests cover ordinary defaults, exact pins, candidate entry through `latest` and exact selectors, authorization scope, same-major updates, disable/re-enable, unavailable retained tracks, exact-target exit, replacement/removal of authorization records, catalog promotion, missing-lock recovery, and offline installation of every advertised version.
+
+### Amendments
+
+**Amended 2026-08-10 (#160 catalog-channel coupling).** The [considered options](#considered-options) jointly determined the accepted outcome's advertisement, selector and authorization, promotion and release-classification, and forbidden-transition mechanics rather than leaving them independently separable: permanent advertisement supplies the shared catalog facts that selectors and authorization resolve, promotion makes a selected catalog default ordinary, and release classification and forbidden transitions preserve the resulting catalog history. This record therefore remains one active ADR rather than being split or superseded. For consumer and configuration work, read [Catalog channels](#catalog-channels), [Candidate entry and retained tracks](#candidate-entry-and-retained-tracks), and [Candidate exit and transition](#candidate-exit-and-transition). For release and operator work, read [Catalog channels](#catalog-channels), [Catalog-major promotion](#catalog-major-promotion), and [Tool release classification](#tool-release-classification). Review of a change that crosses these mechanics is intentionally coupled across those existing subsections; that cost is accepted to keep their shared assumptions aligned. This amendment explains the accepted decision and creates no policy beyond it.
 
 ## More Information
 
