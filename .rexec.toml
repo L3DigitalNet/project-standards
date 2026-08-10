@@ -1,14 +1,23 @@
 # rexec repository configuration. See `rexec help config`.
-#
-# Caches are intentionally left at their remote defaults: uv, Go and pnpm all
-# cache outside the synchronized worktree and share one content-addressed store
-# across every workspace on the host. Pinning them to {remote_cache} would
-# fragment that store per repository, not protect anything.
 
 [env]
-# Keep the interpreter environment out of the disposable worktree, so
-# `rexec clean` rebuilds the mirror without discarding a full `uv sync`.
-UV_PROJECT_ENVIRONMENT = "{remote_cache}/python-env"
+# Deliberately empty. Do not set UV_PROJECT_ENVIRONMENT here, despite the
+# starter config in `rexec help config` recommending "{remote_cache}/python-env"
+# (remote-execution#3): `scripts/verify.sh` resolves its whole toolchain through
+# the literal path `$REPO_ROOT/.venv/bin` — see that script's header on why it
+# bypasses `uv run` — so redirecting the environment leaves `.venv` absent and
+# the gate dies in preflight with "missing .venv/bin/ruff", which the advertised
+# remedy (`uv sync --all-groups`) then cannot repair.
+#
+# The redirect also protects nothing. `.venv/` is a built-in rsync exclude and
+# sync runs `--delete` without `--delete-excluded`, so a worktree-local remote
+# `.venv` already survives every synchronization; only `rexec clean` discards
+# it, and re-running `uv sync` is far cheaper than an unusable gate.
+#
+# Caches stay at their remote defaults for a different reason: uv, Go and pnpm
+# already cache outside the worktree and share one content-addressed store
+# across every workspace on the host, so pinning them to {remote_cache} would
+# fragment that store per repository rather than protect anything.
 
 [provision.tools]
 # Probed, never installed: `rexec setup` names a missing toolchain up front
