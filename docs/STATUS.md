@@ -12,7 +12,9 @@
 - `docs/adr/adr.template.md` now carries the `adr` 1.5 bytes; the lock deliberately retains the artifact's creation digest, which is correct for a create-only artifact and is not drift.
 - Three same-class payload corrections shipped then were caught in-train: stale embedded predecessor version references in successor schemas. `assert_schema_payload_references` guards them per-test, but the class is invisible to the five validators (#156).
 - Twelve follow-ups #156–#167 are filed in Inbox and untriaged; #129 (`adr-conformance` foundation) stays open and deliberately excluded from this train, with both its prerequisites now closed.
-- v5.18.0 was the first release train to use `rexec`: the full serial gate ran remotely in 17.9 min against 38–48 min locally, while builds stayed local because ~12–15 s of sync dominates ~2.1 s of compute. Release verification could not offload from the release worktree (#167).
+- v5.18.0 was the first release train to use `rexec`: the full serial gate ran remotely in 17.9 min against 38–48 min locally, while builds stayed local because ~12–15 s of sync dominates ~2.1 s of compute.
+- Of that gate, only the statics lane actually offloads. The pytest lanes fail on the worker from any checkout, not just the release worktree as #167 first recorded, because `.git` is never mirrored and the ledger seed's `git log` fallback reports the absence as `unused or disconnected amendment` (bug 007).
+- `.rexec.toml` must not set `UV_PROJECT_ENVIRONMENT`; it left `.venv` absent and the gate unrunnable (`976d3715`). A new or `rexec clean`-ed worker still needs a one-time `uv sync --all-groups` and `npm ci`, since both directories are excludes `rexec setup` does not create. Filed upstream as remote-execution#3 and #4.
 - The open-issue program has T16, T19, and T36 terminal (checkpoints `50d0c364`, `229a4bc1`, `e13e1a66`; EV-008); the feature phase T24–T29 remains, with T24 ready.
 - The next release is 5.19.0, scoped to the `project-toolbox` standards by owner direction 2026-08-09.
 - All four reusable workflows accept an optional `runner-labels` input for private same-organization callers.

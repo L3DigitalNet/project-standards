@@ -60,7 +60,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Triage the v5.18.0 follow-ups #156–#167.
 
-  Twelve issues are in Inbox with no Priority. Four need a decision before they can be specified: #156 (validator enhancement vs authoring-contract check for stale embedded version references), #157 (whether reconcile grows an explicit opt-in create-only refresh), #158 and #166 (bound vs test assertion for load-sensitive timing proofs).
+  Twelve issues are in Inbox with no Priority. Five need a decision before they can be specified: #156 (validator enhancement vs authoring-contract check for stale embedded version references), #157 (whether reconcile grows an explicit opt-in create-only refresh), #158 and #166 (bound vs test assertion for load-sensitive timing proofs), and #167.
+
+  #167's premise was corrected on 2026-08-09 and its fix space is now two options: make the ledger seed git-independent, or split the gate so git-dependent collection stays local while the compute-heavy lanes offload. No worktree-side remedy applies, because `.git` is never mirrored for any checkout (bug 007).
 
 - [ ] Scope the 5.19.0 `project-toolbox` release.
 

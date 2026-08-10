@@ -10,3 +10,4 @@ Generated from frontmatter. Regenerate with `python3 docs/handoff/bugs/_regen_in
 | 004 | 2026-08-01 | agent-handoff SessionStart failed through a rejecting Python shim | agent-handoff, claude-code, codex, python, uv | fixed |
 | 005 | 2026-08-04 | agent-handoff 1.8 SessionStart never runs because args selects exec form | agent-handoff, claude-code, hooks | open |
 | 006 | 2026-08-05 | create-only artifacts are invisible to drift-check, so a stale scaffold outlives its package version | control-plane, adr, reconcile, lock | fixed |
+| 007 | 2026-08-09 | remote gate blocked by a redirected uv environment, and .git absence misreports as ledger corruption | rexec, tests, ledger, tooling | fixed |
