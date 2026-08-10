@@ -26,7 +26,7 @@
 - Explicit `rexec` invocations are remote-only. Its one root configuration plus compiled defaults are authoritative; the surviving user-level file is present but inactive. Run a command directly when local execution is intended.
 - `.git` is a mandatory sync exclusion, so Git-history, branch, index, and `git ls-files` workloads remain local. The former full-gate observation remains historical: its statics lane offloaded, but the pytest lanes fail remotely because the ledger's `git log` fallback misreports missing Git metadata as amendment corruption (bug 007).
 - Do not set `UV_PROJECT_ENVIRONMENT`: this gate addresses `.venv/bin` directly and the redirect leaves it absent. A new or `rexec clean`-ed worker still needs remote `uv sync --all-groups` and `npm ci`, because those excluded workspace dependencies are not created by `rexec setup` (remote-execution#3 and #4).
-- The open-issue program has T16, T19, T24, and T36 terminal. T24 approved the #62 design at `b3b5ece`; T25 is dependency-ready and no implementation is claimed. Superseded pre-format-3 checklists at the work item's root recorded T16/T19/T36 as `not-started`; they are deleted and the authoritative `execution/` tree was correct all along (bug 008, agent-configs#23).
+- The open-issue program has T16, T19, T24, and T36 terminal. T25's #62 child plan is active at `3bb7c4cf`; T1/T2 are ready, but no implementation is claimed. T4 waits for a separately governed verified #143 checkpoint before Catalog/self-host activation and selected dogfood remediation. Superseded pre-format-3 checklists at the work item's root recorded T16/T19/T36 as `not-started`; they are deleted and the authoritative `execution/` tree was correct all along (bug 008, agent-configs#23).
 - Work-state fields applied 2026-08-10: 19 of the 20 are `Ready` at `P1 Next` with target date 2026-08-17; #129 stays `Needs definition` and deferred, and #168 is `P2 Planned` for 5.20.0.
 - All four reusable workflows accept an optional `runner-labels` input for private same-organization callers.
 - Reviewed action pins: setup-uv 9.0.0 (`prune-cache: true`), setup-node 7.0.0, setup-python 7.0.0.
@@ -36,7 +36,7 @@
 - The preflight reports `declared`/`missing`/`not applicable` per site and runs clean on all ten catalog-5 families; seam applicability is read from `AUTHORITATIVE_INPUT_OWNER`, because no `payload.toml` field separates `python-tooling` from `adr`.
 - That work landed green on the full fast gate at 14:45 — statics 4:01, ordinary 9:01, compatibility 14:17, performance 0:26 — with coverage at 90%.
 - #131 is the only consumer-visible item of the four and is recorded under `CHANGELOG.md` `[5.17.0]` for the v5.17.0 train; the other three are repository tooling.
-- Program tail otherwise unchanged: T25–T29, SPEC-GSF3 T1, and the Usage Documentation Site V2 specs stay queued for later sessions.
+- Program tail otherwise unchanged: T25 implementation, T26–T29, SPEC-GSF3 T1, and the Usage Documentation Site V2 specs stay queued for later sessions.
 - The `github-workflow` package is fully staged: approved design rev 1.6 (D0–D12) and SPEC-GHW1 rev 1.6; the format-3 plan completed 2026-08-07.
 - Two Codex high-effort review rounds ran over SPEC-GHW1 and its plan; all ten round-1 findings and the round-2 residues are applied.
-- `scripts/plan.py` carries the plan-authoring 3.4.1 bridge; the open-issue program validates at revision 4 with T24 done and only T25 ready. `agent-configs` is on 3.5.0, so the consumer copy is one minor behind.
+- `scripts/plan.py` carries canonical plan-authoring 3.5.0 at `4c6d2b7e`; parity and self-tests passed. The #62 child plan validates with four tasks, seven requirements, four proofs, and one durable evidence record.

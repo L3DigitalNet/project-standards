@@ -2,10 +2,10 @@
 
 ## Current focus
 
-- All 20 open issues except #168 triaged 2026-08-09; comments posted. 14 carried a wrong premise.
-- All seven owner decisions resolved 2026-08-10; each issue carries its decision, alternatives, and costs.
+- All 20 open issues except #168 were triaged; all seven owner decisions are resolved.
 - Release shape resolved 2026-08-10: 5.19.0 is the 20-issue consolidation train; `project-toolbox` moved to 5.20.0.
-- T24 #62 completed at `b3b5ece`; T25 is ready; no implementation. Tails: SPEC-GSF3 T1, Usage Doc Site V2 specs, #129 deferred.
+- T25's #62 child plan is active at `3bb7c4cf`; T1/T2 are ready, but implementation has not begun.
+- T4 waits for a separately governed verified #143 checkpoint. Tails: SPEC-GSF3 T1, Usage Doc Site V2 specs, #129 deferred.
 
 ## Active incidents
 

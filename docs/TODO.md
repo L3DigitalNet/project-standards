@@ -56,7 +56,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md).
 
-  Remaining work is T25–T29 for #62 (conformance linting) and #55 (house-format conversion); T25 is dependency-ready. T24 approved the design at `b3b5ece`. #116 shipped in v5.18.0 as `python-tooling` 1.13. The deferred-tooling phase closed in v5.16.0 — see `docs/handoff/deployed.md` for what shipped.
+  Remaining work is T25 implementation and T26–T29 for #62 (conformance linting), plus #55 (house-format conversion). T25's child plan is active at `3bb7c4cf`; T1/T2 are ready, and T4 waits for a separately governed verified #143 checkpoint.
+
+  #116 shipped in v5.18.0 as `python-tooling` 1.13. The deferred-tooling phase closed in v5.16.0 — see `docs/handoff/deployed.md` for what shipped.
 
 - [x] Triage the v5.18.0 follow-ups #156–#167.
 
