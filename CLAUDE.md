@@ -20,7 +20,7 @@ Maintained Project Specification documents live under `docs/specs/`.
 
 ## Heavy Workloads
 
-Run CPU-heavy commands through `rexec -- <command>`: `scripts/verify.sh`, full or compatibility pytest batteries, `make go-check`. Wheel/sdist builds stay local (~2 s compute vs ~12–15 s sync) unless batched before a remote gate needing them. Pull needed artifacts with `--pull`; declare missing worker tooling in the rexec config and converge with `rexec setup` — provisioning the worker is its purpose. Signing, tagging, and publication stay local. Git-worktree checkouts cannot run git-dependent commands remotely (remote-execution#2).
+Run CPU-heavy commands through `rexec -- <command>`: `make go-check`, and `scripts/verify.sh` for its statics lane. Its pytest lanes cannot pass remotely from any checkout — `.git` is never mirrored, so the ledger seed's `git log` fails and reports the misleading `unused or disconnected amendment` (#167, remote-execution#2); run those locally until that is resolved. Wheel/sdist builds stay local (~2 s compute vs ~12–15 s sync) unless batched before a remote gate needing them. Pull needed artifacts with `--pull`; declare missing worker tooling in the rexec config and converge with `rexec setup` — provisioning the worker is its purpose. `.venv/` and `node_modules/` are rsync excludes that `setup` does not create, so a new or `rexec clean`-ed worker needs a one-time `rexec --shell 'uv sync --all-groups'` and `rexec --shell 'npm ci'`; skipping it fails as a missing local path, not a remote one (remote-execution#4). Never set `UV_PROJECT_ENVIRONMENT` in `.rexec.toml` — see the comment there. Signing, tagging, and publication stay local.
 
 ## Non-Negotiables
 
