@@ -500,7 +500,10 @@ def _historical_issue_tables(
         text=True,
     )
     if history.returncode != 0:
-        return {_integer(row, "number", label="current issue"): row for row in current}
+        detail = history.stderr.strip()
+        raise LedgerError(
+            f"git log --follow --reverse --format=%H -- {relative.as_posix()} failed: {detail}"
+        )
     authority: dict[int, Mapping[str, object]] = {}
     for commit in history.stdout.splitlines():
         snapshot = subprocess.run(
@@ -615,9 +618,10 @@ def _historical_consumer_tables(
         text=True,
     )
     if history.returncode != 0:
-        return {
-            _string(row, "standard_id", label="current consumer outcome"): row for row in current
-        }
+        detail = history.stderr.strip()
+        raise LedgerError(
+            f"git log --follow --reverse --format=%H -- {relative.as_posix()} failed: {detail}"
+        )
     authority: dict[str, Mapping[str, object]] = {}
     for commit in history.stdout.splitlines():
         snapshot = subprocess.run(

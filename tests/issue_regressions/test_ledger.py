@@ -76,6 +76,24 @@ def test_ledger_schema_1_1_loads_canonical_introduced_release(tmp_path: Path) ->
         _ledger_text(reference, symbol_digest(tmp_path, reference)),
         encoding="utf-8",
     )
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Regression Test",
+            "-c",
+            "user.email=regression@example.invalid",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "commit",
+            "-qm",
+            "seed authority",
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
 
     ledger = validate_ledger(ledger_path, tmp_path, expected_issues=(3,))
 
@@ -358,6 +376,25 @@ def test_historical_authority_rejects_self_consistent_proof_rewrite_without_amen
 
     with pytest.raises(LedgerError, match="amendment"):
         validate_ledger(ledger, tmp_path, expected_issues=(3,))
+
+
+def test_historical_authority__missing_git_history__reports_collection_failure(
+    tmp_path: Path,
+) -> None:
+    reference = _write_proof(tmp_path)
+    ledger = tmp_path / "ledger.toml"
+    ledger.write_text(
+        _ledger_text(reference, symbol_digest(tmp_path, reference)),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(LedgerError) as error:
+        validate_ledger(ledger, tmp_path, expected_issues=(3,))
+
+    message = str(error.value)
+    assert "git log --follow --reverse --format=%H -- ledger.toml failed:" in message
+    assert "not a git repository" in message
+    assert "amendment" not in message
 
 
 def test_historical_authority_accepts_one_complete_linear_amendment(tmp_path: Path) -> None:
@@ -653,6 +690,51 @@ validate = "passed"
             (current,),
             (current_table,),
         )
+
+
+def test_consumer_outcome_authority__missing_git_history__reports_collection_failure(
+    tmp_path: Path,
+) -> None:
+    checks = {
+        "format": "passed",
+        "installed_workflow": "passed",
+        "lint": "passed",
+        "reconcile": "passed",
+        "validate": "passed",
+    }
+    current = ConsumerOutcome(
+        standard_id="agent-handoff",
+        predecessor="1.3",
+        latest="1.4",
+        proof_reference="tests/test_proof.py::test_proof",
+        proof_digest="sha256:proof",
+        exact_checks=checks,
+        latest_checks=checks,
+    )
+    current_table: dict[str, object] = {
+        "standard_id": current.standard_id,
+        "predecessor": current.predecessor,
+        "latest": current.latest,
+        "proof_reference": current.proof_reference,
+        "proof_digest": current.proof_digest,
+        "amendments": [],
+        "exact_checks": checks,
+        "latest_checks": checks,
+    }
+    path = tmp_path / "baseline.toml"
+
+    with pytest.raises(LedgerError) as error:
+        validate_historical_consumer_authority(
+            path,
+            tmp_path,
+            (current,),
+            (current_table,),
+        )
+
+    message = str(error.value)
+    assert "git log --follow --reverse --format=%H -- baseline.toml failed:" in message
+    assert "not a git repository" in message
+    assert "amendment" not in message
 
 
 def test_verified_wheel_execution_binds_digest_version_and_import_origin(
