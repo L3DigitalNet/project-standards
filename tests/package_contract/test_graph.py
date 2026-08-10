@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import inspect
+import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
+from project_standards.cli import main
 from project_standards.package_contract import graph as package_graph
 from project_standards.package_contract.catalog import (
     CatalogPackageEntry,
@@ -50,8 +53,10 @@ from project_standards.package_contract.repository import (
     LoadedFamily,
     LoadedPayload,
     PackageRepository,
+    SchemaPropertyScope,
     build_package_repository,
 )
+from tests.package_contract.helpers import copy_minimal_repository, refresh_declared_file_digest
 
 _FIXTURE = Path(__file__).resolve().parents[1] / "fixtures/package_contract/valid/minimal"
 _DIGEST = Sha256Digest("sha256:1ec8d07e07de0defe61804181b75e9139a7d6e9ed8540f677138efa8d2335dcb")
@@ -62,6 +67,42 @@ _OTHER_DIGEST = Sha256Digest(
 
 def _base_payload() -> LoadedPayload:
     return build_package_repository(_FIXTURE).payloads[0]
+
+
+def _declare_json_schema(
+    repository: Path,
+    *,
+    resource_id: str,
+    relative_path: str,
+    content: str,
+) -> Path:
+    payload_root = repository / "standards/demo/versions/1.2"
+    schema_path = payload_root / relative_path
+    schema_path.parent.mkdir(parents=True, exist_ok=True)
+    schema_path.write_text(content, encoding="utf-8")
+    payload_path = payload_root / "payload.toml"
+    with payload_path.open("a", encoding="utf-8") as payload_file:
+        payload_file.write(
+            f'''\n[[resources]]
+id = "{resource_id}"
+role = "provider-input"
+path = "{relative_path}"
+media_type = "application/schema+json"
+digest = "sha256:{"0" * 64}"
+'''
+        )
+    refresh_declared_file_digest(repository / "standards/demo", relative_path)
+    return schema_path
+
+
+def _schema(properties: dict[str, object]) -> str:
+    return json.dumps(
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": properties,
+        }
+    )
 
 
 def _manifest(
@@ -203,6 +244,260 @@ def _migration(
             "affected": affected or ["config:*"],
         }
     )
+
+
+def _automatic_migration(
+    migration_id: str,
+    from_endpoint: str,
+    to_endpoint: str,
+    provider: str,
+) -> MigrationDeclaration:
+    return MigrationDeclaration.model_validate(
+        {
+            "id": migration_id,
+            "from": from_endpoint,
+            "to": to_endpoint,
+            "mode": MigrationMode.AUTOMATIC,
+            "provider": provider,
+            "reversible": False,
+            "affected": ["config:*"],
+        }
+    )
+
+
+def test_builder_backed_graph_reports_stale_schema_literals_in_stable_order(
+    tmp_path: Path,
+) -> None:
+    repository_root = copy_minimal_repository(tmp_path)
+    _declare_json_schema(
+        repository_root,
+        resource_id="stale-references",
+        relative_path="schemas/stale-references.schema.json",
+        content=_schema(
+            {
+                "standard_id": {"const": "demo"},
+                "version": {"const": "1.1"},
+                "migration_id": {"enum": ["missing-b", "missing-a"]},
+            }
+        ),
+    )
+
+    findings = validate_package_graph(build_package_repository(repository_root))
+
+    assert [finding.code for finding in findings] == [
+        "PC-SCHEMA-PAYLOAD-REFERENCE",
+        "PC-SCHEMA-PAYLOAD-REFERENCE",
+    ]
+    assert [finding.identity for finding in findings] == [
+        "schema:schemas/stale-references.schema.json#/properties/migration_id",
+        "schema:schemas/stale-references.schema.json#/properties/version",
+    ]
+    assert "undeclared migrations ['missing-a', 'missing-b']" in findings[0].message
+    assert "payload version 1.2" in findings[1].message
+
+
+@pytest.mark.parametrize(
+    ("resource_id", "relative_path", "document", "identity"),
+    [
+        pytest.param(
+            "provider-input",
+            "schemas/provider-input.schema.json",
+            _schema(
+                {
+                    "standard_id": {"const": "demo"},
+                    "version": {"const": "1.1"},
+                }
+            ),
+            "schema:schemas/provider-input.schema.json#/properties/version",
+            id="provider-input-version-const",
+        ),
+        pytest.param(
+            "migration-report",
+            "schemas/migration-report.schema.json",
+            json.dumps(
+                {
+                    "type": "object",
+                    "properties": {
+                        "package": {
+                            "type": "object",
+                            "properties": {
+                                "standard_id": {"const": "demo"},
+                                "version": {"const": "1.1"},
+                            },
+                        }
+                    },
+                }
+            ),
+            ("schema:schemas/migration-report.schema.json#/properties/package/properties/version"),
+            id="nested-migration-report-version-const",
+        ),
+        pytest.param(
+            "config-transform-input",
+            "schemas/config-transform-input.schema.json",
+            json.dumps(
+                {
+                    "type": "object",
+                    "$defs": {
+                        "configurationTransform": {
+                            "type": "object",
+                            "properties": {
+                                "migration_id": {"enum": ["upgrade-1-1-to-1-2"]},
+                                "source": {"enum": ["package:1.1"]},
+                            },
+                        }
+                    },
+                }
+            ),
+            (
+                "schema:schemas/config-transform-input.schema.json"
+                "#/$defs/configurationTransform/properties/migration_id"
+            ),
+            id="configuration-transform-migration-enum",
+        ),
+    ],
+)
+def test_graph_rejects_historical_stale_schema_shapes_without_family_wiring(
+    tmp_path: Path,
+    resource_id: str,
+    relative_path: str,
+    document: str,
+    identity: str,
+) -> None:
+    repository_root = copy_minimal_repository(tmp_path)
+    _declare_json_schema(
+        repository_root,
+        resource_id=resource_id,
+        relative_path=relative_path,
+        content=document,
+    )
+
+    findings = validate_package_graph(build_package_repository(repository_root))
+
+    assert identity in [finding.identity for finding in findings]
+
+
+def test_graph_accepts_manifest_declared_predecessor_schema_edges() -> None:
+    repository = build_package_repository(
+        Path.cwd(),
+        family_allowlist={"python-tooling"},
+    )
+
+    assert any(
+        source.startswith("package:") and source != f"package:{payload.manifest.payload.version}"
+        for payload in repository.payloads
+        for scope in payload.schema_property_scopes or ()
+        for source in scope.sources
+    )
+    assert not [
+        finding
+        for finding in validate_package_graph(repository)
+        if finding.code == "PC-SCHEMA-PAYLOAD-REFERENCE"
+    ]
+
+
+def test_provider_scoped_schema_literals_must_match_that_providers_edges() -> None:
+    manifest = _manifest(
+        "alpha",
+        migrations=[
+            _automatic_migration("edge-a", "package:1.0", "package:1.2", "provider-a"),
+            _automatic_migration("edge-b", "package:1.1", "package:1.2", "provider-b"),
+        ],
+    )
+    scope = SchemaPropertyScope(
+        resource_path="schemas/config-transform-input.schema.json",
+        pointer="/$defs/configurationTransform/properties",
+        property_names=("migration_id", "provider_id", "source", "target"),
+        standard_id_pinned=False,
+        standard_id=None,
+        version_schema_present=False,
+        version=None,
+        migration_ids=("edge-b",),
+        sources=("package:1.1",),
+        targets=("package:1.2",),
+        selectors=(),
+        provider_id="provider-a",
+    )
+    repository = _repository([manifest])
+    payload = replace(repository.payloads[0], schema_property_scopes=(scope,))
+    repository = replace(
+        repository,
+        families=(replace(repository.families[0], payloads=(payload,)),),
+    )
+
+    findings = [
+        finding
+        for finding in validate_package_graph(repository)
+        if finding.code == "PC-SCHEMA-PAYLOAD-REFERENCE"
+    ]
+
+    assert [finding.identity for finding in findings] == [
+        (
+            "schema:schemas/config-transform-input.schema.json"
+            "#/$defs/configurationTransform/properties/migration_id"
+        ),
+        (
+            "schema:schemas/config-transform-input.schema.json"
+            "#/$defs/configurationTransform/properties/source"
+        ),
+    ]
+    assert all(
+        "does not enumerate provider 'provider-a'" in finding.message for finding in findings
+    )
+
+
+def test_malformed_declared_json_is_a_normalized_finding(tmp_path: Path) -> None:
+    repository_root = copy_minimal_repository(tmp_path)
+    _declare_json_schema(
+        repository_root,
+        resource_id="malformed-schema",
+        relative_path="schemas/malformed.schema.json",
+        content="{",
+    )
+
+    repository = build_package_repository(repository_root)
+
+    assert [finding.code for finding in repository.findings] == ["PC-SCHEMA-JSON"]
+    assert repository.findings[0].identity == "schema:schemas/malformed.schema.json"
+    assert validate_package_graph(repository) == repository.findings
+
+
+def test_builder_populates_schema_facts_but_synthetic_payloads_may_omit_them() -> None:
+    builder_payload = _base_payload()
+    synthetic = _repository([_manifest("alpha")])
+
+    assert builder_payload.schema_property_scopes is not None
+    assert synthetic.payloads[0].schema_property_scopes is None
+    assert validate_package_graph(synthetic) == ()
+
+
+def test_validate_graph_cli_reports_schema_findings_and_exit_one(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repository_root = copy_minimal_repository(tmp_path)
+    _declare_json_schema(
+        repository_root,
+        resource_id="cli-stale-reference",
+        relative_path="schemas/cli-stale-reference.schema.json",
+        content=_schema(
+            {
+                "standard_id": {"const": "demo"},
+                "version": {"const": "1.1"},
+            }
+        ),
+    )
+    (repository_root / "catalogs/5.toml").unlink()
+
+    exit_code = main(["standards", "validate-graph", "--root", str(repository_root), "--json"])
+
+    output = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert output["ok"] is False
+    assert [finding["code"] for finding in output["findings"]] == ["PC-SCHEMA-PAYLOAD-REFERENCE"]
+    assert [finding["path"] for finding in output["findings"]] == [
+        "standards/demo/versions/1.2/schemas/cli-stale-reference.schema.json"
+    ]
+    assert "must pin payload version 1.2" in output["findings"][0]["message"]
 
 
 def test_graph_reports_missing_and_self_relation_targets() -> None:

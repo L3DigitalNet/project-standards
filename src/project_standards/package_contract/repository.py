@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from project_standards.package_contract.catalog import (
     CatalogSource,
@@ -37,6 +39,27 @@ class LoadedPayload:
     manifest: PayloadManifest
     integrity: PayloadIntegrity
     option_schema: PackageOptionSchema
+    # `None` is reserved for synthetic callers that have no filesystem boundary;
+    # `build_package_repository` always supplies a tuple, even when it is empty.
+    schema_property_scopes: tuple[SchemaPropertyScope, ...] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SchemaPropertyScope:
+    """Immutable schema literals from one JSON Schema `properties` scope."""
+
+    resource_path: str
+    pointer: str
+    property_names: tuple[str, ...]
+    standard_id_pinned: bool
+    standard_id: str | None
+    version_schema_present: bool
+    version: str | None
+    migration_ids: tuple[str, ...]
+    sources: tuple[str, ...]
+    targets: tuple[str, ...]
+    selectors: tuple[str, ...]
+    provider_id: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +116,122 @@ def _finding(
         message=message,
         hint="repair the declared V2 package source and rerun repository validation",
     )
+
+
+def _literal_values(node: object) -> tuple[str, ...]:
+    if not isinstance(node, dict):
+        return ()
+    mapping = cast("dict[str, object]", node)
+    values: list[object] = []
+    if "const" in mapping:
+        values.append(mapping["const"])
+    enum = mapping.get("enum")
+    if isinstance(enum, list):
+        values.extend(cast("list[object]", enum))
+    for keyword in ("anyOf", "oneOf", "allOf"):
+        branches = mapping.get(keyword)
+        if isinstance(branches, list):
+            for branch in cast("list[object]", branches):
+                values.extend(_literal_values(branch))
+    return tuple(value for value in values if isinstance(value, str))
+
+
+def _pointer_segment(value: str) -> str:
+    return value.replace("~", "~0").replace("/", "~1")
+
+
+def _schema_property_scopes(
+    resource_path: str, document: object
+) -> tuple[SchemaPropertyScope, ...]:
+    scopes: list[SchemaPropertyScope] = []
+
+    def walk(node: object, pointer: str) -> None:
+        if isinstance(node, list):
+            for index, item in enumerate(cast("list[object]", node)):
+                walk(item, f"{pointer}/{index}")
+            return
+        if not isinstance(node, dict):
+            return
+        mapping = cast("dict[str, object]", node)
+        properties = mapping.get("properties")
+        if isinstance(properties, dict):
+            property_map = cast("dict[str, object]", properties)
+            standard_id_schema = property_map.get("standard_id")
+            standard_id_pinned = isinstance(standard_id_schema, dict) and (
+                "const" in standard_id_schema
+            )
+            standard_id_value = (
+                cast("dict[str, object]", standard_id_schema).get("const")
+                if standard_id_pinned
+                else None
+            )
+            version_schema = property_map.get("version")
+            version_value = (
+                cast("dict[str, object]", version_schema).get("const")
+                if isinstance(version_schema, dict)
+                else None
+            )
+            provider_schema = property_map.get("provider_id")
+            provider_value = (
+                cast("dict[str, object]", provider_schema).get("const")
+                if isinstance(provider_schema, dict)
+                else None
+            )
+            scopes.append(
+                SchemaPropertyScope(
+                    resource_path=resource_path,
+                    pointer=f"{pointer}/properties",
+                    property_names=tuple(sorted(property_map)),
+                    standard_id_pinned=standard_id_pinned,
+                    standard_id=standard_id_value if isinstance(standard_id_value, str) else None,
+                    version_schema_present=isinstance(version_schema, dict),
+                    version=version_value if isinstance(version_value, str) else None,
+                    migration_ids=_literal_values(property_map.get("migration_id")),
+                    sources=_literal_values(property_map.get("source")),
+                    targets=_literal_values(property_map.get("target")),
+                    selectors=_literal_values(property_map.get("selector")),
+                    provider_id=provider_value if isinstance(provider_value, str) else None,
+                )
+            )
+        for key, value in mapping.items():
+            walk(value, f"{pointer}/{_pointer_segment(key)}")
+
+    walk(document, "")
+    return tuple(scopes)
+
+
+def _load_schema_property_scopes(
+    payload_root: Path,
+    manifest: PayloadManifest,
+    *,
+    standard_id: str,
+    version: str,
+) -> tuple[tuple[SchemaPropertyScope, ...], list[PackageFinding]]:
+    scopes: list[SchemaPropertyScope] = []
+    findings: list[PackageFinding] = []
+    for resource in manifest.resources:
+        relative = resource.path.normalized.as_posix()
+        if not relative.endswith(".json"):
+            continue
+        try:
+            document = cast(
+                "object",
+                json.loads((payload_root / relative).read_text(encoding="utf-8")),
+            )
+        except OSError, UnicodeError, json.JSONDecodeError:
+            findings.append(
+                _finding(
+                    "PC-SCHEMA-JSON",
+                    standard_id,
+                    version,
+                    f"standards/{standard_id}/versions/{version}/{relative}",
+                    f"schema:{relative}",
+                    "declared JSON schema is not readable valid JSON",
+                )
+            )
+            continue
+        scopes.extend(_schema_property_scopes(relative, document))
+    return tuple(scopes), findings
 
 
 def build_package_repository(
@@ -176,11 +315,19 @@ def build_package_repository(
                     )
                 )
                 continue
+            schema_property_scopes, schema_findings = _load_schema_property_scopes(
+                payload_path.parent,
+                payload_manifest,
+                standard_id=standard_id,
+                version=version,
+            )
+            findings.extend(schema_findings)
             loaded_payloads.append(
                 LoadedPayload(
                     manifest=payload_manifest,
                     integrity=integrity,
                     option_schema=option_schema,
+                    schema_property_scopes=schema_property_scopes,
                 )
             )
         loaded_families.append(LoadedFamily(manifest, tuple(loaded_payloads)))

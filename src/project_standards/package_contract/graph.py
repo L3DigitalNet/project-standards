@@ -22,7 +22,7 @@ from project_standards.package_contract.payload import (
     WholeArtifactDeclaration,
     contributions_overlap,
 )
-from project_standards.package_contract.repository import PackageRepository
+from project_standards.package_contract.repository import PackageRepository, SchemaPropertyScope
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,13 +39,15 @@ def _finding(
     version: str,
     identity: str,
     message: str,
+    *,
+    path: str = "standards",
 ) -> PackageFinding:
     return PackageFinding(
         code=code,
         severity="error",
         standard_id=standard_id,
         version=version,
-        path="standards",
+        path=path,
         identity=identity,
         message=message,
         hint="make package relationships, ownership, and migrations explicit and conflict-free",
@@ -60,6 +62,96 @@ def _payloads(repository: PackageRepository) -> list[PayloadManifest]:
             manifest.payload.version.sort_key,
         ),
     )
+
+
+def _schema_scope_findings(
+    scope: SchemaPropertyScope,
+    manifest: PayloadManifest,
+) -> list[PackageFinding]:
+    standard_id = manifest.payload.standard
+    version = manifest.payload.version.value
+    declared_ids = {migration.id for migration in manifest.migrations}
+    declared_endpoints = {
+        endpoint.value
+        for migration in manifest.migrations
+        for endpoint in (migration.from_endpoint, migration.to_endpoint)
+    }
+    own_selectors = {"latest", version}
+    violations: dict[str, set[str]] = defaultdict(set)
+
+    if scope.standard_id_pinned:
+        if scope.standard_id != standard_id:
+            violations["standard_id"].add(f"must name payload family {standard_id}")
+        if not scope.version_schema_present or scope.version != version:
+            violations["version"].add(f"must pin payload version {version}")
+
+    unknown_ids = sorted(set(scope.migration_ids) - declared_ids)
+    if unknown_ids:
+        violations["migration_id"].add(f"names undeclared migrations {unknown_ids}")
+    for property_name, literals in (("source", scope.sources), ("target", scope.targets)):
+        endpoints = {literal for literal in literals if literal.startswith(("package:", "legacy:"))}
+        unknown_endpoints = sorted(endpoints - declared_endpoints)
+        if unknown_endpoints:
+            violations[property_name].add(
+                f"names endpoints absent from declared migrations {unknown_endpoints}"
+            )
+    unknown_selectors = sorted(set(scope.selectors) - own_selectors)
+    if unknown_selectors:
+        violations["selector"].add(f"names foreign selectors {unknown_selectors}")
+
+    provider_id = scope.provider_id
+    provider_edges = (
+        [migration for migration in manifest.migrations if migration.provider == provider_id]
+        if provider_id is not None
+        else []
+    )
+    if provider_edges:
+        expected = {
+            "migration_id": {migration.id for migration in provider_edges},
+            "source": {migration.from_endpoint.value for migration in provider_edges},
+            "target": {migration.to_endpoint.value for migration in provider_edges},
+        }
+        property_names = set(scope.property_names)
+        actual = {
+            "migration_id": set(scope.migration_ids),
+            "source": set(scope.sources),
+            "target": set(scope.targets),
+        }
+        for property_name, wanted in expected.items():
+            if property_name not in property_names or actual[property_name] == wanted:
+                continue
+            violations[property_name].add(
+                f"does not enumerate provider {provider_id!r}: "
+                f"missing {sorted(wanted - actual[property_name])}, "
+                f"unexpected {sorted(actual[property_name] - wanted)}"
+            )
+
+    path = f"standards/{standard_id}/versions/{version}/{scope.resource_path}"
+    return [
+        _finding(
+            "PC-SCHEMA-PAYLOAD-REFERENCE",
+            standard_id,
+            version,
+            f"schema:{scope.resource_path}#{scope.pointer}/{property_name}",
+            "schema payload reference contradicts its manifest: " + "; ".join(sorted(reasons)),
+            path=path,
+        )
+        for property_name, reasons in sorted(violations.items())
+    ]
+
+
+def _validate_schema_payload_references(
+    repository: PackageRepository,
+) -> list[PackageFinding]:
+    findings: list[PackageFinding] = []
+    for payload in repository.payloads:
+        # Synthetic repositories may omit schema facts; builder-created payloads
+        # never take this branch because the repository boundary supplies a tuple.
+        if payload.schema_property_scopes is None:
+            continue
+        for scope in payload.schema_property_scopes:
+            findings.extend(_schema_scope_findings(scope, payload.manifest))
+    return findings
 
 
 def _validate_relations(
@@ -503,6 +595,7 @@ def validate_package_graph(repository: PackageRepository) -> tuple[PackageFindin
     findings.extend(_validate_relations(payloads, family_ids))
     findings.extend(_validate_outputs(payloads))
     findings.extend(_validate_migrations(repository, payloads))
+    findings.extend(_validate_schema_payload_references(repository))
     return tuple(sort_findings(findings))
 
 

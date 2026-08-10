@@ -26,7 +26,6 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
-from tests.package_contract.helpers import assert_schema_payload_references
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/agent-handoff"
@@ -90,27 +89,6 @@ def test_agent_handoff_1_11__successor__preserves_1_10_and_indexes_complete_payl
     }
     for migration in manifest.migrations:
         assert migration.to_endpoint.value == "package:1.11"
-
-
-def test_agent_handoff_1_11__payload_schemas__pin_their_own_payload_identity() -> None:
-    """Every schema const that names a payload must name *this* payload.
-
-    A successor copies the predecessor's schemas forward, and a copy that keeps the
-    predecessor's `version` const fails closed in `_validate_json_schema` — the payload
-    is unreachable, not merely mislabelled. The first cut of this guard read only the
-    render envelope and so missed the migration report, whose stale `1.10` broke every
-    `plan_legacy_migration` call under 1.11 with `provider output violates its declared
-    schema`. Output schemas run through the same validator; the sweep now covers both.
-    Its second cut read only `version` consts and so missed python-tooling 1.13's stale
-    `migration_id` enum, so it now checks every payload reference a schema pins.
-    """
-    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
-    checked = assert_schema_payload_references(_SUCCESSOR, manifest)
-
-    # Both defects this guard was widened for, named explicitly: the render envelope
-    # at the document root, and the migration report's pin nested under `package`.
-    assert "schemas/provider-input.schema.json#/properties" in checked
-    assert "schemas/migration-report.schema.json#/properties/package/properties" in checked
 
 
 def test_agent_handoff_1_11__launcher__reuses_the_1_10_bytes() -> None:
