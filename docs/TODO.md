@@ -66,9 +66,41 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   `ROADMAP.md` scopes 5.19.0 to `project-toolbox` alone (owner direction 2026-08-09), which does not accommodate the 20 triaged issues. #168's title says v5.20.0 while its body says v5.19.0. The triage recommends inserting a consolidation train and moving `project-toolbox` to the release after; explicit deferral with recorded reasoning is the alternative.
 
-- [ ] Resolve the seven owner decisions blocking specification.
+- [x] Resolve the seven owner decisions blocking specification.
 
-  #142 (accept a subprocess trust boundary for `command` providers), #153 (closed prefix enum vs documentation-only), #157 (manual-plus-advisory vs opt-in refresh; option 2 needs a new control-plane ADR), #158 (which number the provider bound takes), #159 (`.agents/` root substance), #160 (split ADR 0024 or record the coupling), #161 (three-way URI grammar ownership).
+  All seven resolved 2026-08-10; each issue carries its decision, rejected alternatives, and release classification.
+
+- [ ] Implement the `command` provider kind (#142).
+
+  Extract the bounded runner from `mcp_services` so the control-plane CLI path shares it — that path dispatches in-process with no timeout today. Preserve every ADR 0025 property, including the third-descriptor result transport.
+
+  Then define the subprocess resource transport, materialize the entrypoint to disk with mode `0755` and verify it against its payload digest, declare platform targets, gate committed binaries reproducibly, and record the ADR. `agent-handoff`'s 1499-line provider migrates once the runner lands.
+
+- [ ] Add the create-only content-match advisory (#157).
+
+  Compare the consumer's file content against the create-only artifact digest of every advertised version, in `validate` and `drift-check`. Engine-only, so PATCH. Amend ADR 0028 with the decision, the rejected refresh path, the customized-copy limit, and the dependency on permanent advertisement. Bug 006 closes against it.
+
+- [ ] Ship `vscode.task_prefix` and the governing-option diagnostic (#153).
+
+  A closed enum defaulting to `""`, implemented as option-gated contribution sets; reserved-label documentation in `adopt.md`; a migration note for consumers who already renamed.
+
+  The diagnostic already names the owning package — only the governing option is missing, and `_classify_removed` sees just the `LockedUnit`. Verify whether an already-renamed consumer lands on `ActionKind.ADOPT`.
+
+- [ ] Stabilize the two real-provider MCP proofs (#158).
+
+  Inject `PROVIDER_TIMEOUT_SECONDS` in both, as nine other tests do. Measure unloaded timing first and record it: a result near 30 s is a production defect for consumers on modest hardware, not a test-isolation problem.
+
+- [ ] Land the three ADR decisions before #162.
+
+  #161 (ADR 0026 owns URI grammar, 0010 adopts by reference; both records carry a stale "open alignment item" claim closed at `e400f83f`), #160 (record ADR 0024's coupling as load-bearing, with a reader's map), #159 (new ADR owning the `.agents/` root, per-class allocation, `standard-id` keying, `.agents/skills/` grandfathered). #162 touches every active ADR body, so it goes last.
+
+- [ ] Sweep #162 with `git grep`, never a recursive grep.
+
+  Re-measured 2026-08-10 and the recorded scope holds: 46 tracked hits across 17 files (`adr-0025` 21, `adr-0026` 25). Raw `grep -r` reports 65 files because two git-excluded agent worktrees under `.claude/worktrees/` carry copies that must not be edited — the same inflation turned ADR 0024's 23 tracked files into 100 raw hits.
+
+- [ ] Declare platform targets for the shipped `github-workflow` binary.
+
+  `standards/github-workflow/versions/1.1/payload.toml` installs `bin/gh-workflow` as a plain `mode = "0755"` artifact with no platform declaration and no degradation path, though it is `ELF 64-bit x86-64` built `GOOS=linux GOARCH=amd64`. Harmless in the current internal population; covered by the same work as #142's item 5.
 
 - [ ] Apply triage field values to the 20 issues.
 
