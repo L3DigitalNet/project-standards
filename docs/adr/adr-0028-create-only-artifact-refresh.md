@@ -2,12 +2,12 @@
 schema_version: '1.1'
 id: 'adr-0028-project-standards-create-only-artifact-refresh'
 title: 'ADR 0028: Create-Only Artifact Refresh'
-description: 'Selects a documented manual refresh as the supported way a consumer repository refreshes an installed create-only package artifact, amended once when the originally selected delete-and-reconcile step proved not to exist.'
+description: 'Keeps create-only artifacts permanently consumer-owned, with manual copy or editing as the only refresh and a warning for exact matches to earlier advertised content.'
 doc_type: 'adr'
 status: 'active'
 created: '2026-08-09'
-updated: '2026-08-09'
-reviewed: '2026-08-09'
+updated: '2026-08-10'
+reviewed: '2026-08-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -45,6 +45,8 @@ project:
 MADR status: **accepted**.
 
 > **Amended 2026-08-09 (v5.18.0 release preparation, refutation of the selected mechanism).** The delete-and-reconcile step chosen below does not exist in the executor, so the sanctioned refresh is now a manual copy of the selected payload's artifact over the installed one. The problem, the applicability, and the exclusion of automatic refresh are unchanged. See [Amendments](#amendments).
+>
+> **Amended 2026-08-10 (#157 owner decision and implementation proof).** Create-only content remains permanently consumer-owned: manual copy or editing is the only refresh, and no explicit or automatic refresh path will be added. A warning now identifies unchanged content that exactly matches an earlier advertised version; customized content stays intentionally silent. This detection depends on ADR 0024 retaining every advertised immutable payload. See [Amendments](#amendments).
 
 ## Context and Problem Statement
 
@@ -112,6 +114,14 @@ The sanctioned refresh is now a **manual copy**: the consumer copies the selecte
 One consequence stated above is withdrawn with the mechanism. "The recreated artifact and the lock digest agree afterwards, so provenance stops being false" does not hold for a manual copy: `.standards/lock.toml` records a create-only unit's digest at creation time and does not recompute it on later reconciles, so after a refresh the lock keeps the creation digest while the file carries the new bytes. That disagreement is the documented steady state for a create-only artifact, not drift — reconcile plans the unit as `preserve consumer bytes outside managed changes`, `reconcile --check` stays clean, and no gate reports it. It is the same false-provenance condition this record's Context names, now understood as inherent to create-only rather than as something the refresh closes. Closing it requires the automated path this record reserves.
 
 The Confirmation clause above is restated accordingly: the refresh is confirmed when the installed bytes match the selected payload's declared source bytes. The clause requiring `.standards/lock.toml` to record that same digest is withdrawn, because no supported operation produces it.
+
+**Amended 2026-08-10 (#157 owner decision and implementation proof).** The automated-path reservation is closed. Create-only is permanently non-overwriting, and neither reconcile, a dedicated refresh command, nor a package provider may replace installed create-only content. Manual copy or editing remains the only sanctioned refresh because it expresses the consumer's decision as an ordinary reviewable repository change. The advisory-free variant is also rejected: the control plane now reports `CP-CREATE-ONLY-STALE` when a selected, materialized static create-only unit exactly matches the equivalent unit from a strictly earlier advertised package version.
+
+The advisory is observational only. It does not refresh content, change the lock, create drift, or turn validation into a failure. Content matching the selected version is current and silent. Customized or otherwise unmatched content, content matching only a later advertised version, absent content, and provider-generated content without an immutable source digest are also silent. In particular, silence for a customized copy does not prove that it is current; determining whether consumer edits should be carried forward remains a manual review.
+
+The historical comparison depends on [ADR 0024](adr-0024-catalog-scoped-package-version-channels.md): every advertised version must remain available with its immutable embedded payload. Those payloads, rather than Git history or `.standards/lock.toml`, are the currency oracle. Removing an earlier advertised payload would make unchanged content from that version indistinguishable from customization and would weaken the advisory without changing the write policy.
+
+The Confirmation clause is restated again for the settled outcome. The advisory confirms staleness only when the installed semantic content exactly matches the nearest strictly earlier advertised version of the selected create-only unit. A manual refresh is confirmed separately by comparing the installed content with the selected payload source; lock metadata is not evidence of create-only content currency.
 
 ## More Information
 
