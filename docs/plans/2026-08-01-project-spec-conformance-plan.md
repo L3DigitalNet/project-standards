@@ -3,9 +3,9 @@ plan_format: 3
 title: 'Project Specification Conformance Linting Implementation Plan'
 slug: 'project-spec-conformance'
 status: active
-revision: 1
-revises_revision: 0
-revision_reason: 'initial plan from the approved issue 62 design'
+revision: 2
+revises_revision: 1
+revision_reason: 'add the #156 T2 schema-guard checkpoint before T3 successor payload mutation'
 pause_reason: ''
 source: 'approved #62 design, issue acceptance, and current repository evidence'
 spec_ref: 'docs/specs/2026-08-01-project-spec-conformance-plan-input.md'
@@ -42,6 +42,7 @@ Ship a Project Specification 1.9 candidate whose selected `spec lint` path repor
 | `repo:tests/package_contract/test_project_spec_1_8.py::test_project_spec_1_8__successor__preserves_1_7_and_indexes_complete_payload` | current-state evidence | Predecessor-byte, package, projection, catalog, and navigation oracle pattern | `4c6d2b7e` | §§4, 7; T3 |
 | `repo:ROADMAP.md` | decision | #143 remains a same-train companion but does not alter #62 behavior | 2026-08-10 | §§3, 10; T3 |
 | `issue:L3DigitalNet/project-standards#143` | normative | Prior same-train advisory and Project Specification 1.9 collision boundary | verified 2026-08-10 | §§3, 5, 10; T4 |
+| `repo:docs/plans/2026-08-10-schema-payload-reference-validation-plan.md#t2-document-the-successor-cut-guard-and-verify-the-repository` | decision | #156 must supply its verified graph/corpus checkpoint before T3 creates any successor payload byte. | revision 1, 2026-08-10 | §§3, 6–10; T3 |
 
 Conflict precedence: the approved design and issue acceptance define #62 behavior; repository code defines only the starting state. The roadmap coordinates a #143 edit after T3 composition and before T4 activation, but that edit cannot weaken or replace this plan's conformance contract.
 
@@ -69,7 +70,7 @@ Conflict precedence: the approved design and issue acceptance define #62 behavio
 | Boundary | Owner / Responsibility |
 | --- | --- |
 | Plan owns | #62 lint engine, optional coverage metadata projection, Project Specification 1.9 conformance behavior, selected dogfood repair, documentation, tests, and local release-candidate proof |
-| Depends on | Approved T24 design, selected payload template resources, existing findings effect, repository package validators, and parent T25 publication authority |
+| Depends on | Approved T24 design, selected payload template resources, existing findings effect, repository package validators, #156 T2/PV-T2-001 before T3 payload writes, and parent T25 publication authority |
 | Does not own | #143's cross-package advisory, non-dogfood consumer document repair, release publication, hosted issue mutation, or new lint policy/configuration |
 | Must preserve | Every 1.8 payload byte and behavior; legacy no-payload output; existing warning/strict exits; selected-spec meaning and lifecycle history; unrelated authored prose; immutable released history |
 
@@ -80,6 +81,7 @@ Conflict precedence: the approved design and issue acceptance define #62 behavio
 - Every recognized FR, NFR, IR, and DR requirement row checks its `Requirement` cell, regardless of an optional Priority column, for the exact `The system shall` prefix.
 - The CLI adds check coverage only when the selected provider returns the successor contract. Absence preserves the predecessor JSON key set and clean human format.
 - Dogfood remediation changes only reported canonical surfaces and requirement cells, preserves each requirement's intent/acceptance/priority, and records a revision row in every changed approved or archived specification.
+- T3 cannot create Project Specification 1.9 until #156 is terminal at a commit carrying `Plan-Id: 2026-08-10/schema-payload-reference-validation`, `Plan-Task: T2`, `Plan-Status: done`, and `Plan-Proofs: PV-T2-001`, and that graph/corpus proof reruns green.
 - T4 cannot activate 1.9 until the separately governed #143 work has supplied a verified Project Specification provider checkpoint and cross-package release-ready status. Absence blocks T4 without weakening or publishing the #62 candidate.
 - CPU-intensive gates follow repository rexec policy except commands whose Git-history dependency requires direct local execution. Publication and GitHub issue mutation require parent T25's explicit action authorization.
 
@@ -160,6 +162,7 @@ The selected 1.9 provider builds its registry from its own immutable template re
 | REQ-005 | Successor documentation shall name all checked surfaces, exact repair guidance, strict-mode impact, additive JSON compatibility, and the remaining semantic-review boundary. | approved design downstream impact | Must | T3 | T3 | PV-T3-001 |
 | REQ-006 | Project Specification 1.9 shall be a complete selected V2 package candidate while every 1.8 byte and legacy/1.8 lint behavior remains unchanged. | approved compatibility decision and package contract | Must | T3 | T2, T3 | PV-T2-001, PV-T3-001 |
 | REQ-007 | After the verified #143 prerequisite, Catalog/self-host activation shall leave every explicitly selected dogfood specification clean under successor strict lint while preserving its requirement meaning, acceptance, priority, and revision history. | repository dogfood policy, roadmap order, and approved migration impact | Must | T4 | T4 | PV-T4-001 |
+| REQ-008 | No Project Specification 1.9 payload byte shall be created until #156 T2/PV-T2-001 is terminal, identity-matched, and green under its graph/corpus acceptance. | #156 plan and release coordination | Must | T3 | T3 | PV-T3-001 |
 
 ## 7. Verification and Evidence Strategy
 
@@ -177,7 +180,7 @@ The selected 1.9 provider builds its registry from its own immutable template re
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | T1 | Add default-off conformance checks | active | behavior | P1 | None | REQ-001, REQ-002 | PV-T1-001 | yes / none |
 | T2 | Project optional check coverage in the CLI | active | brownfield-behavior | P1 | None | REQ-003, REQ-006 | PV-T2-001 | yes / none |
-| T3 | Compose and verify Project Specification 1.9 candidate | active | brownfield-behavior | P2 | T1, T2 | REQ-001–REQ-006 | PV-T3-001 | no / T1, T2 contracts |
+| T3 | Compose and verify Project Specification 1.9 candidate | active | brownfield-behavior | P2 | T1, T2 | REQ-001–REQ-006, REQ-008 | PV-T3-001 | no / T1, T2 contracts and #156 gate |
 | T4 | Activate 1.9 and remediate selected dogfood | active | migration | P3 | T3 | REQ-007 | PV-T4-001 | no / T3 candidate |
 
 ## 9. Implementation Tasks
@@ -262,11 +265,11 @@ The selected 1.9 provider builds its registry from its own immutable template re
 - **checkpoint:** one green commit with task, requirement, proof IDs, and the required `Plan-*` checkpoint trailers
 - **boundary:** public
 - **depends_on:** [T1, T2]
-- **dependency_reason:** consumes `conformance-lint-v1` from T1 and `spec-lint-coverage-v1` from T2
-- **requirements:** [REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006]
+- **dependency_reason:** consumes `conformance-lint-v1` from T1 and `spec-lint-coverage-v1` from T2; external #156 T2/PV-T2-001 must be terminal and green before any payload write
+- **requirements:** [REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-008]
 - **proof:** [PV-T3-001]
-- **source_refs:** [spec:docs/specs/2026-08-01-project-spec-conformance-plan-input.md#selected-design, spec:docs/specs/2026-08-01-project-spec-conformance-plan-input.md#migration-and-compatibility, issue:L3DigitalNet/project-standards#62, repo:standards/project-spec/versions/1.8/providers/project_spec.py::run_lint, repo:standards/project-spec/standard.toml, repo:catalogs/5.toml, repo:tests/package_contract/test_project_spec_1_8.py::test_project_spec_1_8__successor__preserves_1_7_and_indexes_complete_payload, repo:ROADMAP.md]
-- **consumes:** [conformance-lint-v1, spec-lint-coverage-v1, complete immutable 1.8 payload, Catalog 5/V2 family/projection contracts]
+- **source_refs:** [spec:docs/specs/2026-08-01-project-spec-conformance-plan-input.md#selected-design, spec:docs/specs/2026-08-01-project-spec-conformance-plan-input.md#migration-and-compatibility, issue:L3DigitalNet/project-standards#62, repo:docs/plans/2026-08-10-schema-payload-reference-validation-plan.md#t2-document-the-successor-cut-guard-and-verify-the-repository, repo:standards/project-spec/versions/1.8/providers/project_spec.py::run_lint, repo:standards/project-spec/standard.toml, repo:catalogs/5.toml, repo:tests/package_contract/test_project_spec_1_8.py::test_project_spec_1_8__successor__preserves_1_7_and_indexes_complete_payload, repo:ROADMAP.md]
+- **consumes:** [validated #156 T2/PV-T2-001 checkpoint, conformance-lint-v1, spec-lint-coverage-v1, complete immutable 1.8 payload, Catalog 5/V2 family/projection contracts]
 - **produces:** [project-spec-1.9-lint-v1, complete unadvertised Project Specification 1.9 payload candidate, exact-selected source/candidate acceptance]
 - **preserves:** [every 1.8 byte and behavior, every older selectable version, 1.8 Catalog/self-host default, unrelated config/lock/catalog entries, current managed workflow behavior, #143 extension seam]
 - **invariants:** [provider uses its own template resources, findings stay warnings, ordinary/strict exits stay 0/1, output schema fixes the two check names, package digest and projection match authored bytes]
@@ -280,7 +283,7 @@ The selected 1.9 provider builds its registry from its own immutable template re
 - **recovery:** revert or forward-fix only the unreleased 1.9 candidate, its family/projection identity, and its generated unadvertised catalog row; never edit 1.8 or advance Catalog 5/self-host selection. The pre-activation #143 edit must rerun PV-T3-001.
 - **acceptance:** PV-T3-001 proves exact-selected Light, Standard, and Full 1.9 canonical and legitimately tailored documents are clean with explicit check coverage; per-profile divergent surfaces/rows warn and strict-exit 1; all 1.8 bytes and outputs remain exact; payload integrity, family index, projection, successor docs, generated catalog freshness, and focused source/candidate checks pass while Catalog 5/self-host still select 1.8 and the 1.9 row remains unadvertised.
 - **sub-tasks:**
-  - **T3.1 CHARACTERIZE** — capture the 1.8 aggregate digest, file bytes/modes, selected clean/divergent output, family navigation, catalog role, and reconcile projection.
+  - **T3.1 CHARACTERIZE** — validate the exact #156 T2/PV-T2-001 checkpoint and rerun its graph/corpus acceptance before writes; then capture the 1.8 aggregate digest, file bytes/modes, selected clean/divergent output, family navigation, catalog role, and reconcile projection.
   - **T3.2 Verify Baseline** — run the 1.8 package contract and selected-routing baseline before creating 1.9.
   - **T3.3 RED** — add the 1.9 package/output schemas and package/selected tests first; expected failures are the absent 1.9 payload and provider activation.
   - **T3.4 Verify RED** — run focused package and selected tests and confirm the missing successor behavior, not fixture/import failure.
@@ -330,7 +333,7 @@ The selected 1.9 provider builds its registry from its own immutable template re
 ### 10.1 Integration Sequence
 
 1. T1 and T2 independently freeze their preservation seams, observe correct-reason RED, and land the version-neutral contracts.
-2. T3 consumes both contracts, composes the complete unadvertised 1.9 payload, renders its required unadvertised catalog row, and proves exact-selected behavior through the candidate wheel while Catalog 5/self-host selection remains on 1.8.
+2. T3 verifies #156 T2/PV-T2-001 before its first payload write, consumes both #62 contracts, composes the complete unadvertised 1.9 payload, renders its required unadvertised catalog row, and proves exact-selected behavior through the candidate wheel while Catalog 5/self-host selection remains on 1.8.
 3. T4 verifies the separate #143 checkpoint/readiness, snapshots the selected corpus, activates Catalog/self-host, repairs only successor-reported loci, proves semantic preservation and catalog/reconcile convergence, then runs the full serial gate.
 4. Final verification reruns every task proof plus package, Markdown, dogfood, and full serial gates. The resulting child plan is eligible for parent T25, but has no publication authority.
 
@@ -366,6 +369,7 @@ An integrated, dogfood, semantic-review, or later #143 same-candidate failure bl
 | --- | --- | --- |
 | A-001 | The existing selected provider's schema-validated `structured_output` remains the authoritative metadata carrier. | If it cannot preserve the fixed array, pause T2/T3 and return for an interface decision rather than adding a version hardcode. |
 | A-002 | Project Specification 1.9 is the next successor identifier and remains unpublished during this plan. | If another task publishes 1.9 first, pause T3/T4 and revise the candidate/version boundary; a same-train unpublished #143 edit instead reruns this plan's proof. |
+| A-003 | #156's terminal prerequisite remains T2/PV-T2-001 under plan revision 1. | If #156 is revised or superseded, keep T3 blocked and revise this plan's external gate rather than inferring checkpoint equivalence. |
 
 ### 11.3 Open Questions
 
@@ -373,7 +377,7 @@ None.
 
 ## 12. Final Verification
 
-- `uv run --no-project scripts/plan.py validate docs/plans/2026-08-01-project-spec-conformance-plan.md` reports revision 1 valid and execution state matches all checkpoint commits.
+- `uv run --no-project scripts/plan.py validate docs/plans/2026-08-01-project-spec-conformance-plan.md` reports revision 2 valid and execution state matches all checkpoint commits.
 - PV-T1-001, PV-T2-001, PV-T3-001, and PV-T4-001 pass from the integrated tree with no orphan requirement or proof.
 - `uv run project-standards standards validate-packages --root . --json`, `validate-graph --root . --require-all-manifests --json`, `generate-package-schemas --root . --check`, `sync-payload-projection --root . --check`, and `render-catalog --root . --check` all pass against the candidate runtime.
 - Candidate-wheel `project-standards validate`, the repository Markdown checks, Ruff, BasedPyright, `git diff --check`, and local `scripts/verify.sh --full` pass.
@@ -382,6 +386,7 @@ None.
 - The exact selected corpus is strict-clean; every changed requirement retains its ID, intent, rationale, acceptance, priority, and truthful revision history under independent semantic review.
 - Package identity, catalog role, family navigation, projection, `.standards` resolution, and repeat reconcile are consistent; no publication, tag, asset, push, or issue mutation occurred.
 - The separately governed #143 Project Specification checkpoint and cross-package readiness are recorded before activation; no blocker, unapproved deviation, or incomplete correction remains in the integrated candidate.
+- The exact #156 T2/PV-T2-001 checkpoint is recorded and its graph/corpus acceptance reruns green before any Project Specification 1.9 payload write.
 
 ## 13. Close-out
 
@@ -406,7 +411,7 @@ None.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | PV-T1-001 | REQ-001, REQ-002 | T1 | unit and table/section contract | immutable profile templates and approved loci/line contract | `PYTHONPATH="$PWD/build/wheel-runtime" uv run pytest tests/test_spec_conformance_lint.py tests/test_spec_lint.py` | For each Light/Standard/Full profile, all five applicable canonical surfaces and recognized requirement cells classify exactly; tailored surrounding prose and disabled mode stay clean/current | in every profile mutate each applicable surface separately, remove the exact prefix, place lookalike text in fences/surrounding prose, and run with activation disabled | bootstrapped locked worktree | ephemeral |
 | PV-T2-001 | REQ-003, REQ-006 | T2 | CLI characterization and contract | pre-task clean output plus provider-declared structured metadata | `PYTHONPATH="$PWD/build/wheel-runtime" uv run pytest tests/test_spec_conformance_cli.py tests/test_spec_cli.py tests/test_spec_selected_routing.py` | Declared checks appear in successor clean human/JSON output; absent metadata retains exact legacy/1.8 output and exits | supply no checks, invalid/untrusted inferred version, findings with no checks, and selected 1.8 | bootstrapped locked worktree | ephemeral |
-| PV-T3-001 | REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006 | T3 | selected integration and package contract | approved design, immutable 1.8 digest/bytes, V2 package validators, candidate wheel | run focused T1–T3 tests, 1.8/1.9 package contracts, exact-selected routing for Light/Standard/Full, all five package checks, and Markdown gates | Each exact-selected 1.9 profile's canonical/tailored cases are clean with explicit coverage; per-profile divergent cases warn and strict-fail; payload/docs/projection and the generated unadvertised catalog row are complete; 1.8/default selection remains exact | for each profile mutate a canonical surface/row; also mutate a 1.8 byte, omit one check/schema field, break projection/digest/catalog freshness, or accidentally advance Catalog 5/self-host selection | local bootstrapped source and candidate wheel | ephemeral |
+| PV-T3-001 | REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-008 | T3 | selected integration and package contract | approved design, #156 T2 checkpoint, immutable 1.8 digest/bytes, V2 package validators, candidate wheel | validate #156 T2 identity and rerun its graph/corpus proof before writes; run focused T1–T3 tests, 1.8/1.9 package contracts, exact-selected routing for Light/Standard/Full, all five package checks, and Markdown gates | The #156 prerequisite is green before payload creation; each exact-selected 1.9 profile's canonical/tailored cases are clean with explicit coverage; per-profile divergent cases warn and strict-fail; payload/docs/projection and the generated unadvertised catalog row are complete; 1.8/default selection remains exact | remove or mismatch the #156 checkpoint; for each profile mutate a canonical surface/row; also mutate a 1.8 byte, omit one check/schema field, break projection/digest/catalog freshness, or accidentally advance Catalog 5/self-host selection | local bootstrapped source and candidate wheel | ephemeral |
 | PV-T4-001 | REQ-007 | T4 | migration, semantic inspection, selected source/candidate/installed regression | #143 checkpoint, pre-edit per-ID snapshot, successor findings, immutable 1.9 templates, and independent reviewer | verify #143 readiness; run 1.9 strict lint inventory; compare every changed row's ID/rationale/acceptance/priority and meaning; render catalog and reconcile twice; then candidate/installed dogfood, five package checks, Markdown gates, and `scripts/verify.sh --full` | #143 is checkpointed; selected set is unchanged and strict-clean; only reported loci plus revision rows changed; meaning/acceptance/priority/lifecycle are preserved; Catalog/self-host converge on 1.9; full gate passes | omit #143 checkpoint, drop/add a selected path, change an acceptance/priority, leave one finding, omit a revision row, fail activation mid-transition, or make a second render/reconcile change state | isolated pre-activation recovery fixture plus local Git-aware source/candidate/installed environment | EV-001 |
 
 ## Appendix C. Durable Evidence
