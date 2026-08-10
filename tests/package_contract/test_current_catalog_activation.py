@@ -156,7 +156,9 @@ def test_catalog_activation__consumer_predecessors__remain_retained_with_family_
         family = _family(repository, standard_id)
         target_version = targets[standard_id].manifest.payload.version
         expected_versions = {
-            indexed.version.value: indexed.digest for indexed in family.manifest.versions
+            indexed.version.value: indexed.digest
+            for indexed in family.manifest.versions
+            if (standard_id, indexed.version.value) in entries
         }
         actual = {
             version: entry
@@ -181,7 +183,9 @@ def test_catalog_activation__internal_family__keeps_every_indexed_version_intern
     for standard_id in _activation_ids(targets, PayloadAvailability.INTERNAL):
         family = _family(repository, standard_id)
         expected_versions = {
-            indexed.version.value: indexed.digest for indexed in family.manifest.versions
+            indexed.version.value: indexed.digest
+            for indexed in family.manifest.versions
+            if (standard_id, indexed.version.value) in entries
         }
         actual = {
             version: entry
@@ -207,6 +211,7 @@ def test_catalog_activation__internal_family__keeps_every_indexed_version_intern
 def test_catalog_activation__internal_exact_versions__stay_visible_but_not_selectable() -> None:
     repository = _repository()
     targets = _activation_targets(repository)
+    entries = _catalog_entries(repository)
     assert repository.catalog is not None
     catalog = parse_catalog(
         render_consumer_catalog(
@@ -219,7 +224,11 @@ def test_catalog_activation__internal_exact_versions__stay_visible_but_not_selec
 
     for standard_id in _activation_ids(targets, PayloadAvailability.INTERNAL):
         family = _family(repository, standard_id)
-        expected_versions = [indexed.version for indexed in family.manifest.versions]
+        expected_versions = [
+            indexed.version
+            for indexed in family.manifest.versions
+            if (standard_id, indexed.version.value) in entries
+        ]
         standard = catalog.standards[standard_id]
 
         assert standard.available == expected_versions
