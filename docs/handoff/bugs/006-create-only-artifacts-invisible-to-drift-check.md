@@ -3,12 +3,12 @@ bug_id: '006'
 date: '2026-08-05'
 title: 'create-only artifacts are invisible to drift-check, so a stale scaffold outlives its package version'
 services: '[control-plane, adr, reconcile, lock]'
-status: 'open'
+status: 'fixed'
 ---
 
 # 006 — Create-only artifacts are invisible to drift-check
 
-**Status:** open. Diagnosed during the ADR 1.4 conformance assessment; tracked as item 1 of issue #128 for v5.18.0.
+**Status:** fixed in v5.18.0 (`68203eca`). The decision is recorded in ADR 0028 as amended and this repository's scaffold is current. The engine has no refresh path and is not gaining one under this bug; that is issue #157.
 
 ## Symptom
 
@@ -43,9 +43,15 @@ The structural consequence is broader than one file: **a package whose only mana
 
 ## Fix
 
-Not shipped. Item 1 of #128 replaces the local file and corrects the lock record. The underlying delivery gap needs a decision first: a reconcile-time create-only refresh rule, an explicit opt-in command, an `upgrade` provider operation, or a documented manual step.
+Shipped in v5.18.0 (`68203eca`), and the decision is not the one this file anticipated.
 
-If it changes reconcile behaviour it is a control-plane change rather than an ADR-package one, and it likely warrants its own ADR.
+[ADR 0028](../../adr/adr-0028-create-only-artifact-refresh.md) was accepted with a consumer-initiated **delete-and-reconcile** as the sanctioned refresh, then **amended in the same release** because the engine refuted it.
+
+`CP-CREATE-ONLY-ABSENT` is permanent. Deleting a create-only artifact does not make the next reconcile recreate it — absence is a terminal recorded state, not a trigger. The sanctioned refresh is therefore a **manual copy** of the payload template into the consumer path.
+
+`docs/adr/adr.template.md` was refreshed to the `adr` 1.5 bytes that way on 2026-08-09. The lock still records the artifact's creation digest: for a create-only artifact that is correct by design, not residual drift, and it means the refresh leaves no machine-readable trace.
+
+The structural delivery gap is unchanged and deliberately so. Whether reconcile grows an explicit, per-artifact, opt-in refresh — or whether create-only stays permanently manual and the investment goes into a staleness *advisory* instead — is tracked as issue #157. Either answer is a control-plane change and amends or succeeds ADR 0028.
 
 ## Lesson
 

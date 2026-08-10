@@ -2,11 +2,11 @@
 
 ## Current focus
 
-- `agent-handoff@1.10` is default: its SessionStart hook is a Go binary (#138). `linux/amd64` only; upgraders remove the old hook (#140).
-- v5.17.0 is published at `29c875ab` with `github-workflow@1.0`; follow-ups #143–#147 are triaged.
-- v5.18.0 has 14 P1 issues; #141/#147 are Ready, #128 is Blocked; run #127 before #128 and decide bug 006 first.
-- Tail: T24–T29 (#62, #55; T24 ready), deferred #116, SPEC-GSF3 T1, Usage Doc Site V2 specs; owner: 1.12 legacy-digest residual.
+- v5.18.0 published at `68203eca`; 14 issues closed by cuts `adr@1.5`, `python-tooling@1.13`, `agent-handoff@1.11`, `github-workflow@1.1`.
+- ADR 0028 was amended in-release: `CP-CREATE-ONLY-ABSENT` is permanent, so create-only refresh is a manual copy, not delete-and-reconcile.
+- Next is 5.19.0 `project-toolbox` planning per `ROADMAP.md`. #129 stays open and deferred; both its prerequisites are now closed.
+- Tails: T24–T29 (#62, #55; T24 ready), SPEC-GSF3 T1, Usage Doc Site V2 specs; follow-ups #156–#167 are in Inbox, untriaged.
 
 ## Active incidents
 
-- None. #147 is fixed: MCP bounds now escalate until the provider starts, and client frame deadlines outlast the service's own bound.
+- Two real-provider MCP proofs flake under load: one failure in three clean gate runs, and 244–356 s outliers vs the 30 s bound (#158).

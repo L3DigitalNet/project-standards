@@ -56,15 +56,15 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md).
 
-  Remaining work is the feature phase T24–T29 for #62 (conformance linting) and #55 (house-format conversion); T24 is dependency-ready. #116 moved to the v5.18.0 release scope by owner triage on 2026-08-09. The deferred-tooling phase closed in v5.16.0 — see `docs/handoff/deployed.md` for what shipped.
+  Remaining work is the feature phase T24–T29 for #62 (conformance linting) and #55 (house-format conversion); T24 is dependency-ready. #116 shipped in v5.18.0 as `python-tooling` 1.13. The deferred-tooling phase closed in v5.16.0 — see `docs/handoff/deployed.md` for what shipped.
 
-- [ ] Deliver the [v5.18.0 roadmap](../ROADMAP.md).
+- [ ] Triage the v5.18.0 follow-ups #156–#167.
 
-  The 14 P1 issues cover the ADR train (#127/#128), Python Tooling (#116), Agent Handoff (#130/#139/#141/#148), GitHub Workflow (#144/#145/#149/#154), executable adoption guidance (#151), and tests (#146/#147).
+  Twelve issues are in Inbox with no Priority. Four need a decision before they can be specified: #156 (validator enhancement vs authoring-contract check for stale embedded version references), #157 (whether reconcile grows an explicit opt-in create-only refresh), #158 and #166 (bound vs test assertion for load-sensitive timing proofs).
 
-  Owner decision 2026-08-05: bundle #127/#128 and target **5.18.0** (MINOR — `adr` 1.4 → 1.5 becomes the Catalog 5 default). Ship #127 as `adr` 1.5 first, then the 21 backlog items in the ADR conformance assessment §10 using the 1.5 amendment form.
+- [ ] Scope the 5.19.0 `project-toolbox` release.
 
-  `adr` 1.5 must stay non-breaking or it cannot become the default within catalog major 5.
+  Owner direction 2026-08-09. #129 (`adr-conformance` foundation) remains open and unscheduled; both its prerequisites #127 and #128 are now closed, and its decision 10 must be re-derived from ADR 0028 as amended.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
