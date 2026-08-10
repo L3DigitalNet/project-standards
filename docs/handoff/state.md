@@ -11,3 +11,4 @@
 
 - Two real-provider MCP proofs flake under load (#158); the 30 s bound is ADR 0025, not 0026, and is not frozen by amendment.
 - Executor state stale: `.project-pipeline/…/p4.md` and `p10.md` call T16/T19/T36 not-started though all completed 2026-08-05 (bug 008).
+- ADRs 0026 and 0010 still claim an open URI producer divergence that closed at `e400f83f` on 2026-07-29; #161 corrects both (bug 009).

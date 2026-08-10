@@ -12,3 +12,4 @@ Generated from frontmatter. Regenerate with `python3 docs/handoff/bugs/_regen_in
 | 006 | 2026-08-05 | create-only artifacts are invisible to drift-check, so a stale scaffold outlives its package version | control-plane, adr, reconcile, lock | fixed |
 | 007 | 2026-08-09 | remote gate blocked by a redirected uv environment, and .git absence misreports as ledger corruption | rexec, tests, ledger, tooling | fixed |
 | 008 | 2026-08-09 | plan executor state records completed tasks as not-started, so handoff docs derived from it mislead | execute-plan, handoff, docs | open |
+| 009 | 2026-08-10 | active ADRs state timestamped observations about code in decision voice, so the observations go stale invisibly | adr, docs, triage | open |
