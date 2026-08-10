@@ -27,6 +27,7 @@ related:
   - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
   - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+  - 'docs/adr/adr-0030-command-provider-execution-boundary.md'
 supersedes: []
 superseded_by: null
 source:

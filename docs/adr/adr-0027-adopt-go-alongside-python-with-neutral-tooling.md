@@ -22,6 +22,7 @@ aliases:
   - 'Go and Python coexistence'
 related:
   - 'docs/adr/README.md'
+  - 'docs/adr/adr-0030-command-provider-execution-boundary.md'
   - 'docs/handoff/conventions.md'
   - 'standards/adr/library/development/go-and-python-neutral-tooling.md'
   - 'go.mod'
