@@ -26,6 +26,8 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 18 | Match verification to the changed surface | Choosing what to run to prove a change |
 | 19 | Enumerate a new family's declaration sites before authoring | Adopting a family into this repository, or wiring one into a new layer |
 | 20 | A green gate cannot see an unstaged executable | Adding an executable file to the repository |
+| 21 | Renaming a managed artifact is a cross-cutting change | Moving or renaming an installed managed artifact |
+| 22 | rexec v0.2 is a remote-only, root-configured execution path | Selecting or diagnosing remote CPU-intensive work |
 
 ## 1. Dogfood the standards
 
@@ -441,3 +443,17 @@ Six registries named the Agent Handoff hook; each failed a different gate when 1
 **Sources:** `agent-handoff@1.10`, issues #138, #140.
 
 **Related:** 19, 20.
+
+## 22. rexec v0.2 is a remote-only, root-configured execution path
+
+**Applies when:** selecting, configuring, or diagnosing CPU-intensive work on the `rexec` worker.
+
+**Rule:** use the one schema-1 `.rexec.toml` at the Git root and verify a migration with `rexec config show`, `rexec doctor`, and `rexec setup --check`. The v0.2 client reads no user-level configuration and has no local fallback: run a command directly when it must be local. Run `rexec setup` only when deliberately converging the declared Debian packages and exact tools.
+
+**Gotcha:** `.git` is never synchronized, so commands that inspect history, branches, the index, or `git ls-files` must remain local. This repository's direct `.venv/bin` gate must not set `UV_PROJECT_ENVIRONMENT`; bootstrap excluded `.venv` and `node_modules` remotely after `rexec clean`.
+
+**Why:** v0.2 replaced layered, fallback-capable v0.1 behavior in a hard cut. Treating an explicit rexec run as locally recoverable or Git-complete produces misleading verification evidence.
+
+**Sources:** `~/.local/bin/rexec` v0.2.0 live checks on 2026-08-10; `.rexec.toml`; bug 007; `remote-execution/docs/usage.md`.
+
+**Related:** 3, 13, 18.
