@@ -6,8 +6,8 @@ description: 'Freezes the v1 local stdio read-only scope, CLI form, resource URI
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-28'
-updated: '2026-08-09'
-reviewed: '2026-08-09'
+updated: '2026-08-10'
+reviewed: '2026-08-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -57,6 +57,8 @@ MADR status: **accepted** (2026-07-28; owner approval recorded in the T1 session
 > **Amended 2026-07-30 (T10 RED review, finding F3; record queued at the T3, T5, and T6 close-out harvests).** The v1 error taxonomy and its per-revision JSON-RPC wire mapping are frozen as enumerated below. See [Amendments](#amendments).
 >
 > **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings §4 and C4).** The three amendments above were previously inline paragraphs inside `### Frozen adapter configuration`; their text is unchanged and now lives under [Amendments](#amendments), so a reader meets them before the decision text as the amendment form requires. The outcome also records why the omitted generic provider-dispatch tool is consistent with [ADR 0005](adr-0005-stable-generic-agent-tooling-interface.md) rather than a departure from it. No frozen commitment changes.
+>
+> **Amended 2026-08-10 (#161 grammar-authority reconciliation).** This ADR remains the sole owner of the unchanged four-segment MCP resource URI grammar. [ADR 0010](adr-0010-standard-resource-uris-and-index.md) adopts it by reference for its catalog and index population without widening either record. Commit `e400f83f` already aligned both catalog producers; the earlier divergence disclosure remains below as historical accepted text. See [Amendments](#amendments).
 
 ## Context and Problem Statement
 
@@ -189,6 +191,8 @@ Prompts are registered only from declared prompt-role resources. The server inve
 Contract tests assert the declared capability set equals the registration set, that `subscribe` is absent, that `listChanged` is false on all three of the resources, tools, and prompts capabilities, and that prompts are declared only when prompt-role resources exist. Further contract tests pin the server name, the instructions string, and the absence of any non-protocol output on `stdout`. Parametrized tests cover URI canonicalization, rejection of non-canonical and undeclared URIs, rejection of the three-segment index form, and root containment including symlinked and out-of-bounds inputs. Security tests assert that no registered tool writes to the repository. The client smoke matrix exercises the registry against Claude Code and Codex CLI from an installed wheel.
 
 ### Amendments
+
+**Amended 2026-08-10 (#161 grammar-authority reconciliation).** The producer divergence disclosed in the accepted outcome was resolved by `e400f83f`: `_render_package_catalog` changed from the three-segment index form and `render_catalog` changed from the two-segment unversioned form to this ADR's frozen four-segment form. This ADR remains the sole owner of that grammar. ADR 0010 adopts it by reference for its existing catalog and index population and retains its protocol-boundary exclusion; neither record's governed population changes. The three permitted forms, canonicalization rules, structured-error behavior, and positional rejection of the former two-segment form remain unchanged. A v2 protocol successor must carry the grammar forward or deliberately replace it in its own decision.
 
 **Amended 2026-07-29 (T5 RED review, finding F6).** The frozen draft text above becomes binding at the implementation-plan task that completes the six-tool registry it describes (T9) and is pinned verbatim by the T10 contract suite. Until that registry exists, the server serves a static, era-stable instructions string that must stay truthful for its phase: it must not name tools, prompts, or URIs that are not registered. This phase rule resolves the conflict between the frozen text and the plan's T5 empty-registry boundary without weakening either.
 

@@ -6,8 +6,8 @@ description: 'Records the decision to treat standard resources as lazy-loadable,
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-08-09'
-reviewed: '2026-08-09'
+updated: '2026-08-10'
+reviewed: '2026-08-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -46,6 +46,8 @@ project:
 MADR status: **accepted**. Records decision D-010 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 > **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings §5 and C1).** The outcome now states the governed population and excludes the wire URI grammar a protocol server exposes, which [ADR 0026](adr-0026-project-standards-mcp-local-read-only-transport.md) froze separately for MCP v1. The declaration-and-index decision is unchanged, and the divergence between the two forms remains an open alignment item rather than an exception to this record.
+>
+> **Amended 2026-08-10 (#161 grammar-authority reconciliation).** [ADR 0026](adr-0026-project-standards-mcp-local-read-only-transport.md) remains the sole owner of the unchanged four-segment MCP resource URI grammar. This record adopts that grammar by reference for catalog and index URI form while retaining its protocol-boundary exclusion. Commit `e400f83f` already aligned both catalog producers; the earlier open-alignment statement remains below as historical accepted text. See [Amendments](#amendments).
 
 ## Context and Problem Statement
 
@@ -70,3 +72,7 @@ It does not govern the wire URI grammar a server exposes across a protocol bound
 - Good, because a generated index gives agents and tooling a single place to discover available resources across all standards.
 - Bad, because every resource addition or move requires a manifest update rather than being picked up implicitly from the directory tree.
 - Neutral, because resources must be lazy-loadable by declaration, which constrains how large or dynamic a resource can be.
+
+### Amendments
+
+**Amended 2026-08-10 (#161 grammar-authority reconciliation).** The open producer-alignment item described in the accepted outcome was resolved by `e400f83f`: `_render_package_catalog` changed from the three-segment index form and `render_catalog` changed from the two-segment unversioned form to ADR 0026's frozen four-segment form. ADR 0026 remains the sole grammar authority. This ADR adopts that form by reference only for its existing catalog and index population; it neither governs the MCP wire grammar nor widens that population. Its existing protocol-boundary exclusion remains in force. A v2 protocol successor must carry the grammar forward or deliberately replace it in its own decision; it cannot treat this declaration-and-index decision as grammar authority.
