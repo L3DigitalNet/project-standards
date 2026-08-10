@@ -20,14 +20,7 @@ Maintained Project Specification documents live under `docs/specs/`.
 
 ## Heavy Workloads
 
-Run CPU-intensive commands through `rexec` (`rexec -- <command>`; see `rexec --help`): it mirrors this worktree to the remote worker, runs the command in the matching directory with live output, and falls back to a local run only if the host is unreachable before the command starts. In this repository that covers `scripts/verify.sh` (any mode), full or compatibility pytest batteries, and `make go-check`. Wheel/sdist builds are not CPU-bound — measured at ~2 s of remote compute against ~12–15 s of sync per invocation — so build locally, or batch the builds into a single remote invocation when they precede a remote gate that needs their output anyway. Notes:
-
-- `rexec` auto-rewrites `make -j` and `pytest -n` to the remote core count; concurrency you wrote yourself is kept.
-- Retrieve artifacts you need locally with `--pull` (e.g. `--pull build/release-wheel`); nothing else copies back, and the local checkout stays authoritative.
-- Use `--remote-only` when a local fallback would be harmful (e.g. avoiding load on this machine); use `--local` for the small validators, which are not worth the sync.
-- Release signing, tagging, and publication remain local operations.
-- `rexec doctor` checks readiness; `rexec setup` is the only command allowed to install anything on the worker.
-- Installing tooling the workload needs on the rexec worker is permitted — provisioning the worker is what it is for. Declare the requirement in the rexec configuration so `rexec setup` converges it, rather than ad-hoc installs the next rebuild loses.
+Run CPU-heavy commands through `rexec -- <command>`: `scripts/verify.sh`, full or compatibility pytest batteries, `make go-check`. Wheel/sdist builds stay local (~2 s compute vs ~12–15 s sync) unless batched before a remote gate needing them. Pull needed artifacts with `--pull`; declare missing worker tooling in the rexec config and converge with `rexec setup` — provisioning the worker is its purpose. Signing, tagging, and publication stay local. Git-worktree checkouts cannot run git-dependent commands remotely (remote-execution#2).
 
 ## Non-Negotiables
 
