@@ -146,7 +146,7 @@ catalog_major = 5
 
 
 @pytest.mark.performance
-def test_scale_gate_validates_100_packages_1000_payloads_10000_units_under_ten_seconds(
+def test_scale_gate_validates_representative_repository_within_serial_performance_budget(
     tmp_path: Path,
 ) -> None:
     _write_scale_repository(tmp_path)
@@ -168,4 +168,4 @@ def test_scale_gate_validates_100_packages_1000_payloads_10000_units_under_ten_s
     assert len(repository.payloads) == 1_000
     assert sum(len(payload.manifest.resources) for payload in repository.payloads) == 10_000
     assert rendered.startswith(b"[project_standards]\n")
-    assert elapsed < 10.0
+    assert elapsed < 5.0
