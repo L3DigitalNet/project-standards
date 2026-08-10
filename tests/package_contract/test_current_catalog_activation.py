@@ -52,6 +52,8 @@ def _family(repository: PackageRepository, standard_id: str) -> LoadedFamily:
 
 def _activation_targets(repository: PackageRepository) -> dict[str, LoadedPayload]:
     baseline = _baseline_catalog_identities()
+    assert repository.catalog is not None
+    current = {(entry.id, entry.version.value) for entry in repository.catalog.packages}
     successors = [
         payload
         for family in repository.families
@@ -61,6 +63,11 @@ def _activation_targets(repository: PackageRepository) -> dict[str, LoadedPayloa
             payload.manifest.payload.version.value,
         )
         not in baseline
+        and (
+            payload.manifest.payload.standard,
+            payload.manifest.payload.version.value,
+        )
+        in current
     ]
     targets = {payload.manifest.payload.standard: payload for payload in successors}
     assert len(targets) == len(successors)
