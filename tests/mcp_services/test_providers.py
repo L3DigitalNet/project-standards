@@ -103,6 +103,10 @@ APPROVED_OPERATIONS = ("validate", "verify", "lint", "drift-check")
 # ADR 0025: "The provider timeout is 30 seconds per provider invocation."
 ADR_TIMEOUT_SECONDS = 30
 
+# Issue #158 measured a 7.901-second unloaded maximum and a 356-second saturated
+# outlier; this finite test-only margin leaves the production 30-second default intact.
+REAL_PACKAGE_PROVIDER_TIMEOUT_SECONDS = 400.0
+
 # alpha 2.0 is the fixture's default-role consumer version, so it is what the
 # authoritative resolution selects for an enabled `alpha`; alpha 3.0 is the
 # candidate version used to prove exact version qualification.
@@ -2418,7 +2422,9 @@ def test_provider_output_key_order_is_canonical_across_worker_processes(
 # ---------------------------------------------------------------------------
 
 
-def test_composite_dispatch_input_matches_authoritative_direct_dispatch() -> None:
+def test_composite_dispatch_input_matches_authoritative_direct_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """TC-T14-001: every composite result equals its authority's own dispatch.
 
     The composite sends a seam directive rather than a built input, so nothing at
@@ -2434,6 +2440,10 @@ def test_composite_dispatch_input_matches_authoritative_direct_dispatch() -> Non
     answers 240, and three other providers raised outright).
     """
     services = import_mcp_services()
+    providers = require_service_module("providers")
+    monkeypatch.setattr(
+        providers, "PROVIDER_TIMEOUT_SECONDS", REAL_PACKAGE_PROVIDER_TIMEOUT_SECONDS
+    )
     distribution = real_packaged_distribution()
     facade = build_facade(services, distribution)
     validate_repo = require_operation(facade, "validate_repo")
@@ -2511,7 +2521,9 @@ def empty_input_diverges(
     return False
 
 
-def test_real_packaged_provider_validates_real_consumer_root() -> None:
+def test_real_packaged_provider_validates_real_consumer_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """TC-T14-002: shipping providers complete against a real consumer repository.
 
     The end-to-end half of T14. Before it, `adr/validate-adr`,
@@ -2520,6 +2532,10 @@ def test_real_packaged_provider_validates_real_consumer_root() -> None:
     matrix), and the composite aborted on the first of them.
     """
     services = import_mcp_services()
+    providers = require_service_module("providers")
+    monkeypatch.setattr(
+        providers, "PROVIDER_TIMEOUT_SECONDS", REAL_PACKAGE_PROVIDER_TIMEOUT_SECONDS
+    )
     distribution = real_packaged_distribution()
     facade = build_facade(services, distribution)
 
