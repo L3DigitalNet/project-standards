@@ -58,11 +58,25 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   Remaining work is the feature phase T24–T29 for #62 (conformance linting) and #55 (house-format conversion); T24 is dependency-ready. #116 shipped in v5.18.0 as `python-tooling` 1.13. The deferred-tooling phase closed in v5.16.0 — see `docs/handoff/deployed.md` for what shipped.
 
-- [ ] Triage the v5.18.0 follow-ups #156–#167.
+- [x] Triage the v5.18.0 follow-ups #156–#167.
 
-  Twelve issues are in Inbox with no Priority. Five need a decision before they can be specified: #156 (validator enhancement vs authoring-contract check for stale embedded version references), #157 (whether reconcile grows an explicit opt-in create-only refresh), #158 and #166 (bound vs test assertion for load-sensitive timing proofs), and #167.
+  Completed 2026-08-09 as part of a full triage of all 20 open issues except #168; every issue carries a verified comment. See `docs/handoff/sessions/2026-08.md`.
 
-  #167's premise was corrected on 2026-08-09 and its fix space is now two options: make the ledger seed git-independent, or split the gate so git-dependent collection stays local while the compute-heavy lanes offload. No worktree-side remedy applies, because `.git` is never mirrored for any checkout (bug 007).
+- [ ] Decide the release shape for the triaged backlog.
+
+  `ROADMAP.md` scopes 5.19.0 to `project-toolbox` alone (owner direction 2026-08-09), which does not accommodate the 20 triaged issues. #168's title says v5.20.0 while its body says v5.19.0. The triage recommends inserting a consolidation train and moving `project-toolbox` to the release after; explicit deferral with recorded reasoning is the alternative.
+
+- [ ] Resolve the seven owner decisions blocking specification.
+
+  #142 (accept a subprocess trust boundary for `command` providers), #153 (closed prefix enum vs documentation-only), #157 (manual-plus-advisory vs opt-in refresh; option 2 needs a new control-plane ADR), #158 (which number the provider bound takes), #159 (`.agents/` root substance), #160 (split ADR 0024 or record the coupling), #161 (three-way URI grammar ownership).
+
+- [ ] Apply triage field values to the 20 issues.
+
+  Twelve sit in Inbox with no Priority and seven at `Needs definition`. Priority is an owner call and `Execution mode` is never self-promoted, so nothing was applied.
+
+- [ ] Reconcile the stale open-issue-program executor state.
+
+  `.project-pipeline/2026-08-01-open-issue-resolution-program/p4.md` and `p10.md` record T16/T19/T36 as `not-started` although all three completed 2026-08-05 (`50d0c364`, `229a4bc1`, `e13e1a66`). Reconcile through the execute-plan skill, never by hand.
 
 - [ ] Scope the 5.19.0 `project-toolbox` release.
 
