@@ -4,7 +4,7 @@
 
 - All 20 open issues except #168 triaged 2026-08-09; comments posted. 14 carried a wrong premise.
 - All seven owner decisions resolved 2026-08-10; each issue carries its decision, alternatives, and costs.
-- Release shape unresolved: `ROADMAP.md` scopes 5.19.0 to `project-toolbox` alone; #168's title says v5.20.0, its body v5.19.0.
+- Release shape resolved 2026-08-10: 5.19.0 is the 20-issue consolidation train; `project-toolbox` moved to 5.20.0.
 - Tails: T24 ready (#62 then #55), SPEC-GSF3 T1, Usage Doc Site V2 specs; #129 stays deferred.
 
 ## Active incidents

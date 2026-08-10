@@ -62,9 +62,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   Completed 2026-08-09 as part of a full triage of all 20 open issues except #168; every issue carries a verified comment. See `docs/handoff/sessions/2026-08.md`.
 
-- [ ] Decide the release shape for the triaged backlog.
+- [x] Decide the release shape for the triaged backlog.
 
-  `ROADMAP.md` scopes 5.19.0 to `project-toolbox` alone (owner direction 2026-08-09), which does not accommodate the 20 triaged issues. #168's title says v5.20.0 while its body says v5.19.0. The triage recommends inserting a consolidation train and moving `project-toolbox` to the release after; explicit deferral with recorded reasoning is the alternative.
+  Resolved 2026-08-10. 5.19.0 is a consolidation train covering all 20 triaged issues, grouped by surface in `ROADMAP.md`; `project-toolbox` moved to 5.20.0, which #168's title already said. Its body and the roadmap now agree with the title.
 
 - [x] Resolve the seven owner decisions blocking specification.
 
@@ -110,9 +110,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   `.project-pipeline/2026-08-01-open-issue-resolution-program/p4.md` and `p10.md` record T16/T19/T36 as `not-started` although all three completed 2026-08-05 (`50d0c364`, `229a4bc1`, `e13e1a66`). Reconcile through the execute-plan skill, never by hand.
 
-- [ ] Scope the 5.19.0 `project-toolbox` release.
+- [ ] Scope the 5.20.0 `project-toolbox` release (#168).
 
-  Owner direction 2026-08-09. #129 (`adr-conformance` foundation) remains open and unscheduled; both its prerequisites #127 and #128 are now closed, and its decision 10 must be re-derived from ADR 0028 as amended.
+  Moved from 5.19.0 on 2026-08-10. #129 (`adr-conformance` foundation) remains open and deferred; both its prerequisites #127 and #128 are closed, and its decision 10 must be re-derived from ADR 0028 as amended — which #157 settles.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 

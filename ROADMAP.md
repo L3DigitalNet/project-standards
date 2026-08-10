@@ -12,6 +12,14 @@ This file tracks work planned for upcoming Project Standards releases. It is for
       - [Executable payload adoption guidance](#executable-payload-adoption-guidance)
       - [Test reliability and contract cleanup](#test-reliability-and-contract-cleanup)
     - [5.19.0](#5190)
+      - [ADR corpus completion](#adr-corpus-completion)
+      - [Control plane and payload contract](#control-plane-and-payload-contract)
+      - [Package follow-ups](#package-follow-ups)
+      - [Project Specification conformance](#project-specification-conformance)
+      - [Test reliability](#test-reliability)
+      - [Release and execution tooling](#release-and-execution-tooling)
+      - [Deferred with reasoning](#deferred-with-reasoning)
+    - [5.20.0](#5200)
       - [Project Toolbox standards](#project-toolbox-standards)
   - [Beyond](#beyond)
 
@@ -51,8 +59,56 @@ This file tracks work planned for upcoming Project Standards releases. It is for
 
 ### 5.19.0
 
+A consolidation train covering the open backlog. Every issue below was triaged against source on 2026-08-09, and the seven that needed an owner decision were resolved on 2026-08-10; each carries its decision, rejected alternatives, and release classification. `project-toolbox` moved to [5.20.0](#5200) to make room, per #168's title.
+
+Fourteen of the twenty triaged issues carried a materially wrong or stale premise, so several are smaller or differently shaped than filed. Read the decision comment before planning from the issue body.
+
+#### ADR corpus completion
+
+Ordered. [#162](https://github.com/L3DigitalNet/project-standards/issues/162) rewrites every active ADR body plus 46 references across 17 tracked files, so it conflicts with everything before it and goes last.
+
+- [#161](https://github.com/L3DigitalNet/project-standards/issues/161) — ADR 0026 owns resource-URI grammar; ADR 0010 adopts it by reference. Both records still claim an open producer divergence that closed at `e400f83f` on 2026-07-29.
+- [#160](https://github.com/L3DigitalNet/project-standards/issues/160) — record ADR 0024's coupling as load-bearing with a reader's map. No split: its rejected alternatives are jointly determined.
+- [#159](https://github.com/L3DigitalNet/project-standards/issues/159) — a new ADR owning the `.agents/` root, allocating per artifact class. Landing it before #162 keeps the sweep to one pass over 24 records.
+- [#162](https://github.com/L3DigitalNet/project-standards/issues/162) — the evidence-vs-authority link convention and the ADR 0025/0026 renames. Sweep with `git grep`; a recursive grep reaches excluded agent worktrees.
+- [#163](https://github.com/L3DigitalNet/project-standards/issues/163) — validate `amends`/`amended_by` reciprocity. The corpus already passes with zero findings, so this ships the guard, not a repair.
+
+#### Control plane and payload contract
+
+- [#156](https://github.com/L3DigitalNet/project-standards/issues/156) — report stale predecessor version references embedded in successor payload schemas. **Lands before every payload cut below**, so the guard exists when those cuts are authored.
+- [#157](https://github.com/L3DigitalNet/project-standards/issues/157) — create-only stays permanent; add a content-match advisory against every advertised payload digest in `validate` and `drift-check`. Engine-only. Amends ADR 0028 and closes bug 006.
+- [#142](https://github.com/L3DigitalNet/project-standards/issues/142) — implement the `command` provider kind. Extract the bounded runner from `mcp_services` so the control-plane CLI path shares it; that path dispatches in-process with no timeout today.
+- [#140](https://github.com/L3DigitalNet/project-standards/issues/140) — managed-artifact retirement. The original defect is obsolete for V5-native installs; the live defect is the `agent-handoff` 1.11 `adopt.md` guidance.
+
+#### Package follow-ups
+
+- [#153](https://github.com/L3DigitalNet/project-standards/issues/153) — a closed `vscode.task_prefix` enum in `python-tooling`, reserved-label documentation, and a governing-option name on the `CP-MODIFIED-MANAGED` missing-unit diagnostic.
+- [#165](https://github.com/L3DigitalNet/project-standards/issues/165) — correct the `agent-handoff` legacy-migration runbook, which still names the retired `session_start.py` launcher.
+- [#169](https://github.com/L3DigitalNet/project-standards/issues/169) — close the `github-workflow` gaps recorded at `agent-configs#13`.
+
+#### Project Specification conformance
+
+- [#143](https://github.com/L3DigitalNet/project-standards/issues/143) — advise when `runner_labels` is set but a consumer-owned caller cannot receive it. Needs no diagnostic model change; `severity` already carries `warning`.
+- [#62](https://github.com/L3DigitalNet/project-standards/issues/62) then [#55](https://github.com/L3DigitalNet/project-standards/issues/55) — the approved T24 feature phase, dependency-ready since the v5.16.0 checkpoints.
+
+#### Test reliability
+
+- [#158](https://github.com/L3DigitalNet/project-standards/issues/158) — inject `PROVIDER_TIMEOUT_SECONDS` in the two real-provider proofs, as nine other tests already do. Measure unloaded timing first: a result near 30 s is a production defect, not a test-isolation problem.
+- [#166](https://github.com/L3DigitalNet/project-standards/issues/166) — the scale gate's ceiling. Its performance-lane remedy already shipped, so confirm what remains before planning work.
+
+#### Release and execution tooling
+
+- [#164](https://github.com/L3DigitalNet/project-standards/issues/164) — `release_prep.py` version sweep. Its acceptance criteria are unsatisfiable as written: `sweep_version_references` reports and never rewrites, and its hint is MAJOR-only. Restate the outcome before implementing.
+- [#167](https://github.com/L3DigitalNet/project-standards/issues/167) — `rexec` pytest offload. Not worktree-specific: `.git` is never mirrored from any checkout.
+
+#### Deferred with reasoning
+
+- [#129](https://github.com/L3DigitalNet/project-standards/issues/129) — the `adr-conformance` guardrail foundation stays deferred. Both prerequisites are closed, but its decision 10 must be re-derived from ADR 0028 as amended, which [#157](https://github.com/L3DigitalNet/project-standards/issues/157) settles.
+
+### 5.20.0
+
 #### Project Toolbox standards
 
-- Develop and release the `project-toolbox` standards. Owner direction, 2026-08-09.
+- Develop and release the `project-toolbox` standards, tracked in [#168](https://github.com/L3DigitalNet/project-standards/issues/168). Owner direction 2026-08-09 originally placed this at 5.19.0; moved to 5.20.0 on 2026-08-10 so the triaged backlog consolidates first.
 
 ## Beyond
