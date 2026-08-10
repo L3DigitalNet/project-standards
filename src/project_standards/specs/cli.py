@@ -73,6 +73,7 @@ from project_standards.specs.registry import (
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
 _TIER_ORDER = {"light": 0, "standard": 1, "full": 2}
+_CONFORMANCE_CHECKS = ("shared-boilerplate", "mandatory-phrasing")
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,12 +153,12 @@ def _selected_snapshot(
     return relative, runtime.repo / relative.normalized, entry
 
 
-def _selected_findings(
+def _selected_findings_with_checks(
     paths: list[tuple[Path, SnapshotEntry]],
     runtime: _SpecRuntime,
     *,
     lint: bool,
-) -> list[tuple[Path, list[ControlFinding]]]:
+) -> tuple[list[tuple[Path, list[ControlFinding]]], tuple[str, ...] | None]:
     assert runtime.payload is not None
     assert runtime.effective_config is not None
     for display, entry in paths:
@@ -186,7 +187,23 @@ def _selected_findings(
     grouped: dict[str, list[ControlFinding]] = {str(display): [] for display, _entry in paths}
     for finding in result.findings:
         grouped.setdefault(finding.path, []).append(finding)
-    return [(display, grouped[str(display)]) for display, _entry in paths]
+    structured = result.structured_output
+    declared_checks = structured.get("checks") if structured is not None else None
+    checks = _CONFORMANCE_CHECKS if declared_checks == list(_CONFORMANCE_CHECKS) else None
+    return (
+        [(display, grouped[str(display)]) for display, _entry in paths],
+        checks,
+    )
+
+
+def _selected_findings(
+    paths: list[tuple[Path, SnapshotEntry]],
+    runtime: _SpecRuntime,
+    *,
+    lint: bool,
+) -> list[tuple[Path, list[ControlFinding]]]:
+    results, _checks = _selected_findings_with_checks(paths, runtime, lint=lint)
+    return results
 
 
 def _finding_payload(finding: Finding | ControlFinding) -> dict[str, object]:
@@ -211,6 +228,7 @@ def _setwide_argument_parser(*, lint: bool) -> argparse.ArgumentParser:
 def _run_setwide(argv: list[str], *, lint: bool, runtime: _SpecRuntime) -> int:
     ap = _setwide_argument_parser(lint=lint)
     args = ap.parse_args(argv)
+    checks: tuple[str, ...] | None = None
     if runtime.payload is None:
         reg = load_registry()
         cfg = load_spec_config(args.config)
@@ -238,7 +256,9 @@ def _run_setwide(argv: list[str], *, lint: bool, runtime: _SpecRuntime) -> int:
     else:
         try:
             paths = _selected_paths(args.files, runtime)
-            selected_results = _selected_findings(paths, runtime, lint=lint) if paths else []
+            selected_results, checks = (
+                _selected_findings_with_checks(paths, runtime, lint=lint) if paths else ([], None)
+            )
         except ControlPlaneError as exc:
             raise ConfigError(_provider_failure_message(exc)) from exc
         results = selected_results
@@ -250,6 +270,7 @@ def _run_setwide(argv: list[str], *, lint: bool, runtime: _SpecRuntime) -> int:
                         "file": str(path),
                         "ok": not findings,
                         "findings": [_finding_payload(finding) for finding in findings],
+                        **({"checks": list(checks)} if checks is not None else {}),
                     }
                     for path, findings in results
                 ],
@@ -262,7 +283,10 @@ def _run_setwide(argv: list[str], *, lint: bool, runtime: _SpecRuntime) -> int:
         else:
             for path, findings in results:
                 state = "WARN" if lint and findings else "FAIL" if findings else "OK  "
-                print(f"{state} {path}")
+                coverage = (
+                    f" (checks: {', '.join(checks)})" if checks is not None and not findings else ""
+                )
+                print(f"{state} {path}{coverage}")
                 for finding in findings:
                     line = f" (L{finding.line})" if finding.line else ""
                     print(f"   [{finding.code}] {finding.message}{line}")
