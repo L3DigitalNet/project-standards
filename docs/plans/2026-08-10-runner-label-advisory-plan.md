@@ -3,9 +3,9 @@ plan_format: 3
 title: 'Runner Label Reachability Advisory Implementation Plan'
 slug: 'runner-label-advisory'
 status: active
-revision: 1
-revises_revision: 0
-revision_reason: 'initial plan from issue 143 and its approved triage boundary'
+revision: 2
+revises_revision: 1
+revision_reason: "bind T3 to the integrated #62 revision-2 Project Specification 1.9 checkpoint"
 pause_reason: ''
 source: 'issue L3DigitalNet/project-standards#143; verified triage and coordinated 5.19 release constraints'
 spec_ref: ''
@@ -31,8 +31,8 @@ Ship unadvertised Markdown Tooling 1.15 and Markdown Frontmatter 1.11 candidates
 | `issue:L3DigitalNet/project-standards#143` | normative | Outcome, reconcile-layer acceptance, package-specific wording, remedies, and no automatic rewrite/configuration scope. | body and comments verified 2026-08-10 | §§1, 3, 5–12; T1–T4 |
 | `repo:ROADMAP.md#project-specification-conformance` | decision | #143 is separately governed in the 5.19 train and precedes #62 activation. | `5e1b04f1` | §§3, 8–12; T3–T4 |
 | `repo:docs/plans/2026-08-10-schema-payload-reference-validation-plan.md#t2-document-the-successor-cut-guard-and-verify-the-repository` | decision | #156 must supply its verified T2 checkpoint before any successor payload mutation. | revision 1, 2026-08-10 | §§3, 8–10; T1–T3 |
-| `repo:docs/plans/2026-08-01-project-spec-conformance-plan.md#t3-compose-and-verify-project-specification-19-candidate` | decision | Produces the unreleased, unadvertised Project Specification 1.9 candidate that #143 must extend rather than recut. | revision 1, 2026-08-10 | §§3–5, 8–10; T3 |
-| `repo:docs/plans/2026-08-01-project-spec-conformance-plan.md#t4-activate-19-and-remediate-selected-dogfood` | decision | Consumes this plan's verified cross-package checkpoint before Catalog/self-host activation. | revision 1, 2026-08-10 | §§3, 8–12; T4 |
+| `repo:docs/plans/2026-08-01-project-spec-conformance-plan.md#t3-compose-and-verify-project-specification-19-candidate` | decision | Produces the unreleased, unadvertised Project Specification 1.9 candidate that #143 must extend rather than recut; integrated checkpoint `318946a5` carries revision-2 digest `d0ae03fd…09d4c`. | revision 2, 2026-08-10 | §§3–5, 8–10; T3 |
+| `repo:docs/plans/2026-08-01-project-spec-conformance-plan.md#t4-activate-19-and-remediate-selected-dogfood` | decision | Consumes this plan's verified cross-package checkpoint before Catalog/self-host activation. | revision 2, 2026-08-10 | §§3, 8–12; T4 |
 | `spec:docs/specs/2026-08-01-project-spec-conformance-plan-input.md#selected-design` | decision | #62's conformance findings, coverage, exact matching, and predecessor-preservation contract that #143 must not change. | approved 2026-08-10 | §§3–5, 7, 9–12; T3–T4 |
 | `repo:src/project_standards/control_plane/executor.py::_verify` | current-state evidence | Verify-phase warnings are retained in `ApplyResult.verification_findings`; only error findings fail apply. | `5e1b04f1` | §§4–5; T1–T4 |
 | `repo:src/project_standards/control_plane/planner.py::_verification_requests` | current-state evidence | Every selected payload verify-phase findings provider becomes a post-apply reconciliation request. | `5e1b04f1` | §§4–5; T1–T4 |
@@ -78,7 +78,7 @@ Conflict precedence: issue #143 and its latest triage comment define advisory be
 ### 3.4 Constraints and Authorization
 
 - **EG-001 — payload-cut gate:** before T1, T2, or T3 writes any successor payload, verify #156 plan T2 is terminal at a commit carrying `Plan-Id: 2026-08-10/schema-payload-reference-validation`, `Plan-Task: T2`, `Plan-Status: done`, and `Plan-Proofs: PV-T2-001`; validate that plan and rerun its graph/corpus acceptance. Absence or failed proof blocks all payload work.
-- **EG-002 — Project Specification handoff:** before T3 writes Project Specification 1.9, verify #62 plan T3 is terminal at a commit carrying `Plan-Id: 2026-08-10/project-spec-conformance`, `Plan-Task: T3`, `Plan-Status: done`, and `Plan-Proofs: PV-T3-001`; validate the plan and confirm 1.9 is complete, unadvertised, and Catalog/self-host still select 1.8.
+- **EG-002 — Project Specification handoff:** before T3 writes Project Specification 1.9, verify exact commit `318946a54acf0053ffa2e6068ba34fcf9b2808c7` carries `Plan-Id: 2026-08-10/project-spec-conformance`, `Plan-Task: T3`, `Plan-Revision: 2`, `Plan-Definition-Digest: d0ae03fd313d984abdb635e439cb3ea47d44c9f8bbf8a39c2a2cd95383609d4c`, `Plan-Status: done`, and `Plan-Proofs: PV-T3-001`; validate the plan and confirm 1.9 is complete, unadvertised, and Catalog/self-host still select 1.8.
 - **EG-003 — activation handoff:** #62 T4 may begin only after this plan's T4 commit carries `Plan-Id: 2026-08-10/runner-label-advisory`, `Plan-Task: T4`, `Plan-Status: done`, and `Plan-Proofs: PV-T4-001`, and the plan plus checkpoint validate.
 - The warning condition is derived from resolved configuration. Empty/unset `runner_labels` is silent. Markdown Tooling evaluates each enabled lint/format caller independently; a disabled tool produces no dead-caller warning.
 - The successor schemas retain the same option set, types, and defaults. Mechanical successor identity constants and manifest/resource digests may change, but no configuration or public finding-schema contract may widen.
@@ -378,7 +378,7 @@ A missing external checkpoint, unexpected 1.9 composition, duplicate/missing war
 | ID | Assumption | Impact if False |
 | --- | --- | --- |
 | A-001 | #156's final implementation checkpoint remains the T2/PV-T2-001 contract named by its active plan. | If that plan is revised, pause before payload writes and update EG-001 only through an approved plan revision. |
-| A-002 | #62 T3 produces Project Specification 1.9 under the file/digest/conformance contracts declared in revision 1. | If the version, task, or acceptance changes, pause T3 and revise this plan after the upstream owner records the new contract. |
+| A-002 | #62 T3 produced Project Specification 1.9 under the file/digest/conformance contracts declared in revision 2 and checkpointed at `318946a5`. | If the version, task, or acceptance changes, pause T3 and revise this plan after the upstream owner records the new contract. |
 | A-003 | Existing provider input and findings schemas can express a config-only verify request without schema-shape changes. | If direct loading disproves this, stop T2/T3 and request an interface decision; do not widen schemas or move semantics into the engine implicitly. |
 
 ### 11.3 Open Questions
