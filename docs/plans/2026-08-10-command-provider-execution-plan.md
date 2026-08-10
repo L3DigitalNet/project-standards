@@ -3,9 +3,9 @@ plan_format: 3
 title: 'Command Provider Execution Implementation Plan'
 slug: 'command-provider-execution'
 status: active
-revision: 1
-revises_revision: 0
-revision_reason: 'initial plan'
+revision: 2
+revises_revision: 1
+revision_reason: 'move the command-provider ADR to 0030 and claim required reciprocal-link paths'
 pause_reason: ''
 source: 'issue L3DigitalNet/project-standards#142 and owner decisions of 2026-08-10'
 spec_ref: ''
@@ -32,6 +32,7 @@ The implementation ends with a committed Go payload fixture that proves `command
 | `issue:L3DigitalNet/project-standards#142` | normative | Approved `command` provider outcome, trust-boundary properties, Go direction, accepted `linux/amd64` narrowing, rejected alternatives, materialization, and acceptance criteria. | live through 2026-08-10T04:38:11Z | §§1, 3, 5–13; T1–T4 |
 | `repo:docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md#provider-execution-boundary` | decision | Existing 30-second bound, process-group termination/reaping, bounded result and diagnostics, third-descriptor result channel, and MCP failure-isolation obligations. | `23c0036f` | §§3–7; T1–T3 |
 | `repo:docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md` | decision | Repository Go lane and neutral Python/Go tooling boundary. | `23c0036f` | §§3, 5, 7; T1, T4 |
+| `repo:docs/adr/adr-0029-agents-root-allocation.md` | current-state evidence | Integrated release ADR that consumes number 0029 and makes 0030 the next free command-provider allocation. | `8dbdf9b1` | §§4–5, 9, 11; T1 |
 | `repo:standards/adr/versions/1.5/README.md` | normative | Adopted ADR authoring, numbering, frontmatter, indexing, and relationship rules for the prerequisite decision record. | `23c0036f` | §§3, 7–9; T1 |
 | `repo:src/project_standards/control_plane/providers.py::invoke_provider` | current-state evidence | V2 selection, payload integrity, resource loading, input/output schema validation, typed results, and current in-process Python execution. | `23c0036f` | §§4–5; T2–T4 |
 | `repo:src/project_standards/mcp_services/providers.py::_run_worker` | current-state evidence | Existing bounded transport, caps, environment/spawn seam, termination, reaping, and deterministic diagnostic composition to extract. | `23c0036f` | §§4–5; T2–T3 |
@@ -132,7 +133,7 @@ A V2 command declaration uses `entrypoint = "payload:{resource-id}"`, `platforms
 
 | Component / Surface | Current Responsibility | Planned Responsibility | Paths / Contracts | Owning Task |
 | --- | --- | --- | --- | --- |
-| Architecture corpus | ADR 0025 owns MCP-only provider isolation; ADR 0027 owns Go coexistence. | New ADR owns generic provider execution, command ABI, materialization, and platform narrowing, and links the existing decisions. | `docs/adr/adr-0029-command-provider-execution-boundary.md`, `docs/adr/README.md` | T1 |
+| Architecture corpus | ADR 0025 owns MCP-only provider isolation; ADR 0027 owns Go coexistence; ADR 0029 allocates `.agents/`. | ADR 0030 owns generic provider execution, command ABI, materialization, and platform narrowing, with reciprocal links to the existing provider and Go decisions. | `docs/adr/adr-0030-command-provider-execution-boundary.md`, ADRs 0025/0027, `docs/adr/README.md` | T1 |
 | Bounded transport | MCP module owns spawn, selector pump, caps, signals, frames, and cleanup. | Control-plane module owns a provider-neutral subprocess result/diagnostic contract. | `control_plane` new runner/worker modules; `mcp_services/providers.py` | T2 |
 | Direct provider dispatcher | Selects/validates and directly executes Python bytes. | Prepares/finishes all providers around the shared runner; Python uses a bounded child. | `control_plane/providers.py::invoke_provider` | T2 (shared owner), T3 contributor |
 | V2 manifest/schema | Declares `command` enum but only Python-shaped executable contract. | Kind-specific entrypoint/platform/mode validation and generated schema. | `package_contract/payload.py::ProviderDeclaration`; generated standard-payload schema | T3 |
@@ -264,9 +265,9 @@ External gates:
 - **consumes:** [approved owner decision, ADR 1.5 authoring contract, existing MCP boundary and Go coexistence decisions]
 - **produces:** [command-provider-execution-adr-v1, EG-ADR checkpoint]
 - **preserves:** [ADR 0025's MCP SDK/service decisions, ADR 0027's neutral tooling scope, stable ADR numbering/links, #162's ownership of its later corpus sweep]
-- **invariants:** [ADR 0029 is the next number unless a concurrent accepted record takes it first; filename follows current title; decision boundary excludes Agent Handoff migration and future platforms; evidence and authority links follow the repo convention]
-- **executor_discretion:** [final ADR title/slug if number 0029 is concurrently consumed, concise prose arrangement, non-substantive index wording]
-- **files:** [`docs/adr/adr-0029-command-provider-execution-boundary.md` (create; owner T1), `docs/adr/README.md` (modify; owner T1)]
+- **invariants:** [ADR 0030 is the exact next allocation after integrated ADR 0029; reciprocal related edges connect ADR 0030 with ADRs 0025 and 0027; decision boundary excludes Agent Handoff migration and future platforms; evidence and authority links follow the repo convention]
+- **executor_discretion:** [concise prose arrangement, non-substantive index wording]
+- **files:** [`docs/adr/adr-0030-command-provider-execution-boundary.md` (create; owner T1), `docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md` (modify only reciprocal related edge; owner T1), `docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md` (modify only reciprocal related edge; owner T1), `docs/adr/README.md` (modify; owner T1)]
 - **parallel_safe:** no
 - **conflicts_with:** []
 - **supersedes:** []
@@ -435,7 +436,7 @@ A wrong-reason RED, ADR conflict, Python parity change, duplicate runner, cap/cl
 
 | ID | Assumption | Impact if False |
 | --- | --- | --- |
-| A-001 | ADR number 0029 remains available when T1 starts. | Pause and revise the master with the next free exact path before generating or resuming T1; do not overwrite a concurrent record or silently exceed the file claim. |
+| A-001 | ADR number 0030 remains available after the integrated ADR 0029 checkpoint. | If another accepted record consumes 0030 before T1 writes, pause and revise the master to the next free exact path; do not overwrite it or silently exceed the file claim. |
 | A-002 | The `linux/amd64` identifier and `0755` string can be added to schema version `1.0` as optional fields globally but required/prohibited by provider kind. | If schema-version policy requires a bump, pause T3 and obtain an owner amendment; do not silently create schema `1.1`. |
 | A-003 | The shared runner can preserve all existing Python providers without retaining MCP's worker-side full rediscovery. | If real-provider characterization disproves it, pause T2 and amend the ADR/plan rather than retain a duplicate or raise bounds without authority. |
 | A-004 | #156 revision 1 T2 remains the checkpoint that authorizes successor work. | If revised/superseded, use the bridge-validated active replacement named by #156's owner. |
