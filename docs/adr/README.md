@@ -6,8 +6,8 @@ description: 'Index of the project-standards Architecture Decision Records, incl
 doc_type: 'index'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-08-09'
-reviewed: '2026-08-09'
+updated: '2026-08-10'
+reviewed: '2026-08-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -29,13 +29,14 @@ related:
   - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
   - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
   - 'docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md'
+  - 'docs/adr/adr-0029-agents-root-allocation.md'
 ---
 
 # Architecture Decision Records
 
 Decisions governing the `project-standards` repository, recorded in [MADR](https://adr.github.io/madr/) form. See the [ADR 1.5 standard](../../standards/adr/versions/1.5/README.md) for the format, the id/filename convention (the `id` embeds the repo name; the filename omits it), the decision-boundary rules every record here is authored to, and the amendment vocabulary this corpus uses. The [family landing page](../../standards/adr/README.md) always names the version this repository currently resolves.
 
-ADRs **0001–0013** capture the original meta-repository readiness decisions from [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3, accepted on 2026-07-07. ADRs **0014–0022** record repository field-value policy, local scope, packaged skills and hooks, adoption, lifecycle, provenance, and package versioning. ADR **0023** establishes the unified consumer control plane and supersedes ADRs 0003, 0008, and 0017. ADR **0024** establishes catalog-scoped package channels and supersedes ADR 0020. ADRs **0025** and **0026** record the MCP-server decisions (SPEC-MS01 §8.3): the service and SDK boundary, and the v1 local read-only transport surface. Both were accepted on 2026-07-28 at the `SPEC-RD01` Step 09 decision gate. ADR **0027** adopts a neutral Go tooling lane alongside Python. ADR **0028** records how a create-only package artifact is refreshed in a consumer repository.
+ADRs **0001–0013** capture the original meta-repository readiness decisions from [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3, accepted on 2026-07-07. ADRs **0014–0022** record repository field-value policy, local scope, packaged skills and hooks, adoption, lifecycle, provenance, and package versioning. ADR **0023** establishes the unified consumer control plane and supersedes ADRs 0003, 0008, and 0017. ADR **0024** establishes catalog-scoped package channels and supersedes ADR 0020. ADRs **0025** and **0026** record the MCP-server decisions (SPEC-MS01 §8.3): the service and SDK boundary, and the v1 local read-only transport surface. Both were accepted on 2026-07-28 at the `SPEC-RD01` Step 09 decision gate. ADR **0027** adopts a neutral Go tooling lane alongside Python. ADR **0028** records how a create-only package artifact is refreshed in a consumer repository. ADR **0029** allocates the platform-owned `.agents/` root by artifact class.
 
 ## Reading this corpus
 
@@ -75,3 +76,4 @@ That discipline is now applied rather than merely intended. The [2026-08-05 conf
 | [0026](adr-0026-project-standards-mcp-local-read-only-transport.md) | MCP Local Read-Only Transport | local | active |
 | [0027](adr-0027-adopt-go-alongside-python-with-neutral-tooling.md) | Adopt Go Alongside Python with Neutral Tooling | local | active |
 | [0028](adr-0028-create-only-artifact-refresh.md) | Create-Only Artifact Refresh | local | active |
+| [0029](adr-0029-agents-root-allocation.md) | .agents Root Allocation | local | active |

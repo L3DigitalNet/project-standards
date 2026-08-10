@@ -32,6 +32,7 @@ related:
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
+  - 'docs/adr/adr-0029-agents-root-allocation.md'
 supersedes: []
 superseded_by: null
 source:

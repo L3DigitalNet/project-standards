@@ -35,6 +35,7 @@ related:
   - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
   - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
+  - 'docs/adr/adr-0029-agents-root-allocation.md'
 supersedes: []
 superseded_by: null
 source:
