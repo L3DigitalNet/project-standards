@@ -1,0 +1,502 @@
+---
+plan_format: 3
+title: 'Command Provider Execution Implementation Plan'
+slug: 'command-provider-execution'
+status: active
+revision: 1
+revises_revision: 0
+revision_reason: 'initial plan'
+pause_reason: ''
+source: 'issue L3DigitalNet/project-standards#142 and owner decisions of 2026-08-10'
+spec_ref: ''
+created: 2026-08-10
+updated: 2026-08-10
+owners:
+  - 'Project Standards maintainers'
+---
+
+# Command Provider Execution Implementation Plan
+
+> **Definition, not state.** This plan stops at verified local checkpoints. Plan authoring did not generate execution state; during execution, the orchestrator alone generates and mutates the ephemeral state under `.project-pipeline/2026-08-10-command-provider-execution/execution/`.
+
+## 1. Objective
+
+Allow a trusted V2 payload to declare a Go executable as a `command` provider and receive the same validated provider input, declared resource bytes, typed output handling, and repository-integrity checks as a Python provider. Every executable provider runs through one control-plane-owned bounded subprocess implementation, whether the caller is the CLI or MCP service. The first release supports `linux/amd64`, executes only integrity-verified bytes materialized at mode `0755` for that invocation, and never executes an installed-wheel resource path.
+
+The implementation ends with a committed Go payload fixture that proves `command` dispatch through reconcile, validate, and drift-check, including platform refusal and reproducible-build coverage. Migrating the Agent Handoff provider is a separate successor-payload plan after this platform checkpoint.
+
+## 2. Authority and Source Map
+
+| Source | Source Role | Authority / Use | Version / Date | Affected Plan Surface |
+| --- | --- | --- | --- | --- |
+| `issue:L3DigitalNet/project-standards#142` | normative | Approved `command` provider outcome, trust-boundary properties, Go direction, accepted `linux/amd64` narrowing, rejected alternatives, materialization, and acceptance criteria. | live through 2026-08-10T04:38:11Z | §§1, 3, 5–13; T1–T4 |
+| `repo:docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md#provider-execution-boundary` | decision | Existing 30-second bound, process-group termination/reaping, bounded result and diagnostics, third-descriptor result channel, and MCP failure-isolation obligations. | `23c0036f` | §§3–7; T1–T3 |
+| `repo:docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md` | decision | Repository Go lane and neutral Python/Go tooling boundary. | `23c0036f` | §§3, 5, 7; T1, T4 |
+| `repo:standards/adr/versions/1.5/README.md` | normative | Adopted ADR authoring, numbering, frontmatter, indexing, and relationship rules for the prerequisite decision record. | `23c0036f` | §§3, 7–9; T1 |
+| `repo:src/project_standards/control_plane/providers.py::invoke_provider` | current-state evidence | V2 selection, payload integrity, resource loading, input/output schema validation, typed results, and current in-process Python execution. | `23c0036f` | §§4–5; T2–T4 |
+| `repo:src/project_standards/mcp_services/providers.py::_run_worker` | current-state evidence | Existing bounded transport, caps, environment/spawn seam, termination, reaping, and deterministic diagnostic composition to extract. | `23c0036f` | §§4–5; T2–T3 |
+| `repo:src/project_standards/mcp_services/provider_worker.py::run_request` | current-state evidence | Existing MCP worker-side redispatch and third-descriptor frame production. | `23c0036f` | §§4–5; T2 |
+| `repo:src/project_standards/package_contract/payload.py::ProviderDeclaration` | current-state evidence | V2 provider schema, payload-qualified Python entrypoint grammar, resource closure, operation/phase/effect contract, and declared `ProviderKind.COMMAND`. | `23c0036f` | §§4–6; T3–T4 |
+| `repo:src/project_standards/control_plane/planner.py::_verification_requests` | current-state evidence | Current Python/documentation-only verification filter that must admit supported command declarations without package-specific dispatch. | `23c0036f` | §§4–6; T3–T4 |
+| `repo:src/project_standards/provider_runner.py::_run_python_provider` | current-state evidence | Legacy V1 installed-bundle runner that deliberately rejects external-process provider kinds. | `23c0036f` | §§3–5; T3 |
+| `repo:tests/mcp_services/test_providers.py` | current-state evidence | ADR 0025 boundary, timeout, cap, cancellation, descendant, cleanup, real-provider, and MCP composition regression surface. | `23c0036f` | §§4, 7; T2–T4 |
+| `repo:tests/control_plane/test_providers.py` | current-state evidence | Direct-dispatch schema, resource, typed-effect, failure-content, and live-path integrity regression surface. | `23c0036f` | §§4, 7; T2–T4 |
+| `repo:scripts/lib/go-reproducible-build.sh` | current-state evidence | Pinned `linux/amd64`, `CGO_ENABLED=0`, `-trimpath`, source-to-committed-byte rebuild-and-compare contract. | `23c0036f` | §§4–7; T4 |
+| `repo:Makefile::go-verify-binary` | current-state evidence | Explicit owner list for every committed Go binary's reproducible-build verification. | `23c0036f` | §§4–7; T4 |
+| `repo:tests/control_plane/test_end_to_end.py::test_every_adapter_converges_in_one_virtual_tree_and_second_apply_is_byte_noop` | current-state evidence | Real control-plane reconciliation flow and convergence oracle for the synthetic command fixture. | `23c0036f` | §§4, 7; T4 |
+| `issue:L3DigitalNet/project-standards#156` | normative | Requires the family-agnostic schema-reference guard's T2 checkpoint before any production successor payload cut. | live through 2026-08-10T04:38:13Z | §§3, 8–13; deferred migration only |
+| `repo:docs/plans/2026-08-10-schema-payload-reference-validation-plan.md#t2-document-the-successor-cut-guard-and-verify-the-repository` | informative | Names the currently approved T2/PV-T2-001 checkpoint that a later successor plan must re-resolve and consume. | revision 1 at `23c0036f` | §§3, 8–13; deferred migration only |
+| `issue:L3DigitalNet/project-standards#162` | normative | Requires the release-wide ADR corpus sweep to run last; this plan's new ADR must exist before that sweep begins. | live through 2026-08-10T04:38:17Z | §§3, 8–13; T1 |
+
+Conflict precedence: issue #142's owner decisions govern the target. ADR 0025 governs the properties retained from the MCP boundary; the new T1 ADR extends those properties to the generic control plane and records the accepted platform and command ABI. Current code and tests establish the starting behavior, not authority to retain the MCP-only ownership or in-process CLI dispatch.
+
+## 3. Scope, Boundaries, and Constraints
+
+### 3.1 In Scope
+
+- An accepted control-plane ADR recording the command-provider trust boundary, exact wire/platform contract, accepted portability narrowing, status-quo and Python-shim rejections, and the relationship to ADRs 0025 and 0027.
+- One control-plane-owned bounded subprocess runner used by direct CLI/control-plane dispatch and MCP services, with the ADR 0025 timeout, per-stream/result caps, explicit truncation, third inherited result descriptor, `SIGTERM` then `SIGKILL`, whole-process-group cleanup, reaping, and content-safe diagnostics.
+- Additive V2 `ProviderDeclaration` semantics for `kind = "command"`: a payload-resource entrypoint, closed platform declaration, and executable mode, while preserving the Python declaration grammar.
+- Exact command-provider input/resource/result transport, input and output schema validation at the same authoritative control-plane boundary as Python, platform preflight, temporary `0755` materialization, post-write digest verification, and cleanup.
+- A Go command-provider fixture and source/committed-binary reproducibility gate that exercise real reconcile, validate, and drift-check entrypoints plus the material failure paths.
+- Generated package schema, focused tests, existing MCP/control-plane regression migration, and only the owner documentation required to keep the runtime and fixture contract discoverable.
+
+### 3.2 Out of Scope and Deferred
+
+- Do not migrate `standards/agent-handoff/versions/1.11/providers/agent_handoff.py`, cut an Agent Handoff successor, change its advertised/default version, or retire Python provider bytes. That migration receives its own later plan after T4 and external gate EG-156.
+- Do not add another production package, payload family, catalog version, Catalog 5 selection, release, tag, publication, or GitHub mutation.
+- Do not add a Python shim around the Go provider, execute an installed-wheel payload path, invoke a shell, search `PATH`, or inherit arbitrary environment variables into a command provider.
+- Do not make the legacy V1 `standard.toml` runner execute `command` declarations. Its installed-module path remains Python-only and fail-closed; V2 payload execution is the boundary changed here.
+- Do not provide macOS, Windows, Linux architectures other than `amd64`, cross-platform fallback, a sandbox, privilege separation, network isolation, or aggregate rollback beyond the existing declared-live-path integrity check.
+- Do not run #162's corpus-wide sweep or close #142/#156/#162. This plan only produces the prerequisite ADR checkpoint and core implementation checkpoints.
+- This authoring task did not generate `.project-pipeline` state. During execution, only the orchestrator may generate or mutate that state; workers must not edit it directly.
+
+### 3.3 Ownership and Preserved Behavior
+
+| Boundary | Owner / Responsibility |
+| --- | --- |
+| T1 owns | The new ADR and its index entry; it produces the architecture checkpoint consumed by T2–T4 and externally by #162. |
+| T2 owns | The shared subprocess transport/worker boundary, removal of MCP-local ownership, and Python-provider behavior parity through direct and MCP callers. |
+| T3 owns | V2 command declaration semantics, platform/materialization/resource transport, command dispatch, deterministic failure taxonomy, and branch-point closure. |
+| T4 owns | The Go fixture source and committed binary, its reproducible-build script/gate, the synthetic payload, end-to-end acceptance, and final integrated qualification. |
+| Depends on | ADR 0025, Go ADR 0027, payload integrity, existing input/output schemas, repository snapshot integrity, bridge 3.5.0, and T1 before #162. The deferred production successor depends on EG-156. |
+| Does not own | Agent Handoff migration behavior, package activation/publication, non-Linux platform support, organization work state, or #162's corpus rewrite. |
+| Must preserve | All Python provider effects and typed results; current provider schema validation; selected-payload/resource integrity; public MCP DTO/service behavior; finding ordering; planner/executor genericity; existing V1 command refusal; no package-ID dispatch in shared control-plane modules. |
+
+### 3.4 Constraints and Authorization
+
+- T1 is the first content checkpoint. No source, schema, fixture, generated schema, or build-gate implementation may begin before its accepted ADR commit validates.
+- The command ABI is direct execution of a materialized payload resource. The runner passes no shell and resolves no executable from an installed directory or `PATH`.
+- The first closed platform identifier is `linux/amd64`. A command declaration must name that target and mode `0755`; a mismatch is refused before materialization or spawn with a stable, path-free diagnostic.
+- Python entrypoints remain `payload:{resource-id}#{symbol}`. Command entrypoints are `payload:{resource-id}` with no symbol fragment. `entrypoint_resource` resolves both forms to exactly one declared resource.
+- The subprocess result travels only on the third inherited descriptor named by `argv[1]`. Provider `stdout` and `stderr` are diagnostics and cannot carry the result.
+- Command provider environment construction is an explicit closed map containing only runner-required locale/runtime values; it does not copy the parent environment. Python worker environment compatibility is decided and recorded by T1 without weakening the command boundary.
+- The command envelope and result are deterministic UTF-8 JSON. Resource bytes use standard padded Base64 keyed by sorted declared resource ID; input/resources/result reject malformed or duplicate data before use.
+- Existing exact caps remain the initial runtime contract: 30 seconds per invocation, 8,192 bytes retained per diagnostic stream, 262,144 result bytes, and 16,384 composed diagnostic characters. Boundary tests cover the exact limit and `N + 1` where meaningful.
+- Temporary executable materialization uses a private per-invocation directory, writes the already integrity-checked bytes, sets exactly `0755`, rehashes the on-disk file against the manifest digest, executes that path, tears down the process group, and then removes the file/directory on success, timeout, cancellation, crash, schema failure, and spawn failure.
+- Comments/docstrings added during implementation must record the cross-file ABI, why the third descriptor is authoritative, why installed paths are rejected, materialization/cleanup ordering, process-group teardown semantics, and environment boundary. Syntax narration and diff chatter are prohibited.
+- Complete at local verified checkpoints. Do not publish, release, close issues, or begin the deferred payload migration under this plan.
+
+## 4. Current State and Target State
+
+### 4.1 Current State
+
+`ProviderKind.COMMAND` is already legal in both manifest enums and the generated V2 payload schema. V2 `ProviderDeclaration` nevertheless accepts only the Python-shaped `payload:{resource}#{symbol}` executable entrypoint, and `invoke_provider` refuses every non-Python declaration. It loads digest-checked resource bytes, validates provider input, compiles Python bytes directly in the CLI process, captures only Python-level `stdout`/`stderr`, validates output, constructs a typed effect, and confirms declared live paths did not change. There is no timeout, cancellation point, process-group teardown, or fault isolation on this authoritative direct path.
+
+MCP separately owns a hardened process boundary in `mcp_services/providers.py`. It starts a Python worker, pumps stdin/result/stdout/stderr without blocking, caps output and result data, returns results on a third descriptor, terminates and reaps the process group, filters failure text, and composes deterministic diagnostic sections. The child resolves the selected payload again and calls the same in-process `invoke_provider`. Thus MCP is bounded but the CLI is not, and extracting the boundary must avoid double-spawning MCP providers.
+
+Payload resources carry path, media type, and digest but no executable semantics. Installed wheel modes are not a reliable execution contract. The reproducible Go build library proves the two current committed binaries only because their thin scripts are explicitly listed in `Makefile`; no command-provider binary or generic platform-declaration test exists.
+
+### 4.2 Target State
+
+The control plane owns one bounded execution implementation. `invoke_provider` resolves and validates the selected declaration and resources, builds the authoritative provider input, validates it, snapshots declared live paths, and dispatches Python or command bytes through that one process boundary. The parent treats child output as untrusted: it parses one bounded result object, applies the declared output schema and typed-effect checks, verifies live-path integrity, and publishes only fixed failure categories plus bounded/sanitized diagnostics. MCP delegates to this boundary and retains its operation/effect qualification and DTO mapping without its own process transport.
+
+A V2 command declaration uses `entrypoint = "payload:{resource-id}"`, `platforms = ["linux/amd64"]`, and `mode = "0755"`. The entrypoint and declared provider resources are loaded from the verified payload inventory. A command receives canonical JSON on stdin containing the already schema-validated provider input plus Base64 resource bytes; it writes exactly one JSON result to the inherited descriptor. The control plane materializes executable bytes privately, verifies the materialized digest, executes the exact temporary path with a closed environment, and cleans up after group teardown. Unsupported hosts, wrong declarations, digest drift, malformed transport, oversize output, timeout, crash, nonzero exit, and schema violations fail deterministically without leaking installed or temporary paths.
+
+### 4.3 Delta Summary
+
+| Area | Current | Target | Must Preserve |
+| --- | --- | --- | --- |
+| Runner ownership | MCP-local bounded runner; direct control plane in-process. | One control-plane-owned runner used by CLI and MCP. | ADR 0025 bound, caps, third descriptor, group teardown, and service behavior. |
+| Python dispatch | `compile`/`exec` in caller. | Python bytes execute in a bounded child through the shared ABI. | Input/resource immutability, all effects, schema checks, output notice, safe failure text, and generic routing. |
+| Command declaration | Enum legal but Python entrypoint shape and runtime refusal. | Payload resource with explicit `linux/amd64` and `0755` declaration. | Existing Python/documentation-only declarations and schema version remain valid. |
+| Executable delivery | None. | Digest-verified temporary materialization; installed path never executed. | Payload integrity remains the source of trusted bytes. |
+| Resource transport | In-process immutable `{id: bytes}` mapping. | Canonical Base64 map in the stdin envelope, with the input's digest map unchanged. | Only `provider.resources` bytes are exposed; order/encoding are deterministic. |
+| Platform behavior | Python follows the CLI host. | Command providers fail closed outside declared `linux/amd64`; adopting packages knowingly narrow. | Python payload portability remains unchanged. |
+| Reproducibility | Explicit gates for two unrelated committed Go binaries. | Fixture binary joins the same source-to-byte gate; future command binaries must add a thin script and gate entry. | Pinned Go toolchain/build flags and released bytes remain unchanged. |
+| Agent Handoff | 1.11 provider remains Python. | Unchanged in this plan. | No successor cut, catalog activation, or consumer migration. |
+
+## 5. Change Surface and Architecture
+
+### 5.1 Components and Ownership
+
+| Component / Surface | Current Responsibility | Planned Responsibility | Paths / Contracts | Owning Task |
+| --- | --- | --- | --- | --- |
+| Architecture corpus | ADR 0025 owns MCP-only provider isolation; ADR 0027 owns Go coexistence. | New ADR owns generic provider execution, command ABI, materialization, and platform narrowing, and links the existing decisions. | `docs/adr/adr-0029-command-provider-execution-boundary.md`, `docs/adr/README.md` | T1 |
+| Bounded transport | MCP module owns spawn, selector pump, caps, signals, frames, and cleanup. | Control-plane module owns a provider-neutral subprocess result/diagnostic contract. | `control_plane` new runner/worker modules; `mcp_services/providers.py` | T2 |
+| Direct provider dispatcher | Selects/validates and directly executes Python bytes. | Prepares/finishes all providers around the shared runner; Python uses a bounded child. | `control_plane/providers.py::invoke_provider` | T2 (shared owner), T3 contributor |
+| V2 manifest/schema | Declares `command` enum but only Python-shaped executable contract. | Kind-specific entrypoint/platform/mode validation and generated schema. | `package_contract/payload.py::ProviderDeclaration`; generated standard-payload schema | T3 |
+| Planner/public routing | Verify admits Python/documentation-only; legacy runner rejects command. | V2 generic routes admit supported command; V1 runner remains explicitly fail-closed. | `control_plane/planner.py::_verification_requests`; `provider_runner.py` | T3 |
+| Materializer/command adapter | Absent. | Private file, `0755`, post-write digest check, closed environment, exact-path spawn, cleanup. | control-plane runner/provider modules | T3 |
+| Go fixture/repro gate | No provider executable. | One minimal ABI fixture, committed bytes, thin build script, `Makefile` verification, payload/e2e tests. | `cmd/`, `scripts/`, `tests/fixtures/`, `tests/` | T4 |
+
+### 5.2 Target Control and Data Flow
+
+```text
+selected InstalledPayload + ProviderInvocation
+        │
+        ▼
+control_plane.providers
+  ├─ verify identity/declaration/resource closure and payload digests
+  ├─ materialize referenced inputs and validate provider input schema
+  ├─ snapshot declared live paths
+  └─ build canonical {input, Base64 resources} envelope
+        │
+        ▼
+control-plane bounded runner (single owner)
+  ├─ Python: fixed interpreter/bootstrap argv
+  └─ command: verified private 0755 entrypoint argv
+        │ stdin JSON                    │ argv[1] result fd
+        ▼                               ▼
+  isolated process group          bounded JSON result
+  stdout/stderr diagnostics       (never stdout)
+        │                               │
+        └──────────────┬────────────────┘
+                       ▼
+control_plane.providers
+  ├─ validate frame + declared output schema + typed effect
+  ├─ verify declared live paths unchanged
+  ├─ sanitize/compose diagnostics
+  └─ return ProviderResult
+                       │
+             CLI / planner / executor / MCP facade
+```
+
+The process boundary is fault isolation, not a sandbox. Payload bytes are catalog-trusted, but every byte and frame crossing the child boundary remains subject to integrity, size, shape, path-containment, and content-safety checks.
+
+### 5.3 Change-Surface Matrix
+
+| Surface | Applies? | Invariant / Required Change | Proof | Task |
+| --- | --- | --- | --- | --- |
+| Behavior | yes | Python becomes bounded without semantic drift; command providers execute across all declared effects/routes. | PV-T2-001, PV-T3-001, PV-T4-001 | T2–T4 |
+| Architecture / dependency direction | yes | `control_plane` owns the process runner; MCP consumes it and no longer owns a second dispatch boundary. | PV-T1-001, PV-T2-001 | T1–T2 |
+| Public / cross-task interface | yes | Kind-specific V2 declaration and command wire ABI are frozen before code. | PV-T1-001, PV-T3-001 | T1, T3 |
+| Data / state | yes | Entrypoint exists only as private temporary state during an invocation and is removed after teardown. | PV-T3-001 | T3 |
+| Configuration | no | No consumer option/config key changes. | PV-T4-001 | T4 |
+| Security / trust | yes | Integrity at read and materialization, no installed-path execution, no shell/PATH, closed command environment, bounded child/result/diagnostics, safe failure text. | PV-T2-001, PV-T3-001 | T2–T3 |
+| Compatibility / migration | yes | Existing Python manifests/results and V1 fail-closed behavior remain; command packages declare `linux/amd64`. | PV-T2-001, PV-T3-001 | T2–T3 |
+| Operations / deployment | yes | No release or payload activation; final output is a local platform checkpoint and deferred migration input. | PV-T4-001 | T4 |
+| Documentation | yes | New ADR/index and concise provider/repro owner truth. | PV-T1-001, PV-T4-001 | T1, T4 |
+| Durable evidence | no | Committed tests, ADR, fixture source/binary, build script, and identity-bearing checkpoints are reproducible evidence. | PV-T4-001 | T4 |
+
+### 5.4 Binding Decisions
+
+| ID | Decision | Rationale | Source | Affected Task(s) |
+| --- | --- | --- | --- | --- |
+| D-001 | Record and validate the control-plane trust/platform ADR before implementation; its T1 checkpoint is a prerequisite for #162. | The issue changes a repository-wide trust boundary and #162 must sweep the final ADR corpus once. | issue #142; issue #162 | T1–T4 |
+| D-002 | Extract one control-plane-owned bounded runner; MCP delegates rather than wrapping it in another worker. | Duplicate or nested boundaries could drift in caps, cleanup, diagnostics, and schema behavior. | issue #142 owner decision | T2–T4 |
+| D-003 | Preserve ADR 0025's 30-second bound, process-group `SIGTERM`/`SIGKILL`, reaping, per-stream/result caps, explicit truncation, third descriptor, and filtered failures for CLI and MCP. | These are accepted properties, not MCP implementation accidents. | ADR 0025; issue #142 | T1–T3 |
+| D-004 | Use `payload:{resource-id}` plus `platforms = ["linux/amd64"]` and `mode = "0755"` for command declarations; Python retains `#symbol`. | A command has no Python symbol and needs an explicit executable/platform contract. | issue #142 owner decision | T1, T3–T4 |
+| D-005 | Transport `{input, resources}` as canonical JSON on stdin; resources are standard padded Base64 keyed by resource ID, and the raw result uses only the inherited result descriptor. | JSON is the existing cross-boundary form; Base64 preserves arbitrary bytes; stdout/stderr remain untrusted diagnostics. | issue #142 owner decision; ADR 0025 | T1, T3–T4 |
+| D-006 | Materialize the exact integrity-checked entrypoint bytes privately at `0755`, rehash the file, execute that path, teardown the group, then clean up. Never execute `payload.root/...`. | Wheel installers do not guarantee executable mode, and verification must remain coupled to use. | issue #142 implementation finding | T1, T3–T4 |
+| D-007 | Command providers receive a closed environment and use no shell or `PATH`; unsupported platform refusal occurs before materialization/spawn. | Prevent ambient credentials/tooling and opaque `ENOEXEC` behavior from defining the ABI. | issue #142 scope/acceptance | T1, T3 |
+| D-008 | Keep the V1 installed-bundle provider runner Python-only and fail-closed for command/workflow. | Its module-import contract is separate from V2 integrity-addressed payload execution; widening it would invite installed-path execution and exceed issue acceptance. | direct derivation from issue scope and current architecture | T3 |
+| D-009 | Use a dedicated synthetic payload fixture, not a production family or Agent Handoff successor, for core end-to-end proof. | Core acceptance needs real routing proof without coupling platform implementation to the deferred package migration. | issue #142 acceptance; owner-approved migration boundary | T4 |
+| D-010 | Require external #156 T2 before any later production successor cut, but do not misclassify the synthetic test fixture as a released family successor. | The guard must exist when a new package version is authored; it need not block core runtime proof. | issue #156 owner coordination | deferred migration boundary |
+
+## 6. Requirements and Acceptance
+
+| ID | Requirement | Source | Priority | Owner Task | Task(s) | Proof(s) |
+| --- | --- | --- | --- | --- | --- | --- |
+| REQ-001 | An accepted ADR shall freeze the control-plane provider trust boundary, command ABI, `linux/amd64` consequence, materialization/integrity/cleanup order, and rejected status-quo/Python-shim alternatives before implementation. | `issue:L3DigitalNet/project-standards#142` | Must | T1 | T1 | PV-T1-001 |
+| REQ-002 | The new ADR checkpoint shall precede T2–T4 and be provided to #162 before its final corpus-wide link/rename sweep. | `issue:L3DigitalNet/project-standards#162` | Must | T1 | T1 | PV-T1-001 |
+| REQ-003 | Direct control-plane and MCP provider calls shall use one bounded runner that preserves the 30-second bound, process-group teardown/reaping, per-stream/result/diagnostic caps, explicit truncation, third-descriptor result transport, and sanitized deterministic failures. | `issue:L3DigitalNet/project-standards#142`; ADR 0025 | Must | T2 | T2 | PV-T2-001 |
+| REQ-004 | All existing Python provider operations/effects, schema checks, resources, output notices, typed results, live-path integrity checks, CLI routing, and MCP DTO behavior shall remain equivalent after bounded extraction. | `issue:L3DigitalNet/project-standards#142` | Must | T2 | T2 | PV-T2-001 |
+| REQ-005 | V2 command declarations shall require a payload-resource entrypoint, closed supported platform list containing `linux/amd64`, and mode `0755`, while existing Python/documentation-only manifests and the V1 command refusal remain valid. | `issue:L3DigitalNet/project-standards#142` | Must | T3 | T3 | PV-T3-001 |
+| REQ-006 | A command provider shall receive the same schema-validated input and exactly its declared resource bytes over the defined JSON/Base64 transport, and its bounded JSON result shall pass the existing output schema and typed-effect validation before publication. | `issue:L3DigitalNet/project-standards#142` | Must | T3 | T3, T4 | PV-T3-001, PV-T4-001 |
+| REQ-007 | The runner shall refuse unsupported platforms before spawn, materialize verified executable bytes privately at `0755`, reverify the on-disk digest, execute no installed-wheel path, use no shell/PATH or inherited command environment, and clean up after every completion/failure path. | `issue:L3DigitalNet/project-standards#142` | Must | T3 | T3, T4 | PV-T3-001, PV-T4-001 |
+| REQ-008 | Timeout, cancellation, crash, nonzero exit, malformed/oversize result, diagnostic overflow, digest mismatch, schema violation, descendant retention, and cleanup shall produce stable bounded behavior without raw installed/temp paths or secret environment values. | `issue:L3DigitalNet/project-standards#142`; ADR 0025 | Must | T3 | T2, T3 | PV-T2-001, PV-T3-001 |
+| REQ-009 | A Go-backed payload fixture shall pass real reconcile, validate, and drift-check flows, prove input/resource/output equivalence and materialized mode/digest/cleanup, and reject a wrong platform and plausible hollow transports. | `issue:L3DigitalNet/project-standards#142` | Must | T4 | T4 | PV-T4-001 |
+| REQ-010 | The fixture's committed binary shall rebuild byte-identically under the shared pinned Go contract and be included in the repository Go verification gate; declaration tests shall fail when command platform/mode are missing or invalid. | `issue:L3DigitalNet/project-standards#142` | Must | T4 | T3, T4 | PV-T3-001, PV-T4-001 |
+| REQ-011 | No production successor payload shall be cut here; any future Agent Handoff successor shall start only from green T4 and #156 T2 checkpoints under a separate plan. | owner boundary; `issue:L3DigitalNet/project-standards#156` | Must | T4 | T4 | PV-T4-001 |
+
+## 7. Verification and Evidence Strategy
+
+- **Authoritative commands:** focused `tests/control_plane/test_providers.py`, new shared-runner/command-provider tests, `tests/mcp_services/test_providers.py`, payload execution/schema tests, and new command-provider end-to-end tests; the five package validators; generated schema/projection checks; Git-tracked Prettier/markdownlint; Ruff, BasedPyright, and coverage; `make go-check`; `git diff --check`; fast `scripts/verify.sh` at intermediate engine checkpoints and `scripts/verify.sh --full` after T4.
+- **Runner placement:** Git-history/index/diff commands and the Git-dependent `scripts/verify.sh` lanes run locally. Synchronized-tree-compatible CPU-heavy pytest, BasedPyright, and Go gates run as `rexec -- command [args]`; shell syntax is used only through `rexec --shell` when an actual shell expression is required. Package/Markdown checks that depend on Git corpus selection remain local.
+- **Prerequisites:** each new implementation worktree runs `scripts/bootstrap-worktree.sh` first and again after any `src/**` or payload-source change. Run `rexec config show`, `rexec doctor`, and `rexec setup --check` before classifying a remote failure as repository failure.
+- **Oracles:** ADR 0025's bound/teardown/cap clauses; V2 manifest/resource digests; existing Python direct/MCP test outputs; declared input/output schemas; independent on-disk hash/mode/liveness inspection; and the shared Go rebuild-and-compare library.
+- **Negative controls:** old MCP-local runner retained, direct Python call still in-process, nested MCP spawn, result on stdout, missing/extra resource, Base64 corruption, installed resource forced non-executable, materialized byte mutation, current platform changed to unsupported, command environment canary, timeout at the bound, output at limit and `N + 1`, stubborn/descendant processes, malformed/non-object result, wrong output schema, and binary/source mismatch.
+- **Test layers:** architecture/import-owner inspection, characterization, Python unit/contract, process/security/cleanup, payload schema generation, Go unit/race/build/audit, control-plane integration, MCP regression, extracted-wheel/materialization, and end-to-end reconcile/validate/drift-check.
+- **Evidence:** command output is ephemeral. The committed ADR, tests, fixture source/binary, build script, and checkpoint trailers retain the durable contract; no separate evidence file is required.
+- **Late failure:** block the owning task. If a completed checkpoint is disproved, append a correction task with `corrects:` and `discovered_from:` and rerun the failed proof; never weaken a cap, skip a platform/materialization control, or reopen completed history.
+
+## 8. Execution Summary
+
+| Task | Title | Disposition | Work Type | Phase | Depends On | Requirement(s) | Primary Proof | Parallel / Conflict |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| T1 | Record the command-provider trust and platform decision | active | documentation | P1 | None | REQ-001, REQ-002 | PV-T1-001 | no / ADR corpus; external #162 |
+| T2 | Extract the shared bounded runner and preserve Python behavior | active | brownfield-behavior | P2 | T1 | REQ-003, REQ-004, REQ-008 | PV-T2-001 | no / owns shared runner and dispatcher seam |
+| T3 | Implement the V2 command declaration and runtime boundary | active | behavior | P3 | T2 | REQ-005, REQ-006, REQ-007, REQ-008, REQ-010 | PV-T3-001 | no / contributes to T2-owned runner/dispatcher |
+| T4 | Prove the Go payload fixture and core platform checkpoint | active | behavior | P4 | T3 | REQ-006, REQ-007, REQ-009, REQ-010, REQ-011 | PV-T4-001 | no / fixture, Makefile, final gate |
+
+External gates:
+
+- **EG-ADR:** T1's validated checkpoint is available to issue #162. The #162 final corpus sweep may begin only after that commit so it includes the new active ADR and all inbound links once.
+- **EG-156 (deferred successor gate):** issue #156 plan T2/PV-T2-001 must be terminal at a bridge-validated checkpoint before any later production successor payload is authored or cut. It does not block T1–T4's synthetic fixture. If #156's plan is revised, the successor plan must use its approved replacement task/checkpoint rather than inferring equivalence.
+
+## 9. Implementation Tasks
+
+### Phase P1: Architecture Authority
+
+#### T1: Record the command-provider trust and platform decision
+
+- **disposition:** active
+- **outcome:** The active ADR corpus contains one accepted record that unambiguously governs generic bounded provider execution, the command ABI, materialization, platform narrowing, environment/diagnostic policy, rejected alternatives, and its relationship to ADRs 0025/0027; #162 can consume its checkpoint before the final sweep.
+- **work_type:** documentation
+- **checkpoint:** one green `docs(adr)` commit with task, requirement, proof IDs, and the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** []
+- **dependency_reason:** none
+- **requirements:** [REQ-001, REQ-002]
+- **proof:** [PV-T1-001]
+- **source_refs:** [issue:L3DigitalNet/project-standards#142, repo:docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md#provider-execution-boundary, repo:docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md, repo:standards/adr/versions/1.5/README.md]
+- **consumes:** [approved owner decision, ADR 1.5 authoring contract, existing MCP boundary and Go coexistence decisions]
+- **produces:** [command-provider-execution-adr-v1, EG-ADR checkpoint]
+- **preserves:** [ADR 0025's MCP SDK/service decisions, ADR 0027's neutral tooling scope, stable ADR numbering/links, #162's ownership of its later corpus sweep]
+- **invariants:** [ADR 0029 is the next number unless a concurrent accepted record takes it first; filename follows current title; decision boundary excludes Agent Handoff migration and future platforms; evidence and authority links follow the repo convention]
+- **executor_discretion:** [final ADR title/slug if number 0029 is concurrently consumed, concise prose arrangement, non-substantive index wording]
+- **files:** [`docs/adr/adr-0029-command-provider-execution-boundary.md` (create; owner T1), `docs/adr/README.md` (modify; owner T1)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** if an ADR number/path was concurrently claimed, stop before writing and allocate the next number under ADR 1.5. If #162 has begun, pause this task and coordinate one serialized corpus owner; never land an ADR after the sweep and leave it unswept.
+- **acceptance:** PV-T1-001 proves the new accepted ADR contains every binding D-002–D-008 boundary, names the portability consequence and both rejected alternatives, links ADRs 0025/0027 reciprocally as required by the ADR standard, appears once in the index, validates under frontmatter/reference/Markdown checks, and its checkpoint is explicitly handed to #162.
+- **sub-tasks:**
+  - **T1.1 INVENTORY** — confirm the next ADR number, ADR 1.5 filename/frontmatter rules, current inbound decision edges, and #162 execution state before editing.
+  - **T1.2 UPDATE** — author the bounded record and index entry; do not modify implementation or perform #162's evidence-vs-authority sweep.
+  - **T1.3 VERIFY REFERENCES** — search tracked paths for the new ADR ID/path and related ADR edges; verify no stale filename, duplicate number, unresolved placeholder, or missing reciprocal edge.
+  - **T1.4 Verify Task** — run scoped frontmatter/reference, Prettier, markdownlint, `git diff --check`, and bridge validation; create the checkpoint and communicate EG-ADR to #162 without mutating GitHub state.
+
+### Phase P2: Shared Bounded Python Baseline
+
+#### T2: Extract the shared bounded runner and preserve Python behavior
+
+- **disposition:** active
+- **outcome:** Direct CLI/control-plane and MCP calls execute Python payload providers through one control-plane-owned bounded process implementation, with no MCP-local duplicate or nested worker and no observable typed-result regression.
+- **work_type:** brownfield-behavior
+- **checkpoint:** one green bounded-dispatch commit with task, requirement, proof IDs, and the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T1]
+- **dependency_reason:** consumes `command-provider-execution-adr-v1`, which fixes runner ownership, ABI direction, limits, environment split, and confirmation obligations before source movement
+- **requirements:** [REQ-003, REQ-004, REQ-008]
+- **proof:** [PV-T2-001]
+- **source_refs:** [issue:L3DigitalNet/project-standards#142, repo:docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md#provider-execution-boundary, repo:src/project_standards/control_plane/providers.py::invoke_provider, repo:src/project_standards/mcp_services/providers.py::_run_worker, repo:src/project_standards/mcp_services/provider_worker.py::run_request, repo:tests/mcp_services/test_providers.py::test_slow_provider_returns_bounded_diagnostic_and_worker_is_reaped, repo:tests/control_plane/test_providers.py::test_provider_returns_typed_findings_mutation_plan_and_migration_report]
+- **consumes:** [command-provider-execution-adr-v1, current Python provider input/resource/output contract, ADR 0025 bounded transport behavior]
+- **produces:** [bounded-provider-runner-v1, bounded-python-provider-dispatch-v1]
+- **preserves:** [all V2 Python operations/effects, schemas, typed results, output notice semantics, live-path integrity, public MCP DTO/service results, request qualification, finding ordering, content-safe errors, V1 runner behavior]
+- **invariants:** [one owner for selector pump/signals/caps/frame/diagnostics; direct and MCP callers do not wrap the shared runner in another provider process; result fd is distinct from stdout/stderr; every exit path tears down/reaps the group]
+- **executor_discretion:** [private module/type/helper names, exact extraction file split, test fixture factoring, behavior-preserving comment placement]
+- **files:** [`src/project_standards/control_plane/provider_subprocess.py` (create; owner T2), `src/project_standards/control_plane/provider_worker.py` (create; owner T2), `src/project_standards/control_plane/providers.py` (modify; owner T2), `src/project_standards/mcp_services/providers.py` (modify; owner T2), `src/project_standards/mcp_services/provider_worker.py` (delete or reduce to compatibility-free removal; owner T2), `tests/control_plane/test_provider_subprocess.py` (create; owner T2), `tests/control_plane/test_providers.py` (modify; owner T2), `tests/mcp_services/test_providers.py` (modify; owner T2), `tests/mcp_services/test_provider_worker.py` (delete/migrate; owner T2)]
+- **parallel_safe:** no
+- **conflicts_with:** [T3, T4]
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** preserve a green characterization checkpoint before moving ownership. If parity fails, restore the last green checkpoint or append a correction task; do not keep both runners, add a compatibility wrapper that double-spawns, or weaken ADR 0025 tests to fit the extraction.
+- **acceptance:** PV-T2-001 observes one child for direct Python dispatch and the same single child for MCP dispatch; exact finding/mutation/migration objects, output notices, input/resource bytes, failure codes, timeout/caps/truncation, result-fd behavior, cancellation, crash, descendant cleanup, and sanitized diagnostics match their frozen characterization values; import/source inspection finds one transport implementation.
+- **sub-tasks:**
+  - **T2.1 CHARACTERIZE** — bootstrap; capture focused direct provider and MCP results, timeout/cap/cleanup behavior, process count, and current import ownership before edits.
+  - **T2.2 Verify Baseline** — run the focused existing tests and confirm they pass for the current in-process/MCP split; record the assertions that must move rather than be deleted.
+  - **T2.3 RED** — add direct-dispatch timeout, result-cap, process-group cleanup, and one-runner ownership assertions while preserving the characterized success-path objects.
+  - **T2.4 Verify RED** — run the focused tests and confirm they fail because direct dispatch remains in-process and MCP still owns the runner, while the frozen success-path characterization stays green.
+  - **T2.5 GREEN** — extract the transport and Python worker ABI into the control-plane boundary, route `invoke_provider` through it, and make MCP call the same bounded dispatcher without nested spawn.
+  - **T2.6 Verify GREEN** — run the direct/MCP parity, every ADR 0025 process-path assertion, exact typed effects, real-provider compositions, import-boundary assertions, and a process-count assertion that rejects double spawn.
+  - **T2.7 REFACTOR** — remove the superseded MCP-local transport/worker ownership and consolidate fixed caps, diagnostic formatting, teardown, and ABI comments under the control plane.
+  - **T2.8 Verify Task** — rerun bootstrap; focused suites; five package checks; Markdown/Ruff; `rexec -- uv run basedpyright`; `git diff --check`; direct-local `scripts/verify.sh`; create the checkpoint.
+
+### Phase P3: Command Contract and Runtime
+
+#### T3: Implement the V2 command declaration and runtime boundary
+
+- **disposition:** active
+- **outcome:** A valid V2 `command` declaration dispatches its integrity-addressed resource through the shared runner on `linux/amd64`, while every declaration, platform, transport, materialization, cleanup, schema, and diagnostic failure is deterministic and fail-closed.
+- **work_type:** behavior
+- **checkpoint:** one green command-runtime commit with task, requirement, proof IDs, and the required `Plan-*` checkpoint trailers
+- **boundary:** public
+- **depends_on:** [T2]
+- **dependency_reason:** consumes `bounded-provider-runner-v1` and `bounded-python-provider-dispatch-v1`; command execution must extend the proven single runner rather than create another process implementation
+- **requirements:** [REQ-005, REQ-006, REQ-007, REQ-008, REQ-010]
+- **proof:** [PV-T3-001]
+- **source_refs:** [issue:L3DigitalNet/project-standards#142, repo:docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md#provider-execution-boundary, repo:src/project_standards/package_contract/payload.py::ProviderDeclaration, repo:src/project_standards/control_plane/providers.py::invoke_provider, repo:src/project_standards/control_plane/planner.py::_verification_requests, repo:src/project_standards/provider_runner.py::_run_python_provider]
+- **consumes:** [bounded-provider-runner-v1, V2 provider/input/output/resource/integrity contracts, normalized host platform, ADR command ABI]
+- **produces:** [v2-command-provider-declaration-v1, command-provider-wire-v1, command-provider-materialization-v1]
+- **preserves:** [existing schema version, all existing manifests/generated schema compatibility, Python entrypoint grammar/behavior, documentation-only behavior, V1 command refusal, generic package-independent routing]
+- **invariants:** [platform checked before disk/spawn; only declared resources cross; input validated before spawn; output validated after bounded parse; no shell/PATH/installed path; on-disk digest and 0755 checked before execution; cleanup follows group teardown; temp/installed paths and inherited secrets never enter diagnostics]
+- **executor_discretion:** [private Pydantic helper names, normalized platform helper placement, temporary-directory implementation satisfying the contract, internal diagnostic code representation consistent with existing `ControlPlaneError`]
+- **files:** [`src/project_standards/package_contract/payload.py` (modify; owner T3), `src/project_standards/schemas/standard-payload.schema.json` (regenerate; owner T3), `src/project_standards/control_plane/providers.py` (modify; owner T2), `src/project_standards/control_plane/provider_subprocess.py` (modify; owner T2), `src/project_standards/control_plane/provider_worker.py` (modify; owner T2), `src/project_standards/control_plane/planner.py` (modify; owner T3), `src/project_standards/provider_runner.py` (inspect and update only contract comments/tests if needed; owner T3), `tests/package_contract/test_payload_execution_contracts.py` (modify; owner T3), `tests/package_contract/test_schemas.py` (modify; owner T3), `tests/control_plane/test_command_providers.py` (create; owner T3), `tests/control_plane/test_providers.py` (command regression contribution; owner T2), `tests/mcp_services/test_providers.py` (command regression contribution; owner T2)]
+- **parallel_safe:** no
+- **conflicts_with:** [T2, T4]
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** declaration/schema/materialization failure leaves no executable or child and does not alter the repository. A test failure blocks T3; revert to T2 or append a correction task. Never fall back to Python, installed bytes, a shell, undeclared platform, unverified mode/digest, or an unbounded result.
+- **acceptance:** PV-T3-001 proves the exact declaration matrix and generated schema; correct stdin/result/resource equivalence; Python parity; supported/unsupported platform behavior; installed-path nonexecution; materialized mode/digest; closed environment; exact/N+1 caps; timeout/cancel/crash/nonzero/descendant cleanup; safe deterministic diagnostics; V1 refusal; and no package-ID branch.
+- **sub-tasks:**
+  - **T3.1 RED** — add declaration/schema and process-boundary tests first. Expected failures are the current Python-only entrypoint grammar/runtime gate and missing platform/materialization/transport behavior, not import, fixture, or environment failure.
+  - **T3.2 Verify RED** — run the focused contract/runtime tests and prove each fails for the missing `command` behavior while T2's Python parity remains green.
+  - **T3.3 GREEN** — implement kind-specific declaration/schema logic, platform preflight, canonical envelope, command environment/argv, private materialization and rehash, bounded result handling, and generic planner routing through T2's runner.
+  - **T3.4 Verify GREEN** — run declaration/schema, direct runtime, MCP regression, transport, materialization, platform, diagnostic, and Python-parity matrices, including exact and `N + 1` caps.
+  - **T3.5 REFACTOR** — remove duplicated kind branches and stale MCP-worker comments; ensure every new comment/docstring carries only ABI, invariant, failure, or cross-file contract information.
+  - **T3.6 Verify Task** — rerun bootstrap; focused suites; five package checks including schema generation/projection; Markdown/Ruff; `rexec -- uv run basedpyright`; `git diff --check`; direct-local `scripts/verify.sh`; create the checkpoint.
+
+### Phase P4: Go Fixture and Integrated Acceptance
+
+#### T4: Prove the Go payload fixture and core platform checkpoint
+
+- **disposition:** active
+- **outcome:** A reproducibly built Go command-provider payload fixture passes real reconcile, validate, drift-check, wheel-install/materialization, platform, and failure-control paths, leaving one complete local platform checkpoint that a later Agent Handoff migration plan can consume.
+- **work_type:** behavior
+- **checkpoint:** one green fixture/integration commit with task, requirement, proof IDs, and the required `Plan-*` checkpoint trailers
+- **boundary:** cross-task
+- **depends_on:** [T3]
+- **dependency_reason:** consumes `v2-command-provider-declaration-v1`, `command-provider-wire-v1`, and `command-provider-materialization-v1`; the synthetic fixture is not a production successor cut, so EG-156 gates only the deferred package migration
+- **requirements:** [REQ-006, REQ-007, REQ-009, REQ-010, REQ-011]
+- **proof:** [PV-T4-001]
+- **source_refs:** [issue:L3DigitalNet/project-standards#142, repo:scripts/lib/go-reproducible-build.sh, repo:Makefile::go-verify-binary, repo:tests/control_plane/test_end_to_end.py::test_every_adapter_converges_in_one_virtual_tree_and_second_apply_is_byte_noop, repo:tests/mcp_services/test_providers.py::test_drift_check_preserves_reconciliation_and_typed_provider_results]
+- **consumes:** [v2-command-provider-declaration-v1, command-provider-wire-v1, command-provider-materialization-v1, repository Go toolchain/build library, real control-plane/MCP entrypoints]
+- **produces:** [go-command-provider-fixture-v1, command-provider-core-checkpoint-v1]
+- **preserves:** [no production family or successor payload, Catalog 5/default/self-host selections, released binary bytes, existing Go checks, no GitHub/release mutation]
+- **invariants:** [fixture implements the ADR ABI rather than importing Python; build script is the sole output recipe and is listed in build/verify gates; e2e routes do not bypass public planner/executor/service owners; installed fixture resource may be 0644 because only the verified temporary copy executes]
+- **executor_discretion:** [fixture package/internal organization, compact operation switch, test table factoring, fixture standard ID/version that does not collide with production identities]
+- **files:** [`cmd/command-provider-fixture/` (create; owner T4), `internal/commandproviderfixture/` (create if needed; owner T4), `scripts/build-command-provider-fixture.sh` (create; owner T4), `Makefile` (modify; owner T4), `tests/fixtures/command-provider/` (create; owner T4), `tests/control_plane/test_command_provider_end_to_end.py` (create; owner T4), `tests/mcp_services/test_providers.py` (end-to-end contribution; owner T2), `tests/package_contract/test_command_provider_fixture.py` (create; owner T4), `scripts/README.md` (modify only if required; owner T4)]
+- **parallel_safe:** no
+- **conflicts_with:** [T2, T3]
+- **supersedes:** []
+- **superseded_by:** []
+- **evidence:** [ephemeral]
+- **recovery:** if build/e2e proof fails after writes, revert T4 only or append a correction task; do not cut a production payload, relax the ABI, regenerate from an unpinned Go toolchain, or treat helper-only invocation as end-to-end evidence. EG-156 remains mandatory before any later production successor cut.
+- **acceptance:** PV-T4-001 proves the fixture binary matches a pinned rebuild, a command payload goes through real reconcile/validate/drift-check and preserves exact input/resource/output behavior, installed bytes are never executed, temporary mode/digest/cleanup and platform refusal are independently observed, hollow transports fail, all Python/MCP regressions remain green, and no production payload/catalog/release/GitHub path changed.
+- **sub-tasks:**
+  - **T4.1 RED** — validate T1–T3 checkpoints, then add the Go source/build/fixture/e2e tests with no committed binary. Expected failures are the missing built executable and absent end-to-end command result, while T3 unit contracts remain green.
+  - **T4.2 Verify RED** — run focused Python and Go tests; confirm failure is caused by the absent fixture implementation, not toolchain mismatch, schema/projection drift, or a stale checkpoint.
+  - **T4.3 GREEN** — implement the minimal Go ABI fixture with explicit JSON tags and error returns, build committed bytes through the shared script, wire both `go-binary` and `go-verify-binary`, and complete the synthetic payload/e2e routes.
+  - **T4.4 Verify GREEN** — prove real route outputs plus materialization/platform controls; run Go race/unit/static/audit and byte comparison.
+  - **T4.5 REFACTOR** — consolidate fixture helpers without changing the ABI and audit Go/Python comments for cross-file ABI and cleanup accuracy.
+  - **T4.6 Verify Task** — rerun bootstrap; PV-T4-001; T2/T3 regressions; five package checks; Markdown/Ruff; `rexec -- uv run basedpyright`; `rexec -- make go-check`; `git diff --check`; direct-local `scripts/verify.sh --full`; validate plan/checkpoint; create the checkpoint.
+
+## 10. Integration, Migration, and Recovery
+
+### 10.1 Integration Sequence
+
+1. T1 records the decision and produces EG-ADR. T2–T4 remain blocked until it validates; #162 consumes the same checkpoint before its final sweep.
+2. T2 moves the existing bounded process contract into the control plane and proves Python/MCP parity before any command schema or executable is introduced.
+3. T3 adds command declaration/runtime behavior to T2's single runner and proves all failure boundaries with synthetic executable controls.
+4. T4 adds the synthetic Go payload fixture and reproducible binary, proves the real routes, and runs the final full gate. This is not a production successor cut.
+5. Stop at `command-provider-core-checkpoint-v1`. A separately authored Agent Handoff migration plan may consume T4 only after verifying EG-156; this plan cannot begin that cut.
+
+### 10.2 Runtime Transition
+
+- Required: yes, for Python provider execution ownership and the new command ABI; no persistent consumer data migration.
+- Compatibility period: existing Python and documentation-only declarations remain valid; no production command declaration exists until a later package plan.
+- Idempotency: repeated dispatch against identical payload/input bytes yields the same typed result and deterministic diagnostic ordering; repeated reconcile/validate/drift-check fixture runs leave no temporary executable or repository change beyond the owning operation's declared result.
+- Point of no return: none. All changes are local source/contracts/fixtures; release and payload activation are external.
+- Rollback / forward repair: revert the latest unreleased task checkpoint before downstream consumption or append a correction task after completion. Preserve T1's ADR history and published payload bytes.
+- Recovery proof: each runner failure path asserts no surviving descriptor/process/temp path; T4 repeats end-to-end flows and verifies a clean temporary namespace and unchanged production catalogs/payloads.
+
+### 10.3 External Coordination
+
+- **#162:** its final sweep must observe T1's commit. If it has already started, serialize ownership and rerun its tracked-reference inventory after integrating T1; do not let both tasks edit `docs/adr/README.md` concurrently.
+- **#156:** T1–T4 create no production successor and therefore do not consume this gate. The later Agent Handoff successor plan must verify the exact active-plan T2 checkpoint and its Plan trailers before authoring the new package version.
+- **Agent Handoff migration:** the later plan owns its successor version, Go source parity, all package provider operations, documentation, catalog role, immutable predecessor proof, consumer behavior, and release classification. It may not treat this core fixture as package acceptance.
+
+### 10.4 Late Failure and Correction
+
+A wrong-reason RED, ADR conflict, Python parity change, duplicate runner, cap/cleanup failure, unsafe diagnostic, platform/materialization defect, missing external checkpoint, reproducibility mismatch, or end-to-end route bypass blocks the current task. If governing intent is incomplete, return the smallest amendment request to #142/the ADR owner. Otherwise append a permanent correction task with `corrects:` and `discovered_from:`, preserve completed definitions/checkpoints, rerun the owning proof, and then rerun every dependent proof.
+
+## 11. Risks, Assumptions, and Open Questions
+
+### 11.1 Risks
+
+| ID | Risk | Likelihood | Impact | Treatment | Owner / Task |
+| --- | --- | --- | --- | --- | --- |
+| R-001 | Extraction leaves MCP double-spawning or preserves a second timeout/cap implementation. | medium | high | Import/source ownership and child-count tests reject duplicate/nested runners before T2 completes. | T2 |
+| R-002 | Bounding all Python providers changes a formerly successful large-input or long-running CLI operation. | medium | high | Characterize real provider corpus, use deadline-bound nonblocking stdin, retain schema/resource behavior, and exercise real packaged providers; a limit conflict returns to ADR authority. | T1–T2 |
+| R-003 | A temporary executable is verified before a later path/byte substitution. | low | high | Private directory, no installed-path execution, exact-path spawn, post-write digest/mode inspection, and race-focused negative tests. | T3 |
+| R-004 | Result or diagnostic text exposes installed paths, temp paths, or inherited secrets. | medium | high | Closed command environment, fixed errors, double filtering at parent boundary, canary tests, and no raw exception/provider text publication. | T2–T3 |
+| R-005 | A fixture-only happy path passes while reconcile, validate, or drift-check still filters command providers. | medium | high | T4 uses real route owners and cardinality/assertion controls; helper-only calls are insufficient. | T3–T4 |
+| R-006 | The Go fixture binary diverges from source or a future provider omits the build gate. | medium | high | Thin build script plus shared rebuild comparison; list in both Makefile targets; tests pin platform/mode declaration and gate membership. | T4 |
+| R-007 | #162 lands before the new ADR or #156 changes checkpoint identity before the deferred migration. | medium | medium | Deliver EG-ADR before #162; make the later successor plan re-resolve EG-156 rather than infer an equivalent checkpoint. | T1, deferred migration |
+| R-008 | Core implementation silently expands into the 1,499-line Agent Handoff migration. | medium | high | File claims exclude Agent Handoff payload bytes; final diff asserts no production payload/catalog change; later plan is mandatory. | T4 |
+
+### 11.2 Assumptions
+
+| ID | Assumption | Impact if False |
+| --- | --- | --- |
+| A-001 | ADR number 0029 remains available when T1 starts. | Pause and revise the master with the next free exact path before generating or resuming T1; do not overwrite a concurrent record or silently exceed the file claim. |
+| A-002 | The `linux/amd64` identifier and `0755` string can be added to schema version `1.0` as optional fields globally but required/prohibited by provider kind. | If schema-version policy requires a bump, pause T3 and obtain an owner amendment; do not silently create schema `1.1`. |
+| A-003 | The shared runner can preserve all existing Python providers without retaining MCP's worker-side full rediscovery. | If real-provider characterization disproves it, pause T2 and amend the ADR/plan rather than retain a duplicate or raise bounds without authority. |
+| A-004 | #156 revision 1 T2 remains the checkpoint that authorizes successor work. | If revised/superseded, use the bridge-validated active replacement named by #156's owner. |
+
+### 11.3 Open Questions
+
+None.
+
+## 12. Final Verification
+
+- Bridge 3.5.0 validates this active master and every T1–T4 checkpoint/trailer identity; EG-ADR was delivered before #162. EG-156 remains an explicit deferred-successor prerequisite, not a core-plan completion condition.
+- Every Must requirement maps to completed task-owned Appendix B proof; no final broad gate excuses a failed task-level runner, command, materialization, platform, or fixture proof.
+- The accepted ADR and index are frontmatter/reference/Prettier/markdownlint clean, and #162 has the T1 prerequisite before its final sweep.
+- Source/import inspection finds one control-plane-owned selector/process/cap/teardown implementation, no nested MCP provider worker, and no package identity branch in shared routing.
+- Existing Python providers preserve every effect, schema, resource, typed result, output notice, live-path integrity check, CLI route, MCP composition, and content-safe failure behavior under the bounded process.
+- Command declaration/generated-schema tests prove the `payload:{resource}`, `linux/amd64`, and `0755` contract, invalid kind-specific combinations, and unchanged Python/documentation-only/V1 behavior.
+- Command process tests prove input and resource byte equivalence, output schema/effect validation, result-fd isolation, exact/N+1 caps, timeout/cancellation/crash/nonzero/descendant cleanup, unsupported-platform pre-spawn refusal, closed environment, installed-path nonexecution, on-disk digest/mode verification, and cleanup after every path.
+- The committed Go fixture rebuilds byte-identically and `make go-check` passes remotely; extracted-wheel and real reconcile/validate/drift-check tests prove the integrated route without a Python shim.
+- `scripts/bootstrap-worktree.sh` is fresh after the last `src/**`/fixture payload change. The five package checks, schema generation/projection, scoped Markdown gates, Ruff, remote BasedPyright, remote Go gate, `git diff --check`, and direct-local `scripts/verify.sh --full` pass.
+- Tracked diff inspection shows no Agent Handoff provider migration, production payload version, catalog selection, release metadata, handoff state, GitHub state, or unrelated file change.
+- No blocker, unapproved deviation, incomplete correction, publication action, or orphan external handoff remains.
+
+## 13. Close-out
+
+- **Completed:** record T1–T4 commits, command-provider-core-checkpoint-v1, EG-ADR delivery to #162, and the unconsumed EG-156 requirement in the deferred-migration handoff.
+- **Decisions / deviations harvested:** retain the accepted ADR and record only approved changes to ABI, limits, platform normalization, or runner ownership; do not rewrite completed task definitions.
+- **Risks closed / accepted:** close R-001 through R-008 from proof or file a bounded follow-up owned outside core acceptance.
+- **Deferred/discovered work filed:** the Agent Handoff provider migration remains a separately planned successor cut; any additional platform target, sandboxing, or environment capability requires explicit authority.
+- **Source/ADR/handoff reconciliation:** T1 owns ADR/index truth; #162 owns its later corpus sweep. Agent Handoff updates occur only if core execution creates a durable repository fact not already owned by the ADR/plan and under a separately authorized closeout.
+- **Scratch teardown:** only the orchestrator may remove execution state after all checkpoints and concise evidence pointers are committed and the later migration handoff can cite T4 plus EG-156.
+
+## Appendix A. Interface and State Contracts
+
+| Contract | Owner / Producer Task | Consumer(s) | Current | Planned / States | Errors / Limits | Compatibility / Invariant | Source |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `bounded-provider-runner-v1` | T2 | `invoke_provider`, CLI/planner/executor, MCP services, T3 command adapter | MCP-only Python-worker subprocess; direct dispatch in-process. | One control-plane runner accepts fixed argv/environment/request bytes and returns bounded result plus stdout/stderr capture; teardown is success-path unconditional. | 30 seconds; stdout/stderr 8,192 bytes each; result 262,144 bytes; diagnostics 16,384 chars; timeout/cancel/crash/spawn/frame failures are fixed and safe. | Third descriptor only; `SIGTERM` then `SIGKILL`; group reaped; explicit truncation; no duplicate/nested runner. | ADR 0025; issue #142; T1 ADR |
+| `python-provider-child-v1` | T2 | all existing V2 Python providers | Python bytes compile/execute in caller with immutable input/resources. | Fixed interpreter bootstrap receives canonical envelope, reconstructs immutable input/resource mapping, executes the declared symbol, and writes JSON object to result fd. | Same runner limits; non-JSON/non-object/exception becomes bounded fixed failure. | Existing input/output schemas, effects, output notices, resource closure, and V1 behavior remain exact. | current `invoke_provider`; T1 ADR |
+| `v2-command-provider-declaration-v1` | T3 | manifest loader/schema, planner, runtime, future payload authors | Enum exists; declaration/runtime reject it. | `kind = "command"`; `entrypoint = "payload:{resource-id}"`; `platforms = ["linux/amd64"]`; `mode = "0755"`; required/prohibited fields enforced by kind. | Unsupported/missing/duplicate platform, symbol fragment, mode other than `0755`, or undeclared entrypoint resource is invalid. | Schema `1.0` remains valid under A-002; Python uses `#symbol`; docs-only has no execution fields; V1 runner stays closed. | issue #142; T1 ADR |
+| `command-provider-wire-v1` | T3 | Go fixture and future command providers | No command transport. | Stdin is canonical UTF-8 JSON object with schema version, validated provider input, and sorted `{resource_id: padded-base64}`; `argv[1]` is decimal result fd; result is one UTF-8 JSON object. | Malformed envelope/Base64/result, unknown/duplicate field, over-limit result, nonzero exit, and schema violation fail deterministically. | Input's resource digest map still names the same bytes; only declared resources are sent; stdout/stderr never carry result. | issue #142; T1 ADR |
+| `command-provider-materialization-v1` | T3 | shared runner command adapter | Installed payload resource is data only. | Private per-call dir → write verified bytes → `chmod 0755` → rehash → exact-path spawn → process-group teardown → remove. | Unsupported platform or digest/mode failure occurs before spawn; cleanup covers every exit path. | Never execute installed-wheel path; no shell/PATH; closed environment; temp path not published. | issue #142 implementation finding; T1 ADR |
+| `go-command-provider-fixture-v1` | T4 | end-to-end and reproducibility tests | Absent. | Minimal Go implementation of wire v1, dedicated synthetic payload, committed `linux/amd64` bytes, thin build script, both Makefile gate entries. | Malformed input/resource/result controls return errors; no panic/log-and-return; build mismatch fails gate. | Test-only identity; no production package/catalog role; source and bytes are one checkpoint. | issue #142; Go ADR 0027; shared build library |
+| `command-provider-core-checkpoint-v1` | T4 | later Agent Handoff migration plan | No platform checkpoint. | Plan-validated T4 commit with all core requirements/proofs; deferred EG-156 remains separately required. | Missing/mismatched checkpoint trailers or failed proof blocks successor work. | Authorizes planning input only, not a payload cut, activation, release, or issue closure. | this plan; #156 coordination |
+
+## Appendix B. Requirement-to-Proof Traceability
+
+| Proof ID | Requirement(s) | Task | Method | Oracle | Command / Procedure | Expected Result | Negative Control | Environment | Evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| PV-T1-001 | REQ-001, REQ-002 | T1 | ADR/frontmatter/reference inspection | issue #142 owner decision, ADR 0025, ADR 0027, ADR 1.5, #162 sequencing | Validate new ADR/index with local `project-standards validate`, tracked Prettier/markdownlint, `git grep`, bridge validation, and inspect the T1 checkpoint handoff. | One accepted bounded record covers D-002–D-008, rejected alternatives and portability consequence; metadata/links/index pass; #162 receives the commit before its sweep. | Omit installed-path prohibition, environment/platform rule, one ADR 0025 property, or #162 handoff; duplicate/skip ADR number. | local Git-aware docs checkout | ephemeral |
+| PV-T2-001 | REQ-003, REQ-004, REQ-008 | T2 | characterization, refactor parity, and subprocess regression | existing direct Python outputs and MCP DTOs; ADR 0025 clauses; independent child/fd/process inspection | Run focused control-plane and MCP provider suites, import/source ownership checks, real packaged provider compositions, package checks, type/lint, and fast repository gate after bootstrap. | Direct and MCP Python calls share one bounded child path, spawn once, preserve exact effect/result objects, and satisfy timeout/caps/truncation/fd/cancel/crash/descendant/cleanup/safe-failure assertions. | Leave `_run_worker` in MCP; direct call runs in parent; MCP spawns twice; write result to stdout; overflow at N+1; stubborn child survives; expose a canary path/detail. | local and rexec synchronized Linux amd64; Git-dependent gate local | ephemeral |
+| PV-T3-001 | REQ-005, REQ-006, REQ-007, REQ-008, REQ-010 | T3 | schema, contract, process-boundary, and filesystem regression | generated Pydantic schema; payload digest; declared input/output schemas; independent `stat`/hash/process/env inspection | Run payload declaration/schema tests; focused command/direct/MCP runner matrices; schema generation; package checks; type/lint; fast repository gate. | Valid command declaration dispatches on Linux amd64 with exact resources/result; invalid declarations/platform/digest/mode/env/result/schema/cap/process cases fail before unsafe use and leave no temp/process/descriptor; Python/V1 remain green. | `payload:x#symbol`; missing platform/mode; 0644/modified temp; execute installed path; fake host; inherited secret; Base64 corruption; stdout-only result; N+1 result; nonzero/crash/fork. | local and rexec synchronized Linux amd64; host platform injected for refusal | ephemeral |
+| PV-T4-001 | REQ-006, REQ-007, REQ-009, REQ-010, REQ-011 | T4 | Go build/repro, extracted-wheel, control-plane/MCP end-to-end | pinned shared build contract; synthetic payload manifest/digests/schemas; real reconcile/validate/drift-check results; independent filesystem/process inspection | Run Go unit/race/static/audit and rebuild compare; run command payload e2e across real routes; five package checks; full Python/Go/Markdown gates; full repository gate; inspect final diff and prove no production successor path changed. | Source and binary match; every real route returns expected typed output/findings; materialized file not installed resource executes at 0755 then disappears; wrong platform/hollow transports fail; no production payload/catalog/release/GitHub change. | Delete/alter build gate entry; mutate binary; force installed file 0644; bypass route with helper; remove one operation/provider; wrong platform; result on stdout; leave temp; alter production Agent Handoff/catalog path. | bootstrapped local Git-aware checkout; compatible CPU-heavy Python/Go lanes via rexec | ephemeral |
+
+## Appendix C. Durable Evidence
+
+No separate evidence record is required. The accepted ADR, committed Python/Go tests, fixture source and binary, reproducible build script, and identity-bearing task checkpoints make every acceptance result inexpensive and reproducible.
+
+## Appendix D. Deferred Work
+
+| Item | Reason Deferred | Follow-up / Reopen Trigger |
+| --- | --- | --- |
+| Agent Handoff provider migration | Core issue acceptance does not require moving package logic, and the successor cut has distinct parity, package-version, catalog, documentation, and release obligations. | Author a separate format-3 plan after T4 and EG-156 validate; choose the successor version from live family state. |
+| Additional command-provider platforms | Owner knowingly accepted Linux x86-64 for the internal consumer population; one binary/resource cannot imply unproved portability. | A real consumer/platform requirement supplies build, declaration, fixture, and release authority. |
+| Stronger sandboxing or privilege isolation | The accepted boundary is bounded fault isolation for trusted catalog payloads, not an untrusted-code sandbox. | A separate threat model/owner decision changes the payload trust assumption. |
+| Production payload release and issue closure | This plan stops at local core checkpoints and grants no publication or GitHub work-state mutation. | Parent release workflow authorizes package cut/activation, release verification, publication, and synchronized issue closure. |
