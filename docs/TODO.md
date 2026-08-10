@@ -102,13 +102,15 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   `standards/github-workflow/versions/1.1/payload.toml` installs `bin/gh-workflow` as a plain `mode = "0755"` artifact with no platform declaration and no degradation path, though it is `ELF 64-bit x86-64` built `GOOS=linux GOARCH=amd64`. Harmless in the current internal population; covered by the same work as #142's item 5.
 
-- [ ] Apply triage field values to the 20 issues.
+- [x] Apply triage field values to the 20 issues.
 
-  Twelve sit in Inbox with no Priority and seven at `Needs definition`. Priority is an owner call and `Execution mode` is never self-promoted, so nothing was applied.
+  Applied 2026-08-10 with `gh-workflow set`. Nineteen are `Ready` at `P1 Next`, target date 2026-08-17; #142 re-sized XL to L; acceptance criteria authored for #55, #62, #140, #142, #153. No `Execution mode` was self-promoted.
 
-- [ ] Reconcile the stale open-issue-program executor state.
+  #129 stays `Needs definition` and deferred — its criteria section uses `###` subheadings, which the Ready check reads as unpopulated. #168 is `P2 Planned` for 5.20.0.
 
-  `.project-pipeline/2026-08-01-open-issue-resolution-program/p4.md` and `p10.md` record T16/T19/T36 as `not-started` although all three completed 2026-08-05 (`50d0c364`, `229a4bc1`, `e13e1a66`). Reconcile through the execute-plan skill, never by hand.
+- [x] Reconcile the stale open-issue-program executor state.
+
+  Resolved 2026-08-10, and the diagnosis was wrong: the executor state was correct throughout. The work item carried superseded pre-format-3 checklists at its root beside the current `execution/` tree, and those were what recorded T16/T19/T36 as `not-started`. Deleted locally; `validate` and `next` are unchanged. Filed upstream as agent-configs#23.
 
 - [ ] Scope the 5.20.0 `project-toolbox` release (#168).
 

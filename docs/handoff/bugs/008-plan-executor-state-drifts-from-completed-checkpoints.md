@@ -1,14 +1,14 @@
 ---
 bug_id: '008'
 date: '2026-08-09'
-title: 'plan executor state records completed tasks as not-started, so handoff docs derived from it mislead'
+title: 'superseded pre-format-3 checklists remained at the work-item root and were read as live executor state'
 services: '[execute-plan, handoff, docs]'
-status: 'open'
+status: 'fixed'
 ---
 
-# 008 — Plan executor state drifts from completed checkpoints
+# 008 — Superseded plan checklists were read as live executor state
 
-**Status:** open. `docs/handoff/specs-plans.md` is corrected; the executor state itself still records the drift and must be reconciled through the execute-plan skill, never by hand.
+**Status:** fixed 2026-08-10. The superseded artifacts are deleted locally and `docs/handoff/specs-plans.md` is corrected. Filed upstream as [agent-configs#23](https://github.com/L3DigitalNet/agent-configs/issues/23).
 
 ## Symptom
 
@@ -18,11 +18,26 @@ During a full open-issue triage, the ready state of the open-issue resolution pr
 - `docs/handoff/specs-plans.md` — "Remaining tail: T16/T19/T36 … Ready: T16, T19".
 - `.project-pipeline/2026-08-01-open-issue-resolution-program/p4.md` and `p10.md` — all three tasks `not-started`, every subtask unchecked, no evidence recorded.
 
-A reader who trusts the executor state concludes T24 is blocked behind T36 and therefore that #62 and #55 cannot start. That conclusion was drawn and published in a triage report and in comments on both issues before it was caught.
+A reader who trusts those checklists concludes T24 is blocked behind T36 and therefore that #62 and #55 cannot start. That conclusion was drawn and published in a triage report and in comments on both issues before it was caught.
 
 ## Cause
 
-The work completed but the state files were never advanced. The checkpoints are real and verifiable:
+**The first diagnosis recorded here was wrong.** It attributed the drift to executor state that was never advanced. The executor state was correct throughout.
+
+The work item carried two checklist trees. The pre-format-3 bridge wrote checklists to the work-item root; format 3 relocates execution state to `<work-item>/execution/`, and the migration left the older tree in place — ten `p*.md` files, `logs/`, and `notes.md`, all dated 2026-08-01/02 — beside the current `execution/` tree dated 2026-08-05.
+
+The superseded files sit at the more prominent path, use different phase numbering, and carry the older bridge's generated header instructing a reader to edit them as live state. The triage read those.
+
+The authoritative revision-4 state recorded T16, T19, and T36 as `done` with their checkpoint commits, and `plan.py` never consulted the superseded copies:
+
+```console
+$ uv run scripts/plan.py state <master> T16 --status done --commit 50d0c364
+error: T16: transition done -> done is not permitted
+
+$ uv run scripts/plan.py next <master>
+ready:
+  T24  [not-started]  Specify conformance linting for #62
+```
 
 | Task | Checkpoint | Subject |
 | --- | --- | --- |
@@ -30,17 +45,17 @@ The work completed but the state files were never advanced. The checkpoints are 
 | T19 | `229a4bc1` | keep undeclared Ruff plugin sub-tables consumer-owned |
 | T36 | `e13e1a66` | qualify and publish v5.16.0 |
 
-All three landed 2026-08-05; #88 and #99 closed the same day with the v5.16.0 release. T36's own `depends_on` is `[T16, T19]`, so T24's gate has been satisfied since then.
-
-`docs/handoff/specs-plans.md` was written from the executor state rather than from the checkpoints, so the drift propagated from a generated-state file into a durable handoff document, where it outlived the release that disproved it.
-
 ## Fix
 
-`docs/handoff/specs-plans.md` now records the three tasks as complete with their checkpoint SHAs, names T24 as the ready task, and flags the executor state as stale. The `.project-pipeline` files are owned by the execute-plan skill and were deliberately left untouched.
+The superseded root-level `p*.md`, `logs/`, and `notes.md` were deleted. `validate` and `next` return identical output before and after, confirming they were inert. `.project-pipeline/` is gitignored, so nothing was committed and no other checkout is affected.
+
+`docs/handoff/specs-plans.md` records the three tasks as complete with their checkpoint SHAs and names T24 as ready.
+
+The bridge gap — migration leaving superseded checklists at the work-item root with no removal, marker, or diagnostic — is [agent-configs#23](https://github.com/L3DigitalNet/agent-configs/issues/23). It is still present in bridge 3.5.0.
 
 ## Lesson
 
-- **A task's state file is a claim; its checkpoint commit is the evidence.** When the two disagree, the commit wins — verify with `git log -1 <sha>` and the issue's close date.
-- **Do not derive durable handoff prose from generated executor state.** `specs-plans.md` outlives any execution, so it must cite checkpoints, not restate a pipeline file.
-- Agreement between documents proves nothing when they share an upstream source. `state.md` and `STATUS.md` were right because they were written from release evidence.
-- Verifying claims against source is worth its cost. Fourteen of twenty issues in this pass carried a wrong premise, and this one sat in the handoff surface itself.
+- **Locate the state root before reading state.** Two checklist trees existed and the stale one sat at the shallower path. `plan.py next` reads only the authoritative tree.
+- **A generated "edit this file" header is not evidence that a file is live.** The superseded checklists carried the same authoritative header as the current ones.
+- **Prefer the tool's answer to the file's contents.** Every `plan.py` command was correct throughout; only direct file reading was wrong.
+- **Verify the cause, not just the symptom.** This record's first version saw the contradiction and misattributed it, queuing a fix for state that was already correct.

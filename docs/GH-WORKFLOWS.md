@@ -13,39 +13,33 @@ Do not edit: `gh-workflow ledger` regenerates this file in whole, and manual edi
 
 ## Needs attention
 
-- **Needs definition** — #55 \[upgrade\] Project Specification adoption lacks a conversion path for existing house-format specs: missing Target date and acceptance criteria
-- **Needs definition** — #62 \[upgrade\] Project Spec checks accept documented shared-boilerplate divergence: missing acceptance criteria
-- **Needs definition** — #129 \[adr-conformance\] Add the mechanical ADR guardrail foundation: missing Target date and acceptance criteria
-- **Needs definition** — #140 Payload contract cannot retire an artifact a previous version installed: missing Target date and acceptance criteria
-- **Needs definition** — #142 Implement the \`command\` provider kind so payload providers can ship as executables: missing Target date and acceptance criteria
-- **Needs definition** — #143 \[caller-mode\] Advise when runner\_labels is set but a consumer-owned caller cannot receive it: missing Target date
-- **Needs definition** — #153 \[adoption\] python-tooling owns five generic VS Code task labels with no namespacing option: missing Target date and acceptance criteria
+- **Needs definition** — #129 \[adr-conformance\] Add the mechanical ADR guardrail foundation: missing acceptance criteria
 
 ## Issues
 
 | Issue | Type | Title | Workflow | Priority | Size / Severity | Execution mode |
 | --- | --- | --- | --- | --- | --- | --- |
-| #55 | Feature | \[upgrade\] Project Specification adoption lacks a conversion path for existing house-format specs | Needs definition | P2 Planned | L | Interactive agent |
-| #62 | Bug | \[upgrade\] Project Spec checks accept documented shared-boilerplate divergence | Needs definition | P2 Planned | S2 Moderate | Interactive agent |
+| #55 | Feature | \[upgrade\] Project Specification adoption lacks a conversion path for existing house-format specs | Ready | P1 Next | L | Interactive agent |
+| #62 | Bug | \[upgrade\] Project Spec checks accept documented shared-boilerplate divergence | Ready | P1 Next | S2 Moderate | Interactive agent |
 | #129 | Initiative | \[adr-conformance\] Add the mechanical ADR guardrail foundation | Needs definition | P2 Planned | — | — |
-| #140 | Feature | Payload contract cannot retire an artifact a previous version installed | Needs definition | P2 Planned | L | Interactive agent |
-| #142 | Feature | Implement the \`command\` provider kind so payload providers can ship as executables | Needs definition | P2 Planned | XL | Interactive agent |
-| #143 | Feature | \[caller-mode\] Advise when runner\_labels is set but a consumer-owned caller cannot receive it | Needs definition | P2 Planned | M | Interactive agent |
-| #153 | Feature | \[adoption\] python-tooling owns five generic VS Code task labels with no namespacing option | Needs definition | P2 Planned | M | Interactive agent |
-| #155 | Research | Evaluate offloading high-CPU build steps to the Hetzner server (LXC or VM) | Inbox | — | — | — |
-| #156 | Feature | standards: no check reports stale predecessor version references embedded in successor payload schemas | Inbox | — | M | Interactive agent |
-| #157 | Feature | reconcile: decide whether create-only artifacts gain an explicit opt-in refresh path | Inbox | — | M | Interactive agent |
-| #158 | Bug | tests: real-provider MCP proofs exceed the 30s ADR bound under gate parallelism and CPU starvation | Inbox | — | S2 Moderate | Interactive agent |
-| #159 | Task | adr: give the .agents/ directory root an affirmative owning decision | Inbox | — | S | Interactive agent |
-| #160 | Task | adr: split ADR 0024's release-classification and consumer-selector populations | Inbox | — | M | Interactive agent |
-| #161 | Task | adr: reconcile resource-URI grammar ownership between ADR 0010 and ADR 0026 | Inbox | — | S | Interactive agent |
-| #162 | Task | adr: apply the evidence-vs-authority link convention and rename ADRs 0025/0026 | Inbox | — | M | Interactive agent |
-| #163 | Feature | adr: validate amends/amended\_by reciprocity and supersession conflicts | Inbox | — | M | Interactive agent |
-| #164 | Bug | release\_prep.py does not sweep standards/\*/agent-summary.md | Inbox | — | S3 Low | Interactive agent |
-| #165 | Bug | \[agent-handoff\] legacy-migration runbook names the retired session\_start.py launcher | Inbox | — | S3 Low | Interactive agent |
-| #166 | Bug | tests: the scale gate's 10-second ceiling has no headroom under gate load | Inbox | — | S3 Low | Interactive agent |
-| #167 | Task | release: rexec offload is blocked from the git-worktree release checkout | Inbox | — | M | Interactive agent |
-| #168 | Initiative | Develop and release the project-toolbox standards with v5.19.0 | Inbox | — | — | — |
+| #140 | Feature | Payload contract cannot retire an artifact a previous version installed | Ready | P1 Next | L | Interactive agent |
+| #142 | Feature | Implement the \`command\` provider kind so payload providers can ship as executables | Ready | P1 Next | L | Interactive agent |
+| #143 | Feature | \[caller-mode\] Advise when runner\_labels is set but a consumer-owned caller cannot receive it | Ready | P1 Next | M | Interactive agent |
+| #153 | Feature | \[adoption\] python-tooling owns five generic VS Code task labels with no namespacing option | Ready | P1 Next | M | Interactive agent |
+| #156 | Feature | standards: no check reports stale predecessor version references embedded in successor payload schemas | Ready | P1 Next | M | Interactive agent |
+| #157 | Feature | reconcile: decide whether create-only artifacts gain an explicit opt-in refresh path | Ready | P1 Next | M | Interactive agent |
+| #158 | Bug | tests: real-provider MCP proofs exceed the 30s ADR bound under gate parallelism and CPU starvation | Ready | P1 Next | S2 Moderate | Interactive agent |
+| #159 | Task | adr: give the .agents/ directory root an affirmative owning decision | Ready | P1 Next | S | Interactive agent |
+| #160 | Task | adr: split ADR 0024's release-classification and consumer-selector populations | Ready | P1 Next | M | Interactive agent |
+| #161 | Task | adr: reconcile resource-URI grammar ownership between ADR 0010 and ADR 0026 | Ready | P1 Next | S | Interactive agent |
+| #162 | Task | adr: apply the evidence-vs-authority link convention and rename ADRs 0025/0026 | Ready | P1 Next | M | Interactive agent |
+| #163 | Feature | adr: validate amends/amended\_by reciprocity and supersession conflicts | Ready | P1 Next | M | Interactive agent |
+| #164 | Bug | release\_prep.py does not sweep standards/\*/agent-summary.md | Ready | P1 Next | S3 Low | Interactive agent |
+| #165 | Bug | \[agent-handoff\] legacy-migration runbook names the retired session\_start.py launcher | Ready | P1 Next | S3 Low | Interactive agent |
+| #166 | Bug | tests: the scale gate's 10-second ceiling has no headroom under gate load | Ready | P1 Next | S3 Low | Interactive agent |
+| #167 | Task | release: rexec offload is blocked from the git-worktree release checkout | Ready | P1 Next | M | Interactive agent |
+| #168 | Initiative | Develop and release the project-toolbox standards with v5.20.0 \[edited\] | Inbox | P2 Planned | — | — |
+| #169 | Task | github-workflow package: close the gaps recorded at agent-configs#13 closure (labels, MCP decision, counter-examples) | Ready | P1 Next | S | Interactive agent |
 
 ## Pull requests
 

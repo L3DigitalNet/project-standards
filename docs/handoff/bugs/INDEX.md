@@ -11,5 +11,5 @@ Generated from frontmatter. Regenerate with `python3 docs/handoff/bugs/_regen_in
 | 005 | 2026-08-04 | agent-handoff 1.8 SessionStart never runs because args selects exec form | agent-handoff, claude-code, hooks | open |
 | 006 | 2026-08-05 | create-only artifacts are invisible to drift-check, so a stale scaffold outlives its package version | control-plane, adr, reconcile, lock | fixed |
 | 007 | 2026-08-09 | remote gate blocked by a redirected uv environment, and .git absence misreports as ledger corruption | rexec, tests, ledger, tooling | fixed |
-| 008 | 2026-08-09 | plan executor state records completed tasks as not-started, so handoff docs derived from it mislead | execute-plan, handoff, docs | open |
+| 008 | 2026-08-09 | superseded pre-format-3 checklists remained at the work-item root and were read as live executor state | execute-plan, handoff, docs | fixed |
 | 009 | 2026-08-10 | active ADRs state timestamped observations about code in decision voice, so the observations go stale invisibly | adr, docs, triage | open |
