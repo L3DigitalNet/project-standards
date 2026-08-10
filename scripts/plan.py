@@ -1,6 +1,6 @@
 #!/usr/bin/env -S uv run --script
 # /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.14"
 # ///
 """Plan format 3 scaffold, validator, and execution-state projector.
 
@@ -19,7 +19,7 @@ Commands:
   recover    reconstruct completed task state from durable Git checkpoints
   sync       re-project append-only task additions while preserving state
   next       print tasks ready to execute
-  state      apply one validated task transition atomically
+  state      apply one validated task transition path atomically
 
 Plan format 3 is selected explicitly by ``plan_format: 3``. Older plans should
 continue to use the bridge version with which they were created or be migrated as
@@ -61,7 +61,7 @@ from typing import Any, NoReturn, cast
 # self-contained -- it ships as a lone regular file into repositories that have
 # no skill install to read.  `scripts/selftest.py` asserts the two agree, so the
 # duplication cannot drift silently.
-BRIDGE_VERSION = "3.4.1"
+BRIDGE_VERSION = "3.5.0"
 
 # ---------------------------------------------------------------------------
 # Grammar and contracts
@@ -277,6 +277,33 @@ TASK_TRANSITIONS: dict[tuple[str, str], frozenset[str]] = {
     ("blocked", "in-progress"): frozenset({"clear_blocker"}),
     ("blocked", "skipped"): frozenset({"reason", "commit"}),
 }
+
+# Compound transitions.  A task an orchestrator opens and completes without ever
+# pausing still has to leave the same ordered audit trail as the two-call flow,
+# so the pair is expressed as the path it traverses rather than as a shortcut
+# edge: `state` reports every intermediate transition and enforces every
+# intermediate rule.  Adding a pair here therefore adds no new reachable state
+# and no new companion-field rule -- both are derived below from the atomic
+# table, which stays the single authority for what a transition costs.
+TASK_TRANSITION_PATHS: dict[tuple[str, str], tuple[str, ...]] = {
+    ("not-started", "done"): ("in-progress", "done"),
+}
+
+
+def _compound_requirements(origin: str, path: tuple[str, ...]) -> frozenset[str]:
+    """Return the union of the companion fields every step of ``path`` requires."""
+    required: set[str] = set()
+    current = origin
+    for step in path:
+        required |= TASK_TRANSITIONS[(current, step)]
+        current = step
+    return frozenset(required)
+
+
+TASK_TRANSITIONS.update(
+    {pair: _compound_requirements(pair[0], path) for pair, path in TASK_TRANSITION_PATHS.items()}
+)
+
 COMPANION_FLAGS = ("evidence", "blocker", "reason", "clear_blocker", "commit")
 COMPANION_FLAG_NAMES = {name: f"--{name.replace('_', '-')}" for name in COMPANION_FLAGS}
 
@@ -909,6 +936,8 @@ def resolve_repo_regular_file(
     relative: Path,
     context: str,
     problems: list[str],
+    *,
+    allow_missing: bool = False,
 ) -> Path | None:
     """Resolve one repository authority file without following any symlink hop."""
 
@@ -927,7 +956,8 @@ def resolve_repo_regular_file(
         try:
             metadata = current.lstat()
         except FileNotFoundError:
-            problems.append(f"{context}: referenced source does not exist: {relative}")
+            if not allow_missing:
+                problems.append(f"{context}: referenced source does not exist: {relative}")
             return None
         except OSError as exc:
             problems.append(f"{context}: cannot inspect {relative}: {exc}")
@@ -1664,6 +1694,7 @@ def check_source_ref(
     problems: list[str],
     *,
     exact_task_ref: bool = False,
+    allow_missing: bool = False,
 ) -> None:
     kind, path, anchor, symbol = split_source_ref(ref)
     if kind == "request":
@@ -1675,7 +1706,13 @@ def check_source_ref(
     if kind == "unsupported" or path is None:
         problems.append(f"{context}: unsupported source reference {ref!r}")
         return
-    target = resolve_repo_regular_file(repo_root, path, context, problems)
+    target = resolve_repo_regular_file(
+        repo_root,
+        path,
+        context,
+        problems,
+        allow_missing=allow_missing and kind == "repo",
+    )
     if target is None:
         return
     if anchor and symbol:
@@ -1712,7 +1749,12 @@ def check_source_ref(
             problems.append(f"{context}: source-code repo reference requires ::symbol: {ref!r}")
 
 
-def check_source_map(master: Master, repo_root: Path, problems: list[str]) -> None:
+def check_source_map(
+    master: Master,
+    repo_root: Path,
+    problems: list[str],
+    grounded_tasks: frozenset[str],
+) -> None:
     if not master.sources:
         problems.append("Authority and Source Map is missing or empty")
         return
@@ -1726,7 +1768,19 @@ def check_source_map(master: Master, repo_root: Path, problems: list[str]) -> No
         check_nonempty(source.authority, f"source {source.ref!r} authority/use", problems)
         check_nonempty(source.version, f"source {source.ref!r} version/date", problems)
         check_nonempty(source.surface, f"source {source.ref!r} affected plan surface", problems)
-        check_source_ref(source.ref, repo_root, "Authority and Source Map", problems)
+        source_key = source_ref_key(source.ref)
+        consumers = {
+            task.id
+            for task in master.tasks
+            if any(source_ref_key(ref) == source_key for ref in task.items("source_refs"))
+        }
+        check_source_ref(
+            source.ref,
+            repo_root,
+            "Authority and Source Map",
+            problems,
+            allow_missing=bool(consumers) and consumers <= grounded_tasks,
+        )
         _kind, path, _, _ = split_source_ref(source.ref)
         if (
             path is not None
@@ -1753,6 +1807,18 @@ def source_map_covers(ref: str, sources: list[SourceMapEntry]) -> bool:
     # anchors/symbols inside it. The role still comes from the document row.
     key = source_ref_key(ref)
     return any(source_ref_key(source.ref) == key for source in sources)
+
+
+def has_missing_repo_source(master: Master, repo_root: Path) -> bool:
+    """Return whether validation may need terminal-source retirement rules."""
+
+    refs = [source.ref for source in master.sources]
+    refs.extend(ref for task in master.tasks for ref in task.items("source_refs"))
+    for ref in refs:
+        kind, path, _, _ = split_source_ref(ref)
+        if kind == "repo" and path is not None and not (repo_root / path).exists():
+            return True
+    return False
 
 
 def task_lists(task: Task, problems: list[str]) -> dict[str, tuple[str, ...]]:
@@ -1787,6 +1853,7 @@ def check_tasks(
     master: Master,
     repo_root: Path,
     problems: list[str],
+    grounded_tasks: frozenset[str],
     warnings: list[str] | None = None,
 ) -> dict[str, dict[str, tuple[str, ...]]]:
     ids = [task.id for task in master.tasks]
@@ -1889,6 +1956,7 @@ def check_tasks(
                 f"{task.id} source_refs",
                 problems,
                 exact_task_ref=True,
+                allow_missing=task.id in grounded_tasks,
             )
             if master.sources and not source_map_covers(source_ref, master.sources):
                 problems.append(
@@ -2660,9 +2728,21 @@ def validate_master(
     check_headings(master, problems)
     check_snippet_labels(master.body, problems)
     check_table_shapes(master.body, problems)
+    # A credited checkpoint is durable, identity-bound terminal completion for
+    # an unchanged task definition. Later cutover tasks may therefore retire a
+    # repository source used only by such tasks. Scratch status is deliberately
+    # not trusted for this exemption.
+    checkpointed_tasks: frozenset[str] = (
+        frozenset(git_checkpoint_scan(master).records.keys())
+        if revision >= 1 and SLUG_RE.fullmatch(slug) and has_missing_repo_source(master, repo_root)
+        else frozenset()
+    )
+    grounded_tasks: frozenset[str] = checkpointed_tasks | frozenset(
+        task.id for task in master.tasks if task.scalar("disposition") == "superseded"
+    )
     if master.sources or "## 2. Authority and Source Map" in master.body:
-        check_source_map(master, repo_root, problems)
-    task_data = check_tasks(master, repo_root, problems, warnings)
+        check_source_map(master, repo_root, problems, grounded_tasks)
+    task_data = check_tasks(master, repo_root, problems, grounded_tasks, warnings)
     check_requirements_and_proofs(master, task_data, problems)
     if master.summary or "## 8. Execution Summary" in master.body:
         check_summary(master, task_data, problems)
@@ -4080,7 +4160,17 @@ def cmd_state(args: argparse.Namespace) -> None:
     if "clear_blocker" in supplied:
         task_state.blocker = "none"
     task_state.status = status
-    detail = f"{task_id}: {current} -> {status}"
+    # The traversed path, not just its endpoints.  A compound request is one
+    # atomic write, but the audit trail has to name each transition it stands
+    # for; reporting only `not-started -> done` would hide the opening
+    # transition that the two-call flow makes visible.
+    traversed = TASK_TRANSITION_PATHS.get(key, (status,))
+    steps: list[str] = []
+    origin = current
+    for step in traversed:
+        steps.append(f"{task_id}: {origin} -> {step}")
+        origin = step
+    detail = "; ".join(steps)
 
     # Render the complete file, validate the result, and only then replace it.
     # Validating the rendered text rather than the written file is what makes a
@@ -4093,7 +4183,8 @@ def cmd_state(args: argparse.Namespace) -> None:
         print_validation(problems, master, False)
         die(f"{detail} would produce invalid execution state; nothing was written", 1)
     atomic_write_text(directory / owning, rendered[owning])
-    print(f"state: {detail} ({directory / owning})")
+    for step_detail in steps:
+        print(f"state: {step_detail} ({directory / owning})")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -4190,9 +4281,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     state = subparsers.add_parser(
         "state",
-        help="apply one validated task transition to generated execution state",
+        help="apply one validated task transition path to generated execution state",
         description=(
-            "Apply exactly one validated transition to a task. This is the only "
+            "Apply one validated request to a task: a single transition, or a compound "
+            "transition that reports every step of the path it traverses. This is the only "
             "sanctioned way to change generated execution state: every transition is checked "
             "against the closed matrix, the companion-field contract, the master revision, the "
             "task definition digest, dependency ordering, and -- for a terminal task -- the "
