@@ -8,6 +8,8 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import cast
 
+from project_standards.package_contract.diagnostics import PackageFinding
+from project_standards.package_contract.graph import validate_package_graph
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import (
     AdapterKind,
@@ -16,6 +18,7 @@ from project_standards.package_contract.payload import (
     PayloadManifest,
     load_payload_manifest,
 )
+from project_standards.package_contract.repository import PackageRepository
 
 _MINIMAL = Path(__file__).resolve().parents[1] / "fixtures/package_contract/valid/minimal"
 
@@ -80,6 +83,15 @@ def refresh_declared_file_digest(family: Path, relative_path: str) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def assert_schema_payload_references(repository: PackageRepository) -> list[PackageFinding]:
+    """Return the graph-owned schema-reference findings for focused package tests."""
+    return [
+        finding
+        for finding in validate_package_graph(repository)
+        if finding.code == "PC-SCHEMA-PAYLOAD-REFERENCE"
+    ]
 
 
 def selects_ruff(scope: str) -> bool:

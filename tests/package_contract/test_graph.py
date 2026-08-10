@@ -56,7 +56,11 @@ from project_standards.package_contract.repository import (
     SchemaPropertyScope,
     build_package_repository,
 )
-from tests.package_contract.helpers import copy_minimal_repository, refresh_declared_file_digest
+from tests.package_contract.helpers import (
+    assert_schema_payload_references,
+    copy_minimal_repository,
+    refresh_declared_file_digest,
+)
 
 _FIXTURE = Path(__file__).resolve().parents[1] / "fixtures/package_contract/valid/minimal"
 _DIGEST = Sha256Digest("sha256:1ec8d07e07de0defe61804181b75e9139a7d6e9ed8540f677138efa8d2335dcb")
@@ -282,7 +286,7 @@ def test_builder_backed_graph_reports_stale_schema_literals_in_stable_order(
         ),
     )
 
-    findings = validate_package_graph(build_package_repository(repository_root))
+    findings = assert_schema_payload_references(build_package_repository(repository_root))
 
     assert [finding.code for finding in findings] == [
         "PC-SCHEMA-PAYLOAD-REFERENCE",
