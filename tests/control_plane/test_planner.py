@@ -433,6 +433,398 @@ def _absence_findings(plan: ReconciliationPlan) -> tuple[ControlFinding, ...]:
     return tuple(finding for finding in plan.findings if finding.code == "CP-CREATE-ONLY-ABSENT")
 
 
+def _stale_create_only_findings(plan: ReconciliationPlan) -> tuple[ControlFinding, ...]:
+    return tuple(finding for finding in plan.findings if finding.code == "CP-CREATE-ONLY-STALE")
+
+
+@pytest.mark.parametrize(
+    ("declaration_kind", "target", "adapter", "scope", "old_content", "new_content"),
+    [
+        pytest.param(
+            "artifact",
+            "usage.md",
+            "whole-file",
+            "$file",
+            b"old usage\n",
+            b"new usage\n",
+            id="whole-file",
+        ),
+        pytest.param(
+            "contribution",
+            "settings.json",
+            "json",
+            "key:/tool/enabled",
+            b'{"tool": {"enabled": false}}\n',
+            b'{"tool": {"enabled": true}}\n',
+            id="semantic-contribution",
+        ),
+    ],
+)
+def test_create_only_unit__matches_predecessor__reports_content_safe_advisory(
+    tmp_path: Path,
+    declaration_kind: str,
+    target: str,
+    adapter: str,
+    scope: str,
+    old_content: bytes,
+    new_content: bytes,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    if declaration_kind == "artifact":
+        old = write_payload(
+            tmp_path / "old",
+            "demo",
+            version="1.0",
+            artifacts=[
+                {
+                    "id": "content",
+                    "target": target,
+                    "content": old_content,
+                    "policy": "create-only",
+                }
+            ],
+        )
+        selected = write_payload(
+            tmp_path / "selected",
+            "demo",
+            version="2.0",
+            artifacts=[
+                {
+                    "id": "content",
+                    "target": target,
+                    "content": new_content,
+                    "policy": "create-only",
+                }
+            ],
+        )
+    else:
+        old = write_payload(
+            tmp_path / "old",
+            "demo",
+            version="1.0",
+            contributions=[
+                {
+                    "id": "content",
+                    "target": target,
+                    "adapter": adapter,
+                    "scope": scope,
+                    "content": old_content,
+                    "policy": "create-only",
+                }
+            ],
+        )
+        selected = write_payload(
+            tmp_path / "selected",
+            "demo",
+            version="2.0",
+            contributions=[
+                {
+                    "id": "content",
+                    "target": target,
+                    "adapter": adapter,
+                    "scope": scope,
+                    "content": new_content,
+                    "policy": "create-only",
+                }
+            ],
+        )
+    seed = plan_reconciliation(_request(repo, (old,)))
+    (repo / target).parent.mkdir(parents=True, exist_ok=True)
+    (repo / target).write_bytes(seed.proposed_content(target))
+    request = PlannerRequest(
+        repo=repo,
+        resolution=resolution_request((selected, old), selected_versions={"demo": "2.0"}),
+        payloads=(selected, old),
+    )
+
+    plan = plan_reconciliation(request)
+    without_history = plan_reconciliation(
+        PlannerRequest(
+            repo=repo,
+            resolution=resolution_request(
+                (selected,),
+                selected_versions={"demo": "2.0"},
+            ),
+            payloads=(selected,),
+        )
+    )
+
+    assert plan.applicable
+    assert _action(plan, target).kind is ActionKind.PRESERVE
+    assert plan.actions == without_history.actions
+    assert plan.units == without_history.units
+    assert plan.targets == without_history.targets
+    assert plan.next_lock == without_history.next_lock
+    findings = _stale_create_only_findings(plan)
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.severity == "warning"
+    assert finding.standard_id == "demo"
+    assert finding.version == "2.0"
+    assert finding.path == target
+    assert finding.identity == scope
+    assert "1.0" in finding.message
+    assert "2.0" in finding.message
+    assert finding.expected_digest is not None
+    assert finding.actual_digest is not None
+    assert old_content.decode().strip() not in repr(finding)
+    assert plan.proposed_content(target) == (repo / target).read_bytes()
+
+
+def test_create_only_unit__matches_repeated_older_digest__names_nearest_version(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    old_content = b"old usage\n"
+
+    def payload(version: str, content: bytes) -> InstalledPayload:
+        return write_payload(
+            tmp_path / version,
+            "demo",
+            version=version,
+            artifacts=[
+                {
+                    "id": "usage",
+                    "target": "usage.md",
+                    "content": content,
+                    "policy": "create-only",
+                }
+            ],
+        )
+
+    oldest = payload("1.0", old_content)
+    nearest = payload("1.1", old_content)
+    selected = payload("2.0", b"current usage\n")
+    (repo / "usage.md").write_bytes(old_content)
+    request = PlannerRequest(
+        repo=repo,
+        resolution=resolution_request(
+            (selected, oldest, nearest),
+            selected_versions={"demo": "2.0"},
+        ),
+        payloads=(selected, oldest, nearest),
+    )
+
+    plan = plan_reconciliation(request)
+    reordered = plan_reconciliation(
+        PlannerRequest(
+            repo=repo,
+            resolution=resolution_request(
+                (nearest, selected, oldest),
+                selected_versions={"demo": "2.0"},
+            ),
+            payloads=(nearest, selected, oldest),
+        )
+    )
+
+    [finding] = _stale_create_only_findings(plan)
+    assert "1.1" in finding.message
+    assert "1.0" not in finding.message
+    assert reordered.findings == plan.findings
+
+
+@pytest.mark.parametrize(
+    ("observed", "selected_content", "old_content", "future_content"),
+    [
+        pytest.param(
+            b"current\n",
+            b"current\n",
+            b"current\n",
+            None,
+            id="selected-match-wins-over-repeated-old-digest",
+        ),
+        pytest.param(
+            b"consumer customization\n",
+            b"current\n",
+            b"old\n",
+            None,
+            id="customized",
+        ),
+        pytest.param(
+            b"future\n",
+            b"current\n",
+            b"old\n",
+            b"future\n",
+            id="later-only",
+        ),
+    ],
+)
+def test_create_only_unit__nonhistorical_state__stays_silent(
+    tmp_path: Path,
+    observed: bytes,
+    selected_content: bytes,
+    old_content: bytes,
+    future_content: bytes | None,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def payload(version: str, content: bytes) -> InstalledPayload:
+        return write_payload(
+            tmp_path / version,
+            "demo",
+            version=version,
+            artifacts=[
+                {
+                    "id": "usage",
+                    "target": "usage.md",
+                    "content": content,
+                    "policy": "create-only",
+                }
+            ],
+        )
+
+    old = payload("1.0", old_content)
+    selected = payload("1.1", selected_content)
+    payloads = [old, selected]
+    if future_content is not None:
+        payloads.append(payload("1.2", future_content))
+    (repo / "usage.md").write_bytes(observed)
+
+    plan = plan_reconciliation(
+        PlannerRequest(
+            repo=repo,
+            resolution=resolution_request(
+                payloads,
+                selected_versions={"demo": "1.1"},
+            ),
+            payloads=tuple(reversed(payloads)),
+        )
+    )
+
+    assert _stale_create_only_findings(plan) == ()
+    assert _action(plan, "usage.md").kind in {ActionKind.ADOPT, ActionKind.PRESERVE}
+
+
+def test_create_only_unit__absent_or_unrelated_or_managed__stays_silent(
+    tmp_path: Path,
+) -> None:
+    old_content = b"old\n"
+    selected_content = b"current\n"
+
+    def payload(
+        root: str,
+        standard_id: str,
+        version: str,
+        target: str,
+        content: bytes,
+        policy: str = "create-only",
+    ) -> InstalledPayload:
+        return write_payload(
+            tmp_path / root,
+            standard_id,
+            version=version,
+            artifacts=[
+                {
+                    "id": "usage",
+                    "target": target,
+                    "content": content,
+                    "policy": policy,
+                }
+            ],
+        )
+
+    old = payload("old", "demo", "1.0", "usage.md", old_content)
+    selected = payload("selected", "demo", "2.0", "usage.md", selected_content)
+    unrelated = payload("unrelated", "other", "1.0", "other.md", old_content)
+
+    absent_repo = tmp_path / "absent"
+    absent_repo.mkdir()
+    absent_plan = plan_reconciliation(
+        PlannerRequest(
+            repo=absent_repo,
+            resolution=resolution_request(
+                (old, selected),
+                selected_versions={"demo": "2.0"},
+            ),
+            payloads=(old, selected),
+        )
+    )
+    assert _stale_create_only_findings(absent_plan) == ()
+
+    unrelated_repo = tmp_path / "unrelated-repo"
+    unrelated_repo.mkdir()
+    (unrelated_repo / "usage.md").write_bytes(old_content)
+    unrelated_plan = plan_reconciliation(
+        PlannerRequest(
+            repo=unrelated_repo,
+            resolution=resolution_request(
+                (selected, unrelated),
+                selected_versions={"demo": "2.0"},
+            ),
+            payloads=(unrelated, selected),
+        )
+    )
+    assert _stale_create_only_findings(unrelated_plan) == ()
+
+    managed = payload(
+        "managed",
+        "demo",
+        "2.0",
+        "usage.md",
+        selected_content,
+        policy="managed",
+    )
+    managed_plan = plan_reconciliation(
+        PlannerRequest(
+            repo=unrelated_repo,
+            resolution=resolution_request((old, managed)),
+            payloads=(old, managed),
+        )
+    )
+    assert _stale_create_only_findings(managed_plan) == ()
+
+
+def test_create_only_unit__provider_generated_declaration__stays_silent(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "settings.json").write_bytes(b'{"generated": false}\n')
+
+    def payload(version: str) -> InstalledPayload:
+        return write_payload(
+            tmp_path / version,
+            "demo",
+            version=version,
+            contributions=[
+                {
+                    "id": "generated",
+                    "target": "settings.json",
+                    "adapter": "json",
+                    "scope": "key:/generated",
+                    "provider": "render-generated",
+                    "policy": "create-only",
+                }
+            ],
+            render_providers=("render-generated",),
+        )
+
+    old = payload("1.0")
+    selected = payload("2.0")
+
+    def runner(_invocation: ProviderInvocation) -> ProviderResult:
+        return ProviderResult(ProviderEffect.CONTENT, content=b'{"generated": true}\n')
+
+    plan = plan_reconciliation(
+        PlannerRequest(
+            repo=repo,
+            resolution=resolution_request(
+                (old, selected),
+                selected_versions={"demo": "2.0"},
+            ),
+            payloads=(old, selected),
+            provider_runner=runner,
+        )
+    )
+
+    assert plan.applicable
+    assert _stale_create_only_findings(plan) == ()
+    assert _action(plan, "settings.json").kind is ActionKind.PRESERVE
+
+
 def test_deleted_create_only_file_reports_a_named_absence_finding(tmp_path: Path) -> None:
     """A consumer-deleted create-only artifact explains its own drift (issue #70).
 

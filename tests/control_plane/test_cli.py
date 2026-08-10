@@ -1258,6 +1258,67 @@ def test_reconcile_human_check__edited_create_only_target__is_reconciled(
     assert "CP-DRIFT" not in captured.err
 
 
+def test_create_only_stale_advisory__validation_and_check__stay_successful_and_read_only(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from project_standards.control_plane.cli import (
+        _emit_plan,  # pyright: ignore[reportPrivateUsage]  # focused projection boundary
+    )
+    from tests.control_plane.planner_helpers import stale_create_only_plan
+
+    repo, request, plan = stale_create_only_plan(tmp_path)
+    distribution = installed_distribution(tmp_path / "distribution")
+    initialize_control_plane(repo, "5", distribution=distribution)
+    before = _tree_snapshot(repo)
+
+    def planner_request(*_args: object, **_kwargs: object) -> object:
+        return request
+
+    monkeypatch.setattr(
+        "project_standards.control_plane.cli.build_planner_request",
+        planner_request,
+    )
+
+    assert plan.applicable
+    assert plan.next_lock == request.resolution.previous_lock
+    assert validate_repository(repo, distribution=distribution) == 0
+    first = capsys.readouterr()
+    assert first.out == ""
+    assert "WARNING CP-CREATE-ONLY-STALE usage.md" in first.err
+    assert "1.0 instead of selected version 2.0" in first.err
+    assert "old usage" not in first.err
+    assert "CP-DRIFT" not in first.err
+
+    assert validate_repository(repo, distribution=distribution) == 0
+    assert capsys.readouterr() == first
+    assert _tree_snapshot(repo) == before
+
+    assert (
+        _emit_plan(
+            plan,
+            request.resolution.previous_lock,
+            mode="check",
+            json_mode=True,
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    [finding] = [
+        item for item in payload["plan"]["findings"] if item["code"] == "CP-CREATE-ONLY-STALE"
+    ]
+    assert finding["severity"] == "warning"
+    assert finding["standard_id"] == "demo"
+    assert finding["version"] == "2.0"
+    assert finding["path"] == "usage.md"
+    assert finding["identity"] == "$file"
+    assert finding["expected_digest"].startswith("sha256:")
+    assert finding["actual_digest"].startswith("sha256:")
+    assert "old usage" not in json.dumps(payload)
+    assert _tree_snapshot(repo) == before
+
+
 def test_reconcile_human_check__genuine_lock_metadata_drift__remains_actionable(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

@@ -71,7 +71,7 @@ from project_standards.control_plane.command_resolution import (
     selected_command,
 )
 from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
-from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.control_plane.distribution import InstalledDistribution, InstalledPayload
 from project_standards.control_plane.executor import reconciliation_fingerprint
 from project_standards.control_plane.locking import LockMode
 from project_standards.control_plane.paths import CatalogMajor
@@ -1410,6 +1410,60 @@ def test_drift_check_preserves_reconciliation_and_typed_provider_results(tmp_pat
     }
 
 
+def test_drift_check__create_only_stale_advisory__is_stable_and_read_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tests.control_plane.planner_helpers import stale_create_only_plan
+
+    providers = require_service_module("providers")
+    distribution = build_provider_distribution(tmp_path / "distribution")
+    repo, _request, plan = stale_create_only_plan(tmp_path / "consumer-fixture")
+    before = {
+        path.relative_to(repo).as_posix(): path.read_bytes()
+        for path in repo.rglob("*")
+        if path.is_file()
+    }
+
+    def planned(
+        _distribution: InstalledDistribution,
+        _root: Path,
+    ) -> ReconciliationPlan:
+        return plan
+
+    def no_selection(
+        _distribution: InstalledDistribution,
+        _root: Path,
+    ) -> dict[str, tuple[str, InstalledPayload]]:
+        return {}
+
+    monkeypatch.setattr(providers, "_plan", planned)
+    monkeypatch.setattr(providers, "_resolved_selection", no_selection)
+
+    first = providers.drift_check(distribution, repo)
+    second = providers.drift_check(distribution, repo)
+
+    assert dumped(first) == dumped(second)
+    [finding] = [
+        item for item in dumped(first)["findings"] if item["code"] == "CP-CREATE-ONLY-STALE"
+    ]
+    assert finding["severity"] == "warning"
+    assert finding["standard_id"] == "demo"
+    assert finding["version"] == "2.0"
+    assert finding["path"] == "usage.md"
+    assert finding["identity"] == "$file"
+    assert "1.0 instead of selected version 2.0" in finding["message"]
+    assert "old usage" not in json.dumps(dumped(first))
+    assert json.dumps(dumped(first)["actions"], sort_keys=True) == json.dumps(
+        plan.to_jsonable()["actions"], sort_keys=True
+    )
+    assert {
+        path.relative_to(repo).as_posix(): path.read_bytes()
+        for path in repo.rglob("*")
+        if path.is_file()
+    } == before
+
+
 # ---------------------------------------------------------------------------
 # TC-T4-001: typed input, effective configuration, and effective-root forwarding
 # ---------------------------------------------------------------------------
@@ -2077,13 +2131,12 @@ def test_reports_are_typed_root_relative_and_free_of_timestamps(tmp_path: Path) 
 def plant_reconciliation_finding(repo: Path, distribution: InstalledDistribution) -> None:
     """Leave the repository in a state whose authoritative plan carries a finding.
 
-    ``CP-CREATE-ONLY-ABSENT`` (``control_plane/planner.py:1526``) is the only
-    finding the planner emits at ``severity="warning"``; every other code path
-    forces ``applicable = False`` *and* drops the offending target's action
-    (``planner.py:1664``), which would make the actions comparison vacuous
-    instead. So the fixture reconciles once, then deletes the create-only
-    ``.editorconfig`` contribution the lock still records — the consumer-side
-    deletion the planner is designed to report — plus the managed
+    ``CP-CREATE-ONLY-ABSENT`` is used because the packaged fixture can produce
+    it without manufacturing historical payload bytes. Like the stale-content
+    advisory, it preserves applicability; error findings instead drop the
+    offending target's action, which would make the actions comparison vacuous.
+    The fixture reconciles once, then deletes the create-only ``.editorconfig``
+    contribution the lock still records, plus the managed
     ``.standards/alpha/config.toml`` so a mutating action survives alongside it.
     """
     from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation

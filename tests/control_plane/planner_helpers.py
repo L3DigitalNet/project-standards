@@ -8,6 +8,11 @@ from typing import NotRequired, TypedDict
 
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.models import CentralLock, ConsumerCatalog, DesiredConfig
+from project_standards.control_plane.planner import (
+    PlannerRequest,
+    ReconciliationPlan,
+    plan_reconciliation,
+)
 from project_standards.control_plane.resolution import ResolutionPayload, ResolutionRequest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.paths import Sha256Digest
@@ -214,35 +219,53 @@ def resolution_request(
     *,
     configs: Mapping[str, Mapping[str, JsonValue]] | None = None,
     previous_lock: CentralLock | None = None,
+    selected_versions: Mapping[str, str] | None = None,
 ) -> ResolutionRequest:
+    payloads_by_standard: dict[str, list[InstalledPayload]] = {}
+    for payload in payloads:
+        payloads_by_standard.setdefault(payload.manifest.payload.standard, []).append(payload)
+
     catalog_standards: dict[str, object] = {}
     desired_standards: dict[str, object] = {}
     resolution_payloads: list[ResolutionPayload] = []
-    for payload in payloads:
-        identity = payload.manifest.payload
-        standard_id = identity.standard
-        version = identity.version.value
+    for standard_id, standard_payloads in payloads_by_standard.items():
+        ordered = sorted(
+            standard_payloads,
+            key=lambda item: (
+                item.manifest.payload.version.major,
+                item.manifest.payload.version.minor,
+            ),
+        )
+        versions = [item.manifest.payload.version.value for item in ordered]
+        selected = (selected_versions or {}).get(standard_id)
+        if selected is not None and selected not in versions:
+            raise ValueError(
+                f"selected fixture version is not advertised: {standard_id} {selected}"
+            )
         catalog_standards[standard_id] = {
             "status": "active",
-            "available": [version],
-            "default": version,
+            "available": versions,
+            "default": versions[-1],
             "candidates": [],
             "versions": {
-                version: {
+                payload.manifest.payload.version.value: {
                     "channel": "stable",
                     "availability": "consumer",
                     "payload_digest": payload.integrity.aggregate_digest.value,
                 }
+                for payload in ordered
             },
         }
         desired_standards[standard_id] = {
             "enabled": True,
-            "version": "latest",
+            "version": selected or "latest",
             "config": dict((configs or {}).get(standard_id, {})),
         }
+    for payload in payloads:
+        identity = payload.manifest.payload
         resolution_payloads.append(
             ResolutionPayload(
-                standard_id=standard_id,
+                standard_id=identity.standard,
                 version=identity.version,
                 payload_digest=payload.integrity.aggregate_digest,
                 option_schema=load_option_schema(payload.root, payload.manifest),
@@ -288,6 +311,61 @@ def resolution_request(
         payloads=tuple(resolution_payloads),
         transition_paths=frozenset(),
     )
+
+
+def stale_create_only_plan(root: Path) -> tuple[Path, PlannerRequest, ReconciliationPlan]:
+    """Return a settled warning-only plan over one exact predecessor scaffold."""
+    repo = root / "consumer"
+    repo.mkdir(parents=True)
+    old_content = b"old usage\n"
+    old = write_payload(
+        root / "payload-old",
+        "demo",
+        version="1.0",
+        artifacts=[
+            {
+                "id": "usage",
+                "target": "usage.md",
+                "content": old_content,
+                "policy": "create-only",
+            }
+        ],
+    )
+    selected = write_payload(
+        root / "payload-selected",
+        "demo",
+        version="2.0",
+        artifacts=[
+            {
+                "id": "usage",
+                "target": "usage.md",
+                "content": b"current usage\n",
+                "policy": "create-only",
+            }
+        ],
+    )
+    (repo / "usage.md").write_bytes(old_content)
+    payloads = (old, selected)
+    preliminary = plan_reconciliation(
+        PlannerRequest(
+            repo=repo,
+            resolution=resolution_request(
+                payloads,
+                selected_versions={"demo": "2.0"},
+            ),
+            payloads=payloads,
+        )
+    )
+    request = PlannerRequest(
+        repo=repo,
+        resolution=resolution_request(
+            payloads,
+            previous_lock=preliminary.next_lock,
+            selected_versions={"demo": "2.0"},
+        ),
+        payloads=payloads,
+    )
+    return repo, request, plan_reconciliation(request)
 
 
 def locked_unit(

@@ -409,6 +409,13 @@ class _DesiredGroup:
 
 
 type _OwnedNaturalKey = tuple[str, str, str]
+type _HistoricalAddress = tuple[str, str, AdapterKind, str]
+
+
+@dataclass(frozen=True, slots=True)
+class _HistoricalCreateOnlyUnit:
+    version: PackageVersion
+    digest: Sha256Digest
 
 
 def _transition_json(transition: AcceptedTrackTransition) -> dict[str, JsonValue]:
@@ -1201,6 +1208,125 @@ def _group_desired(
     return tuple(groups), tuple(sort_findings(findings))
 
 
+def _package_version_key(version: PackageVersion) -> tuple[int, int]:
+    return (version.major, version.minor)
+
+
+def _historical_create_only_units(
+    selected: tuple[tuple[ResolvedPackage, InstalledPayload], ...],
+    payloads: Iterable[InstalledPayload],
+    registry: AdapterRegistry,
+) -> dict[_HistoricalAddress, tuple[_HistoricalCreateOnlyUnit, ...]]:
+    """Normalize the static create-only history for selected package addresses.
+
+    The complete installed payload set is the oracle because advertised package
+    versions are permanent and integrity verified. Provider-rendered declarations
+    are excluded: their output has no immutable package-side digest to compare.
+    """
+    selected_by_standard = {package.standard_id: package for package, _payload in selected}
+    indexed: dict[_HistoricalAddress, list[_HistoricalCreateOnlyUnit]] = defaultdict(list)
+    for payload in payloads:
+        identity = payload.manifest.payload
+        package = selected_by_standard.get(identity.standard)
+        if package is None:
+            continue
+        declarations: list[tuple[SafeRelativePath, AdapterKind, str, bytes]] = []
+        declarations.extend(
+            (
+                artifact.target,
+                AdapterKind.WHOLE_FILE,
+                "$file",
+                _read_payload_file(payload, artifact.source, artifact.digest),
+            )
+            for artifact in payload.manifest.artifacts
+            if artifact.policy is ArtifactPolicy.CREATE_ONLY
+            and artifact.materializes(package.effective_config)
+        )
+        declarations.extend(
+            (
+                contribution.target,
+                contribution.adapter,
+                contribution.scope,
+                _read_payload_file(payload, contribution.source, contribution.source_digest),
+            )
+            for contribution in payload.manifest.contributions
+            if contribution.policy is ArtifactPolicy.CREATE_ONLY
+            and contribution.materializes(package.effective_config)
+            and contribution.source is not None
+            and contribution.source_digest is not None
+        )
+        for target, adapter_kind, scope, content in declarations:
+            state = registry.get(adapter_kind).inspect(content, (scope,))
+            if len(state.units) != 1:
+                raise ControlPlaneError(
+                    f"advertised create-only source does not contain its semantic scope: {scope}"
+                )
+            indexed[(identity.standard, target.original, adapter_kind, scope)].append(
+                _HistoricalCreateOnlyUnit(identity.version, state.units[0].semantic_digest)
+            )
+    return {
+        address: tuple(
+            sorted(
+                units,
+                key=lambda item: (*_package_version_key(item.version), item.digest.value),
+            )
+        )
+        for address, units in indexed.items()
+    }
+
+
+def _create_only_stale_findings(
+    group: _DesiredGroup,
+    current: AdapterUnit | None,
+    historical: Mapping[_HistoricalAddress, tuple[_HistoricalCreateOnlyUnit, ...]],
+) -> tuple[ControlFinding, ...]:
+    # Selected equality outranks history: unchanged bytes shared with an older
+    # payload are current content, not evidence that the consumer missed an update.
+    if (
+        current is None
+        or group.policy is not ArtifactPolicy.CREATE_ONLY
+        or group.provenance is not UnitProvenance.SOURCE
+        or current.semantic_digest == group.unit.semantic_digest
+    ):
+        return ()
+    findings: list[ControlFinding] = []
+    for standard_id, selected_value in group.versions:
+        selected = PackageVersion(selected_value)
+        matches = [
+            unit
+            for unit in historical.get(
+                (standard_id, group.target.original, group.adapter, group.scope),
+                (),
+            )
+            if _package_version_key(unit.version) < _package_version_key(selected)
+            and unit.digest == current.semantic_digest
+        ]
+        if not matches:
+            continue
+        nearest = max(matches, key=lambda item: _package_version_key(item.version))
+        findings.append(
+            ControlFinding(
+                code="CP-CREATE-ONLY-STALE",
+                severity="warning",
+                standard_id=standard_id,
+                version=selected.value,
+                path=group.target.original,
+                identity=group.scope,
+                message=(
+                    "create-only unit matches advertised version "
+                    f"{nearest.version.value} instead of selected version {selected.value}"
+                ),
+                hint=(
+                    "review the selected package adoption guide and manually copy or "
+                    "merge the current create-only content when appropriate"
+                ),
+                expected_digest=group.unit.semantic_digest.value,
+                actual_digest=current.semantic_digest.value,
+            )
+        )
+    return tuple(findings)
+
+
 def _managed_restore_targets(
     groups: tuple[_DesiredGroup, ...],
     blocked_targets: frozenset[str],
@@ -1648,6 +1774,7 @@ def _render_targets(
     retained_absence_keys: frozenset[_OwnedNaturalKey],
     transitions: frozenset[DeclaredTransition],
     migration_catalog: CatalogMajor | None,
+    historical_create_only: Mapping[_HistoricalAddress, tuple[_HistoricalCreateOnlyUnit, ...]],
 ) -> tuple[
     tuple[ControlAction, ...],
     tuple[PlannedUnit, ...],
@@ -1763,6 +1890,14 @@ def _render_targets(
         if target_findings:
             findings.extend(target_findings)
             continue
+        for group in desired:
+            findings.extend(
+                _create_only_stale_findings(
+                    group,
+                    current_units.get(group.scope),
+                    historical_create_only,
+                )
+            )
         findings.extend(_create_only_absence_finding(group) for group in newly_absent)
         platform_created_container = bool(previous) and all(
             item.created_container for item in previous
@@ -2655,6 +2790,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         )
         desired = ()
     groups, group_findings = _group_desired(desired)
+    historical_create_only = _historical_create_only_units(selected, payloads.values(), registry)
     retained_absence_keys = _retained_create_only_absence_keys(
         groups,
         resolution,
@@ -2682,6 +2818,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         retained_absence_keys=retained_absence_keys,
         transitions=request.resolution.transition_paths,
         migration_catalog=request.migration_catalog,
+        historical_create_only=historical_create_only,
     )
     findings.extend(target_findings)
     if request.catalog_refresh is not None and request.catalog_refresh.changed:
