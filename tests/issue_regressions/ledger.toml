@@ -216,11 +216,11 @@ rationale = "Consumer-conflict findings name the declared governing options."
 introduced_release = "5.6.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/control_plane/test_planner.py::test_consumer_conflict_finding_lists_declared_governing_options"]
-amendments = []
+amendments = [{ approved_by = "Codex independent review", date = "2026-08-10", new_digest = "sha256:6b903414ae733de526a36a6276f9e2eba3a5373bda2b179b387422c549927fce", new_symbol = "tests/control_plane/test_planner.py::test_consumer_conflict_finding_lists_declared_governing_options", old_digest = "sha256:96062e78d6a45ca8cd1495864f476afe8403c5f924cd7b81cb4cd5cada5cde39", old_symbol = "tests/control_plane/test_planner.py::test_consumer_conflict_finding_lists_declared_governing_options", reason = "include the create-only advisory planner closure from d8d5c52f while the GH-22 consumer-conflict assertion remains unchanged", requirement = "REQ-005" }]
 
 [[issues.proofs]]
 symbol = "tests/control_plane/test_planner.py::test_consumer_conflict_finding_lists_declared_governing_options"
-digest = "sha256:96062e78d6a45ca8cd1495864f476afe8403c5f924cd7b81cb4cd5cada5cde39"
+digest = "sha256:6b903414ae733de526a36a6276f9e2eba3a5373bda2b179b387422c549927fce"
 
 [[issues]]
 id = "GH-23"
@@ -255,11 +255,11 @@ rationale = "Anchored TOML comments survive managed table updates end to end."
 introduced_release = "5.7.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/control_plane/test_end_to_end.py::test_toml_table_update_preserves_annotated_consumer_comments_end_to_end"]
-amendments = []
+amendments = [{ approved_by = "Codex independent review", date = "2026-08-10", new_digest = "sha256:aad520d046b8504bbef1916ac048b30a0dbb890f4396319e9ff671d0064ddb1e", new_symbol = "tests/control_plane/test_end_to_end.py::test_toml_table_update_preserves_annotated_consumer_comments_end_to_end", old_digest = "sha256:5810ce20dbcba4211d7fd32ce41a0c7d22ceffcdeb63fd742496cd31d511ca3b", old_symbol = "tests/control_plane/test_end_to_end.py::test_toml_table_update_preserves_annotated_consumer_comments_end_to_end", reason = "include the read-only create-only advisory planner closure from d8d5c52f while the GH-25 anchored-comment assertion remains unchanged", requirement = "REQ-005" }]
 
 [[issues.proofs]]
 symbol = "tests/control_plane/test_end_to_end.py::test_toml_table_update_preserves_annotated_consumer_comments_end_to_end"
-digest = "sha256:5810ce20dbcba4211d7fd32ce41a0c7d22ceffcdeb63fd742496cd31d511ca3b"
+digest = "sha256:aad520d046b8504bbef1916ac048b30a0dbb890f4396319e9ff671d0064ddb1e"
 
 [[issues]]
 id = "GH-26"
@@ -407,19 +407,23 @@ references = [
     "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point",
     "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions",
 ]
-amendments = []
+amendments = [
+    { approved_by = "Codex independent review", date = "2026-08-10", new_digest = "sha256:e6fa5b5fe8f6563b3a833fb50f0ebab565946975a93b9135a24eb5bb94d814bf", new_symbol = "tests/control_plane/test_conflict_guidance.py::test_pre_adoption_whole_file__managed_selector__permits_delete_and_reconcile", old_digest = "sha256:d842cddc6d9048cc462ddfd1f2052befcde00293a13c1d2deab24b7257488637", old_symbol = "tests/control_plane/test_conflict_guidance.py::test_pre_adoption_whole_file__managed_selector__permits_delete_and_reconcile", reason = "include the read-only create-only advisory planner closure from d8d5c52f while the GH-37 managed-selector guidance assertion remains unchanged", requirement = "REQ-005" },
+    { approved_by = "Codex independent review", date = "2026-08-10", new_digest = "sha256:901b1a3ee25e8ff9b39dff85028e3229bb519bcff6a22a53eff9f2b22f0833db", new_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point", old_digest = "sha256:2ebc488614345c623be016ec770b07604e3109cab506a755407afd232c5a61c2", old_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point", reason = "include the read-only create-only advisory planner closure from d8d5c52f while the GH-37 restoration fixed-point assertion remains unchanged", requirement = "REQ-005" },
+    { approved_by = "Codex independent review", date = "2026-08-10", new_digest = "sha256:9cb97bca908ee43e17dc4127064085a8bb46fc5edfbcb92b761feab90d6a550e", new_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions", old_digest = "sha256:886bdb1712b50b9ebe637d2b909a43d1bce0a3795df201ca5b109746d3b3d737", old_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions", reason = "include the read-only create-only advisory planner closure from d8d5c52f while the GH-37 stale-precondition assertion remains unchanged", requirement = "REQ-005" },
+]
 
 [[issues.proofs]]
 symbol = "tests/control_plane/test_conflict_guidance.py::test_pre_adoption_whole_file__managed_selector__permits_delete_and_reconcile"
-digest = "sha256:d842cddc6d9048cc462ddfd1f2052befcde00293a13c1d2deab24b7257488637"
+digest = "sha256:e6fa5b5fe8f6563b3a833fb50f0ebab565946975a93b9135a24eb5bb94d814bf"
 
 [[issues.proofs]]
 symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point"
-digest = "sha256:2ebc488614345c623be016ec770b07604e3109cab506a755407afd232c5a61c2"
+digest = "sha256:901b1a3ee25e8ff9b39dff85028e3229bb519bcff6a22a53eff9f2b22f0833db"
 
 [[issues.proofs]]
 symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions"
-digest = "sha256:886bdb1712b50b9ebe637d2b909a43d1bce0a3795df201ca5b109746d3b3d737"
+digest = "sha256:9cb97bca908ee43e17dc4127064085a8bb46fc5edfbcb92b761feab90d6a550e"
 
 [[issues]]
 id = "GH-38"
@@ -496,15 +500,18 @@ references = [
     "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index__fresh_custom_input__is_locked_and_linked",
     "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index_path__unsafe_shape__fails_closed",
 ]
-amendments = []
+amendments = [
+    { approved_by = "Codex independent review", date = "2026-08-10", new_digest = "sha256:90c3883b5397f58f2c91298f6a1dd88d263a1d30b0f5669bded2fdac2b3d3c64", new_symbol = "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index__fresh_custom_input__is_locked_and_linked", old_digest = "sha256:a1eb50fff9bd5e67f4d265af68df1802fb21ed0ffc2ea9bf95ed93e530e69167", old_symbol = "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index__fresh_custom_input__is_locked_and_linked", reason = "include the read-only create-only advisory planner closure from d8d5c52f while the GH-42 usage-index linkage assertion remains unchanged", requirement = "REQ-005" },
+    { approved_by = "Codex independent review", date = "2026-08-10", new_digest = "sha256:1d929f13f62e086d65b0991c1b3fb42aa527c2ed8adf4f822f20e2210574918e", new_symbol = "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index_path__unsafe_shape__fails_closed", old_digest = "sha256:d8144211203de43ef99f74ed3671c13159a2c8b2699e1be255f57d9681485dfa", old_symbol = "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index_path__unsafe_shape__fails_closed", reason = "include the read-only create-only advisory planner closure from d8d5c52f while the GH-42 unsafe-path refusal assertion remains unchanged", requirement = "REQ-005" },
+]
 
 [[issues.proofs]]
 symbol = "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index__fresh_custom_input__is_locked_and_linked"
-digest = "sha256:a1eb50fff9bd5e67f4d265af68df1802fb21ed0ffc2ea9bf95ed93e530e69167"
+digest = "sha256:90c3883b5397f58f2c91298f6a1dd88d263a1d30b0f5669bded2fdac2b3d3c64"
 
 [[issues.proofs]]
 symbol = "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index_path__unsafe_shape__fails_closed"
-digest = "sha256:d8144211203de43ef99f74ed3671c13159a2c8b2699e1be255f57d9681485dfa"
+digest = "sha256:1d929f13f62e086d65b0991c1b3fb42aa527c2ed8adf4f822f20e2210574918e"
 
 [[issues]]
 id = "GH-43"
