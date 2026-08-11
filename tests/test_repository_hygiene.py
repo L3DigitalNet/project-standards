@@ -87,14 +87,23 @@ _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
 # above it, so anything added there would fail the anchor-inventory assertion instead.
 #
 # This assertion reads the INDEX (`git ls-files -s`), so a new executable is invisible
-# to it until it is staged: a gate run that is green on an untracked script goes red on
-# the next run, after the commit. Add the entry in the same change that adds the script.
+# to it until it is staged: a gate run that is green on an untracked artifact goes red
+# after the commit. Add each artifact to its semantic post-anchor set in the same change.
 _POST_ANCHOR_TOOLING_EXECUTABLES = frozenset(
     {
         "scripts/bootstrap-worktree.sh",
         "scripts/build-agent-handoff-session-start.sh",
+        "scripts/build-command-provider-fixture.sh",
         "scripts/build-gh-workflow.sh",
         "scripts/wheel-runtime-stamp.sh",
+    }
+)
+
+# Native test fixtures implement an external ABI and execute during acceptance tests;
+# classifying them as repository tooling would erase that narrower trust boundary.
+_POST_ANCHOR_NATIVE_TEST_FIXTURE_EXECUTABLES = frozenset(
+    {
+        "tests/fixtures/command-provider/standards/command-provider-fixture/versions/1.0/bin/command-provider-fixture",
     }
 )
 
@@ -145,6 +154,7 @@ def test_git_mode_policy__classifies_and_normalizes_the_complete_anchor_inventor
         | _IMMUTABLE_PROJECTION_EXCLUSIONS
         | _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES
         | _POST_ANCHOR_TOOLING_EXECUTABLES
+        | _POST_ANCHOR_NATIVE_TEST_FIXTURE_EXECUTABLES
     )
     assert {path: entries[path][0] for path in _MUTABLE_NORMALIZATION_ALLOWLIST} == dict.fromkeys(
         _MUTABLE_NORMALIZATION_ALLOWLIST, "100644"
