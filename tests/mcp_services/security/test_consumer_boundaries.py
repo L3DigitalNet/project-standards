@@ -122,6 +122,12 @@ class OpenAudit:
     def record(self, value: object) -> None:
         self.entries.append(str(value))
 
+    def record_open_target(self, value: object) -> None:
+        """Record path-like open targets while excluding inherited descriptors."""
+        if isinstance(value, int):
+            return
+        self.record(value)
+
     def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # The real callables are held as ``Any``: their overloaded signatures
         # cannot be expressed through the pass-through wrappers below.
@@ -139,11 +145,11 @@ class OpenAudit:
             return real_os_open(path, *args, **kwargs)
 
         def audited_open(file: Any, *args: Any, **kwargs: Any) -> Any:
-            self.record(file)
+            self.record_open_target(file)
             return real_open(file, *args, **kwargs)
 
         def audited_io_open(file: Any, *args: Any, **kwargs: Any) -> Any:
-            self.record(file)
+            self.record_open_target(file)
             return real_io_open(file, *args, **kwargs)
 
         def audited_path_open(self_path: Any, *args: Any, **kwargs: Any) -> Any:
@@ -174,6 +180,36 @@ class OpenAudit:
         monkeypatch.setattr(Path, "read_text", audited_read_text)
         monkeypatch.setattr(os, "scandir", audited_scandir)
         monkeypatch.setattr(os, "listdir", audited_listdir)
+
+
+def test_open_audit_ignores_integer_handles_but_records_every_path_form(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "target.txt"
+    target.write_bytes(b"content")
+    descriptor = os.open(target, os.O_RDONLY)
+    audit = OpenAudit()
+    try:
+        with monkeypatch.context() as patched:
+            audit.install(patched)
+            with builtins.open(descriptor, "rb", closefd=False):
+                pass
+            # These explicit APIs and argument forms are the audit surface under
+            # test; normalizing them to Path.open would leave a wrapper unproved.
+            with io.open(descriptor, "rb", closefd=False):  # noqa: UP020
+                pass
+            with builtins.open(str(target), "rb"):  # noqa: PTH123
+                pass
+            with io.open(os.fsencode(target), "rb"):  # noqa: UP020
+                pass
+            with target.open("rb"):
+                pass
+    finally:
+        os.close(descriptor)
+
+    assert str(descriptor) not in audit.entries
+    assert str(target) in audit.entries
+    assert str(os.fsencode(target)) in audit.entries
 
 
 def authoritative_allowlist(distribution: InstalledDistribution, *repos: Path) -> set[str]:

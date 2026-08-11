@@ -114,7 +114,10 @@ def test_real_catalog_plans_inside_scale_and_time_boundary(
     assert plan.applicable, plan.findings
     assert len(plan.resolution.packages) == len(defaults) <= 100
     assert len(plan.units) <= 1_000
-    assert elapsed < 5.0, f"real catalog planning took {elapsed:.3f}s"
+    # This ceiling includes one isolated child for each provider invocation in
+    # the real catalog. It must not be met by batching calls or keeping a worker
+    # alive across invocation boundaries; those would weaken the bounded runner.
+    assert elapsed < 7.5, f"real catalog planning took {elapsed:.3f}s"
 
 
 @pytest.mark.performance

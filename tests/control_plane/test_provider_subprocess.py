@@ -1,4 +1,4 @@
-"""Bounded worker-process execution behind ``invoke_read_provider`` (T4).
+"""Shared bounded provider execution for control-plane and MCP callers.
 
 Covers TC-T4-008: the worker's results equal authoritative direct dispatch for
 the same effective root, payload identity, operation, and input; the controlled
@@ -33,13 +33,21 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import tempfile
 import time
+from importlib import import_module
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from project_standards.control_plane import provider_subprocess
+from project_standards.control_plane.provider_subprocess import (
+    ProviderSubprocessError,
+    python_worker_environment,
+    run_provider_subprocess,
+)
 from project_standards.package_contract.payload import ProviderOperation
 from tests.mcp_services.helpers import import_mcp_services
 from tests.mcp_services.test_consumer import dumped
@@ -223,14 +231,32 @@ def test_worker_module_is_sdk_free_and_importable_by_name() -> None:
     package. The entry-point *shape* is deliberately not frozen here — the ADR
     fixes where provider code runs, not how the parent starts it.
     """
-    worker = require_service_module("provider_worker")
+    worker = import_module("project_standards.control_plane.provider_worker")
     providers = require_service_module("providers")
-    assert worker.__name__ == "project_standards.mcp_services.provider_worker"
+    assert worker.__name__ == "project_standards.control_plane.provider_worker"
     for module in (worker, providers):
         source = Path(str(module.__file__)).read_text(encoding="utf-8")
         assert "import mcp\n" not in source
         assert "from mcp" not in source
         assert "mcp_server" not in source
+
+
+def test_python_callers_share_one_control_plane_transport_implementation() -> None:
+    """Direct and MCP routes call one runner; the worker cannot recursively spawn."""
+    direct = import_module("project_standards.control_plane.providers")
+    service = import_module("project_standards.mcp_services.providers")
+    worker = import_module("project_standards.control_plane.provider_worker")
+
+    direct_source = Path(str(direct.__file__)).read_text(encoding="utf-8")
+    service_source = Path(str(service.__file__)).read_text(encoding="utf-8")
+    worker_source = Path(str(worker.__file__)).read_text(encoding="utf-8")
+
+    assert direct_source.count("run_provider_subprocess(") == 1
+    assert service_source.count("run_provider_subprocess(") == 1
+    assert "subprocess.Popen" not in direct_source
+    assert "subprocess.Popen" not in service_source
+    assert "run_provider_subprocess" not in worker_source
+    assert "invoke_provider_in_child" in worker_source
 
 
 def ipc_artifacts(scratch: Path) -> list[str]:
@@ -385,12 +411,11 @@ def test_forged_ipc_frames_are_refused_by_the_parent(
 ) -> None:
     """F2 (bounded accept): every inbound frame is validated for schema, type, and size."""
     services = import_mcp_services()
-    providers = require_service_module("providers")
     distribution = build_provider_distribution(tmp_path)
     facade = build_facade(services, distribution)
     repo = build_provider_repo(tmp_path, "consumer", distribution=distribution)
     invoke = require_operation(facade, "invoke_read_provider")
-    monkeypatch.setattr(providers, "_WORKER_BOOTSTRAP", hostile_bootstrap(body))
+    monkeypatch.setattr(provider_subprocess, "_PYTHON_WORKER_BOOTSTRAP", hostile_bootstrap(body))
 
     before = tree_state(repo)
     with pytest.raises(services.ServiceError) as raised:
@@ -415,7 +440,6 @@ def test_forged_error_frames_cannot_publish_attacker_selected_paths(
 ) -> None:
     """F2: a forged *error* frame cannot choose the text a caller is shown."""
     services = import_mcp_services()
-    providers = require_service_module("providers")
     distribution = build_provider_distribution(tmp_path)
     facade = build_facade(services, distribution)
     repo = build_provider_repo(tmp_path, "consumer", distribution=distribution)
@@ -428,8 +452,8 @@ def test_forged_error_frames_cannot_publish_attacker_selected_paths(
         }
     )
     monkeypatch.setattr(
-        providers,
-        "_WORKER_BOOTSTRAP",
+        provider_subprocess,
+        "_PYTHON_WORKER_BOOTSTRAP",
         hostile_bootstrap(f"os.write(fd, {forged!r}.encode())"),
     )
 
@@ -468,8 +492,8 @@ def test_a_worker_that_never_reads_its_request_still_fails_within_the_bound(
     invoke = require_operation(facade, "invoke_read_provider")
     monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", 2.0)
     monkeypatch.setattr(
-        providers,
-        "_WORKER_BOOTSTRAP",
+        provider_subprocess,
+        "_PYTHON_WORKER_BOOTSTRAP",
         "import time, sys\nsys.stderr.write('x' * 4096)\ntime.sleep(300)\n",
     )
 
@@ -493,3 +517,79 @@ def test_a_worker_that_never_reads_its_request_still_fails_within_the_bound(
     assert_error_is_content_safe(raised.value, repo, distribution, identified=True)
     assert open_descriptors() == descriptors
     assert_no_unreaped_children()
+
+
+_RESULT_FD_SCRIPT = """
+import json
+import os
+import sys
+
+request = json.loads(sys.stdin.buffer.read())
+os.write(1, b"stdout-data\\n")
+os.write(2, b"stderr-data\\n")
+with os.fdopen(int(sys.argv[1]), "wb") as stream:
+    stream.write(json.dumps({"status": "ok", "result": request}).encode("utf-8"))
+"""
+
+_DESCENDANT_SCRIPT = """
+import json
+import os
+import sys
+import time
+
+request = json.loads(sys.stdin.buffer.read())
+child = os.fork()
+if child == 0:
+    request_path = request["sentinel"]
+    with open(request_path, "w", encoding="utf-8") as stream:
+        stream.write(str(os.getpid()))
+    time.sleep(300)
+    raise SystemExit(0)
+time.sleep(300)
+"""
+
+
+def _python_argv(script: str) -> tuple[str, ...]:
+    return (sys.executable, "-c", script)
+
+
+def _assert_process_gone(pid: int) -> None:
+    deadline = time.monotonic() + 2.0
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return
+        time.sleep(0.01)
+    pytest.fail(f"provider descendant {pid} survived subprocess teardown")
+
+
+def test_run_provider_subprocess__separate_result_fd__captures_diagnostics() -> None:
+    request = {"value": "expected"}
+
+    outcome = run_provider_subprocess(
+        _python_argv(_RESULT_FD_SCRIPT),
+        json.dumps(request).encode("utf-8"),
+        timeout=5.0,
+        environment=python_worker_environment(),
+    )
+
+    assert outcome.frame == {"status": "ok", "result": request}
+    assert outcome.stdout.content == b"stdout-data\n"
+    assert outcome.stderr.content == b"stderr-data\n"
+
+
+def test_run_provider_subprocess__timeout__terminates_descendant_group(tmp_path: Path) -> None:
+    sentinel = tmp_path / "descendant.pid"
+
+    with pytest.raises(ProviderSubprocessError) as raised:
+        run_provider_subprocess(
+            _python_argv(_DESCENDANT_SCRIPT),
+            json.dumps({"sentinel": str(sentinel)}).encode("utf-8"),
+            timeout=1.0,
+            environment=python_worker_environment(),
+        )
+
+    assert raised.value.code == "provider-timeout"
+    assert sentinel.is_file(), "the timeout expired before the fixture created its descendant"
+    _assert_process_gone(int(sentinel.read_text(encoding="utf-8")))

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import base64
+import builtins
 import hashlib
 import json
-import socket
+import os
 from pathlib import Path
 
 import pytest
@@ -282,10 +283,23 @@ def _provider_code(
         )
         imports = "from pathlib import Path\n"
     elif behavior == "network":
-        body = "socket.socket()\n    return {'content': 'bad'}"
+        body = "socket.socket()\n    raise OSError('denied')"
         imports = "import socket\n"
     elif behavior == "raise":
         body = "raise RuntimeError('private provider detail')"
+        imports = ""
+    elif behavior == "value-error":
+        body = "raise ValueError('safe provider detail')"
+        imports = ""
+    elif behavior == "value-error-path":
+        body = "raise ValueError('/etc/shadow contains PRIVATE-PROVIDER-DETAIL')"
+        imports = ""
+    elif behavior == "custom-error":
+        body = (
+            "class ParentTrap(Exception):\n"
+            "        pass\n"
+            "    raise ParentTrap('/etc/shadow contains PRIVATE-PROVIDER-DETAIL')"
+        )
         imports = ""
     elif behavior == "undeclared-resource":
         body = "return {'content': resources['not-declared'].decode()}"
@@ -295,6 +309,15 @@ def _provider_code(
         imports = ""
     elif behavior == "wrong-output":
         body = "return {'unexpected': 'shape'}"
+        imports = ""
+    elif behavior == "pid":
+        body = "return {'content': str(os.getpid())}"
+        imports = "import os\n"
+    elif behavior == "slow":
+        body = "time.sleep(0.5)\n    return {'content': 'finished'}"
+        imports = "import time\n"
+    elif behavior == "oversized":
+        body = "return {'content': 'x' * 300000}"
         imports = ""
     elif behavior == "undeclared-signature":
         digest = "sha256:" + ("a" * 64)
@@ -594,6 +617,39 @@ def test_provider_is_selected_from_exact_integrity_checked_payload(tmp_path: Pat
     assert first.output_notice == "provider output suppressed (stdout, stderr)"
 
 
+def test_invoke_provider__python_provider__runs_in_bounded_child(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload", behavior="pid")
+
+    result = invoke_provider(_invocation(repo, payload))
+
+    assert result.content is not None
+    assert int(result.content.decode("utf-8")) != os.getpid()
+
+
+def test_invoke_provider__slow_python_provider__honors_execution_bound(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload", behavior="slow")
+    monkeypatch.setattr(provider_runtime, "PROVIDER_TIMEOUT_SECONDS", 0.1, raising=False)
+
+    with pytest.raises(ControlPlaneError, match="execution bound"):
+        invoke_provider(_invocation(repo, payload))
+
+
+def test_invoke_provider__oversized_result__fails_at_transport_bound(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload", behavior="oversized")
+
+    with pytest.raises(ControlPlaneError, match="transport limit"):
+        invoke_provider(_invocation(repo, payload))
+
+
 def test_provider_rejects_operation_mismatch_before_invocation(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -694,6 +750,68 @@ def test_provider_receives_immutable_input_and_only_declared_resource_bytes(
 
     with pytest.raises(ControlPlaneError, match="provider failed"):
         invoke_provider(_invocation(repo, payload))
+
+
+def test_provider_restores_allowlisted_value_error_cause_and_safe_detail(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload", behavior="value-error")
+
+    with pytest.raises(
+        ControlPlaneError,
+        match=r"provider failed with ValueError \(demo@1\.2/test-provider\)",
+    ) as raised:
+        invoke_provider(_invocation(repo, payload))
+
+    cause = raised.value.__cause__
+    assert type(cause) is ValueError
+    assert str(cause) == "safe provider detail"
+
+
+def test_provider_redacts_allowlisted_cause_detail_that_names_a_path(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload", behavior="value-error-path")
+
+    with pytest.raises(ControlPlaneError) as raised:
+        invoke_provider(_invocation(repo, payload))
+
+    cause = raised.value.__cause__
+    assert type(cause) is ValueError
+    assert str(cause) == "the failure detail was withheld because it named a filesystem path"
+    assert "/etc/shadow" not in str(raised.value)
+    assert "PRIVATE-PROVIDER-DETAIL" not in str(raised.value)
+
+
+def test_provider_uses_fixed_generic_cause_without_resolving_unknown_child_kind(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    constructed = False
+
+    class ParentTrap(Exception):
+        def __init__(self, *_args: object) -> None:
+            nonlocal constructed
+            constructed = True
+            super().__init__("parent trap constructed")
+
+    monkeypatch.setattr(builtins, "ParentTrap", ParentTrap, raising=False)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload", behavior="custom-error")
+
+    with pytest.raises(
+        ControlPlaneError,
+        match=r"provider failed with an unrecognized exception \(demo@1\.2/test-provider\)",
+    ) as raised:
+        invoke_provider(_invocation(repo, payload))
+
+    assert not constructed
+    assert type(raised.value.__cause__) is RuntimeError
+    assert str(raised.value.__cause__) == "provider raised an unrecognized exception"
+    assert "/etc/shadow" not in str(raised.value)
+    assert "PRIVATE-PROVIDER-DETAIL" not in str(raised.value)
 
 
 def test_provider_returns_typed_findings_mutation_plan_and_migration_report(
@@ -917,19 +1035,11 @@ def test_migration_provider_rejects_undeclared_signatures_and_secret_values(
 @pytest.mark.parametrize("behavior", ["raise", "network"])
 def test_provider_exception_and_denied_network_are_content_safe(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     behavior: str,
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     payload = _write_provider_payload(tmp_path / "payload", behavior=behavior)
-    if behavior == "network":
-
-        def deny_socket(*_args: object, **_kwargs: object) -> socket.socket:
-            raise OSError("denied")
-
-        monkeypatch.setattr(socket, "socket", deny_socket)
-
     with pytest.raises(ControlPlaneError) as exc_info:
         invoke_provider(_invocation(repo, payload))
 

@@ -27,6 +27,17 @@ from project_standards.control_plane.diagnostics import (
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.migration import MigrationReport
 from project_standards.control_plane.models import LockedInput
+from project_standards.control_plane.provider_subprocess import (
+    PROVIDER_TIMEOUT_SECONDS as _DEFAULT_PROVIDER_TIMEOUT_SECONDS,
+)
+from project_standards.control_plane.provider_subprocess import (
+    ProviderSubprocessError,
+    encode_provider_request,
+    python_worker_argv,
+    python_worker_environment,
+    run_provider_subprocess,
+    safe_failure_detail,
+)
 from project_standards.control_plane.schemas import MutationPlanSchema, ProviderInputSchema
 from project_standards.control_plane.snapshot import RepositorySnapshot
 from project_standards.package_contract.paths import (
@@ -40,11 +51,20 @@ from project_standards.package_contract.payload import (
     JsonObject,
     JsonValue,
     PayloadAvailability,
+    ProviderDeclaration,
     ProviderEffect,
     ProviderKind,
     ProviderOperation,
     ResourceDeclaration,
 )
+
+PROVIDER_TIMEOUT_SECONDS: float = _DEFAULT_PROVIDER_TIMEOUT_SECONDS
+
+# Child data may select only constructors fixed here. Resolving a reported name
+# through builtins, imports, or module globals would let provider bytes execute a
+# second attacker-selected constructor in the trusted parent.
+_SAFE_PROVIDER_CAUSE_TYPES: dict[str, type[Exception]] = {"ValueError": ValueError}
+_UNKNOWN_PROVIDER_CAUSE = "provider raised an unrecognized exception"
 
 
 def _safe_repo(repo: Path) -> Path:
@@ -276,6 +296,18 @@ class ProviderResult:
     migration_report: MigrationReport | None = None
     output_notice: str | None = None
     structured_output: JsonObject | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedPythonProvider:
+    """Hold the exact integrity-checked bytes needed by one Python call."""
+
+    code: bytes
+    code_path: Path
+    symbol: str
+    input_schema: JsonObject
+    output_schema: JsonObject
+    resources: dict[str, bytes]
 
 
 class _OutputSink(io.TextIOBase):
@@ -729,8 +761,10 @@ def _bind_authoring_actions_to_snapshot(
         raise ControlPlaneError("authoring mutation exceeds its overwrite authorization")
 
 
-def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
-    """Invoke one declared Python provider and reject changes to declared live targets."""
+def _qualified_python_provider(
+    invocation: ProviderInvocation,
+) -> tuple[Path, InstalledPayload, ProviderDeclaration]:
+    """Qualify one direct invocation before it is allowed to spawn a child."""
     root = _safe_repo(invocation.repo)
     payload = invocation.payload
     identity = payload.manifest.payload
@@ -748,7 +782,14 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
         raise ControlPlaneError("provider operation does not match the requested operation")
     if provider.kind is not ProviderKind.PYTHON or provider.entrypoint is None:
         raise ControlPlaneError("provider kind is not executable by the bounded runner")
+    return root, payload, provider
 
+
+def _prepare_python_provider(
+    payload: InstalledPayload,
+    provider: ProviderDeclaration,
+) -> _PreparedPythonProvider:
+    """Load the provider's complete integrity-checked execution closure."""
     resources = _resource_map(payload)
     required_ids = {
         provider.entrypoint_resource,
@@ -763,17 +804,24 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
         resource_id: _read_payload_resource(payload, resources[resource_id])
         for resource_id in sorted(selected_resources)
     }
-    input_schema = _json_document(
-        loaded[cast(str, provider.input_schema)],
-        kind="input schema",
+    entrypoint_id = cast(str, provider.entrypoint_resource)
+    input_schema_id = cast(str, provider.input_schema)
+    output_schema_id = cast(str, provider.output_schema)
+    code_resource = resources[entrypoint_id]
+    return _PreparedPythonProvider(
+        code=loaded[entrypoint_id],
+        code_path=payload.root / code_resource.path.normalized,
+        symbol=cast(str, provider.entrypoint).rsplit("#", 1)[1],
+        input_schema=_json_document(loaded[input_schema_id], kind="input schema"),
+        output_schema=_json_document(loaded[output_schema_id], kind="output schema"),
+        resources={resource_id: loaded[resource_id] for resource_id in provider.resources},
     )
-    output_schema = _json_document(
-        loaded[cast(str, provider.output_schema)],
-        kind="output schema",
-    )
-    provider_resource_bytes = {
-        resource_id: loaded[resource_id] for resource_id in provider.resources
-    }
+
+
+def invoke_provider_in_child(invocation: ProviderInvocation) -> ProviderResult:
+    """Execute Python bytes in this process; only the child worker may call this."""
+    root, payload, provider = _qualified_python_provider(invocation)
+    prepared = _prepare_python_provider(payload, provider)
     effective_invocation = replace(
         invocation,
         snapshots=materialize_referenced_input_snapshots(
@@ -784,15 +832,11 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
             extensions=payload.manifest.extensions,
         ),
     )
-    provider_input = _provider_input(effective_invocation, provider_resource_bytes)
+    provider_input = _provider_input(effective_invocation, prepared.resources)
     input_value = cast(JsonValue, provider_input.model_dump(mode="json"))
-    _validate_json_schema(input_schema, input_value, kind="input")
+    _validate_json_schema(prepared.input_schema, input_value, kind="input")
     frozen_input = _deep_freeze(input_value)
-    frozen_resources = MappingProxyType(provider_resource_bytes)
-
-    code_resource = resources[cast(str, provider.entrypoint_resource)]
-    code_path = payload.root / code_resource.path.normalized
-    symbol = provider.entrypoint.rsplit("#", 1)[1]
+    frozen_resources = MappingProxyType(prepared.resources)
     before = RepositorySnapshot.capture(
         root,
         _declared_snapshot_paths(effective_invocation.snapshots),
@@ -806,16 +850,16 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
             # Execute the bytes already checked against the payload inventory;
             # reopening the path through an importer would create a verification-to-use race.
             code = compile(
-                loaded[cast(str, provider.entrypoint_resource)],
-                str(code_path),
+                prepared.code,
+                str(prepared.code_path),
                 "exec",
             )
             namespace: dict[str, object] = {
-                "__file__": str(code_path),
+                "__file__": str(prepared.code_path),
                 "__name__": "__project_standards_provider__",
             }
             exec(code, namespace)
-            callable_provider = namespace.get(symbol)
+            callable_provider = namespace.get(prepared.symbol)
             if not callable(callable_provider):
                 raise TypeError("entrypoint symbol is not callable")
             result = callable_provider(frozen_input, frozen_resources)
@@ -832,10 +876,123 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
         ) from failure
 
     output = _json_result(result)
-    _validate_json_schema(output_schema, cast(JsonValue, output), kind="output")
+    _validate_json_schema(prepared.output_schema, cast(JsonValue, output), kind="output")
     return _typed_result(
         invocation,
         provider.effect,
         output,
         _output_notice(stdout, stderr),
+    )
+
+
+def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
+    """Invoke one V2 Python provider through the shared bounded child process."""
+    root, payload, provider = _qualified_python_provider(invocation)
+    prepared = _prepare_python_provider(payload, provider)
+    effective_invocation = replace(
+        invocation,
+        repo=root,
+        snapshots=materialize_referenced_input_snapshots(
+            root,
+            invocation.snapshots,
+            standard_id=invocation.standard_id,
+            config=invocation.effective_config,
+            extensions=payload.manifest.extensions,
+        ),
+    )
+    before = RepositorySnapshot.capture(
+        root,
+        _declared_snapshot_paths(effective_invocation.snapshots),
+    )
+    provider_input = _provider_input(effective_invocation, prepared.resources)
+    input_value = cast(JsonValue, provider_input.model_dump(mode="json"))
+    _validate_json_schema(prepared.input_schema, input_value, kind="input")
+    request = encode_provider_request(
+        cast(
+            JsonObject,
+            {
+                "dispatch_mode": "direct",
+                "repo_root": str(root),
+                "payload_root": str(payload.root),
+                # The child receives bytes already coupled to the qualified
+                # InstalledPayload. Reloading payload.toml here would discard
+                # legitimate in-memory qualification seams and reopen a second
+                # manifest authority after the parent has checked every byte.
+                "capsule": {
+                    "standard_id": invocation.standard_id,
+                    "version": invocation.version.value,
+                    "provider_id": invocation.provider_id,
+                    "operation": invocation.operation.value,
+                    "effect": provider.effect.value,
+                    "symbol": prepared.symbol,
+                    "source_path": str(prepared.code_path),
+                    "code_base64": base64.b64encode(prepared.code).decode("ascii"),
+                    "input": input_value,
+                    "resources": {
+                        resource_id: base64.b64encode(content).decode("ascii")
+                        for resource_id, content in sorted(prepared.resources.items())
+                    },
+                },
+            },
+        )
+    )
+    outcome = None
+    failure: ControlPlaneError | None = None
+    cause: BaseException | None = None
+    try:
+        outcome = run_provider_subprocess(
+            python_worker_argv(),
+            request,
+            timeout=float(PROVIDER_TIMEOUT_SECONDS),
+            environment=python_worker_environment(),
+        )
+    except ProviderSubprocessError as exc:
+        failure = ControlPlaneError(exc.message)
+        cause = exc
+    if outcome is not None and outcome.frame.get("status") != "ok":
+        if outcome.frame.get("code") == "provider-result-too-large":
+            failure = ControlPlaneError(
+                "the bounded provider worker returned a result above the transport limit"
+            )
+            cause = RuntimeError("provider result exceeded the transport limit")
+        else:
+            raw_kind = outcome.frame.get("kind")
+            raw_detail = outcome.frame.get("detail")
+            kind = raw_kind if isinstance(raw_kind, str) else ""
+            detail = safe_failure_detail(
+                raw_detail if isinstance(raw_detail, str) else "",
+                (str(root), str(payload.root)),
+            )
+            exception_type = _SAFE_PROVIDER_CAUSE_TYPES.get(kind)
+            if exception_type is None:
+                label = "an unrecognized exception"
+                cause = RuntimeError(_UNKNOWN_PROVIDER_CAUSE)
+            else:
+                label = kind
+                cause = exception_type(detail)
+            coordinate = (
+                f"{invocation.standard_id}@{invocation.version.value}/{invocation.provider_id}"
+            )
+            failure = ControlPlaneError(f"provider failed with {label} ({coordinate})")
+    try:
+        _assert_declared_paths_unchanged(before)
+    except ControlPlaneError as exc:
+        raise exc from (cause or failure)
+    if failure is not None:
+        raise failure from cause
+    assert outcome is not None
+
+    response_effect = outcome.frame.get("effect")
+    if response_effect != provider.effect.value:
+        raise ControlPlaneError("provider worker returned an invalid effect")
+    output = _json_result(outcome.frame.get("output"))
+    _validate_json_schema(prepared.output_schema, cast(JsonValue, output), kind="output")
+    raw_notice = outcome.frame.get("output_notice")
+    if raw_notice is not None and not isinstance(raw_notice, str):
+        raise ControlPlaneError("provider worker returned an invalid output notice")
+    return _typed_result(
+        effective_invocation,
+        provider.effect,
+        output,
+        raw_notice,
     )

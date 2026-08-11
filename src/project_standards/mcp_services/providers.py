@@ -4,15 +4,13 @@ Three frozen operations live here: ``invoke_read_provider`` dispatches exactly
 one declared provider, and ``validate_repo``/``drift_check`` compose it over the
 consumer's *current* exact resolution.
 
-Nothing in this module re-implements provider semantics. Identity qualification,
-payload-resource closure, input/output schema validation, the declared-live-path
-integrity check, and effect-typed result construction all stay inside
-``invoke_provider`` (``control_plane/providers.py:732``), which the worker calls
-through the same ``selected_command``/``invoke_selected_provider`` pair the CLI
-uses. What this module adds is exactly the execution boundary ADR 0025 requires
-and the dispatcher does not have — proven absent by the T4.0 characterization:
+Nothing in this module re-implements provider semantics or process transport.
+Identity qualification, payload-resource closure, input/output validation, the
+declared-live-path integrity check, typed results, and the ADR 0025 execution
+boundary all belong to the control plane. This service retains only MCP request
+qualification, authoritative composite-input selection, and DTO mapping:
 
-* a spawned worker process on the server's own interpreter, so a provider cannot
+* the shared runner spawns one child on the server's own interpreter, so a provider cannot
   block the protocol loop, take the server down with it, or write to the
   descriptor the stdio transport owns;
 * a 30-second per-invocation bound read from ``PROVIDER_TIMEOUT_SECONDS`` at call
@@ -35,15 +33,9 @@ is still just data.
 from __future__ import annotations
 
 import json
-import os
-import selectors
-import signal
-import subprocess
-import sys
-import time
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import IO, Any, cast
+from typing import Any, cast
 
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
@@ -51,6 +43,22 @@ from project_standards.control_plane.distribution import InstalledDistribution, 
 from project_standards.control_plane.executor import reconciliation_fingerprint
 from project_standards.control_plane.locking import ControlPlaneBusyError
 from project_standards.control_plane.planner import ReconciliationPlan, plan_reconciliation
+from project_standards.control_plane.provider_subprocess import (
+    DIAGNOSTIC_LIMIT_CHARS,
+    ProviderSubprocessError,
+    compose_provider_diagnostics,
+    python_worker_argv,
+    python_worker_environment,
+    run_provider_subprocess,
+    safe_failure_detail,
+)
+from project_standards.control_plane.provider_subprocess import (
+    PROVIDER_TIMEOUT_SECONDS as _DEFAULT_PROVIDER_TIMEOUT_SECONDS,
+)
+from project_standards.control_plane.provider_worker import (
+    INPUT_AUTHORITY_FIELD,
+    SEAM_AUTHORITY,
+)
 from project_standards.control_plane.resolution import resolve_packages
 from project_standards.mcp_services.consumer import (
     Finding,
@@ -60,12 +68,6 @@ from project_standards.mcp_services.consumer import (
     stable_json,
 )
 from project_standards.mcp_services.models import ServiceError, ServiceModel
-from project_standards.mcp_services.provider_worker import (
-    INPUT_AUTHORITY_FIELD,
-    RESULT_LIMIT_BYTES,
-    SEAM_AUTHORITY,
-    safe_detail,
-)
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.payload import ProviderDeclaration, ProviderEffect
 
@@ -73,23 +75,7 @@ from project_standards.package_contract.payload import ProviderDeclaration, Prov
 # a module global rather than a default argument on purpose — the execution path
 # reads it at call time, which is what makes the bound injectable and therefore
 # provable in both directions.
-PROVIDER_TIMEOUT_SECONDS: float = 30
-
-# How long a worker gets to honour SIGTERM before SIGKILL. ADR 0025 fixes the
-# sequence, not this interval; it only has to be long enough for a cooperative
-# process to exit and short enough that an uncooperative one is not tolerated.
-TERMINATION_GRACE_SECONDS = 1.0
-
-# Slice length for waits that must also notice the worker leader exiting. One
-# quiet slice after the leader is gone means a still-open pipe belongs to a
-# descendant rather than to the invocation itself.
-_POLL_SECONDS = 0.05
-
-# Per-stream capture cap, then a cap on the composed diagnostic text. Both are
-# applied with an explicit, quantified marker: DR-008 makes diagnostics bounded
-# supplemental text, and ADR 0025 forbids silent truncation.
-STREAM_LIMIT_BYTES = 8_192
-DIAGNOSTIC_LIMIT_CHARS = 16_384
+PROVIDER_TIMEOUT_SECONDS: float = _DEFAULT_PROVIDER_TIMEOUT_SECONDS
 
 # The request is written to the worker's stdin incrementally inside the same
 # deadline-bound loop that drains its output, so it may exceed a pipe buffer
@@ -135,14 +121,6 @@ _TIMEOUT_REMEDIATION = (
 )
 _STATE_REMEDIATION = "repair the reported control-plane input and retry the operation"
 _INPUT_REMEDIATION = "pass typed provider input containing only JSON-safe values with string keys"
-
-# Started with `-c` rather than `-m`: the parent already imports the worker
-# module (for its transport limit), so `-m` would re-execute it as `__main__`
-# and emit a RuntimeWarning onto the very stderr this service captures as
-# diagnostics.
-_WORKER_BOOTSTRAP = (
-    "from project_standards.mcp_services.provider_worker import main; raise SystemExit(main())"
-)
 
 
 class ProviderOperationResult(ServiceModel):
@@ -199,41 +177,6 @@ class _Selection:
     standard_id: str
     version: str
     declaration: ProviderDeclaration
-
-
-@dataclass(slots=True)
-class _Capture:
-    """One bounded worker stream: what was kept and how much was discarded.
-
-    Every stream is drained to EOF even after its limit is reached, because a
-    worker blocked on a full pipe would defeat the very bound this enforces.
-    """
-
-    label: str
-    limit: int
-    kept: bytearray = field(default_factory=bytearray)
-    dropped: int = 0
-
-    def append(self, data: bytes) -> None:
-        room = max(0, self.limit - len(self.kept))
-        if room:
-            self.kept.extend(data[:room])
-        self.dropped += len(data) - min(room, len(data))
-
-    def section(self) -> list[str]:
-        if not self.kept and not self.dropped:
-            return []
-        sections = [f"{self.label}: {self.kept.decode('utf-8', errors='replace')}"]
-        if self.dropped:
-            sections.append(
-                f"[project-standards: {self.dropped} bytes of worker {self.label} omitted "
-                f"after the {self.limit}-byte capture limit]"
-            )
-        return sections
-
-
-class _Timeout(Exception):
-    """Internal signal that the configured bound elapsed."""
 
 
 def _error(
@@ -454,176 +397,6 @@ def _validated_input(provider_input: Any) -> dict[str, Any]:
     return dict(mapping)
 
 
-class _Transport:
-    """One deadline-bound, non-blocking exchange with a worker process.
-
-    Request bytes and all three inbound streams live in a single ``selectors``
-    loop. That is not an optimization: a blocking ``write()`` on stdin can outlast
-    the execution bound whenever a worker fills stderr before reading its request
-    (T4.4 Codex GREEN review, finding 4), and reading the result first deadlocks
-    the moment a provider fills the stdout pipe. Everything is therefore driven by
-    readiness, and every wait is a slice of the remaining deadline.
-    """
-
-    def __init__(self, captures: dict[int, _Capture], stdin: IO[bytes]) -> None:
-        self._captures = captures
-        self._selector = selectors.DefaultSelector()
-        self.open: set[int] = set()
-        for descriptor in captures:
-            os.set_blocking(descriptor, False)
-            self._selector.register(descriptor, selectors.EVENT_READ)
-            self.open.add(descriptor)
-        # The stream object is kept, not just its number: closing the descriptor
-        # is what gives the worker EOF on its request, and it must be closed
-        # through the object subprocess owns so teardown cannot double-close it.
-        self._stdin: IO[bytes] | None = stdin
-        self._stdin_fd = stdin.fileno()
-        os.set_blocking(self._stdin_fd, False)
-        self._selector.register(self._stdin_fd, selectors.EVENT_WRITE)
-        self._pending = b""
-
-    def send(self, request: bytes) -> None:
-        self._pending = request
-
-    def run(
-        self,
-        deadline: float,
-        *,
-        until_closed: int | None = None,
-        leader: subprocess.Popen[bytes] | None = None,
-    ) -> bool:
-        """Pump until the stop condition, returning False when the deadline expires.
-
-        ``leader`` closes the second half of finding 3. A provider-forked
-        descendant inherits every pipe, so the result descriptor can stay open
-        long after the worker leader has written its frame and exited. Waiting on
-        readiness alone would then burn the whole deadline on a process that is
-        no longer producing anything, so whenever a leader is supplied the wait is
-        sliced: once it has exited and one quiet slice passes, the exchange is
-        over and teardown reaps the rest of the group.
-        """
-        while True:
-            if until_closed is not None:
-                if until_closed not in self.open and not self._pending:
-                    return True
-            elif not self.open and self._stdin is None:
-                return True
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                return False
-            window = remaining if leader is None else min(remaining, _POLL_SECONDS)
-            events = self._selector.select(window)
-            if events:
-                for key, mask in events:
-                    descriptor = int(key.fd)
-                    if self._stdin is not None and descriptor == self._stdin_fd:
-                        if mask & selectors.EVENT_WRITE:
-                            self._write()
-                        continue
-                    self._read(descriptor)
-                continue
-            if leader is not None and until_closed is not None and leader.poll() is not None:
-                return True
-            if window >= remaining:
-                return False
-
-    def _write(self) -> None:
-        if self._stdin is None:  # pragma: no cover - unregistered with the descriptor
-            return
-        try:
-            written = os.write(self._stdin_fd, self._pending) if self._pending else 0
-        except BlockingIOError:  # pragma: no cover - selector said writable
-            return
-        except OSError:
-            # The worker is gone; there is nothing left to deliver.
-            written = len(self._pending)
-        self._pending = self._pending[written:]
-        if not self._pending:
-            self._close_stdin()
-
-    def _read(self, descriptor: int) -> None:
-        try:
-            data = os.read(descriptor, 65_536)
-        except BlockingIOError:  # pragma: no cover - selector said readable
-            return
-        except OSError:
-            data = b""
-        if data:
-            self._captures[descriptor].append(data)
-            return
-        self._selector.unregister(descriptor)
-        self.open.discard(descriptor)
-
-    def _close_stdin(self) -> None:
-        """Unregister *and* close: EOF on the request is what unblocks the worker."""
-        stdin = self._stdin
-        if stdin is None:
-            return
-        self._selector.unregister(self._stdin_fd)
-        self._stdin = None
-        if not stdin.closed:
-            stdin.close()
-
-    def close(self) -> None:
-        self._close_stdin()
-        for descriptor in tuple(self.open):
-            self._selector.unregister(descriptor)
-            self.open.discard(descriptor)
-        self._selector.close()
-
-
-def _worker_environment() -> dict[str, str]:
-    """Give the worker the parent's exact import path, per ADR 0025."""
-    environment = dict(os.environ)
-    entries = [entry for entry in sys.path if entry]
-    if entries:
-        environment["PYTHONPATH"] = os.pathsep.join(entries)
-    return environment
-
-
-def _signal_group(process: subprocess.Popen[bytes], signal_number: int) -> None:
-    """Signal the worker's whole process group, never just its leader.
-
-    The worker is started with ``start_new_session=True``, so its pid is its
-    session and group leader. Signalling only the leader lets a provider-created
-    descendant survive holding the inherited pipes open (T4.4 Codex GREEN review,
-    finding 3), so the group is the unit of termination on every path — including
-    after the leader has already exited.
-    """
-    try:
-        os.killpg(process.pid, signal_number)
-    except ProcessLookupError, PermissionError, OSError:
-        return
-
-
-def _teardown(process: subprocess.Popen[bytes], transport: _Transport) -> None:
-    """Release the worker group, draining throughout, on every completion path.
-
-    Draining continues across the SIGTERM grace on purpose: a cooperative handler
-    that writes more than a pipe capacity before exiting would otherwise block on
-    a parent that had stopped reading, and be escalated to SIGKILL for the
-    parent's own inaction (finding 9).
-    """
-    settled = transport.run(time.monotonic() + TERMINATION_GRACE_SECONDS)
-    _signal_group(process, signal.SIGTERM)
-    if not settled or process.poll() is None:
-        transport.run(time.monotonic() + TERMINATION_GRACE_SECONDS)
-    if process.poll() is None or transport.open:
-        _signal_group(process, signal.SIGKILL)
-        transport.run(time.monotonic() + TERMINATION_GRACE_SECONDS)
-    # Reaping happens only after the last killpg: an unreaped pid cannot be
-    # recycled, so the group identifier stayed unambiguous throughout.
-    try:
-        process.wait(timeout=TERMINATION_GRACE_SECONDS)
-    except subprocess.TimeoutExpired:  # pragma: no cover - SIGKILL is not refusable
-        process.kill()
-        process.wait()
-    transport.close()
-    for stream in (process.stdin, process.stdout, process.stderr):
-        if stream is not None and not stream.closed:
-            stream.close()
-
-
 def _frame_error(reason: str, selection: _Selection) -> ServiceError:
     return _error(
         "provider-frame-invalid",
@@ -634,8 +407,8 @@ def _frame_error(reason: str, selection: _Selection) -> ServiceError:
     )
 
 
-def _validated_frame(raw: bytes, selection: _Selection) -> dict[str, Any]:
-    """Validate one inbound IPC frame strictly before any of it is believed.
+def _validated_frame(frame: dict[str, Any], selection: _Selection) -> dict[str, Any]:
+    """Validate the provider-specific fields after generic frame validation.
 
     The process that executes provider bytes also owns the response descriptor,
     so a payload that violates its declaration can write whatever it likes here.
@@ -644,18 +417,7 @@ def _validated_frame(raw: bytes, selection: _Selection) -> dict[str, Any]:
     (plan:339) — it is that the parent believes nothing it has not checked
     (T4.4 Codex GREEN review, finding 2, disposition ACCEPT-BOUNDED).
     """
-    if len(raw) > RESULT_LIMIT_BYTES:
-        raise _frame_error("a result above the transport limit", selection)
-    try:
-        decoded: object = json.loads(raw)
-    except ValueError as exc:
-        raise _frame_error("no readable result", selection) from exc
-    if not isinstance(decoded, dict):
-        raise _frame_error("a result that is not a JSON object", selection)
-    frame = cast("dict[str, Any]", decoded)
     status = frame.get("status")
-    if status not in {"ok", "error"}:
-        raise _frame_error("a result with no recognized status", selection)
     if status == "error":
         return frame
     if not isinstance(frame.get("effect"), str):
@@ -687,126 +449,6 @@ def _validated_raw_finding(item: dict[str, Any], selection: _Selection) -> None:
     for name in _TEXT_FINDING_FIELDS:
         if not isinstance(item.get(name), str):
             raise _frame_error(f"a finding with a malformed {name}", selection)
-
-
-def _run_worker(
-    request: bytes, timeout: float, selection: _Selection
-) -> tuple[dict[str, Any], _Capture, _Capture]:
-    """Spawn one bounded worker group and return its validated response.
-
-    Every exit path — success, timeout, kill, crash, and parent-side cancellation
-    — runs the same teardown, so no pipe, descriptor, or process in the worker's
-    group survives this function (ADR 0025 confirmation clause).
-    """
-    stdout = _Capture("stdout", STREAM_LIMIT_BYTES)
-    stderr = _Capture("stderr", STREAM_LIMIT_BYTES)
-    # One byte of headroom so an oversized response is detected rather than
-    # silently trimmed into something that still parses.
-    result = _Capture("result", RESULT_LIMIT_BYTES + 1)
-    result_read, result_write = os.pipe()
-    process: subprocess.Popen[bytes] | None = None
-    transport: _Transport | None = None
-    try:
-        try:
-            process = subprocess.Popen(
-                [sys.executable, "-c", _WORKER_BOOTSTRAP, str(result_write)],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                pass_fds=(result_write,),
-                close_fds=True,
-                start_new_session=True,
-                env=_worker_environment(),
-            )
-        except OSError as exc:
-            raise _error(
-                "provider-worker-unavailable",
-                "the bounded provider worker could not be started",
-                "verify the installed distribution and retry",
-                standard_id=selection.standard_id,
-                version=selection.version,
-            ) from exc
-        finally:
-            os.close(result_write)
-            result_write = -1
-
-        assert process.stdin is not None
-        assert process.stdout is not None
-        assert process.stderr is not None
-        deadline = time.monotonic() + timeout
-        transport = _Transport(
-            {
-                result_read: result,
-                process.stdout.fileno(): stdout,
-                process.stderr.fileno(): stderr,
-            },
-            process.stdin,
-        )
-        transport.send(request)
-        try:
-            if not transport.run(deadline, until_closed=result_read, leader=process):
-                raise _Timeout
-        except _Timeout as exc:
-            raise _error(
-                "provider-timeout",
-                f"the provider did not finish within the {timeout}-second execution bound "
-                "and its worker group was terminated",
-                _TIMEOUT_REMEDIATION,
-                standard_id=selection.standard_id,
-                version=selection.version,
-            ) from exc
-        except OSError as exc:
-            raise _error(
-                "provider-worker-failed",
-                "the bounded provider worker ended before returning a result",
-                _TIMEOUT_REMEDIATION,
-                standard_id=selection.standard_id,
-                version=selection.version,
-            ) from exc
-        except (KeyboardInterrupt, SystemExit) as exc:
-            # Parent-side cancellation: a Ctrl-C, an interval timer, or a
-            # shutdown signal delivered while the synchronous wait was in
-            # progress. The plan requires the same cleanup as a timeout, reported
-            # as a structured failure rather than a half-torn-down process. Only
-            # these two carriers are converted — an ordinary exception here is a
-            # defect in this module and must stay loud.
-            raise _error(
-                "provider-cancelled",
-                "the provider invocation was cancelled and its worker group was terminated",
-                _TIMEOUT_REMEDIATION,
-                standard_id=selection.standard_id,
-                version=selection.version,
-            ) from exc
-        return _validated_frame(bytes(result.kept), selection), stdout, stderr
-    finally:
-        if result_write != -1:  # pragma: no cover - only when Popen never ran
-            os.close(result_write)
-        if process is not None and transport is not None:
-            _teardown(process, transport)
-        elif process is not None:  # pragma: no cover - transport construction failed
-            _signal_group(process, signal.SIGKILL)
-            process.wait()
-        os.close(result_read)
-
-
-def _compose_diagnostics(notice: str | None, stdout: _Capture, stderr: _Capture) -> str:
-    """Bound the worker's captured output, marking every omission explicitly."""
-    sections: list[str] = []
-    if notice:
-        # The authoritative dispatcher destroys provider text and publishes only
-        # this notice; dropping it would be a silent loss of the one fact it kept.
-        sections.append(notice)
-    sections.extend(stdout.section())
-    sections.extend(stderr.section())
-    composed = "\n".join(sections)
-    if len(composed) > DIAGNOSTIC_LIMIT_CHARS:
-        omitted = len(composed) - DIAGNOSTIC_LIMIT_CHARS
-        composed = (
-            composed[:DIAGNOSTIC_LIMIT_CHARS]
-            + f"\n[project-standards: {omitted} further diagnostic characters omitted "
-            f"after the {DIAGNOSTIC_LIMIT_CHARS}-character limit]"
-        )
-    return composed
 
 
 _CONTROL_FINDING_FIELDS = tuple(item.name for item in fields(ControlFinding))
@@ -893,7 +535,22 @@ def _dispatch(
     )
     # Read the bound at call time: this is the injection seam the ADR-approved
     # value is proven against in both directions.
-    response, stdout, stderr = _run_worker(request, float(PROVIDER_TIMEOUT_SECONDS), selection)
+    try:
+        outcome = run_provider_subprocess(
+            python_worker_argv(),
+            request,
+            timeout=float(PROVIDER_TIMEOUT_SECONDS),
+            environment=python_worker_environment(),
+        )
+    except ProviderSubprocessError as exc:
+        raise _error(
+            exc.code,
+            exc.message,
+            exc.remediation,
+            standard_id=selection.standard_id,
+            version=selection.version,
+        ) from exc
+    response = _validated_frame(cast("dict[str, Any]", outcome.frame), selection)
     if response.get("status") != "ok":
         code = response.get("code")
         detail = response.get("detail")
@@ -902,7 +559,7 @@ def _dispatch(
             # Re-filtered here, not merely trusted: the worker already redacts its
             # own failure text, but a frame written by provider bytes has not been
             # through that filter (finding 2).
-            safe_detail(
+            safe_failure_detail(
                 str(detail) if isinstance(detail, str) else "the provider invocation failed",
                 (str(root), str(distribution.package_root)),
             ),
@@ -920,7 +577,11 @@ def _dispatch(
         effect=selection.declaration.effect.value,
         status=_STATUS_COMPLETED,
         findings=tuple(_finding(item, root, selection) for item in raw_findings),
-        diagnostics=_compose_diagnostics(response.get("output_notice"), stdout, stderr),
+        diagnostics=compose_provider_diagnostics(
+            cast(str | None, response.get("output_notice")),
+            outcome.stdout,
+            outcome.stderr,
+        ),
         output=stable_json(response.get("output")),
     )
 

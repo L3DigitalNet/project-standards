@@ -9,18 +9,12 @@ result fields preserved).
 Two authorities constrain every expectation here and neither may be re-derived
 by the service under test:
 
-*The dispatcher* — ``invoke_provider``
-(``src/project_standards/control_plane/providers.py:732``) — owns provider
-semantics. ``T4.0`` pinned what it does and does not do: it compiles and executes
-provider bytes in the calling process with no timeout, no cancellation, no
-process boundary, and Python-level-only output capture, and it *discards* the
-captured text, keeping only a one-line ``output_notice``. Everything ADR 0025
-adds — the worker process, the 30-second bound, SIGTERM-then-SIGKILL with
-reaping, bounded JSON IPC with explicit truncation markers, and
-file-descriptor-level stream capture — is therefore new T4 surface, while
-identity qualification, resource closure, input/output schema validation, and
-effect-typed result construction stay with the dispatcher. Parity is asserted
-against it directly.
+*The dispatcher* — ``invoke_provider`` — owns provider semantics and delegates
+execution to the control-plane runner shared by direct and MCP calls. Identity
+qualification, resource closure, input/output schema validation, effect-typed
+result construction, the 30-second bound, group teardown, bounded JSON IPC, and
+file-descriptor-level capture are therefore one control-plane contract. Parity
+is asserted against that dispatcher directly.
 
 *The control plane* — ``build_planner_request``/``plan_reconciliation`` for the
 reconciliation identity, and ``selected_command``/``invoke_selected_provider``
@@ -64,6 +58,7 @@ from typing import Any
 
 import pytest
 
+from project_standards.control_plane import provider_subprocess
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.command_resolution import (
     SelectedCommandPackage,
@@ -138,7 +133,7 @@ HAZARD_SLEEP_SECONDS = 300
 
 # Why no bound in this suite is a fixed number (issue #147).
 #
-# ``_run_worker`` starts its deadline when ``Popen`` returns, not when the
+# The shared runner starts its deadline when ``Popen`` returns, not when the
 # provider's first statement runs, so every injected bound has to outlast a cold
 # interpreter that imports the whole installed distribution before the payload is
 # even loaded. That start-up costs a few tenths of a second on an idle machine
@@ -2352,7 +2347,11 @@ def test_execution_bound_is_not_extended_after_the_streams_close(
 
     bound = 1.0
     monkeypatch.setattr(providers, "PROVIDER_TIMEOUT_SECONDS", bound)
-    grace = require_attribute(providers, "TERMINATION_GRACE_SECONDS", "T4 module constant")
+    grace = require_attribute(
+        provider_subprocess,
+        "TERMINATION_GRACE_SECONDS",
+        "shared provider-runner constant",
+    )
     started = time.monotonic()
     with pytest.raises(services.ServiceError) as raised:
         call("medium-alpha")
@@ -2805,7 +2804,7 @@ def test_every_shipping_catalog_provider_is_seam_served() -> None:
     planning — so serving it here would create the CLI/service divergence this
     node exists to prevent rather than close a defect.
     """
-    worker = require_service_module("provider_worker")
+    worker = importlib.import_module("project_standards.control_plane.provider_worker")
     seam_input = require_attribute(
         worker,
         "authoritative_provider_input",

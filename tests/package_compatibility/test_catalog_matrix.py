@@ -4,7 +4,7 @@ import shutil
 import subprocess
 from itertools import combinations
 from pathlib import Path
-from typing import NoReturn, cast
+from typing import Any, cast
 
 import pytest
 
@@ -17,6 +17,7 @@ from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.migration import plan_legacy_migration
 from project_standards.control_plane.planner import plan_reconciliation
+from project_standards.control_plane.provider_subprocess import python_worker_argv
 from project_standards.package_contract.catalog import (
     CatalogRole,
     load_catalog_source,
@@ -91,14 +92,19 @@ _CORRECTION_TRANSITIONS = tuple(
 )
 
 
-def _deny_child_process(*_args: object, **_kwargs: object) -> NoReturn:
-    pytest.fail("package compatibility provider attempted a child process")
-
-
 @pytest.fixture(autouse=True)
 def deny_provider_child_processes(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fail correctness rows if packaged provider code tries to spawn a child."""
-    monkeypatch.setattr(subprocess, "Popen", _deny_child_process)
+    """Permit only the one control-plane worker required by direct dispatch."""
+    real_popen = subprocess.Popen
+
+    def guarded_popen(args: Any, *pargs: Any, **kwargs: Any) -> subprocess.Popen[bytes]:
+        command = list(cast("list[object] | tuple[object, ...]", args))
+        expected = list(python_worker_argv())
+        if command[:-1] != expected or not isinstance(command[-1], str):
+            pytest.fail("package compatibility provider attempted an undeclared child process")
+        return cast("subprocess.Popen[bytes]", real_popen(args, *pargs, **kwargs))
+
+    monkeypatch.setattr(subprocess, "Popen", guarded_popen)
 
 
 def _assert_distribution_parity(source: LifecycleResult, wheel: LifecycleResult) -> None:

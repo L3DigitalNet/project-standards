@@ -1,55 +1,37 @@
-"""The bounded child process that actually executes provider code (T4, ADR 0025).
+"""Execute trusted Python provider bytes inside the shared bounded child.
 
-The authoritative dispatcher ``invoke_provider``
-(``control_plane/providers.py:732``) compiles and runs provider bytes *in the
-calling process*, with no timeout, no cancellation point, no fault isolation, and
-output capture that only rebinds ``sys.stdout``/``sys.stderr``. Underneath a
-protocol server that is unacceptable, so ADR 0025 moves the call here: a spawned
-process on the server's own interpreter and virtual environment, whose real file
-descriptors the parent owns and can terminate.
-
-This module deliberately adds *no* provider semantics. It re-derives the
-authoritative selection for the requested root — ``selected_command`` for the
-payload and effective config, ``invoke_selected_provider`` for the call — so the
-result is the same object the CLI would have produced, then projects it to JSON.
-Every qualification the parent already performed is performed again here, because
-the worker must be correct on its own inputs rather than trusting a caller.
-
-Three transport rules shape the code below.
-
-*The result never travels on ``stdout``.* The parent captures ``stdout`` and
-``stderr`` as diagnostics, so both are assumed to be contaminated by provider
-output; the response goes out on a third inherited descriptor passed as
-``argv[1]``.
-
-*Nothing unbounded crosses the boundary.* An oversized response is replaced here
-by a bounded structured failure rather than being streamed to a parent that would
-have to buffer it.
-
-*No exception text is republished unfiltered.* A package-contract failure or a
-provider traceback can name absolute installed paths, so ``safe_detail`` drops
-any text carrying a known root or an absolute-looking path.
+Direct control-plane calls send an immutable payload description, while MCP
+calls send an installed-distribution selection directive so large authoritative
+inputs can still be built on this side of the bounded request pipe. Both modes
+end at the same in-child provider implementation and write their only result to
+the inherited descriptor; stdout and stderr remain untrusted diagnostics.
 """
 
 from __future__ import annotations
 
+import base64
+import binascii
+import io
 import json
 import os
-import re
 import sys
-from dataclasses import asdict
+from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import asdict, replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, cast
+
+from project_standards.control_plane.provider_subprocess import (
+    RESULT_LIMIT_BYTES,
+    safe_failure_detail,
+)
+
+type JsonValue = None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]
+type JsonObject = dict[str, JsonValue]
 
 if TYPE_CHECKING:  # pragma: no cover - annotations only; see the import note below
     from project_standards.control_plane.command_resolution import SelectedCommandPackage
     from project_standards.package_contract.payload import ProviderOperation
-
-# Responses above this many bytes are refused rather than transported. The
-# parent applies the same limit when reading, so neither side can be made to
-# buffer an unbounded provider result (ADR 0025: "bounded JSON with an explicit
-# size cap").
-RESULT_LIMIT_BYTES = 262_144
 
 # The request field that names who builds the provider's typed input. Absent or
 # `caller` keeps the T4 contract exactly: `invoke_read_provider` passes the
@@ -59,18 +41,6 @@ RESULT_LIMIT_BYTES = 262_144
 # pipe rather than in the parent.
 INPUT_AUTHORITY_FIELD = "input_authority"
 SEAM_AUTHORITY = "seam"
-
-_ABSOLUTE_PATH_PATTERN = re.compile(r"(?:^|[\s'\"(])/[\w.\-/]{4,}")
-_REDACTED_DETAIL = "the failure detail was withheld because it named a filesystem path"
-
-
-def safe_detail(text: str, secrets: tuple[str, ...]) -> str:
-    """Return exception text only when it names no root and no absolute path."""
-    if any(secret and secret in text for secret in secrets):
-        return _REDACTED_DETAIL
-    if _ABSOLUTE_PATH_PATTERN.search(text):
-        return _REDACTED_DETAIL
-    return text
 
 
 def _jsonable(value: object) -> Any:
@@ -141,10 +111,10 @@ def authoritative_provider_input(
     # had room for it.
     from project_standards.control_plane.cli import build_planner_request
     from project_standards.control_plane.planner import plan_reconciliation
+    from project_standards.control_plane.providers import invoke_provider_in_child
 
-    plan = plan_reconciliation(
-        build_planner_request(selected.repo, selected.distribution, frozenset())
-    )
+    request = build_planner_request(selected.repo, selected.distribution, frozenset())
+    plan = plan_reconciliation(replace(request, provider_runner=invoke_provider_in_child))
     try:
         return dict(
             provider_dispatch_input(
@@ -160,18 +130,120 @@ def authoritative_provider_input(
         return None
 
 
+class _OutputSink(io.TextIOBase):
+    """Discard Python-level output while retaining only whether it was used."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.used = False
+
+    def write(self, value: str) -> int:
+        self.used = self.used or bool(value)
+        return len(value)
+
+
+def _deep_freeze(value: JsonValue) -> object:
+    if isinstance(value, dict):
+        return MappingProxyType({key: _deep_freeze(child) for key, child in value.items()})
+    if isinstance(value, list):
+        return tuple(_deep_freeze(child) for child in value)
+    return value
+
+
+def _capsule_bytes(value: object, *, field: str) -> bytes:
+    if not isinstance(value, str):
+        raise ValueError(f"provider capsule has a malformed {field}")
+    try:
+        return base64.b64decode(value, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise ValueError(f"provider capsule has a malformed {field}") from exc
+
+
+def _run_python_capsule(request: dict[str, Any]) -> dict[str, Any]:
+    """Execute one parent-qualified Python capsule without payload rediscovery."""
+    raw_capsule = request.get("capsule")
+    if not isinstance(raw_capsule, dict):
+        raise ValueError("provider capsule is missing")
+    capsule = cast(dict[str, object], raw_capsule)
+    metadata_fields = (
+        "standard_id",
+        "version",
+        "provider_id",
+        "operation",
+        "effect",
+        "symbol",
+        "source_path",
+    )
+    if any(not isinstance(capsule.get(field), str) for field in metadata_fields):
+        raise ValueError("provider capsule has malformed declaration metadata")
+    raw_input = capsule.get("input")
+    if not isinstance(raw_input, dict):
+        raise ValueError("provider capsule input is not a JSON object")
+    raw_resources = capsule.get("resources")
+    if not isinstance(raw_resources, dict):
+        raise ValueError("provider capsule resources are not a JSON object")
+    resource_values = cast(dict[object, object], raw_resources)
+    if any(not isinstance(resource_id, str) for resource_id in resource_values):
+        raise ValueError("provider capsule has a malformed resource id")
+    resources = {
+        cast(str, resource_id): _capsule_bytes(content, field="resource")
+        for resource_id, content in resource_values.items()
+    }
+    code = _capsule_bytes(capsule.get("code_base64"), field="provider code")
+    provider_input = _deep_freeze(cast(JsonObject, raw_input))
+    frozen_resources = MappingProxyType(resources)
+    stdout = _OutputSink()
+    stderr = _OutputSink()
+    result: object | None = None
+    failure: BaseException | None = None
+    try:
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            compiled = compile(code, cast(str, capsule["source_path"]), "exec")
+            namespace: dict[str, object] = {
+                "__file__": cast(str, capsule["source_path"]),
+                "__name__": "__project_standards_provider__",
+            }
+            exec(compiled, namespace)
+            callable_provider = namespace.get(cast(str, capsule["symbol"]))
+            if not callable(callable_provider):
+                raise TypeError("entrypoint symbol is not callable")
+            result = callable_provider(provider_input, frozen_resources)
+    except BaseException as exc:
+        failure = exc
+    if failure is not None:
+        raise failure
+    try:
+        output = cast(object, json.loads(json.dumps(result, ensure_ascii=False, allow_nan=False)))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("provider returned a non-JSON result") from exc
+    if not isinstance(output, dict):
+        raise ValueError("provider result must be a JSON object")
+    streams = [name for name, sink in (("stdout", stdout), ("stderr", stderr)) if sink.used]
+    return {
+        "status": "ok",
+        "effect": cast(str, capsule["effect"]),
+        "output": cast(JsonObject, output),
+        "output_notice": f"provider output suppressed ({', '.join(streams)})" if streams else None,
+        "findings": [],
+    }
+
+
 def run_request(request: dict[str, Any]) -> dict[str, Any]:
     """Execute one provider invocation and return its JSON-safe response.
 
     Imports are function-local so a parent that spawns this module pays for the
     control-plane import graph only inside the child.
     """
-    from project_standards.control_plane.command_resolution import (
-        invoke_selected_provider,
-        selected_command,
-    )
+    if request.get("dispatch_mode") == "direct":
+        return _run_python_capsule(request)
+
+    from project_standards.control_plane.command_resolution import selected_command
     from project_standards.control_plane.distribution import InstalledDistribution
     from project_standards.control_plane.locking import LockMode
+    from project_standards.control_plane.providers import (
+        ProviderInvocation,
+        invoke_provider_in_child,
+    )
     from project_standards.package_contract.payload import ProviderOperation
 
     distribution = InstalledDistribution(
@@ -205,7 +277,25 @@ def run_request(request: dict[str, Any]) -> dict[str, Any]:
             built = authoritative_provider_input(selected, operation, provider_id=provider_id)
             if built is not None:
                 snapshots = built
-        result = invoke_selected_provider(selected, operation, snapshots, provider_id=provider_id)
+        providers = [
+            item
+            for item in selected.payload.manifest.providers
+            if item.operation is operation and item.id == provider_id
+        ]
+        if len(providers) != 1:
+            raise ValueError("selected package must declare exactly one requested provider")
+        result = invoke_provider_in_child(
+            ProviderInvocation(
+                repo=selected.repo,
+                payload=selected.payload,
+                standard_id=selected.payload.manifest.payload.standard,
+                version=selected.resolved,
+                provider_id=provider_id,
+                operation=operation,
+                effective_config=selected.effective_config,
+                snapshots=cast(JsonObject, snapshots),
+            )
+        )
 
     return {
         "status": "ok",
@@ -223,15 +313,19 @@ def main(argv: list[str] | None = None) -> int:
     raw = sys.stdin.buffer.read()
     secrets: tuple[str, ...] = ()
     try:
-        request: dict[str, Any] = json.loads(raw)
-        secrets = (str(request.get("repo_root", "")), str(request.get("package_root", "")))
+        request = cast(dict[str, Any], json.loads(raw))
+        secrets = (
+            str(request.get("repo_root", "")),
+            str(request.get("package_root", "")),
+            str(request.get("payload_root", "")),
+        )
         response = run_request(request)
     except BaseException as exc:
         response = {
             "status": "error",
             "code": "provider-invocation-failed",
             "kind": type(exc).__name__,
-            "detail": safe_detail(str(exc), secrets),
+            "detail": safe_failure_detail(str(exc), secrets),
         }
 
     payload = json.dumps(response, ensure_ascii=False, allow_nan=False).encode("utf-8")
