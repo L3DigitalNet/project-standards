@@ -3,9 +3,9 @@ plan_format: 3
 title: 'v5.19 ADR Corpus Corrections Implementation Plan'
 slug: 'v519-adr-corpus-corrections'
 status: active
-revision: 2
-revises_revision: 1
-revision_reason: 'clarify operational path oracle and bridge-required plan metadata exception'
+revision: 3
+revises_revision: 2
+revision_reason: 'keep former ADR paths only in bridge-required plan identity metadata'
 pause_reason: ''
 source: 'issues L3DigitalNet/project-standards#161, #160, #159, and #162; owner decisions recorded 2026-08-10'
 spec_ref: ''
@@ -66,8 +66,8 @@ Conflict precedence: the explicit request fixes the sequence and preservation bo
 - Apply the repository-local evidence-versus-current-authority convention to every ADR whose status is active after the release-wide corpus freeze.
 - Begin T4 only after the release coordinator freezes the complete v5.19 ADR-writing set, confirms the integrated #157 ADR 0028 amendment and #142 control-plane ADR checkpoints, records that #167/#169 contribute no ADR, and includes every other owner-approved v5.19 ADR creation or amendment in the active-ADR census.
 - Atomically rename the two consumer-owned ADR files and every operational or reader-facing tracked inbound path reference:
-  - `docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md` → `docs/adr/adr-0025-mcp-service-and-sdk-boundary.md`
-  - `docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md` → `docs/adr/adr-0026-mcp-local-read-only-transport.md`
+  - ADR 0025's former filename with the `project-standards` segment → `docs/adr/adr-0025-mcp-service-and-sdk-boundary.md`
+  - ADR 0026's former filename with the `project-standards` segment → `docs/adr/adr-0026-mcp-local-read-only-transport.md`
 - Produce four serial, reviewable documentation checkpoints, each starting and ending green.
 
 ### 3.2 Out of Scope and Deferred
