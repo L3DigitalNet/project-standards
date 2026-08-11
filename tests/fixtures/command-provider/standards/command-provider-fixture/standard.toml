@@ -1,0 +1,12 @@
+schema_version = "2.0"
+
+[standard]
+id = "command-provider-fixture"
+name = "Command Provider Fixture"
+summary = "Synthetic test-only command-provider ABI fixture."
+status = "active"
+
+[[versions]]
+version = "1.0"
+payload = "versions/1.0/payload.toml"
+digest = "sha256:66720e040b0c6eb6be3cf7397ee94955a996e8e9e28a17c81ebebd9c92df7986"

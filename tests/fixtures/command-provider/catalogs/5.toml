@@ -1,0 +1,8 @@
+schema_version = "1.0"
+catalog_major = 5
+
+[[packages]]
+id = "command-provider-fixture"
+version = "1.0"
+digest = "sha256:66720e040b0c6eb6be3cf7397ee94955a996e8e9e28a17c81ebebd9c92df7986"
+role = "default"

@@ -1,0 +1,62 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$defs": {
+		"finding": {
+			"additionalProperties": false,
+			"properties": {
+				"code": { "type": "string" },
+				"hint": { "type": "string" },
+				"identity": { "type": "string" },
+				"message": { "type": "string" },
+				"path": { "type": "string" },
+				"severity": { "enum": ["error", "warning"] }
+			},
+			"required": ["code", "severity", "path", "identity", "message", "hint"],
+			"type": "object"
+		},
+		"observed": {
+			"additionalProperties": false,
+			"properties": {
+				"environment": { "items": { "type": "string" }, "type": "array" },
+				"operation": { "type": "string" },
+				"resource_base64": { "type": "string" },
+				"resource_digest": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+				"schema_version": { "const": "1.0" },
+				"snapshots": { "type": "object" },
+				"standard_id": { "const": "command-provider-fixture" },
+				"version": { "const": "1.0" }
+			},
+			"required": [
+				"schema_version",
+				"standard_id",
+				"version",
+				"operation",
+				"resource_base64",
+				"resource_digest",
+				"snapshots",
+				"environment"
+			],
+			"type": "object"
+		}
+	},
+	"oneOf": [
+		{
+			"additionalProperties": false,
+			"properties": {
+				"content": { "type": "string" },
+				"observed": { "$ref": "#/$defs/observed" }
+			},
+			"required": ["content", "observed"],
+			"type": "object"
+		},
+		{
+			"additionalProperties": false,
+			"properties": {
+				"findings": { "items": { "$ref": "#/$defs/finding" }, "type": "array" },
+				"observed": { "$ref": "#/$defs/observed" }
+			},
+			"required": ["findings", "observed"],
+			"type": "object"
+		}
+	]
+}

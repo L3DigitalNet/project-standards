@@ -1,0 +1,129 @@
+schema_version = "1.0"
+
+[payload]
+standard = "command-provider-fixture"
+version = "1.0"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["command-provider-fixture.render", "command-provider-fixture.validate"]
+consumes_platform = ["project-standards.reconcile"]
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:fbcea21957e4b360b837307758c32436b4a6da4b10aa74631685121c215116a3"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:511a569b08cd5d741f41005a327847748d283531a8279da8d446318587db35e6"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:abd68a8454d3306506a85f5883132b58fb067291644d2fceb53085ba53263007"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:73bf179180c21b1c38fab5459397ba85fcf02f1ee319a9d25d6ca7a64151e5fd"
+
+[[resources]]
+id = "provider-binary"
+role = "provider"
+path = "bin/command-provider-fixture"
+media_type = "application/octet-stream"
+digest = "sha256:83292a67bab10fb619d5d3be17210b8e056734efb15140562ee5b8741b63496a"
+
+[[resources]]
+id = "provider-input"
+role = "provider-input-schema"
+path = "provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:32101e22b45b099b690e77cc2f105b86819cb4ad2e5489f9ba605e02cc459502"
+
+[[resources]]
+id = "provider-output"
+role = "provider-output-schema"
+path = "provider-output.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:c101dac61b92ed0c55f443cbd6233247265631912f0ba1284b1f8591f0b97354"
+
+[[resources]]
+id = "fixture-data"
+role = "provider-resource"
+path = "fixture-data.txt"
+media_type = "text/plain"
+digest = "sha256:3114a3a9a0fe7bff7457f55f86a486394591dc687514e877e72da5eaa2ebe27d"
+
+[[contributions]]
+id = "render-fixture"
+target = ".standards/command-provider-fixture.txt"
+adapter = "whole-file"
+scope = "$file"
+policy = "managed"
+provider = "render-fixture"
+
+[[providers]]
+id = "render-fixture"
+operation = "render"
+kind = "command"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-binary"
+input_schema = "provider-input"
+output_schema = "provider-output"
+resources = ["fixture-data"]
+platforms = ["linux/amd64"]
+mode = "0755"
+
+[[providers]]
+id = "validate-fixture"
+operation = "validate"
+kind = "command"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-binary"
+input_schema = "provider-input"
+output_schema = "provider-output"
+resources = ["fixture-data"]
+platforms = ["linux/amd64"]
+mode = "0755"
+
+[[providers]]
+id = "verify-fixture"
+operation = "verify"
+kind = "command"
+phase = "verify"
+effect = "findings"
+entrypoint = "payload:provider-binary"
+input_schema = "provider-input"
+output_schema = "provider-output"
+resources = ["fixture-data"]
+platforms = ["linux/amd64"]
+mode = "0755"
+
+[[providers]]
+id = "drift-check-fixture"
+operation = "drift-check"
+kind = "command"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-binary"
+input_schema = "provider-input"
+output_schema = "provider-output"
+resources = ["fixture-data"]
+platforms = ["linux/amd64"]
+mode = "0755"

@@ -90,6 +90,14 @@ from project_standards.package_contract.payload import (
     ProviderOperation,
 )
 from project_standards.package_contract.projection import sync_payload_projection
+from tests.control_plane.test_command_provider_end_to_end import (
+    COMMAND_FIXTURE_RESOURCE,
+    COMMAND_FIXTURE_STANDARD,
+    COMMAND_FIXTURE_VERSION,
+    command_provider_distribution,
+    initialize_command_provider_repo,
+    reconcile_command_provider_repo,
+)
 from tests.control_plane.test_command_providers import command_payload
 from tests.mcp_services.helpers import FULL_FIXTURE, import_mcp_services
 from tests.mcp_services.test_consumer import TOOL_RELEASE, dumped, field_names, model_config_of
@@ -1613,6 +1621,88 @@ def test_python_provider_stays_on_existing_mcp_worker_path(
     assert len(requests) == 1
     assert requests[0]["provider_input"] == {"caller": "input"}
     assert result.status == "completed"
+
+
+def test_go_command_fixture_runs_real_mcp_routes_with_one_child_per_invocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    services = import_mcp_services()
+    distribution = command_provider_distribution(tmp_path)
+    repo = initialize_command_provider_repo(tmp_path, distribution)
+    reconcile_command_provider_repo(repo, distribution)
+    facade = build_facade(services, distribution)
+    real_popen = provider_subprocess.subprocess.Popen
+    spawned: list[tuple[object, ...]] = []
+
+    def counted_popen(*args: Any, **kwargs: Any) -> Any:
+        spawned.append(args)
+        return real_popen(*args, **kwargs)
+
+    monkeypatch.setattr(provider_subprocess.subprocess, "Popen", counted_popen)
+
+    expected_resource = base64.b64encode(COMMAND_FIXTURE_RESOURCE).decode("ascii")
+    rendered_content = b"command-provider-fixture|render|" + COMMAND_FIXTURE_RESOURCE
+    rendered_digest = f"sha256:{hashlib.sha256(rendered_content).hexdigest()}"
+    rendered_target = ".standards/command-provider-fixture.txt"
+
+    direct = require_operation(facade, "invoke_read_provider")(
+        repo,
+        standard_id=COMMAND_FIXTURE_STANDARD,
+        version=COMMAND_FIXTURE_VERSION,
+        provider_id="validate-fixture",
+        operation="validate",
+        provider_input={"mcp": {"nested": ["unchanged"]}},
+    )
+    assert len(spawned) == 1
+    direct_output = dumped(direct)["output"]
+    assert direct_output["observed"]["snapshots"] == {"mcp": {"nested": ["unchanged"]}}
+    assert direct_output["observed"]["resource_base64"] == expected_resource
+    assert direct_output["observed"]["environment"] == []
+
+    before_validate = len(spawned)
+    validation = require_operation(facade, "validate_repo")(repo)
+    validation_results = {item.provider_id: dumped(item) for item in validation.results}
+    assert set(validation_results) == {
+        "validate-fixture",
+        "verify-fixture",
+    }
+    assert {item["status"] for item in validation_results.values()} == {"completed"}
+    validate_observed = validation_results["validate-fixture"]["output"]["observed"]
+    assert validate_observed["operation"] == "validate"
+    assert validate_observed["resource_base64"] == expected_resource
+    assert validate_observed["environment"] == []
+    verify_observed = validation_results["verify-fixture"]["output"]["observed"]
+    assert verify_observed["operation"] == "verify"
+    assert verify_observed["resource_base64"] == expected_resource
+    assert verify_observed["environment"] == []
+    assert verify_observed["snapshots"][rendered_target] == {
+        "content_base64": base64.b64encode(rendered_content).decode("ascii"),
+        "content_digest": rendered_digest,
+        "kind": "regular",
+        "mode": "0644",
+    }
+    # Verify input is plan-bound: render-fixture runs as its own command child
+    # before verify-fixture, so provider invocations exceed reported results by one.
+    assert len(spawned) - before_validate == len(validation.results) + 1
+
+    before_drift = len(spawned)
+    drift = require_operation(facade, "drift_check")(repo)
+    drift_result = dumped(drift.results[0])
+    assert drift_result["provider_id"] == "drift-check-fixture"
+    assert drift_result["status"] == "completed"
+    drift_observed = drift_result["output"]["observed"]
+    assert drift_observed["operation"] == "drift-check"
+    assert drift_observed["resource_base64"] == expected_resource
+    assert drift_observed["environment"] == []
+    assert [
+        (action["kind"], action["target"], action["after_digest"])
+        for action in dumped(drift)["actions"]
+    ] == [("no-op", rendered_target, rendered_digest)]
+    # Drift publishes the plan and target provider separately: render-fixture
+    # runs while planning, but only drift-check-fixture appears in the results.
+    assert len(spawned) - before_drift == len(drift.results) + 1
+    assert_no_unreaped_children()
 
 
 def test_validate_repo_selects_applicable_exact_providers(tmp_path: Path) -> None:

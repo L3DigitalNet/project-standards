@@ -52,9 +52,11 @@ go-mod-check:
 go-binary:
 	scripts/build-gh-workflow.sh
 	scripts/build-agent-handoff-session-start.sh
+	scripts/build-command-provider-fixture.sh
 
 go-verify-binary:
 	scripts/build-gh-workflow.sh --verify
 	scripts/build-agent-handoff-session-start.sh --verify
+	scripts/build-command-provider-fixture.sh --verify
 
 go-check: go-format-check go-mod-check go-vet go-lint go-test go-build go-audit go-verify-binary

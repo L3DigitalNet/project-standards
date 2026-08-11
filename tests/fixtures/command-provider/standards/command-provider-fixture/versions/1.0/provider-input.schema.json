@@ -1,0 +1,30 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"additionalProperties": false,
+	"properties": {
+		"config": { "type": "object" },
+		"operation": { "enum": ["render", "validate", "verify", "drift-check"] },
+		"resources": {
+			"additionalProperties": false,
+			"properties": {
+				"fixture-data": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" }
+			},
+			"required": ["fixture-data"],
+			"type": "object"
+		},
+		"schema_version": { "const": "1.0" },
+		"snapshots": { "type": "object" },
+		"standard_id": { "const": "command-provider-fixture" },
+		"version": { "const": "1.0" }
+	},
+	"required": [
+		"schema_version",
+		"standard_id",
+		"version",
+		"operation",
+		"config",
+		"resources",
+		"snapshots"
+	],
+	"type": "object"
+}
