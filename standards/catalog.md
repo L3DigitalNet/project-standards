@@ -33,8 +33,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.5 | retained | consumer | 14 | 4 | 1 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.6 | default | consumer | 14 | 4 | 1 |
 | [`github-workflow`](github-workflow/README.md) | active | 1.0 | retained | consumer | 10 | 5 | 12 |
-| [`github-workflow`](github-workflow/README.md) | active | 1.1 | default | consumer | 10 | 5 | 12 |
-| [`github-workflow`](github-workflow/README.md) | active | 1.2 | unadvertised | consumer | 10 | 5 | 12 |
+| [`github-workflow`](github-workflow/README.md) | active | 1.1 | retained | consumer | 10 | 5 | 12 |
+| [`github-workflow`](github-workflow/README.md) | active | 1.2 | default | consumer | 10 | 5 | 12 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | retained | consumer | 29 | 5 | 8 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.3 | retained | consumer | 29 | 5 | 9 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.4 | retained | consumer | 30 | 5 | 9 |

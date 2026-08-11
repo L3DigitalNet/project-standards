@@ -2,7 +2,7 @@
 schema_version = "1.0"
 catalog = "5"
 release = "5.18.0"
-digest = "sha256:cbd5768e630b1bbfa42bf79c6afd20b34baff2b22ea3da3be11e406f5d2f8ad5"
+digest = "sha256:1e23e8474e9160210855f3a890f3ec3758d49e0e2408d9f6620b654ca57f9253"
 
 [standards.adr]
 status = "active"
@@ -139,8 +139,8 @@ payload_digest = "sha256:7c6e609bdccdf526cb1426b817b26efcc5622552138ac5e826d917a
 
 [standards.github-workflow]
 status = "active"
-available = ["1.0", "1.1"]
-default = "1.1"
+available = ["1.0", "1.1", "1.2"]
+default = "1.2"
 candidates = []
 
 [standards.github-workflow.versions."1.0"]
@@ -149,9 +149,14 @@ availability = "consumer"
 payload_digest = "sha256:65afb66cd3aaf1e0fa9bb896e63b2275290e93aa8fff6d4e0fb5129b9fb99d86"
 
 [standards.github-workflow.versions."1.1"]
-channel = "stable"
+channel = "retained"
 availability = "consumer"
 payload_digest = "sha256:a6ad7da622a3f7f56f87521be787c7f36761e476029ed2ac009c32db82a5fad6"
+
+[standards.github-workflow.versions."1.2"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:06041b632e15eee8258d7eaf311dfd0560f15d54d34ed2ac44076a069228d13f"
 
 [standards.markdown-frontmatter]
 status = "active"

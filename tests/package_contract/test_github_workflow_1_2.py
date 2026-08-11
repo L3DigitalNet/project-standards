@@ -161,8 +161,8 @@ def test_github_workflow_1_2__projection_and_catalog__stay_complete_and_unadvert
         for package in catalog["packages"]
         if package["id"] == "github-workflow"
     ]
-    assert roles == [("1.0", "retained"), ("1.1", "default")]
+    assert roles == [("1.0", "retained"), ("1.1", "retained"), ("1.2", "default")]
     for document in ("README.md", "adopt.md", "agent-summary.md"):
         family_navigation = (_FAMILY / document).read_text(encoding="utf-8")
-        assert "versions/1.1/" in family_navigation
-        assert "versions/1.2/" not in family_navigation
+        assert "versions/1.2/" in family_navigation
+        assert "versions/1.1/" not in family_navigation

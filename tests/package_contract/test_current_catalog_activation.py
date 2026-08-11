@@ -335,6 +335,47 @@ def test_catalog_activation__release_changelog__has_dated_candidate_section() ->
     )
 
 
+def test_catalog_activation__github_workflow_1_2__is_current_and_records_transport_boundary() -> (
+    None
+):
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    roles = [
+        (package["version"], package["role"])
+        for package in catalog["packages"]
+        if package["id"] == "github-workflow"
+    ]
+    assert roles == [("1.0", "retained"), ("1.1", "retained"), ("1.2", "default")]
+
+    consumer_catalog = tomllib.loads(
+        (_ROOT / ".standards/catalog.toml").read_text(encoding="utf-8")
+    )
+    selection = consumer_catalog["standards"]["github-workflow"]
+    assert selection["available"] == ["1.0", "1.1", "1.2"]
+    assert selection["default"] == "1.2"
+
+    consumer_lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
+    assert consumer_lock["standards"]["github-workflow"]["resolved"] == "1.2"
+
+    current_references = {
+        "standards/github-workflow/README.md": "versions/1.2/README.md",
+        "standards/github-workflow/adopt.md": "versions/1.2/adopt.md",
+        "standards/github-workflow/agent-summary.md": "versions/1.2/agent-summary.md",
+        "standards/README.md": "| 1.2 | default | [github-workflow/]",
+    }
+    for relative, expected in current_references.items():
+        assert expected in (_ROOT / relative).read_text(encoding="utf-8")
+
+    changelog_entry = next(
+        line
+        for line in (_ROOT / "CHANGELOG.md").read_text(encoding="utf-8").splitlines()
+        if line.startswith("- **GitHub Workflow 1.2")
+    )
+    assert "MCP-first proposal is retired" in changelog_entry
+    assert "`gh`-issued-token, REST-only boundary" in changelog_entry
+    assert "no MCP read or mutation path" in changelog_entry
+    assert "no `issue_read` body-escaping procedure" in changelog_entry
+
+
 def test_catalog_activation__managed_root_configuration__preserves_effective_gates() -> None:
     markdownlint = json.loads((_ROOT / ".markdownlint.json").read_text(encoding="utf-8"))
     desired = tomllib.loads((_ROOT / ".standards/config.toml").read_text(encoding="utf-8"))

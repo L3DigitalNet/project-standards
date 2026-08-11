@@ -48,6 +48,16 @@ Do not maintain the two independently from memory. Route terminal transitions th
 
 Never infer readiness merely because an Issue is open.
 
+## Labels complement fields
+
+Labels are optional categorization, not an alternate operational schema. Use these namespaces when a repository needs a multi-valued facet:
+
+- `area/*` identifies the affected component.
+- `concern/*` identifies a cross-cutting concern such as security, reliability, compatibility, performance, or documentation.
+- `source/*` records where the work originated, such as an audit, user report, or agent finding.
+
+Do not create or apply `priority/*`, `status/*`, `size/*`, `severity/*`, `risk/*`, or `agent-ready`. Those labels shadow typed fields or the Ready predicate, creating two sources of truth. Keep Priority, Workflow, Size, Severity, and Change risk in their fields; derive agent readiness from the documented Ready conditions and Execution mode.
+
 ## Priority
 
 **Type:** Single select
@@ -176,6 +186,17 @@ Do not populate it merely because every Issue looks nicer with one. Empty is a v
 | **S3 Low** | Minor defect, cosmetic behavior, narrow edge case, or negligible operational consequence |
 
 Severity is factual — what consequence does the defect produce. Priority is managerial — when should it be fixed relative to other work. Keeping them separate is what makes triage work.
+
+## Pairwise independence examples
+
+Each example keeps the two named fields independent. Do not infer either value from the other.
+
+- **Priority and Size:** An `XS` correction to a release manifest can be `P0 Immediate` when the bad value blocks publication; its small review surface does not lower its urgency.
+- **Priority and Change risk:** A release-blocking documentation pointer can be `P0 Immediate` and `R1 Low`; queue position does not make a localized, reversible edit risky.
+- **Priority and Severity:** An `S1 High` defect with negligible exposure can remain `P2 Planned`; impact does not alone decide queue order.
+- **Size and Change risk:** A one-line authorization-predicate change can be `XS` and `R4 Critical`; a small diff can cross a critical trust boundary.
+- **Size and Severity:** An `S0 Critical` data-loss defect can have an `S` remediation isolated to one faulty guard; impact does not measure implementation breadth.
+- **Change risk and Severity:** An `S3 Low` display defect can require an `R3 High` shared-persistence migration; defect impact does not predict the danger of implementing its fix.
 
 ## Field pinning
 

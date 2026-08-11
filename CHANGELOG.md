@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-08-10'
+updated: '2026-08-11'
 reviewed: '2026-07-27'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -41,6 +41,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 - **Agent Handoff 1.12 corrects the successor and legacy-migration guidance without changing runtime behavior** ([#140](https://github.com/L3DigitalNet/project-standards/issues/140), [#165](https://github.com/L3DigitalNet/project-standards/issues/165)). A clean V5-native reconciliation retires the unchanged superseded Python launcher and refuses consumer-modified bytes with `CP-MODIFIED-MANAGED`; no manual deletion is required. The legacy-migration runbook now confirms current registrations use the compiled `session-start` launcher while its historical per-harness references remain intact. The complete candidate remains unadvertised until release activation; Agent Handoff 1.11 stays the Catalog 5 default.
 - **ADR 1.6 adds independent, default-off amendment relationship validation** ([#163](https://github.com/L3DigitalNet/project-standards/issues/163)). `validate_amendments = true` checks both directions of every declared `project.amends` / `project.amended_by` relationship over the immutable ADR snapshot and reports stable `ADR-AMEND-ONEWAY` findings for a missing reciprocal member or target. It also reports `ADR-AMEND-SUPERSEDED` when an `amends` edge targets a superseded record. The option is independent of `require_sections`, both relationship fields remain optional, and the provider neither reads the filesystem nor infers relationships from prose. The complete candidate remains unadvertised until the v5.19 ADR corpus is frozen; ADR 1.5 stays the Catalog 5 default.
+- **GitHub Workflow 1.2 becomes Catalog 5's default; 1.0 and 1.1 remain retained and exactly selectable** ([#169](https://github.com/L3DigitalNet/project-standards/issues/169)). The superseded MCP-first proposal is retired in favor of the shipped `gh`-issued-token, REST-only boundary. The package adds no MCP read or mutation path and no `issue_read` body-escaping procedure; its binary is byte-identical to 1.1, so this release changes guidance and selection without changing transport or command behavior.
 
 ## [5.18.0] — 2026-08-09
 
