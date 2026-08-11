@@ -3,9 +3,9 @@ plan_format: 3
 title: 'Command Provider Execution Implementation Plan'
 slug: 'command-provider-execution'
 status: active
-revision: 6
-revises_revision: 5
-revision_reason: 'update current source-authority references for renamed ADR 0025 without changing task outcomes'
+revision: 7
+revises_revision: 6
+revision_reason: 'retarget T2 current-state authority from removed MCP-local runner to the shared control-plane runner'
 pause_reason: ''
 source: 'issue L3DigitalNet/project-standards#142 and owner decisions of 2026-08-10'
 spec_ref: ''
@@ -37,8 +37,8 @@ The implementation ends with a committed Go payload fixture that proves `command
 | `repo:docs/adr/adr-0029-agents-root-allocation.md` | current-state evidence | Integrated release ADR that consumes number 0029 and makes 0030 the next free command-provider allocation. | `8dbdf9b1` | §§4–5, 9, 11; T1 |
 | `repo:standards/adr/versions/1.5/README.md` | normative | Adopted ADR authoring, numbering, frontmatter, indexing, and relationship rules for the prerequisite decision record. | `23c0036f` | §§3, 7–9; T1 |
 | `repo:src/project_standards/control_plane/providers.py::invoke_provider` | current-state evidence | V2 selection, payload integrity, resource loading, input/output schema validation, typed results, and current in-process Python execution. | `23c0036f` | §§4–5; T2–T4 |
-| `repo:src/project_standards/mcp_services/providers.py::_run_worker` | current-state evidence | Existing bounded transport, caps, environment/spawn seam, termination, reaping, and deterministic diagnostic composition to extract. | `23c0036f` | §§4–5; T2–T3 |
-| `repo:src/project_standards/mcp_services/provider_worker.py::run_request` | current-state evidence | Existing MCP worker-side redispatch and third-descriptor frame production. | `23c0036f` | §§4–5; T2 |
+| `repo:src/project_standards/control_plane/provider_subprocess.py::run_provider_subprocess` | current-state evidence | Shared bounded transport, caps, environment/spawn seam, termination, reaping, and deterministic diagnostic composition now owned by the control plane. | `3cbde095` | §§4–5; T2–T3 |
+| `repo:src/project_standards/control_plane/provider_worker.py::run_request` | current-state evidence | Shared control-plane worker-side capsule dispatch and third-descriptor frame production. | `3cbde095` | §§4–5; T2 |
 | `repo:src/project_standards/package_contract/payload.py::ProviderDeclaration` | current-state evidence | V2 provider schema, payload-qualified Python entrypoint grammar, resource closure, operation/phase/effect contract, and declared `ProviderKind.COMMAND`. | `23c0036f` | §§4–6; T3–T4 |
 | `repo:src/project_standards/control_plane/planner.py::_verification_requests` | current-state evidence | Current Python/documentation-only verification filter that must admit supported command declarations without package-specific dispatch. | `23c0036f` | §§4–6; T3–T4 |
 | `repo:src/project_standards/provider_runner.py::_run_python_provider` | current-state evidence | Legacy V1 installed-bundle runner that deliberately rejects external-process provider kinds. | `23c0036f` | §§3–5; T3 |
@@ -314,7 +314,7 @@ External gates:
 - **dependency_reason:** consumes `command-provider-execution-adr-v1`, which fixes runner ownership, ABI direction, limits, environment split, and confirmation obligations before source movement
 - **requirements:** [REQ-003, REQ-004, REQ-008, REQ-012]
 - **proof:** [PV-T2-001]
-- **source_refs:** [request, issue:L3DigitalNet/project-standards#142, repo:docs/adr/adr-0025-mcp-service-and-sdk-boundary.md#provider-execution-boundary, repo:src/project_standards/control_plane/providers.py::invoke_provider, repo:src/project_standards/control_plane/diagnostics.py::ControlPlaneError, repo:src/project_standards/mcp_services/providers.py::_run_worker, repo:src/project_standards/mcp_services/provider_worker.py::run_request, repo:tests/mcp_services/test_providers.py::test_slow_provider_returns_bounded_diagnostic_and_worker_is_reaped, repo:tests/control_plane/test_providers.py::test_provider_returns_typed_findings_mutation_plan_and_migration_report, repo:tests/mcp_services/security/test_consumer_boundaries.py::OpenAudit, repo:tests/package_compatibility/test_catalog_matrix.py::deny_provider_child_processes, repo:tests/package_compatibility/test_performance.py::test_real_catalog_plans_inside_scale_and_time_boundary]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#142, repo:docs/adr/adr-0025-mcp-service-and-sdk-boundary.md#provider-execution-boundary, repo:src/project_standards/control_plane/providers.py::invoke_provider, repo:src/project_standards/control_plane/diagnostics.py::ControlPlaneError, repo:src/project_standards/control_plane/provider_subprocess.py::run_provider_subprocess, repo:src/project_standards/control_plane/provider_worker.py::run_request, repo:tests/mcp_services/test_providers.py::test_slow_provider_returns_bounded_diagnostic_and_worker_is_reaped, repo:tests/control_plane/test_providers.py::test_provider_returns_typed_findings_mutation_plan_and_migration_report, repo:tests/mcp_services/security/test_consumer_boundaries.py::OpenAudit, repo:tests/package_compatibility/test_catalog_matrix.py::deny_provider_child_processes, repo:tests/package_compatibility/test_performance.py::test_real_catalog_plans_inside_scale_and_time_boundary]
 - **consumes:** [command-provider-execution-adr-v1, current Python provider input/resource/output and exception-cause contract, qualified InstalledPayload object seams, sanitized child error frame kind/detail, OpenAudit path-access oracle, revision-4 fast-gate receipt, ADR 0025 bounded transport behavior, approved 7.5-second and 30-second performance budgets]
 - **produces:** [bounded-provider-runner-v1, python-provider-execution-capsule-v1, bounded-python-provider-dispatch-v1]
 - **preserves:** [all V2 Python operations/effects, schemas, typed results, output notice semantics, live-path integrity, qualified synthetic and monkeypatched InstalledPayload behavior, public MCP DTO/service results, request qualification, finding ordering, content-safe public errors, safe ValueError cause/detail parity, path-like filesystem audit coverage, V1 runner behavior, one-child architecture, existing caps, 7.5-second real-catalog budget, 30-second deterministic-order budget]
