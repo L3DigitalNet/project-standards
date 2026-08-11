@@ -67,7 +67,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`project-spec`](project-spec/README.md) | active | 1.6 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.7 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.8 | retained | consumer | 23 | 9 | 1 |
-| [`project-spec`](project-spec/README.md) | active | 1.9 | default | consumer | 24 | 10 | 1 |
+| [`project-spec`](project-spec/README.md) | active | 1.9 | default | consumer | 24 | 11 | 1 |
 | [`python-coding`](python-coding/README.md) | draft | 0.5 | reference-only | reference-only | 3 | 1 | 0 |
 | [`python-coding`](python-coding/README.md) | draft | 0.6 | reference-only | reference-only | 3 | 1 | 0 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.1 | retained | consumer | 13 | 3 | 52 |
@@ -2177,6 +2177,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `project-spec@1.9` | `id-next` | `id-next` | `inspect` | `content` | `payload:provider-code#run_id_next` |
 | `project-spec@1.9` | `scaffold` | `scaffold` | `authoring` | `mutation-plan` | `payload:provider-code#run_scaffold` |
 | `project-spec@1.9` | `upgrade` | `upgrade` | `authoring` | `mutation-plan` | `payload:provider-code#run_upgrade` |
+| `project-spec@1.9` | `fix` | `fix` | `authoring` | `mutation-plan` | `payload:provider-code#run_import` |
 | `project-spec@1.9` | `render-workflow` | `render` | `plan` | `content` | `payload:provider-code#run_render_workflow` |
 | `project-spec@1.9` | `render-preview` | `render` | `plan` | `content` | `payload:provider-code#run_render_preview` |
 | `project-spec@1.9` | `verify-runner-labels` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_runner_labels` |

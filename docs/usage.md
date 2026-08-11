@@ -6,8 +6,8 @@ description: 'Canonical man-style usage reference for the project-standards comm
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-21'
-reviewed: '2026-07-21'
+updated: '2026-08-11'
+reviewed: '2026-08-11'
 owner: ''
 consumer: 'mix'
 tags:
@@ -53,11 +53,11 @@ project-standards {--help | --version}
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes 32 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), the `mcp` server, eleven `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes 33 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), the `mcp` server, eleven `standards` operations, one repository-only `packages` release check, seven `spec` verbs, and six `agent-handoff` verbs.
 
 Under unified authority, `validate` and `fix` invoke the provider selected by the applied Markdown Frontmatter package. Read-only validation consumes one immutable file snapshot; `fix` applies only the provider's typed plan through the platform executor and then revalidates. After `project-standards fix`, run `project-standards reconcile --check`, review the digest-only plan, and run `project-standards reconcile --apply` before the final `project-standards validate`. The standalone schema, ID, reference, ID-fix, and format-write surfaces use the same selected payload while retaining their narrower output contracts. In v5 legacy-only repositories, these commands warn and retain the local validator sequence as a bounded compatibility path. The six standalone console-script names documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
-Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 32 leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
+Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 33 leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
 Except for `mcp`, output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. The MCP server reserves standard output for JSON-RPC protocol frames and writes diagnostics to standard error. There is no interactive prompt; commands are non-interactive, while `mcp` serves client protocol requests on standard input after its launch arguments are parsed.
 
@@ -525,13 +525,13 @@ Exit status: `0` allowed `patch`, `minor`, or `major` classification · `1` forb
 
 ### `spec`
 
-Command group: `validate | lint | extract | next | new | upgrade` over project specifications (the Project Specification Standard's document format). Running `project-standards spec` with no verb prints usage to standard error and exits 2; `project-standards spec --help` prints usage and exits 0.
+Command group: `validate | lint | extract | next | new | upgrade | import` over project specifications (the Project Specification Standard's document format). Running `project-standards spec` with no verb prints usage to standard error and exits 2; `project-standards spec --help` prints usage and exits 0.
 
 ```text
-project-standards spec {validate | lint | extract | next | new | upgrade} [<args>...]
+project-standards spec {validate | lint | extract | next | new | upgrade | import} [<args>...]
 ```
 
-The six verbs are documented individually below. There are no group-level options other than `-h` / `--help`; each verb defines its own flags. An unrecognized verb exits 2.
+The seven verbs are documented individually below. There are no group-level options other than `-h` / `--help`; each verb defines its own flags. An unrecognized verb exits 2.
 
 Exit status: `0` group help displayed · `2` missing or unrecognized verb.
 
@@ -645,6 +645,27 @@ Options:
 
 Exit status: `0` upgraded (written or previewed) · `2` any refusal — usage error, flag conflict, source not found or unreadable, source invalid or not upgradeable, or self-validation failure.
 
+### `spec import`
+
+Preview or apply a preservation-first conversion through the selected Project Specification 1.9 `FIX` provider. The source is never changed, and no target is inferred.
+
+```text
+project-standards spec import <source> --output <target> --id <spec-id> [--json] [--apply --expected-plan-digest <digest>]
+```
+
+Options:
+
+- **`<source>`** — Existing UTF-8 house-format specification. Required; must be a contained regular file with no symlink alias.
+- **`-o`, `--output <target>`** — Explicit distinct target. Required for preview and apply; may be missing or a regular file, but cannot alias the source.
+- **`--id <spec-id>`** — Explicit target identity matching `SPEC-XXXX`. Required; import never mints an ID.
+- **`--json`** — Emit the stable `project-standards-spec-import-v1` object with `ok`, `written`, `source`, `target`, `provider`, `spec_id`, `plan_digest`, `mappings`, `review`, `diagnostics`, and `error`.
+- **`--apply`** — Publish the current regenerated plan through the existing staged whole-file executor. Without this flag, the command is a read-only preview and reports `written: false`.
+- **`--expected-plan-digest <digest>`** — Digest from the reviewed current preview. Required with `--apply` and invalid without it. A missing, malformed, wrong, or stale digest refuses before executor invocation.
+
+The importer removes only an approved leading ASCII decimal section number and maps the remaining heading only when it exactly equals a selected canonical title. Preamble, duplicate destinations, near matches, and unmapped headings remain byte-exact in adaptive-fenced review content with content-safe owner-decision diagnostics. Apply generates one current typed plan, compares its digest, and passes that same plan once to the executor only on a match. It stores no plan handle. Traversal, symlink, alias, structural, digest, precondition, and staging failures preserve the source and prior target.
+
+Exit status: `0` preview produced or matching plan applied · `2` invalid invocation, unavailable selected 1.9 provider, unsafe path, structural refusal, digest refusal, stale precondition, or executor failure.
+
 ## EXIT STATUS
 
 The table gives the repository-wide convention; per-command deviations are noted in each command's entry above.
@@ -736,6 +757,13 @@ uv run project-standards spec validate
 
 ```bash
 uv run project-standards spec upgrade docs/specs/my-feature.md --to full --stdout
+```
+
+### Preview and apply a preservation-first spec import
+
+```bash
+uv run project-standards spec import docs/legacy/design.md --output docs/specs/design.md --id SPEC-7F3Q
+uv run project-standards spec import docs/legacy/design.md --output docs/specs/design.md --id SPEC-7F3Q --apply --expected-plan-digest sha256:<64-hex-digits>
 ```
 
 ## Standalone commands

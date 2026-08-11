@@ -22,21 +22,21 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:c21073c9b942df280e60ea34439a455a063f94f9aaa458090b5b0420992a17f9"
+digest = "sha256:9e2b72727813391e78aceacf98ee92426958c3aa1095df93c13fb56de36edc3f"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:f2c49180dba86da26edb8fc6db6423dfc70d80093f3d12cdb3d1a0b069fc3e22"
+digest = "sha256:fba2c282d46e381792ef8e73152b2b627e33d1f87736da0fab9056473867d782"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:44a64f38414ac53b4365077c33fa673957f62a718408ee21f09353df9667c791"
+digest = "sha256:c2ec8ecf1ded7adb181364cba5a96c6407cb476e36f28137d463fe2ece9f8be7"
 
 [[resources]]
 id = "config-schema"
@@ -106,14 +106,14 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/project_spec.py"
 media_type = "text/x-python"
-digest = "sha256:14f552d21cbe2f41e4aafd17e27a8ffc60e85b8538079a181fb63f91eb3b0a10"
+digest = "sha256:820e86774d79035f6648e6ace1d95075b388527ed791c2381d5159020aebe3d2"
 
 [[resources]]
 id = "provider-input"
 role = "provider-resource"
 path = "schemas/provider-input.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:23f5c40f9abbf0eafad87e3fa2dd1fc1a39f52f8f3b09f39f1e840d8b4fab35f"
+digest = "sha256:af9ce4ba3722b4bd7410d695e94eab587c523c4e9f85fb24c2ad0731c36c24ef"
 
 [[resources]]
 id = "provider-findings"
@@ -155,7 +155,7 @@ id = "provider-mutation-plan"
 role = "provider-resource"
 path = "schemas/mutation-plan.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57fd"
+digest = "sha256:bdd2fe328832d50c68dd9b40d81d0b353e6bc9ebbecc8c96283c835ce364210d"
 
 [[resources]]
 id = "provider-migration-report"
@@ -256,6 +256,17 @@ kind = "python"
 phase = "authoring"
 effect = "mutation-plan"
 entrypoint = "payload:provider-code#run_upgrade"
+input_schema = "provider-input"
+output_schema = "provider-mutation-plan"
+resources = ["template-full", "template-light", "template-standard"]
+
+[[providers]]
+id = "fix"
+operation = "fix"
+kind = "python"
+phase = "authoring"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#run_import"
 input_schema = "provider-input"
 output_schema = "provider-mutation-plan"
 resources = ["template-full", "template-light", "template-standard"]

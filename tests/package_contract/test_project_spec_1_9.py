@@ -42,7 +42,7 @@ _PROTECTED_SCHEMA_DIGESTS = {
     "schemas/id-next.schema.json": "fdfb0d10a39767e703482d53479218d0f5aac94280761d1e094e350e84e1f3b9",
     "schemas/lint-findings.schema.json": "3fbcf25c3cfe4cb650439ea9e4b89587d9ee23c1fad244d561635f26fad1f88a",
     "schemas/migration-report.schema.json": "47dbb07fea721a046a03f66a84a00167827f6d011fcea170353c99e711b7a310",
-    "schemas/mutation-plan.schema.json": "8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57fd",
+    "schemas/mutation-plan.schema.json": "bdd2fe328832d50c68dd9b40d81d0b353e6bc9ebbecc8c96283c835ce364210d",
     "schemas/spec-full.schema.json": "a141f360e29aa84ad923678fd5aa9b557016df5bbbf73b6be7efb8274201d734",
     "schemas/spec-light.schema.json": "ffc2bb6a20a56b677297b5776e353a603d68874c1237e799ccc0c43d851420a7",
     "schemas/spec-standard.schema.json": "6bfe16cda38079fb18527a6fc35a4dc74415843f1d7caa319b4f3209536bf504",
@@ -63,6 +63,7 @@ _SUCCESSOR_CHANGES = frozenset(
         "resources/tooling-notes.md",
         "schemas/migration-report.schema.json",
         "schemas/provider-input.schema.json",
+        "schemas/mutation-plan.schema.json",
     }
 )
 
@@ -159,7 +160,7 @@ def test_project_spec_1_9__schemas_fix_successor_identity_and_lint_coverage() ->
     ).read_bytes()
 
 
-def test_project_spec_1_9__provider_input_operation_enum_adds_only_verify() -> None:
+def test_project_spec_1_9__provider_input_operation_enum_adds_fix_and_verify() -> None:
     schema = cast(
         "JsonObject",
         json.loads((_SUCCESSOR / "schemas/provider-input.schema.json").read_text(encoding="utf-8")),
@@ -175,7 +176,7 @@ def test_project_spec_1_9__provider_input_operation_enum_adds_only_verify() -> N
     predecessor_properties = cast("JsonObject", predecessor["properties"])
     predecessor_operation = cast("JsonObject", predecessor_properties["operation"])
     prior_operations = cast("list[str]", predecessor_operation["enum"])
-    assert operation_schema["enum"] == [*prior_operations, "verify"]
+    assert operation_schema["enum"] == [*prior_operations, "fix", "verify"]
 
     validator = cast("_JsonObjectValidator", Draft202012Validator(schema))
     base_input: JsonObject = {
@@ -186,7 +187,7 @@ def test_project_spec_1_9__provider_input_operation_enum_adds_only_verify() -> N
         "resources": {},
         "snapshots": {},
     }
-    for operation in (*prior_operations, "verify"):
+    for operation in (*prior_operations, "fix", "verify"):
         candidate: JsonObject = {**base_input, "operation": operation}
         assert validator.is_valid(candidate)
     unknown: JsonObject = {**base_input, "operation": "unknown"}
@@ -288,6 +289,27 @@ def test_project_spec_1_9__manifest_declares_one_config_only_verify_provider() -
     assert provider.effect.value == "findings"
     assert provider.entrypoint == "payload:provider-code#run_verify_runner_labels"
     assert provider.resources == []
+
+
+def test_project_spec_1_9__manifest_declares_one_import_fix_provider() -> None:
+    manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
+    providers = [
+        provider for provider in manifest.providers if provider.operation is ProviderOperation.FIX
+    ]
+
+    assert len(providers) == 1
+    provider = providers[0]
+    assert provider.id == "fix"
+    assert provider.phase.value == "authoring"
+    assert provider.effect.value == "mutation-plan"
+    assert provider.entrypoint == "payload:provider-code#run_import"
+    assert provider.resources == ["template-full", "template-light", "template-standard"]
+
+    schema = json.loads(
+        (_SUCCESSOR / "schemas/mutation-plan.schema.json").read_text(encoding="utf-8")
+    )
+    assert "import_report" in schema["properties"]
+    assert schema["additionalProperties"] is False
 
 
 @pytest.mark.parametrize(

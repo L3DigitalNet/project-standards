@@ -4,7 +4,7 @@
 - **Specification contract:** `1.1`, selected independently with `contract_version`
 - **Status:** Active consumer package, managed by the V5 control plane.
 - **Owner:** Project standards / repository template
-- **Last updated:** 2026-08-10
+- **Last updated:** 2026-08-11
 - **Last source check:** _TBD_
 - **Scope:** Format, structure, conventions, and tooling for authoring project specifications (software projects, features, subsystems, scripts, services) — reusable across repositories.
 
@@ -135,6 +135,7 @@ Grouped by what they do to a spec. Each notes the guarantee(s) from [§3](#3-fea
 
 - **`new`** _(core)_ — scaffold a spec from a chosen profile: copy the template, mint a fresh `spec_id`, and fill frontmatter (owner, implementer, created, profile) and title, resolving the sentinel. → **G1, G7**
 - **`upgrade`** _(core)_ — additive tier promotion (Light → Standard → Full): insert the missing canonical sections and appendices at their stable numbers, drop the now-satisfied omission notes, and set `profile:`. Purely additive — no renumbering, no reference rewrites. → **G1, G2**
+- **`import`** _(core)_ — preview a preservation-first conversion from an explicitly named source into a distinct explicitly named target. Exact canonical headings map mechanically; preamble, duplicate, and unmapped blocks remain byte-exact in an adaptive-fenced review section with owner-decision diagnostics. The default preview writes nothing and reports a deterministic plan digest. `--apply` requires that digest and publishes the freshly regenerated matching plan through the guarded executor; the source is never changed. → **G2, G3, G7**
 
 **Semantic — a standard-defined contract, not a binary command:**
 

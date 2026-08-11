@@ -58,6 +58,34 @@ project-standards spec upgrade docs/specs/my-feature.md --to full --stdout
 
 `new --stdout` and `upgrade --stdout` use the read-only preview provider and write nothing. File-producing `new` and `upgrade` requests return typed mutation plans that the platform executor applies with containment, symlink, precondition, and mode checks. Tier upgrades are additive: they insert missing canonical sections without renumbering existing sections or rewriting authored prose.
 
+### Import a house-format specification
+
+Import is explicit and preservation-first. It never runs during adoption, infers no destination, and never changes the source. Preview into a distinct target with an explicit specification ID:
+
+```bash
+project-standards spec import docs/legacy/design.md \
+  --output docs/specs/design.md \
+  --id SPEC-7F3Q
+```
+
+The default preview holds the read lock, writes nothing, and reports the selected `project-spec@1.9/fix` provider, exact mappings, review items, content-safe diagnostics, `written: false`, and a deterministic `plan digest`. Exact canonical section titles map after only an approved leading decimal number is removed. Preamble, duplicate destinations, near matches, and unmapped headings remain byte-exact inside adaptive fences in `Legacy Import Review`; their diagnostics identify the block and required owner decision without echoing its prose.
+
+After reviewing the preview, regenerate and apply the current plan by supplying its digest:
+
+```bash
+project-standards spec import docs/legacy/design.md \
+  --output docs/specs/design.md \
+  --id SPEC-7F3Q \
+  --apply \
+  --expected-plan-digest sha256:<64-hex-digits>
+```
+
+Apply holds the write lock, generates one current in-memory plan, and compares its digest before calling the executor. A missing, malformed, wrong, or stale digest exits `2` without invoking the executor. Path aliases, traversal, symlinks, structural refusal, precondition changes, and staging failures likewise preserve both source and prior target. A matching plan is passed once to the existing staged whole-file executor; no plan handle or conversion state is stored.
+
+Add `--json` to either command for the stable `project-standards-spec-import-v1` object. It always carries `ok`, `written`, `source`, `target`, `provider`, `spec_id`, `plan_digest`, `mappings`, `review`, `diagnostics`, and `error`. Preview and successful apply exit `0`; invocation, path, provider, digest, and executor refusals exit `2`.
+
+Repositories with no matching specification files and repositories adopting only new canonical specs remain successful no-ops. Import is never required by enablement or reconciliation.
+
 ## Repair conformance warnings
 
 Package 1.9 activates two profile-aware lint checks:
@@ -128,4 +156,6 @@ project-standards reconcile --apply
 | `SL-REQUIREMENT-PHRASING` | Begin the identified Requirement cell with `The system shall` without changing its meaning, acceptance criteria, or priority. |
 | Markdown Frontmatter also selects a spec | Make the two package corpora disjoint; project specs use their own metadata schema. |
 | Authoring path is unsafe or already changed | Re-preview and resolve the path/precondition; do not bypass the executor. |
+| Import plan digest does not match | The source or target snapshot changed, or the supplied digest is not from the current preview. Preview again and apply that new digest; do not reuse a stored value. |
+| Import reports review blocks | Make the owner placement decisions in the generated target. The importer deliberately preserves ambiguous bytes instead of guessing. |
 | Managed workflow drift | Restore the selected caller/self-hosted bytes or change `workflow_mode` and reconcile. |

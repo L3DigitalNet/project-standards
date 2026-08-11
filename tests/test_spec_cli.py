@@ -86,6 +86,7 @@ def test_bare_spec_is_exit2_but_help_is_exit0(capsys: pytest.CaptureFixture[str]
             ["source.md", "--to", "full", "--unknown"],
             id="upgrade-unknown-option",
         ),
+        pytest.param("import", ["source.md", "--apply"], id="import-incomplete-apply"),
     ],
 )
 def test_operation_lock_mode_fails_safe_on_uncertain_arguments(
@@ -99,6 +100,45 @@ def test_operation_lock_mode_fails_safe_on_uncertain_arguments(
         )
         is LockMode.WRITE
     )
+
+
+def test_import_lock_mode_tracks_digest_authorized_apply() -> None:
+    assert (
+        spec_cli._operation_lock_mode(  # pyright: ignore[reportPrivateUsage]
+            "import",
+            ["source.md", "--output", "target.md", "--id", "SPEC-AB12"],
+        )
+        is LockMode.READ
+    )
+    assert (
+        spec_cli._operation_lock_mode(  # pyright: ignore[reportPrivateUsage]
+            "import",
+            [
+                "source.md",
+                "--output",
+                "target.md",
+                "--id",
+                "SPEC-AB12",
+                "--apply",
+                "--expected-plan-digest",
+                f"sha256:{'a' * 64}",
+            ],
+        )
+        is LockMode.WRITE
+    )
+
+
+def test_spec_help_lists_import_and_required_output(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["spec", "--help"]) == 0
+    assert "import" in capsys.readouterr().out
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["spec", "import", "--help"])
+    assert exc_info.value.code == 0
+    help_text = capsys.readouterr().out
+    assert "--output" in help_text
+    assert "--id" in help_text
+    assert "--expected-plan-digest" in help_text
 
 
 def test_non_utf8_spec_exits_1(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

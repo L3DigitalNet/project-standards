@@ -43,6 +43,7 @@ PUBLIC_COMMAND_EXIT_CODES: Final = {
     "spec next": frozenset({0, 1, 2}),
     "spec new": frozenset({0, 2}),
     "spec upgrade": frozenset({0, 2}),
+    "spec import": frozenset({0, 2}),
     "validate-frontmatter": frozenset({0, 1, 2}),
     "validate-id": frozenset({0, 1, 2}),
     "sync-vscode-colors": frozenset({0, 1}),

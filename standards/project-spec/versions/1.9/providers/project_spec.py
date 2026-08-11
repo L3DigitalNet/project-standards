@@ -541,3 +541,50 @@ def run_verify_runner_labels(
             }
         ]
     }
+
+
+def run_import(request: Mapping[str, object], resources: Mapping[str, bytes]) -> dict[str, object]:
+    """Return one deterministic preservation-first import plan."""
+    # Keep this import with the additive provider entrypoint: the byte-locked
+    # predecessor surface above must remain exact while 1.9 is still mutable.
+    from typing import Literal
+
+    from project_standards.specs.commands.import_legacy import build_import_plan
+
+    snapshots = _table(request.get("snapshots"), name="snapshots")
+    import_request = _table(snapshots.get("import"), name="snapshots.import")
+    source = _table(import_request.get("source"), name="snapshots.import.source")
+    target = _table(import_request.get("target"), name="snapshots.import.target")
+    source_path = source.get("path")
+    source_content = source.get("content_base64")
+    target_path = target.get("path")
+    target_kind = target.get("kind")
+    target_digest = target.get("precondition_digest")
+    spec_id = import_request.get("spec_id")
+    if (
+        not isinstance(source_path, str)
+        or not isinstance(source_content, str)
+        or not isinstance(target_path, str)
+        or target_kind not in {"missing", "regular"}
+        or not isinstance(target_digest, str)
+        or not isinstance(spec_id, str)
+    ):
+        raise ValueError("import snapshot is incomplete")
+    try:
+        source_bytes = base64.b64decode(source_content, validate=True)
+    except ValueError as exc:
+        raise ValueError("import source is not canonical base64") from exc
+    if base64.b64encode(source_bytes).decode("ascii") != source_content:
+        raise ValueError("import source is not canonical base64")
+    plan = build_import_plan(
+        source_bytes,
+        resources["template-standard"],
+        _registry(resources),
+        spec_id=spec_id,
+        source_path=source_path,
+        target_path=target_path,
+        target_kind=cast("Literal['missing', 'regular']", target_kind),
+        target_precondition_digest=target_digest,
+        version=str(request.get("version")),
+    )
+    return cast("dict[str, object]", plan.model_dump(mode="json"))

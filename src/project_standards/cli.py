@@ -611,7 +611,7 @@ def _run_main(argv: list[str]) -> int:
         help="validate schema + id + references (validate-frontmatter, validate-id, validate-references)",
     )
     sub.add_parser("fix", help="format frontmatter + fix ids, then re-validate")
-    sub.add_parser("spec", help="validate|lint|extract|next|new|upgrade over project specs")
+    sub.add_parser("spec", help="validate|lint|extract|next|new|upgrade|import over project specs")
     sub.add_parser("standards", help="validate and generate V1/V2 standards artifacts")
     sub.add_parser("packages", help="check released V2 package payloads")
     sub.add_parser(

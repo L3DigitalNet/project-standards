@@ -144,6 +144,221 @@
       ],
       "title": "MutationDiagnosticSchema",
       "type": "object"
+    },
+    "ProjectSpecImportBlockSchema": {
+      "additionalProperties": false,
+      "description": "One source byte range and its exact target-byte preservation location.",
+      "properties": {
+        "destination": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Destination"
+        },
+        "diagnostic_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Diagnostic Code"
+        },
+        "disposition": {
+          "enum": [
+            "mapped",
+            "review"
+          ],
+          "title": "Disposition",
+          "type": "string"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "fence": {
+          "pattern": "^`{3,}$",
+          "title": "Fence",
+          "type": "string"
+        },
+        "ordinal": {
+          "minimum": 0,
+          "title": "Ordinal",
+          "type": "integer"
+        },
+        "source_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "target_end": {
+          "exclusiveMinimum": 0,
+          "title": "Target End",
+          "type": "integer"
+        },
+        "target_start": {
+          "minimum": 0,
+          "title": "Target Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ordinal",
+        "start",
+        "end",
+        "source_digest",
+        "disposition",
+        "target_start",
+        "target_end",
+        "fence"
+      ],
+      "title": "ProjectSpecImportBlockSchema",
+      "type": "object"
+    },
+    "ProjectSpecImportDiagnosticSchema": {
+      "additionalProperties": false,
+      "description": "Content-safe owner-decision diagnostic for one reviewed source block.",
+      "properties": {
+        "classification": {
+          "enum": [
+            "preamble",
+            "unmapped",
+            "duplicate"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "code": {
+          "enum": [
+            "SPEC-IMPORT-PREAMBLE",
+            "SPEC-IMPORT-UNMAPPED",
+            "SPEC-IMPORT-DUPLICATE"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "ordinal": {
+          "minimum": 0,
+          "title": "Ordinal",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "code",
+        "ordinal",
+        "classification",
+        "message"
+      ],
+      "title": "ProjectSpecImportDiagnosticSchema",
+      "type": "object"
+    },
+    "ProjectSpecImportReportSchema": {
+      "additionalProperties": false,
+      "description": "Closed deterministic preservation report for one legacy-spec import.",
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/$defs/ProjectSpecImportBlockSchema"
+          },
+          "title": "Blocks",
+          "type": "array"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/$defs/ProjectSpecImportDiagnosticSchema"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "plan_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Plan Digest",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "project-spec-import-plan-v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_size": {
+          "minimum": 0,
+          "title": "Source Size",
+          "type": "integer"
+        },
+        "source_snapshot": {
+          "$ref": "#/$defs/ProjectSpecImportSnapshotSchema"
+        },
+        "spec_id": {
+          "pattern": "^SPEC-[0-9A-Z]{4}$",
+          "title": "Spec Id",
+          "type": "string"
+        },
+        "target_content_base64": {
+          "title": "Target Content Base64",
+          "type": "string"
+        },
+        "target_content_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Target Content Digest",
+          "type": "string"
+        },
+        "target_snapshot": {
+          "$ref": "#/$defs/ProjectSpecImportSnapshotSchema"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_snapshot",
+        "target_snapshot",
+        "spec_id",
+        "source_size",
+        "target_content_digest",
+        "target_content_base64",
+        "plan_digest"
+      ],
+      "title": "ProjectSpecImportReportSchema",
+      "type": "object"
+    },
+    "ProjectSpecImportSnapshotSchema": {
+      "additionalProperties": false,
+      "description": "One immutable source or target identity retained by an import plan.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "digest"
+      ],
+      "title": "ProjectSpecImportSnapshotSchema",
+      "type": "object"
     }
   },
   "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/mutation-plan.schema.json",
@@ -164,6 +379,17 @@
       },
       "title": "Diagnostics",
       "type": "array"
+    },
+    "import_report": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ProjectSpecImportReportSchema"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "schema_version": {
       "const": "1.0",

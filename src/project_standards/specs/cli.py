@@ -14,7 +14,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path, PurePosixPath
-from typing import NoReturn
+from typing import NoReturn, cast
 
 from project_standards._filesystem import (
     _directory_descriptor,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
@@ -38,8 +38,9 @@ from project_standards.control_plane.providers import (
     ProviderResult,
     invoke_provider,
 )
+from project_standards.control_plane.schemas import MutationPlanSchema
 from project_standards.control_plane.snapshot import EntryKind, RepositorySnapshot, SnapshotEntry
-from project_standards.package_contract.paths import SafeRelativePath
+from project_standards.package_contract.paths import SafeRelativePath, Sha256Digest
 from project_standards.package_contract.payload import JsonObject, ProviderOperation
 from project_standards.specs.commands.extract import extract_slice
 from project_standards.specs.commands.lint import lint_document
@@ -491,6 +492,17 @@ def _upgrade_argument_parser(*, add_help: bool = True) -> _NewArgParser:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--config", type=Path, default=None)
+    return parser
+
+
+def _import_argument_parser(*, add_help: bool = True) -> _NewArgParser:
+    parser = _NewArgParser(prog="project-standards spec import", add_help=add_help)
+    parser.add_argument("source", type=Path)
+    parser.add_argument("--output", "-o", type=Path, required=True)
+    parser.add_argument("--id", dest="spec_id", required=True)
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--expected-plan-digest")
     return parser
 
 
@@ -1257,6 +1269,247 @@ def _run_upgrade(argv: list[str], runtime: _SpecRuntime) -> int:
         return _emit_new_failure(json_mode, err)
 
 
+class ImportError(NewError):
+    """A stable public refusal from preservation-first specification import."""
+
+
+def _import_payload(
+    *,
+    ok: bool,
+    written: bool,
+    source: str | None,
+    target: str | None,
+    spec_id: str | None,
+    plan_digest: str | None,
+    mappings: list[dict[str, object]],
+    review: list[dict[str, object]],
+    diagnostics: list[dict[str, object]],
+    error: dict[str, str] | None,
+) -> dict[str, object]:
+    return {
+        "schema_version": "project-standards-spec-import-v1",
+        "ok": ok,
+        "written": written,
+        "source": source,
+        "target": target,
+        "provider": "project-spec@1.9/fix",
+        "spec_id": spec_id,
+        "plan_digest": plan_digest,
+        "mappings": mappings,
+        "review": review,
+        "diagnostics": diagnostics,
+        "error": error,
+    }
+
+
+def _emit_import_failure(
+    json_mode: bool,
+    error: ImportError,
+    *,
+    source: str | None = None,
+    target: str | None = None,
+    spec_id: str | None = None,
+    plan_digest: str | None = None,
+) -> int:
+    if json_mode:
+        print(
+            json.dumps(
+                _import_payload(
+                    ok=False,
+                    written=False,
+                    source=source,
+                    target=target,
+                    spec_id=spec_id,
+                    plan_digest=plan_digest,
+                    mappings=[],
+                    review=[],
+                    diagnostics=[],
+                    error={"code": error.code, "message": error.message},
+                ),
+                separators=(",", ":"),
+            )
+        )
+    else:
+        print(f"error: {error.message}", file=sys.stderr)
+    return 2
+
+
+def _import_report_payload(
+    plan: MutationPlanSchema,
+    *,
+    written: bool,
+) -> dict[str, object]:
+    report = getattr(plan, "import_report", None)
+    if report is None:
+        raise ImportError("provider_failure", "selected import provider returned no import report")
+    mappings = [
+        {"ordinal": block.ordinal, "destination": block.destination}
+        for block in report.blocks
+        if block.disposition == "mapped"
+    ]
+    diagnostics_by_ordinal = {item.ordinal: item for item in report.diagnostics}
+    review = [
+        {
+            "ordinal": block.ordinal,
+            "classification": diagnostics_by_ordinal[block.ordinal].classification,
+            "code": diagnostics_by_ordinal[block.ordinal].code,
+        }
+        for block in report.blocks
+        if block.disposition == "review"
+    ]
+    diagnostics = [
+        {
+            "code": item.code,
+            "ordinal": item.ordinal,
+            "classification": item.classification,
+            "message": item.message,
+        }
+        for item in report.diagnostics
+    ]
+    return _import_payload(
+        ok=True,
+        written=written,
+        source=report.source_snapshot.path.original,
+        target=report.target_snapshot.path.original,
+        spec_id=report.spec_id,
+        plan_digest=report.plan_digest.value,
+        mappings=mappings,
+        review=review,
+        diagnostics=diagnostics,
+        error=None,
+    )
+
+
+def _emit_import_success(plan: MutationPlanSchema, *, json_mode: bool, written: bool) -> None:
+    payload = _import_report_payload(plan, written=written)
+    if json_mode:
+        print(json.dumps(payload, separators=(",", ":")))
+        return
+    print(f"source: {payload['source']}")
+    print(f"target: {payload['target']}")
+    print(f"provider: {payload['provider']}")
+    print(f"mapped: {len(cast(list[object], payload['mappings']))}")
+    print(f"review: {len(cast(list[object], payload['review']))}")
+    for diagnostic in cast(list[dict[str, object]], payload["diagnostics"]):
+        print(f"diagnostic: {diagnostic['code']} (block {diagnostic['ordinal']})")
+    print(f"plan digest: {payload['plan_digest']}")
+    print(f"written: {'true' if written else 'false'}")
+
+
+def _import_document_snapshot(entry: SnapshotEntry) -> JsonObject:
+    return {
+        "path": entry.path.original,
+        "kind": entry.kind.value,
+        "precondition_digest": entry.precondition_digest.value,
+        "content_base64": (
+            base64.b64encode(entry.content).decode("ascii") if entry.content is not None else None
+        ),
+    }
+
+
+def _run_import(argv: list[str], runtime: _SpecRuntime) -> int:
+    parser = _import_argument_parser()
+    json_mode = _parser_flag_present(parser, argv, dest="json")
+    args: argparse.Namespace | None = None
+    current_plan_digest: str | None = None
+    try:
+        try:
+            args = parser.parse_args(argv)
+        except _ArgparseError as exc:
+            raise ImportError("usage", str(exc)) from exc
+        if re.fullmatch(SPEC_ID_PATTERN, args.spec_id) is None:
+            raise ImportError("bad_id", f"--id {args.spec_id!r} does not match {SPEC_ID_PATTERN}")
+        if args.apply and args.expected_plan_digest is None:
+            raise ImportError(
+                "expected_digest_required",
+                "--apply requires --expected-plan-digest from a current preview",
+            )
+        if not args.apply and args.expected_plan_digest is not None:
+            raise ImportError(
+                "flag_conflict", "--expected-plan-digest has meaning only with --apply"
+            )
+        if runtime.payload is None or runtime.payload.manifest.payload.version.value != "1.9":
+            raise ImportError(
+                "config_error", "spec import requires selected Project Specification 1.9"
+            )
+
+        try:
+            source_relative, source_path, source_entry = _selected_snapshot(
+                args.source, runtime, must_exist=True
+            )
+            target_relative, target_path, target_entry = _selected_snapshot(
+                args.output, runtime, must_exist=False
+            )
+        except ConfigError as exc:
+            raise ImportError("unsafe_path", str(exc)) from exc
+        if source_relative == target_relative:
+            raise ImportError("path_alias", "source and output must be distinct")
+        if target_entry.kind is EntryKind.REGULAR:
+            try:
+                if source_path.samefile(target_path):
+                    raise ImportError("path_alias", "source and output must be distinct")
+            except OSError as exc:
+                raise ImportError(
+                    "unsafe_path", f"cannot inspect output target: {args.output}"
+                ) from exc
+        assert source_entry.content is not None
+        source_snapshot = _import_document_snapshot(source_entry)
+        target_snapshot = _import_document_snapshot(target_entry)
+        try:
+            result = _invoke_selected(
+                runtime,
+                "fix",
+                ProviderOperation.FIX,
+                {
+                    "documents": [target_snapshot],
+                    "import": {
+                        "source": source_snapshot,
+                        "target": target_snapshot,
+                        "spec_id": args.spec_id,
+                    },
+                },
+            )
+        except ControlPlaneError as exc:
+            raise ImportError("provider_failure", _provider_failure_message(exc)) from exc
+        plan = result.mutation_plan
+        if plan is None or plan.import_report is None:
+            raise ImportError("provider_failure", "selected import provider returned no typed plan")
+        current_plan_digest = plan.import_report.plan_digest.value
+        if args.apply:
+            if not isinstance(args.expected_plan_digest, str):
+                raise ImportError(
+                    "expected_digest_required",
+                    "--apply requires --expected-plan-digest from a current preview",
+                )
+            try:
+                expected = Sha256Digest(args.expected_plan_digest)
+            except ValueError as exc:
+                raise ImportError("bad_digest", "expected plan digest is invalid") from exc
+            if expected != plan.import_report.plan_digest:
+                raise ImportError(
+                    "plan_digest_mismatch",
+                    "current import plan does not match --expected-plan-digest; preview again",
+                )
+            applied = apply_authoring_plan(runtime.repo, plan)
+            if not applied.success:
+                raise ImportError(
+                    "write_failed", f"cannot write {args.output}: {applied.error_code}"
+                )
+            _emit_import_success(plan, json_mode=args.json, written=True)
+            return 0
+        _emit_import_success(plan, json_mode=args.json, written=False)
+        return 0
+    except ImportError as error:
+        return _emit_import_failure(
+            json_mode,
+            error,
+            source=str(args.source) if args is not None else None,
+            target=str(args.output) if args is not None else None,
+            spec_id=args.spec_id if args is not None else None,
+            plan_digest=current_plan_digest,
+        )
+
+
 _VERB_HELP = {
     "validate": "validate project specification documents",
     "lint": "lint project specification documents",
@@ -1264,6 +1517,7 @@ _VERB_HELP = {
     "next": "print the next free tracked-item id",
     "new": "scaffold a new specification",
     "upgrade": "upgrade a specification to a higher tier",
+    "import": "preview or apply a preservation-first specification import",
 }
 _VERBS = frozenset(_VERB_HELP)
 
@@ -1289,6 +1543,8 @@ def _leaf_argument_parser(verb: str) -> argparse.ArgumentParser:
         return _new_argument_parser()
     if verb == "upgrade":
         return _upgrade_argument_parser()
+    if verb == "import":
+        return _import_argument_parser()
     raise ValueError(f"unknown spec verb: {verb}")
 
 
@@ -1311,6 +1567,8 @@ def _operation_lock_mode(verb: str, argv: list[str]) -> LockMode:
         parser = _new_argument_parser(add_help=False)
     elif verb == "upgrade":
         parser = _upgrade_argument_parser(add_help=False)
+    elif verb == "import":
+        parser = _import_argument_parser(add_help=False)
     else:
         return LockMode.READ
 
@@ -1320,6 +1578,8 @@ def _operation_lock_mode(verb: str, argv: list[str]) -> LockMode:
         return LockMode.WRITE
     if verb == "new":
         return LockMode.READ if args.stdout else LockMode.WRITE
+    if verb == "import":
+        return LockMode.WRITE if args.apply else LockMode.READ
     return LockMode.WRITE if args.in_place or args.output is not None else LockMode.READ
 
 
@@ -1366,6 +1626,8 @@ def run(
                 return _run_new(rest, runtime)
             if verb == "upgrade":
                 return _run_upgrade(rest, runtime)
+            if verb == "import":
+                return _run_import(rest, runtime)
             raise AssertionError(f"unhandled spec verb: {verb}")
     except CommandResolutionError as exc:
         message = str(exc)
@@ -1375,6 +1637,8 @@ def run(
             message = "selected project-spec payload is unavailable"
         if verb in {"new", "upgrade"} and "--json" in rest:
             return _emit_new_failure(True, NewError("config_error", message))
+        if verb == "import" and "--json" in rest:
+            return _emit_import_failure(True, ImportError("config_error", message))
         print(f"error: {message}", file=sys.stderr)
         return 2
     except ConfigError as exc:

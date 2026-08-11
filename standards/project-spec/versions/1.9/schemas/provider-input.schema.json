@@ -16,6 +16,7 @@
 				"scaffold",
 				"upgrade",
 				"migrate",
+				"fix",
 				"verify"
 			]
 		},
