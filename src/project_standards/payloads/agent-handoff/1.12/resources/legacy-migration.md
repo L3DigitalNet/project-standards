@@ -1,0 +1,1 @@
+../../../../../../standards/agent-handoff/versions/1.12/resources/legacy-migration.md

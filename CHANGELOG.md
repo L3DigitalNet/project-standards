@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-08-09'
+updated: '2026-08-10'
 reviewed: '2026-07-27'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -36,6 +36,10 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+
+- **Agent Handoff 1.12 corrects the successor and legacy-migration guidance without changing runtime behavior** ([#140](https://github.com/L3DigitalNet/project-standards/issues/140), [#165](https://github.com/L3DigitalNet/project-standards/issues/165)). A clean V5-native reconciliation retires the unchanged superseded Python launcher and refuses consumer-modified bytes with `CP-MODIFIED-MANAGED`; no manual deletion is required. The legacy-migration runbook now confirms current registrations use the compiled `session-start` launcher while its historical per-harness references remain intact. The complete candidate remains unadvertised until release activation; Agent Handoff 1.11 stays the Catalog 5 default.
 
 ## [5.18.0] — 2026-08-09
 
