@@ -100,6 +100,7 @@ class ProviderSubprocessOutcome:
     frame: JsonObject
     stdout: CapturedStream
     stderr: CapturedStream
+    returncode: int = 0
 
 
 class _Timeout(Exception):
@@ -293,7 +294,7 @@ def _teardown(process: subprocess.Popen[bytes], transport: _Transport) -> None:
             stream.close()
 
 
-def _validated_frame(raw: bytes) -> JsonObject:
+def _validated_frame(raw: bytes, *, validate_status: bool) -> JsonObject:
     if len(raw) > RESULT_LIMIT_BYTES:
         raise ProviderSubprocessError(
             "provider-frame-invalid",
@@ -301,8 +302,18 @@ def _validated_frame(raw: bytes) -> JsonObject:
             _TIMEOUT_REMEDIATION,
         )
     try:
-        decoded = cast(object, json.loads(raw))
-    except ValueError as exc:
+        text = raw.decode("utf-8")
+
+        def closed_object(pairs: list[tuple[str, JsonValue]]) -> JsonObject:
+            result: JsonObject = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("duplicate JSON object field")
+                result[key] = value
+            return result
+
+        decoded = cast(object, json.loads(text, object_pairs_hook=closed_object))
+    except (UnicodeDecodeError, ValueError) as exc:
         raise ProviderSubprocessError(
             "provider-frame-invalid",
             "the bounded provider worker returned no readable result",
@@ -316,7 +327,7 @@ def _validated_frame(raw: bytes) -> JsonObject:
         )
     frame = cast(JsonObject, decoded)
     status = frame.get("status")
-    if not isinstance(status, str) or status not in {"ok", "error"}:
+    if validate_status and (not isinstance(status, str) or status not in {"ok", "error"}):
         raise ProviderSubprocessError(
             "provider-frame-invalid",
             "the bounded provider worker returned a result with no recognized status",
@@ -331,6 +342,7 @@ def run_provider_subprocess(
     *,
     timeout: float,
     environment: Mapping[str, str],
+    validate_status: bool = True,
 ) -> ProviderSubprocessOutcome:
     """Run one provider group and return its bounded frame and diagnostics.
 
@@ -349,6 +361,7 @@ def run_provider_subprocess(
     result_read, result_write = os.pipe()
     process: subprocess.Popen[bytes] | None = None
     transport: _Transport | None = None
+    raw_result: bytes | None = None
     try:
         try:
             process = subprocess.Popen(
@@ -408,7 +421,7 @@ def run_provider_subprocess(
                 "the provider invocation was cancelled and its worker group was terminated",
                 _TIMEOUT_REMEDIATION,
             ) from exc
-        return ProviderSubprocessOutcome(_validated_frame(result.content), stdout, stderr)
+        raw_result = result.content
     finally:
         if result_write != -1:  # pragma: no cover - only when Popen never ran
             os.close(result_write)
@@ -418,3 +431,17 @@ def run_provider_subprocess(
             _signal_group(process, signal.SIGKILL)
             process.wait()
         os.close(result_read)
+    assert process is not None
+    assert raw_result is not None
+    if not validate_status and process.returncode != 0:
+        raise ProviderSubprocessError(
+            "provider-command-failed",
+            "the command provider exited with a nonzero status",
+            _TIMEOUT_REMEDIATION,
+        )
+    return ProviderSubprocessOutcome(
+        _validated_frame(raw_result, validate_status=validate_status),
+        stdout,
+        stderr,
+        process.returncode,
+    )

@@ -10,9 +10,9 @@ declared-live-path integrity check, typed results, and the ADR 0025 execution
 boundary all belong to the control plane. This service retains only MCP request
 qualification, authoritative composite-input selection, and DTO mapping:
 
-* the shared runner spawns one child on the server's own interpreter, so a provider cannot
-  block the protocol loop, take the server down with it, or write to the
-  descriptor the stdio transport owns;
+* the shared runner spawns exactly one child — the fixed interpreter worker for
+  Python or the verified materialized executable for a command — so provider
+  code cannot block the protocol loop or write to the stdio transport descriptor;
 * a 30-second per-invocation bound read from ``PROVIDER_TIMEOUT_SECONDS`` at call
   time (so a test or an operator can inject a different bound without the value
   being baked into a default argument), enforced by SIGTERM then SIGKILL with
@@ -33,15 +33,16 @@ is still just data.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, fields
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, cast
 
 from project_standards.control_plane.cli import build_planner_request
+from project_standards.control_plane.command_resolution import selected_command
 from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution, InstalledPayload
 from project_standards.control_plane.executor import reconciliation_fingerprint
-from project_standards.control_plane.locking import ControlPlaneBusyError
+from project_standards.control_plane.locking import ControlPlaneBusyError, LockMode
 from project_standards.control_plane.planner import ReconciliationPlan, plan_reconciliation
 from project_standards.control_plane.provider_subprocess import (
     DIAGNOSTIC_LIMIT_CHARS,
@@ -58,7 +59,9 @@ from project_standards.control_plane.provider_subprocess import (
 from project_standards.control_plane.provider_worker import (
     INPUT_AUTHORITY_FIELD,
     SEAM_AUTHORITY,
+    authoritative_provider_input,
 )
+from project_standards.control_plane.providers import ProviderInvocation, invoke_provider
 from project_standards.control_plane.resolution import resolve_packages
 from project_standards.mcp_services.consumer import (
     Finding,
@@ -69,7 +72,12 @@ from project_standards.mcp_services.consumer import (
 )
 from project_standards.mcp_services.models import ServiceError, ServiceModel
 from project_standards.package_contract.diagnostics import PackageContractError
-from project_standards.package_contract.payload import ProviderDeclaration, ProviderEffect
+from project_standards.package_contract.payload import (
+    JsonObject,
+    ProviderDeclaration,
+    ProviderEffect,
+    ProviderKind,
+)
 
 # ADR 0025: "The provider timeout is 30 seconds per provider invocation." This is
 # a module global rather than a default argument on purpose — the execution path
@@ -91,11 +99,9 @@ _APPROVED_OPERATIONS = frozenset({"validate", "verify", "lint", "drift-check"})
 _STATUS_COMPLETED = "completed"
 
 # Who builds the dispatched provider's typed input. `invoke_read_provider` keeps
-# the caller's, unchanged; the composites send the seam directive instead, and the
-# worker builds the authoritative corpus on its own side of the pipe — the
-# measured authoritative inputs (290 KB to 4.8 MB on a real consumer, 2026-07-30)
-# are one to eighteen times the frozen `REQUEST_LIMIT_BYTES`, so they cannot cross
-# it and the bound is not raised to let them.
+# the caller's unchanged. For composites, the Python worker builds the corpus on
+# its side of the bounded request, while a command is prepared in the parent and
+# receives the same authority result directly through its own stdin.
 _CALLER_AUTHORITY = "caller"
 
 # Composite dispatch supplies no input of its own. The empty object is not a
@@ -520,6 +526,14 @@ def _dispatch(
     *,
     input_authority: str = _CALLER_AUTHORITY,
 ) -> ProviderOperationResult:
+    if selection.declaration.kind is ProviderKind.COMMAND:
+        return _dispatch_command(
+            distribution,
+            root,
+            selection,
+            typed_input,
+            input_authority=input_authority,
+        )
     request = _encoded_request(
         {
             "package_root": str(distribution.package_root),
@@ -583,6 +597,94 @@ def _dispatch(
             outcome.stderr,
         ),
         output=stable_json(response.get("output")),
+    )
+
+
+def _dispatch_command(
+    distribution: InstalledDistribution,
+    root: Path,
+    selection: _Selection,
+    typed_input: dict[str, Any],
+    *,
+    input_authority: str,
+) -> ProviderOperationResult:
+    """Dispatch a command directly so its process is the MCP call's only child."""
+    try:
+        with selected_command(
+            root,
+            selection.standard_id,
+            distribution,
+            mode=LockMode.READ,
+            require_reconciled=False,
+        ) as qualified:
+            if qualified is None or qualified.resolved.value != selection.version:
+                raise ControlPlaneError("qualified command provider selection changed")
+            identity = qualified.payload.manifest.payload
+            matches = [
+                declaration
+                for declaration in qualified.payload.manifest.providers
+                if declaration.id == selection.declaration.id
+            ]
+            if (
+                identity.standard != selection.standard_id
+                or len(matches) != 1
+                or matches[0] != selection.declaration
+            ):
+                raise ControlPlaneError("qualified command provider selection changed")
+            snapshots = typed_input
+            if input_authority == SEAM_AUTHORITY:
+                authoritative = authoritative_provider_input(
+                    qualified,
+                    selection.declaration.operation,
+                    provider_id=selection.declaration.id,
+                )
+                snapshots = {} if authoritative is None else dict(authoritative)
+            result = invoke_provider(
+                ProviderInvocation(
+                    repo=qualified.repo,
+                    payload=qualified.payload,
+                    standard_id=selection.standard_id,
+                    version=qualified.resolved,
+                    provider_id=selection.declaration.id,
+                    operation=selection.declaration.operation,
+                    effective_config=qualified.effective_config,
+                    snapshots=cast("JsonObject", snapshots),
+                )
+            )
+    except _CONTROL_PLANE_FAILURES as exc:
+        cause = exc.__cause__
+        if isinstance(cause, ProviderSubprocessError):
+            raise _error(
+                cause.code,
+                cause.message,
+                cause.remediation,
+                standard_id=selection.standard_id,
+                version=selection.version,
+            ) from exc
+        mapped = _control_plane_error(
+            exc,
+            "the command provider could not be dispatched from the qualified selection",
+        )
+        raise _error(
+            mapped.code,
+            mapped.message,
+            mapped.remediation,
+            standard_id=selection.standard_id,
+            version=selection.version,
+        ) from exc
+
+    raw_findings = [asdict(finding) for finding in result.findings]
+    return ProviderOperationResult(
+        standard_id=selection.standard_id,
+        version=selection.version,
+        provider_id=selection.declaration.id,
+        operation=selection.declaration.operation.value,
+        phase=selection.declaration.phase.value,
+        effect=selection.declaration.effect.value,
+        status=_STATUS_COMPLETED,
+        findings=tuple(_finding(item, root, selection) for item in raw_findings),
+        diagnostics=_bounded(result.output_notice or ""),
+        output=stable_json(result.structured_output),
     )
 
 

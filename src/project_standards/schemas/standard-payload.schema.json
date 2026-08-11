@@ -576,6 +576,108 @@
     },
     "ProviderDeclaration": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "command"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "entrypoint": {
+                "pattern": "^payload:[a-z0-9]+(?:-[a-z0-9]+)*$",
+                "type": "string"
+              },
+              "mode": {
+                "const": "0755"
+              },
+              "platforms": {
+                "const": [
+                  "linux/amd64"
+                ]
+              }
+            },
+            "required": [
+              "entrypoint",
+              "input_schema",
+              "output_schema",
+              "platforms",
+              "mode"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "python",
+                  "workflow"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "entrypoint": {
+                "pattern": "^payload:[a-z0-9]+(?:-[a-z0-9]+)*#[A-Za-z_][A-Za-z0-9_]*$",
+                "type": "string"
+              },
+              "mode": {
+                "type": "null"
+              },
+              "platforms": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "entrypoint",
+              "input_schema",
+              "output_schema"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "documentation-only"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "entrypoint": {
+                "type": "null"
+              },
+              "input_schema": {
+                "type": "null"
+              },
+              "mode": {
+                "type": "null"
+              },
+              "output_schema": {
+                "type": "null"
+              },
+              "platforms": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
       "description": "Declare one phase-bounded provider implemented by payload resources.",
       "properties": {
         "effect": {
@@ -614,6 +716,19 @@
         "kind": {
           "$ref": "#/$defs/ProviderKind"
         },
+        "mode": {
+          "anyOf": [
+            {
+              "const": "0755",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mode"
+        },
         "operation": {
           "$ref": "#/$defs/ProviderOperation"
         },
@@ -632,6 +747,22 @@
         },
         "phase": {
           "$ref": "#/$defs/ProviderPhase"
+        },
+        "platforms": {
+          "anyOf": [
+            {
+              "items": {
+                "const": "linux/amd64",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Platforms"
         },
         "resources": {
           "items": {

@@ -6,7 +6,10 @@ import base64
 import io
 import json
 import os
+import platform
 import stat
+import sys
+import tempfile
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass, replace
@@ -32,6 +35,8 @@ from project_standards.control_plane.provider_subprocess import (
 )
 from project_standards.control_plane.provider_subprocess import (
     ProviderSubprocessError,
+    ProviderSubprocessOutcome,
+    compose_provider_diagnostics,
     encode_provider_request,
     python_worker_argv,
     python_worker_environment,
@@ -305,6 +310,17 @@ class _PreparedPythonProvider:
     code: bytes
     code_path: Path
     symbol: str
+    input_schema: JsonObject
+    output_schema: JsonObject
+    resources: dict[str, bytes]
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedCommandProvider:
+    """Hold the verified command bytes, schemas, and declared resource closure."""
+
+    executable: bytes
+    executable_digest: Sha256Digest
     input_schema: JsonObject
     output_schema: JsonObject
     resources: dict[str, bytes]
@@ -761,7 +777,7 @@ def _bind_authoring_actions_to_snapshot(
         raise ControlPlaneError("authoring mutation exceeds its overwrite authorization")
 
 
-def _qualified_python_provider(
+def _qualified_provider(
     invocation: ProviderInvocation,
 ) -> tuple[Path, InstalledPayload, ProviderDeclaration]:
     """Qualify one direct invocation before it is allowed to spawn a child."""
@@ -780,8 +796,18 @@ def _qualified_python_provider(
     provider = matches[0]
     if provider.operation is not invocation.operation:
         raise ControlPlaneError("provider operation does not match the requested operation")
-    if provider.kind is not ProviderKind.PYTHON or provider.entrypoint is None:
+    if provider.kind not in {ProviderKind.PYTHON, ProviderKind.COMMAND}:
         raise ControlPlaneError("provider kind is not executable by the bounded runner")
+    return root, payload, provider
+
+
+def _qualified_python_provider(
+    invocation: ProviderInvocation,
+) -> tuple[Path, InstalledPayload, ProviderDeclaration]:
+    """Qualify the Python-only in-child execution path."""
+    root, payload, provider = _qualified_provider(invocation)
+    if provider.kind is not ProviderKind.PYTHON:
+        raise ControlPlaneError("provider kind is not executable in the Python worker")
     return root, payload, provider
 
 
@@ -815,6 +841,156 @@ def _prepare_python_provider(
         input_schema=_json_document(loaded[input_schema_id], kind="input schema"),
         output_schema=_json_document(loaded[output_schema_id], kind="output schema"),
         resources={resource_id: loaded[resource_id] for resource_id in provider.resources},
+    )
+
+
+def _prepare_command_provider(
+    payload: InstalledPayload,
+    provider: ProviderDeclaration,
+) -> _PreparedCommandProvider:
+    """Load a command's complete integrity-checked execution closure."""
+    resources = _resource_map(payload)
+    required_ids = {
+        provider.entrypoint_resource,
+        provider.input_schema,
+        provider.output_schema,
+        *provider.resources,
+    }
+    if None in required_ids or not cast(set[str], required_ids).issubset(resources):
+        raise ControlPlaneError("provider references an undeclared payload resource")
+    selected_resources = cast(set[str], required_ids)
+    loaded = {
+        resource_id: _read_payload_resource(payload, resources[resource_id])
+        for resource_id in sorted(selected_resources)
+    }
+    entrypoint_id = cast(str, provider.entrypoint_resource)
+    input_schema_id = cast(str, provider.input_schema)
+    output_schema_id = cast(str, provider.output_schema)
+    return _PreparedCommandProvider(
+        executable=loaded[entrypoint_id],
+        executable_digest=resources[entrypoint_id].digest,
+        input_schema=_json_document(loaded[input_schema_id], kind="input schema"),
+        output_schema=_json_document(loaded[output_schema_id], kind="output schema"),
+        resources={resource_id: loaded[resource_id] for resource_id in provider.resources},
+    )
+
+
+def _host_command_platform() -> str:
+    """Return the closed command ABI platform identifier for this host."""
+    machine = platform.machine().lower()
+    if sys.platform == "linux" and machine in {"amd64", "x86_64"}:
+        return "linux/amd64"
+    return "unsupported"
+
+
+def _run_bounded_provider(
+    argv: Sequence[str],
+    request: bytes,
+    *,
+    environment: Mapping[str, str],
+    validate_status: bool = True,
+) -> ProviderSubprocessOutcome:
+    """Keep every direct provider kind on the sole shared transport call site."""
+    return run_provider_subprocess(
+        argv,
+        request,
+        timeout=float(PROVIDER_TIMEOUT_SECONDS),
+        environment=environment,
+        validate_status=validate_status,
+    )
+
+
+def _invoke_command_provider(
+    root: Path,
+    payload: InstalledPayload,
+    provider: ProviderDeclaration,
+    invocation: ProviderInvocation,
+) -> ProviderResult:
+    """Materialize and invoke one integrity-addressed native command."""
+    if _host_command_platform() != "linux/amd64":
+        raise ControlPlaneError("unsupported command provider platform")
+    prepared = _prepare_command_provider(payload, provider)
+    effective_invocation = replace(
+        invocation,
+        repo=root,
+        snapshots=materialize_referenced_input_snapshots(
+            root,
+            invocation.snapshots,
+            standard_id=invocation.standard_id,
+            config=invocation.effective_config,
+            extensions=payload.manifest.extensions,
+        ),
+    )
+    before = RepositorySnapshot.capture(
+        root,
+        _declared_snapshot_paths(effective_invocation.snapshots),
+    )
+    provider_input = _provider_input(effective_invocation, prepared.resources)
+    input_value = cast(JsonValue, provider_input.model_dump(mode="json"))
+    _validate_json_schema(prepared.input_schema, input_value, kind="input")
+    request = encode_provider_request(
+        cast(
+            JsonObject,
+            {
+                "schema_version": "1.0",
+                "input": input_value,
+                "resources": {
+                    resource_id: base64.b64encode(content).decode("ascii")
+                    for resource_id, content in sorted(prepared.resources.items())
+                },
+            },
+        )
+    )
+    outcome = None
+    failure: ControlPlaneError | None = None
+    cause: BaseException | None = None
+    with tempfile.TemporaryDirectory(prefix="project-standards-provider-") as private:
+        executable = Path(private) / "provider"
+        try:
+            executable.write_bytes(prepared.executable)
+            executable.chmod(0o755)
+            metadata = executable.stat()
+            if (
+                not stat.S_ISREG(metadata.st_mode)
+                or stat.S_IMODE(metadata.st_mode) != 0o755
+                or content_digest(executable.read_bytes()) != prepared.executable_digest
+            ):
+                raise ControlPlaneError("materialized command provider failed verification")
+            outcome = _run_bounded_provider(
+                (str(executable),),
+                request,
+                environment={},
+                validate_status=False,
+            )
+        except OSError as exc:
+            failure = ControlPlaneError("command provider could not be materialized")
+            cause = exc
+        except ProviderSubprocessError as exc:
+            failure = ControlPlaneError(exc.message)
+            cause = exc
+    try:
+        _assert_declared_paths_unchanged(before)
+    except ControlPlaneError as exc:
+        raise exc from (cause or failure)
+    if failure is not None:
+        raise failure from cause
+    assert outcome is not None
+    output = _json_result(outcome.frame)
+    _validate_json_schema(prepared.output_schema, cast(JsonValue, output), kind="output")
+    diagnostics = compose_provider_diagnostics(None, outcome.stdout, outcome.stderr)
+    notice = (
+        safe_failure_detail(
+            diagnostics,
+            (str(root), str(payload.root)),
+        )
+        if diagnostics
+        else None
+    )
+    return _typed_result(
+        effective_invocation,
+        provider.effect,
+        output,
+        notice,
     )
 
 
@@ -886,8 +1062,10 @@ def invoke_provider_in_child(invocation: ProviderInvocation) -> ProviderResult:
 
 
 def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
-    """Invoke one V2 Python provider through the shared bounded child process."""
-    root, payload, provider = _qualified_python_provider(invocation)
+    """Invoke one V2 executable provider through the shared bounded process."""
+    root, payload, provider = _qualified_provider(invocation)
+    if provider.kind is ProviderKind.COMMAND:
+        return _invoke_command_provider(root, payload, provider, invocation)
     prepared = _prepare_python_provider(payload, provider)
     effective_invocation = replace(
         invocation,
@@ -940,10 +1118,9 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
     failure: ControlPlaneError | None = None
     cause: BaseException | None = None
     try:
-        outcome = run_provider_subprocess(
+        outcome = _run_bounded_provider(
             python_worker_argv(),
             request,
-            timeout=float(PROVIDER_TIMEOUT_SECONDS),
             environment=python_worker_environment(),
         )
     except ProviderSubprocessError as exc:

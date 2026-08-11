@@ -109,6 +109,73 @@ def test_payload_schema_exposes_optional_owner_resolution_pointer() -> None:
     assert "consumer_owned_intent_pointer" not in cast("list[str]", signature["required"])
 
 
+def test_payload_schema_exposes_command_platform_and_mode_fields() -> None:
+    schema = package_schema_documents()["standard-payload.schema.json"]
+    definitions = cast("dict[str, object]", schema["$defs"])
+    provider = cast("dict[str, object]", definitions["ProviderDeclaration"])
+    properties = cast("dict[str, object]", provider["properties"])
+
+    assert set(properties) >= {"platforms", "mode"}
+
+
+def test_payload_schema_enforces_kind_specific_provider_execution_fields() -> None:
+    schema = package_schema_documents()["standard-payload.schema.json"]
+    definitions = cast("dict[str, object]", schema["$defs"])
+    provider = cast("dict[str, object]", definitions["ProviderDeclaration"])
+    validator = _validator({"$defs": definitions, **provider})
+    common = {
+        "id": "render-config",
+        "operation": "render",
+        "phase": "plan",
+        "effect": "content",
+        "input_schema": "provider-input",
+        "output_schema": "provider-output",
+        "resources": ["provider-data"],
+    }
+
+    validator.validate(
+        {
+            **common,
+            "kind": "command",
+            "entrypoint": "payload:provider-code",
+            "platforms": ["linux/amd64"],
+            "mode": "0755",
+        }
+    )
+    validator.validate({**common, "kind": "python", "entrypoint": "payload:provider-code#render"})
+    validator.validate(
+        {
+            "id": "guidance",
+            "operation": "render",
+            "kind": "documentation-only",
+            "phase": "plan",
+            "effect": "content",
+            "resources": [],
+        }
+    )
+
+    invalid = [
+        {**common, "kind": "command", "entrypoint": "payload:provider-code"},
+        {
+            **common,
+            "kind": "command",
+            "entrypoint": "payload:provider-code#render",
+            "platforms": ["linux/amd64"],
+            "mode": "0755",
+        },
+        {
+            **common,
+            "kind": "python",
+            "entrypoint": "payload:provider-code#render",
+            "platforms": ["linux/amd64"],
+            "mode": "0755",
+        },
+    ]
+    for declaration in invalid:
+        with pytest.raises(JsonSchemaValidationError):
+            validator.validate(declaration)
+
+
 def test_payload_schema_documents_materialization_option_spellings() -> None:
     schema = package_schema_documents()["standard-payload.schema.json"]
     definitions = cast("dict[str, object]", schema["$defs"])

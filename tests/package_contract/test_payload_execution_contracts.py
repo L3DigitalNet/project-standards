@@ -74,6 +74,12 @@ def _provider(
     return result
 
 
+def _command_provider(**overrides: object) -> dict[str, object]:
+    provider = _provider(kind="command", entrypoint="payload:provider-code")
+    provider.update({"platforms": ["linux/amd64"], "mode": "0755", **overrides})
+    return provider
+
+
 @pytest.mark.parametrize(
     ("operation", "phase", "effect"),
     [
@@ -142,6 +148,54 @@ def test_documentation_only_provider_has_no_executable_contract() -> None:
     assert provider.entrypoint is None
     assert provider.input_schema is None
     assert provider.output_schema is None
+
+
+def test_command_provider_accepts_exact_platform_mode_and_resource_entrypoint() -> None:
+    provider = ProviderDeclaration.model_validate(_command_provider())
+
+    assert provider.entrypoint == "payload:provider-code"
+    assert provider.entrypoint_resource == "provider-code"
+    assert provider.platforms == ["linux/amd64"]
+    assert provider.mode == "0755"
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"entrypoint": "payload:provider-code#run"},
+        {"entrypoint": "provider-code"},
+        {"platforms": None},
+        {"platforms": []},
+        {"platforms": ["linux/amd64", "linux/amd64"]},
+        {"platforms": ["linux/arm64"]},
+        {"mode": None},
+        {"mode": "0644"},
+    ],
+)
+def test_command_provider_rejects_noncanonical_execution_contract(
+    override: dict[str, object],
+) -> None:
+    provider = _command_provider(**override)
+    if override.get("platforms", "present") is None:
+        provider.pop("platforms")
+    if override.get("mode", "present") is None:
+        provider.pop("mode")
+
+    with pytest.raises(ValidationError):
+        ProviderDeclaration.model_validate(provider)
+
+
+@pytest.mark.parametrize("kind", ["python", "documentation-only", "workflow"])
+def test_non_command_provider_rejects_command_only_fields(kind: str) -> None:
+    provider = _provider(kind=kind)
+    provider.update({"platforms": ["linux/amd64"], "mode": "0755"})
+    if kind == "documentation-only":
+        provider.pop("entrypoint")
+        provider.pop("input_schema")
+        provider.pop("output_schema")
+
+    with pytest.raises(ValidationError):
+        ProviderDeclaration.model_validate(provider)
 
 
 def test_payload_provider_references_only_declared_payload_resources() -> None:

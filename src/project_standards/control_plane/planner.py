@@ -2128,7 +2128,12 @@ def _verification_requests(
             if (
                 provider.phase is ProviderPhase.VERIFY
                 and provider.operation is ProviderOperation.VERIFY
-                and provider.kind in {ProviderKind.PYTHON, ProviderKind.DOCUMENTATION_ONLY}
+                and provider.kind
+                in {
+                    ProviderKind.PYTHON,
+                    ProviderKind.COMMAND,
+                    ProviderKind.DOCUMENTATION_ONLY,
+                }
             ):
                 requests.append(
                     VerificationRequest(

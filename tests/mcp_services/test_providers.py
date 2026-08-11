@@ -51,9 +51,10 @@ import sys
 import time
 import tomllib
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import dataclass, fields
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from typing import Any
 
 import pytest
@@ -78,14 +79,18 @@ from project_standards.control_plane.provider_inputs import (
 from project_standards.control_plane.providers import ProviderResult
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.integrity import validate_payload_integrity
+from project_standards.package_contract.paths import PackageVersion
 from project_standards.package_contract.payload import (
     JsonObject,
     PayloadAvailability,
     PayloadManifest,
+    ProviderDeclaration,
     ProviderEffect,
+    ProviderKind,
     ProviderOperation,
 )
 from project_standards.package_contract.projection import sync_payload_projection
+from tests.control_plane.test_command_providers import command_payload
 from tests.mcp_services.helpers import FULL_FIXTURE, import_mcp_services
 from tests.mcp_services.test_consumer import TOOL_RELEASE, dumped, field_names, model_config_of
 
@@ -1301,6 +1306,311 @@ def assert_truncation_is_explicit(text: str, filler: str = NOISE_BYTE) -> None:
 # ---------------------------------------------------------------------------
 # TC-T4-001: validate/drift orchestration over the current exact resolution
 # ---------------------------------------------------------------------------
+
+
+def _unit_provider_selection(providers: ModuleType, kind: ProviderKind) -> Any:
+    selection_type = require_attribute(providers, "_Selection", "qualified selection")
+    declaration = ProviderDeclaration.model_validate(
+        {
+            "id": "validate-demo",
+            "operation": "validate",
+            "kind": kind.value,
+            "phase": "validate",
+            "effect": "findings",
+            "entrypoint": (
+                "payload:provider-code"
+                if kind is ProviderKind.COMMAND
+                else "payload:provider-code#validate"
+            ),
+            "input_schema": "provider-input",
+            "output_schema": "provider-output",
+            "resources": [],
+            **(
+                {"platforms": ["linux/amd64"], "mode": "0755"}
+                if kind is ProviderKind.COMMAND
+                else {}
+            ),
+        }
+    )
+    return selection_type(
+        standard_id="demo",
+        version="1.2",
+        declaration=declaration,
+    )
+
+
+def _unit_distribution(root: Path) -> Any:
+    return SimpleNamespace(
+        package_root=root / "distribution",
+        tool_release=SimpleNamespace(value="5.18.0"),
+    )
+
+
+def _unit_selected_package(root: Path, selection: Any) -> Any:
+    return SimpleNamespace(
+        repo=root,
+        payload=SimpleNamespace(
+            manifest=SimpleNamespace(
+                payload=SimpleNamespace(standard=selection.standard_id),
+                providers=[selection.declaration],
+            )
+        ),
+        resolved=PackageVersion("1.2"),
+        effective_config={"mode": "strict"},
+    )
+
+
+def _unit_provider_result() -> ProviderResult:
+    return ProviderResult(
+        ProviderEffect.FINDINGS,
+        findings=(),
+        structured_output={"findings": []},
+    )
+
+
+def _unexpected_call(message: str) -> Callable[..., Any]:
+    def fail(*_args: object, **_kwargs: object) -> Any:
+        raise AssertionError(message)
+
+    return fail
+
+
+def test_mcp_command_parent_preserves_single_provider_input_and_skips_python_worker(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    providers = require_service_module("providers")
+    selection = _unit_provider_selection(providers, ProviderKind.COMMAND)
+    caller_input = {"caller": {"nested": ["unchanged"]}}
+    invocations: list[Any] = []
+
+    @contextmanager
+    def selected(*_args: object, **_kwargs: object) -> Any:
+        yield _unit_selected_package(tmp_path, selection)
+
+    def direct(invocation: Any) -> ProviderResult:
+        invocations.append(invocation)
+        return _unit_provider_result()
+
+    def nested(*_args: object, **_kwargs: object) -> Any:
+        raise AssertionError("command dispatch entered the Python worker")
+
+    monkeypatch.setattr(providers, "selected_command", selected, raising=False)
+    monkeypatch.setattr(providers, "invoke_provider", direct, raising=False)
+    monkeypatch.setattr(providers, "run_provider_subprocess", nested)
+
+    result = providers._dispatch(
+        _unit_distribution(tmp_path),
+        tmp_path,
+        selection,
+        caller_input,
+    )
+
+    assert len(invocations) == 1
+    assert invocations[0].snapshots is caller_input
+    assert result.status == "completed"
+
+
+def test_mcp_command_parent_runs_one_real_command_child(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    providers = require_service_module("providers")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = command_payload(
+        tmp_path / "payload",
+        operation=ProviderOperation.VALIDATE,
+        effect=ProviderEffect.FINDINGS,
+    )
+    declaration = payload.manifest.providers[0]
+    selection_type = require_attribute(providers, "_Selection", "qualified selection")
+    selection = selection_type(
+        standard_id="demo",
+        version="1.2",
+        declaration=declaration,
+    )
+    qualified = SimpleNamespace(
+        repo=repo,
+        payload=payload,
+        resolved=PackageVersion("1.2"),
+        effective_config={"mode": "strict"},
+    )
+
+    @contextmanager
+    def selected(*_args: object, **_kwargs: object) -> Any:
+        yield qualified
+
+    monkeypatch.setattr(providers, "selected_command", selected)
+    monkeypatch.setattr(
+        providers,
+        "run_provider_subprocess",
+        _unexpected_call("command dispatch created a Python worker"),
+    )
+
+    result = providers._dispatch(
+        _unit_distribution(tmp_path),
+        repo,
+        selection,
+        {"caller": "unchanged"},
+    )
+
+    assert result.status == "completed"
+    assert result.findings == ()
+    assert dumped(result)["output"] == {"findings": []}
+
+
+@pytest.mark.parametrize(
+    ("authority_input", "expected"),
+    [
+        ({"family": {"documents": ["README.md"]}}, {"family": {"documents": ["README.md"]}}),
+        ({"plan_bound": {"verification": True}}, {"plan_bound": {"verification": True}}),
+        (None, {}),
+    ],
+    ids=("family-first", "plan-bound", "generic-empty"),
+)
+def test_mcp_command_parent_uses_authoritative_composite_input(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    authority_input: dict[str, Any] | None,
+    expected: dict[str, Any],
+) -> None:
+    providers = require_service_module("providers")
+    selection = _unit_provider_selection(providers, ProviderKind.COMMAND)
+    directive = {"directive": "must-not-reach-command"}
+    invocations: list[Any] = []
+    authority_calls: list[tuple[Any, ProviderOperation, str]] = []
+
+    @contextmanager
+    def selected(*_args: object, **_kwargs: object) -> Any:
+        yield _unit_selected_package(tmp_path, selection)
+
+    def authoritative(
+        qualified: Any,
+        operation: ProviderOperation,
+        *,
+        provider_id: str,
+    ) -> dict[str, Any] | None:
+        authority_calls.append((qualified, operation, provider_id))
+        return authority_input
+
+    def direct(invocation: Any) -> ProviderResult:
+        invocations.append(invocation)
+        return _unit_provider_result()
+
+    monkeypatch.setattr(providers, "selected_command", selected, raising=False)
+    monkeypatch.setattr(
+        providers,
+        "authoritative_provider_input",
+        authoritative,
+        raising=False,
+    )
+    monkeypatch.setattr(providers, "invoke_provider", direct, raising=False)
+    monkeypatch.setattr(
+        providers,
+        "run_provider_subprocess",
+        _unexpected_call("command dispatch entered the Python worker"),
+    )
+
+    providers._dispatch(
+        _unit_distribution(tmp_path),
+        tmp_path,
+        selection,
+        directive,
+        input_authority=providers.SEAM_AUTHORITY,
+    )
+
+    assert [(operation, provider_id) for _, operation, provider_id in authority_calls] == [
+        (ProviderOperation.VALIDATE, "validate-demo")
+    ]
+    assert invocations[0].snapshots == expected
+    assert invocations[0].snapshots is not directive
+
+
+def test_mcp_command_parent_keeps_authority_failure_isolated_per_composite_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    providers = require_service_module("providers")
+    selection = _unit_provider_selection(providers, ProviderKind.COMMAND)
+
+    @contextmanager
+    def selected(*_args: object, **_kwargs: object) -> Any:
+        yield _unit_selected_package(tmp_path, selection)
+
+    def fail_authority(*_args: object, **_kwargs: object) -> Any:
+        raise ValueError("private authority detail")
+
+    monkeypatch.setattr(providers, "selected_command", selected, raising=False)
+    monkeypatch.setattr(
+        providers,
+        "authoritative_provider_input",
+        fail_authority,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        providers,
+        "invoke_provider",
+        _unexpected_call("authority failure executed command bytes"),
+        raising=False,
+    )
+
+    result = providers._composite_dispatch(
+        _unit_distribution(tmp_path),
+        tmp_path,
+        selection,
+    )
+
+    assert result.status == "control-plane-unavailable"
+    assert result.findings == ()
+    assert "private authority detail" not in result.diagnostics
+
+
+def test_python_provider_stays_on_existing_mcp_worker_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    providers = require_service_module("providers")
+    selection = _unit_provider_selection(providers, ProviderKind.PYTHON)
+    requests: list[dict[str, Any]] = []
+
+    def worker(
+        argv: tuple[str, ...],
+        request: bytes,
+        **_kwargs: object,
+    ) -> provider_subprocess.ProviderSubprocessOutcome:
+        requests.append(json.loads(request))
+        assert argv == provider_subprocess.python_worker_argv()
+        return provider_subprocess.ProviderSubprocessOutcome(
+            {
+                "status": "ok",
+                "effect": "findings",
+                "output": {"findings": []},
+                "output_notice": None,
+                "findings": [],
+            },
+            provider_subprocess.CapturedStream("stdout", 8192),
+            provider_subprocess.CapturedStream("stderr", 8192),
+        )
+
+    monkeypatch.setattr(providers, "run_provider_subprocess", worker)
+    monkeypatch.setattr(
+        providers,
+        "invoke_provider",
+        _unexpected_call("Python provider bypassed its worker"),
+        raising=False,
+    )
+
+    result = providers._dispatch(
+        _unit_distribution(tmp_path),
+        tmp_path,
+        selection,
+        {"caller": "input"},
+    )
+
+    assert len(requests) == 1
+    assert requests[0]["provider_input"] == {"caller": "input"}
+    assert result.status == "completed"
 
 
 def test_validate_repo_selects_applicable_exact_providers(tmp_path: Path) -> None:

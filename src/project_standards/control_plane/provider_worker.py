@@ -1,10 +1,11 @@
 """Execute trusted Python provider bytes inside the shared bounded child.
 
-Direct control-plane calls send an immutable payload description, while MCP
+Direct Python calls send an immutable payload description, while MCP Python
 calls send an installed-distribution selection directive so large authoritative
-inputs can still be built on this side of the bounded request pipe. Both modes
-end at the same in-child provider implementation and write their only result to
-the inherited descriptor; stdout and stderr remain untrusted diagnostics.
+inputs can be built on this side of the bounded request pipe. Both Python modes
+end at the same in-child implementation and write their only result to the
+inherited descriptor; MCP command calls bypass this worker so the materialized
+command remains their only child.
 """
 
 from __future__ import annotations
@@ -90,10 +91,11 @@ def authoritative_provider_input(
     have always had; that a *shipping* provider never lands there is pinned by
     TC-T14-004 rather than assumed.
 
-    This runs worker-side because it cannot run anywhere else: the authoritative
-    inputs measured on a real consumer are 290 KB to 4.8 MB (2026-07-30), against
-    a 256 KiB IPC request bound that ADR 0025 makes a property rather than a
-    tuning knob. Building here means only the small directive crosses the pipe.
+    MCP Python dispatch builds here because authoritative inputs measured on a
+    real consumer are 290 KB to 4.8 MB (2026-07-30), beyond ADR 0025's 256 KiB
+    request bound. MCP command dispatch calls this same authority in the parent
+    and sends its result through the command's own stdin, avoiding a nested
+    Python worker while preserving one authority implementation.
     """
     from project_standards.control_plane.provider_inputs import (
         NoDeclaredProviderInput,

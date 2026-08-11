@@ -550,6 +550,10 @@ def _invocation(repo: Path, payload: InstalledPayload) -> ProviderInvocation:
     )
 
 
+write_provider_payload = _write_provider_payload
+provider_invocation = _invocation
+
+
 def _fix_invocation(
     repo: Path, payload: InstalledPayload, *, kind: str = "regular"
 ) -> ProviderInvocation:

@@ -19,6 +19,7 @@ from urllib.parse import unquote_to_bytes
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError as JsonSchemaError
 from pydantic import (
+    ConfigDict,
     Field,
     GetCoreSchemaHandler,
     StringConstraints,
@@ -437,11 +438,81 @@ _OPERATION_CONTRACT: dict[ProviderOperation, tuple[ProviderPhase, ProviderEffect
     ProviderOperation.SEMANTIC_REVIEW: (ProviderPhase.VALIDATE, ProviderEffect.FINDINGS),
 }
 
-_PAYLOAD_ENTRYPOINT = re.compile(r"^payload:([a-z0-9]+(?:-[a-z0-9]+)*)#([A-Za-z_][A-Za-z0-9_]*)$")
+_PYTHON_PAYLOAD_ENTRYPOINT = re.compile(
+    r"^payload:([a-z0-9]+(?:-[a-z0-9]+)*)#([A-Za-z_][A-Za-z0-9_]*)$"
+)
+_COMMAND_PAYLOAD_ENTRYPOINT = re.compile(r"^payload:([a-z0-9]+(?:-[a-z0-9]+)*)$")
 
 
 class ProviderDeclaration(StrictModel):
     """Declare one phase-bounded provider implemented by payload resources."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {"kind": {"const": "command"}},
+                        "required": ["kind"],
+                    },
+                    "then": {
+                        "properties": {
+                            "entrypoint": {
+                                "pattern": (r"^payload:[a-z0-9]+(?:-[a-z0-9]+)*$"),
+                                "type": "string",
+                            },
+                            "platforms": {"const": ["linux/amd64"]},
+                            "mode": {"const": "0755"},
+                        },
+                        "required": [
+                            "entrypoint",
+                            "input_schema",
+                            "output_schema",
+                            "platforms",
+                            "mode",
+                        ],
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {"enum": ["python", "workflow"]},
+                        },
+                        "required": ["kind"],
+                    },
+                    "then": {
+                        "properties": {
+                            "entrypoint": {
+                                "pattern": (
+                                    r"^payload:[a-z0-9]+(?:-[a-z0-9]+)*"
+                                    r"#[A-Za-z_][A-Za-z0-9_]*$"
+                                ),
+                                "type": "string",
+                            },
+                            "platforms": {"type": "null"},
+                            "mode": {"type": "null"},
+                        },
+                        "required": ["entrypoint", "input_schema", "output_schema"],
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"kind": {"const": "documentation-only"}},
+                        "required": ["kind"],
+                    },
+                    "then": {
+                        "properties": {
+                            "entrypoint": {"type": "null"},
+                            "input_schema": {"type": "null"},
+                            "output_schema": {"type": "null"},
+                            "platforms": {"type": "null"},
+                            "mode": {"type": "null"},
+                        },
+                    },
+                },
+            ],
+        }
+    )
 
     id: ResourceId
     operation: ProviderOperation
@@ -452,6 +523,8 @@ class ProviderDeclaration(StrictModel):
     input_schema: ResourceId | None = None
     output_schema: ResourceId | None = None
     resources: list[ResourceId]
+    platforms: list[Literal["linux/amd64"]] | None = None
+    mode: Literal["0755"] | None = None
 
     @field_validator("resources")
     @classmethod
@@ -466,12 +539,30 @@ class ProviderDeclaration(StrictModel):
         if self.kind is ProviderKind.DOCUMENTATION_ONLY:
             if any(
                 value is not None
-                for value in (self.entrypoint, self.input_schema, self.output_schema)
+                for value in (
+                    self.entrypoint,
+                    self.input_schema,
+                    self.output_schema,
+                    self.platforms,
+                    self.mode,
+                )
             ):
                 raise ValueError("documentation-only provider cannot declare execution fields")
             return self
-        if self.entrypoint is None or _PAYLOAD_ENTRYPOINT.fullmatch(self.entrypoint) is None:
+        if self.kind is ProviderKind.COMMAND:
+            if (
+                self.entrypoint is None
+                or _COMMAND_PAYLOAD_ENTRYPOINT.fullmatch(self.entrypoint) is None
+            ):
+                raise ValueError("command provider requires a payload resource entrypoint")
+            if self.platforms != ["linux/amd64"] or self.mode != "0755":
+                raise ValueError("command provider requires exactly linux/amd64 at mode 0755")
+        elif (
+            self.entrypoint is None or _PYTHON_PAYLOAD_ENTRYPOINT.fullmatch(self.entrypoint) is None
+        ):
             raise ValueError("executable provider requires a payload-qualified entrypoint")
+        elif self.platforms is not None or self.mode is not None:
+            raise ValueError("non-command provider cannot declare command execution fields")
         if self.input_schema is None or self.output_schema is None:
             raise ValueError("executable provider requires input and output schemas")
         return self
@@ -481,7 +572,12 @@ class ProviderDeclaration(StrictModel):
         """Return the version-scoped implementation resource, when executable."""
         if self.entrypoint is None:
             return None
-        match = _PAYLOAD_ENTRYPOINT.fullmatch(self.entrypoint)
+        pattern = (
+            _COMMAND_PAYLOAD_ENTRYPOINT
+            if self.kind is ProviderKind.COMMAND
+            else _PYTHON_PAYLOAD_ENTRYPOINT
+        )
+        match = pattern.fullmatch(self.entrypoint)
         return match.group(1) if match is not None else None
 
 
