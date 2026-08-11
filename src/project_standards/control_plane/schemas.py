@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
+import json
+from itertools import pairwise
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -117,6 +120,144 @@ class MutationDiagnosticSchema(StrictModel):
     refusal: bool = False
 
 
+class ProjectSpecImportSnapshotSchema(StrictModel):
+    """One immutable source or target identity retained by an import plan."""
+
+    path: SafeRelativePath
+    digest: Sha256Digest
+
+
+PROJECT_SPEC_IMPORT_DIAGNOSTICS: dict[str, tuple[str, str]] = {
+    "SPEC-IMPORT-PREAMBLE": (
+        "preamble",
+        "Source block precedes the first recognized heading; owner placement is required.",
+    ),
+    "SPEC-IMPORT-UNMAPPED": (
+        "unmapped",
+        "Source heading has no exact canonical destination; owner placement is required.",
+    ),
+    "SPEC-IMPORT-DUPLICATE": (
+        "duplicate",
+        "Multiple source blocks select one canonical destination; owner placement is required.",
+    ),
+}
+
+
+class ProjectSpecImportDiagnosticSchema(StrictModel):
+    """Content-safe owner-decision diagnostic for one reviewed source block."""
+
+    code: Literal[
+        "SPEC-IMPORT-PREAMBLE",
+        "SPEC-IMPORT-UNMAPPED",
+        "SPEC-IMPORT-DUPLICATE",
+    ]
+    ordinal: int = Field(ge=0)
+    classification: Literal["preamble", "unmapped", "duplicate"]
+    message: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _content_safe_message(self) -> ProjectSpecImportDiagnosticSchema:
+        if (self.classification, self.message) != PROJECT_SPEC_IMPORT_DIAGNOSTICS[self.code]:
+            raise ValueError("import diagnostic must use its content-safe canonical form")
+        return self
+
+
+class ProjectSpecImportBlockSchema(StrictModel):
+    """One source byte range and its exact target-byte preservation location."""
+
+    ordinal: int = Field(ge=0)
+    start: int = Field(ge=0)
+    end: int = Field(gt=0)
+    source_digest: Sha256Digest
+    disposition: Literal["mapped", "review"]
+    destination: str | None = None
+    diagnostic_code: str | None = None
+    target_start: int = Field(ge=0)
+    target_end: int = Field(gt=0)
+    fence: str = Field(pattern=r"^`{3,}$")
+
+    @model_validator(mode="after")
+    def _complete_disposition(self) -> ProjectSpecImportBlockSchema:
+        if self.start >= self.end or self.target_start >= self.target_end:
+            raise ValueError("import block ranges must be non-empty")
+        if self.disposition == "mapped":
+            if self.destination is None or self.diagnostic_code is not None:
+                raise ValueError("mapped import block requires only a destination")
+        elif self.destination is not None or self.diagnostic_code is None:
+            raise ValueError("review import block requires only a diagnostic code")
+        return self
+
+
+class ProjectSpecImportReportSchema(StrictModel):
+    """Closed deterministic preservation report for one legacy-spec import."""
+
+    schema_version: Literal["project-spec-import-plan-v1"]
+    source_snapshot: ProjectSpecImportSnapshotSchema
+    target_snapshot: ProjectSpecImportSnapshotSchema
+    spec_id: str = Field(pattern=r"^SPEC-[0-9A-Z]{4}$")
+    source_size: int = Field(ge=0)
+    blocks: list[ProjectSpecImportBlockSchema] = Field(default_factory=list)
+    diagnostics: list[ProjectSpecImportDiagnosticSchema] = Field(default_factory=list)
+    target_content_digest: Sha256Digest
+    target_content_base64: str
+    plan_digest: Sha256Digest
+
+    @model_validator(mode="after")
+    def _validate_preservation(self) -> ProjectSpecImportReportSchema:
+        try:
+            target = base64.b64decode(self.target_content_base64, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("import target content must be canonical base64") from exc
+        if base64.b64encode(target).decode("ascii") != self.target_content_base64:
+            raise ValueError("import target content must be canonical base64")
+        if digest_of(target) != self.target_content_digest:
+            raise ValueError("import target content does not match its digest")
+
+        cursor = 0
+        recovered: list[bytes] = []
+        reviews: list[tuple[int, str]] = []
+        target_ranges: list[tuple[int, int]] = []
+        for ordinal, block in enumerate(self.blocks):
+            if block.ordinal != ordinal or block.start != cursor:
+                raise ValueError("import source partition has a gap, overlap, or duplicate")
+            if block.end - block.start != block.target_end - block.target_start:
+                raise ValueError(
+                    "import source partition range differs from preserved target range"
+                )
+            if block.target_end > len(target):
+                raise ValueError("import block target range exceeds target content")
+            raw = target[block.target_start : block.target_end]
+            if digest_of(raw) != block.source_digest:
+                raise ValueError("import block bytes do not match their digest")
+            if block.fence.encode("ascii") in raw:
+                raise ValueError("import block bytes can close their preservation fence")
+            fence = block.fence.encode("ascii")
+            prefix_start = block.target_start - len(fence) - 1
+            suffix = (b"" if raw.endswith((b"\n", b"\r")) else b"\n") + fence + b"\n"
+            if (
+                prefix_start < 0
+                or target[prefix_start : block.target_start] != fence + b"\n"
+                or target[block.target_end : block.target_end + len(suffix)] != suffix
+            ):
+                raise ValueError("import block is not bounded by its preservation fence")
+            recovered.append(raw)
+            target_ranges.append((block.target_start, block.target_end))
+            cursor = block.end
+            if block.disposition == "review":
+                assert block.diagnostic_code is not None
+                reviews.append((block.ordinal, block.diagnostic_code))
+        if cursor != self.source_size:
+            raise ValueError("import source partition does not cover the source")
+        if digest_of(b"".join(recovered)) != self.source_snapshot.digest:
+            raise ValueError("recovered import source does not match its snapshot")
+        ordered_ranges = sorted(target_ranges)
+        if any(left[1] > right[0] for left, right in pairwise(ordered_ranges)):
+            raise ValueError("import target block ranges overlap or duplicate content")
+        if reviews != [(item.ordinal, item.code) for item in self.diagnostics]:
+            raise ValueError("import review diagnostics do not match reviewed blocks")
+        return self
+
+
 class MutationPlanSchema(StrictModel):
     """Typed mutation intent and diagnostics returned by a package provider."""
 
@@ -125,6 +266,67 @@ class MutationPlanSchema(StrictModel):
     version: PackageVersion
     actions: list[MutationActionSchema] = Field(default_factory=list)
     diagnostics: list[MutationDiagnosticSchema] = Field(default_factory=list)
+    import_report: ProjectSpecImportReportSchema | None = None
+
+    @model_validator(mode="after")
+    def _validate_import_report(self) -> MutationPlanSchema:
+        report = self.import_report
+        if report is None:
+            return self
+        if len(self.actions) != 1:
+            raise ValueError("import mutation plan requires exactly one target action")
+        action = self.actions[0]
+        if (
+            action.target != report.target_snapshot.path
+            or action.precondition_digest != report.target_snapshot.digest
+            or action.content_digest != report.target_content_digest
+            or action.content_base64 != report.target_content_base64
+        ):
+            raise ValueError("import report does not match its target action")
+        expected_diagnostics = [
+            (
+                item.code,
+                "warning",
+                report.source_snapshot.path,
+                item.message,
+                False,
+            )
+            for item in report.diagnostics
+        ]
+        actual_diagnostics = [
+            (item.code, item.severity, item.path, item.message, item.refusal)
+            for item in self.diagnostics
+        ]
+        if actual_diagnostics != expected_diagnostics:
+            raise ValueError("import plan diagnostics do not match its content-safe report")
+        expected = canonical_mutation_plan_digest(self)
+        if report.plan_digest != expected:
+            raise ValueError("import plan digest does not match the canonical plan")
+        return self
+
+
+def canonical_mutation_plan_digest(plan: MutationPlanSchema | dict[str, object]) -> Sha256Digest:
+    """Digest every mutation-plan field except the digest value being computed."""
+    raw = (
+        cast("dict[str, object]", plan.model_dump(mode="json"))
+        if isinstance(plan, MutationPlanSchema)
+        else plan
+    )
+    canonical = dict(raw)
+    report_value = canonical.get("import_report")
+    if not isinstance(report_value, dict):
+        raise ValueError("canonical import plan digest requires an import report")
+    report = dict(cast("dict[str, object]", report_value))
+    report.pop("plan_digest", None)
+    canonical["import_report"] = report
+
+    encoded = json.dumps(
+        canonical,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return Sha256Digest(f"sha256:{hashlib.sha256(encoded).hexdigest()}")
 
 
 class PublicFindingSchema(StrictModel):

@@ -8,6 +8,8 @@ from project_standards.control_plane.executor import apply_authoring_plan
 from project_standards.control_plane.schemas import MutationPlanSchema
 from project_standards.control_plane.snapshot import RepositorySnapshot
 from project_standards.package_contract.paths import SafeRelativePath
+from project_standards.specs.commands.import_legacy import build_import_plan
+from project_standards.specs.registry import load_registry
 
 
 def _digest(content: bytes) -> str:
@@ -78,6 +80,34 @@ def test_authoring_executor_rejects_a_plan_with_package_refusal(tmp_path: Path) 
     assert result.success is False
     assert result.error_code == "CP-AUTHORING-PLAN"
     assert target.read_bytes() == b"old\n"
+
+
+def test_authoring_executor_does_not_interpret_optional_import_metadata(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    target = repo / "existing.md"
+    target.write_bytes(b"old\n")
+    snapshot = RepositorySnapshot.capture(repo, (SafeRelativePath.parse("existing.md"),)).entries[0]
+    template = Path(
+        "standards/project-spec/versions/1.9/templates/spec-standard-template.md"
+    ).read_bytes()
+    plan = build_import_plan(
+        b"# 2 Scope\nlegacy body\n",
+        template,
+        load_registry(),
+        spec_id="SPEC-AB12",
+        source_path="legacy.md",
+        target_path="existing.md",
+        target_kind="regular",
+        target_precondition_digest=snapshot.precondition_digest.value,
+        version="1.9",
+    )
+    expected = plan.actions[0].content_bytes
+
+    result = apply_authoring_plan(repo, plan)
+
+    assert result.success
+    assert target.read_bytes() == expected
 
 
 def test_authoring_executor_stages_and_applies_complete_whole_file_plan(

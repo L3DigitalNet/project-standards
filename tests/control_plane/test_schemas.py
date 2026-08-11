@@ -189,6 +189,23 @@ def test_mutation_plan_carries_complete_bytes_and_snapshot_preconditions() -> No
         MutationPlanSchema.model_validate(invalid)
 
 
+def test_mutation_plan_import_report_is_optional_and_structurally_closed() -> None:
+    legacy = MutationPlanSchema.model_validate(
+        {
+            "schema_version": "1.0",
+            "standard_id": "project-spec",
+            "version": "1.9",
+        }
+    )
+    assert legacy.import_report is None
+
+    document = control_plane_schema_documents()["mutation-plan.schema.json"]
+    definitions = cast("dict[str, object]", document["$defs"])
+    report = cast("dict[str, object]", definitions["ProjectSpecImportReportSchema"])
+    assert report["additionalProperties"] is False
+    assert "import_report" in cast("dict[str, object]", document["properties"])
+
+
 @pytest.mark.parametrize(
     "override",
     [

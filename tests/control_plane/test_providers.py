@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -263,6 +264,16 @@ def _provider_schema(effect: ProviderEffect) -> dict[str, object]:
         },
         "required": ["findings"],
     }
+
+
+def test_mutation_plan_provider_schema_exposes_optional_closed_import_report() -> None:
+    schema = _provider_schema(ProviderEffect.MUTATION_PLAN)
+    properties = cast("dict[str, object]", schema["properties"])
+    definitions = cast("dict[str, object]", schema["$defs"])
+
+    assert "import_report" in properties
+    report = cast("dict[str, object]", definitions["ProjectSpecImportReportSchema"])
+    assert report["additionalProperties"] is False
 
 
 def _provider_code(
