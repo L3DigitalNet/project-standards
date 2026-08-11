@@ -323,12 +323,12 @@ None. The required output-target contract was resolved by owner direction on 202
 
 ## 13. Close-out
 
-- **Completed:** pending both child checkpoints and parent T27 completion evidence.
-- **Decisions / deviations harvested:** retain the explicit `--output`, source-immutable, no-default clarification in this durable plan; record any approved deviation in the source specification before implementing it.
-- **Risks closed / accepted:** pending T1 accounting and T2 workflow/package proof.
+- **Completed:** T1 checkpoint `4227d51a635d1b78cf6ff4664af7e30239b36495` and T2 checkpoint `f711726418eceeaad8f8076713e76f70588636d9` are terminal, identity-matched, and satisfy all child requirements/proofs without a repository-wide gate.
+- **Decisions / deviations harvested:** the explicit `--output`, source-immutable, no-default clarification remains binding; canonical registry titles use the same approved numeric-prefix stripping before exact comparison; T2's Project Spec 1.9 digest change required one serialized claim excursion for renderer-owned `standards/catalog.md` and no other path.
+- **Risks closed / accepted:** T1's independent accounting/digest proof closes R-001; T2's one-plan CLI/provider/executor proof closes R-002 and R-004; package validators, projection checks, and no-op reconcile close R-003.
 - **Deferred/discovered work filed:** additional mapping profiles and automatic review resolution require separate approved specifications/issues; no speculative follow-up is created by default.
 - **Source/ADR/handoff reconciliation:** no ADR or handoff mutation is owned here; parent/release closeout records the final current state.
-- **Scratch teardown:** only after terminal child checkpoints and parent consumption are confirmed and no recovery evidence exists solely under `.project-pipeline`.
+- **Scratch teardown:** child checkpoints are terminal; retain scratch only until the parent T27 checkpoint consumes this close-out, then remove it after confirming no recovery evidence exists only there.
 
 ## Appendix A. Interface and State Contracts
 
