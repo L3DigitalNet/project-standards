@@ -3,14 +3,14 @@ plan_format: 3
 title: 'Command Provider Execution Implementation Plan'
 slug: 'command-provider-execution'
 status: active
-revision: 5
-revises_revision: 4
-revision_reason: 'correct T2 exception-cause reconstruction and inherited-fd audit semantics'
+revision: 6
+revises_revision: 5
+revision_reason: 'update current source-authority references for renamed ADR 0025 without changing task outcomes'
 pause_reason: ''
 source: 'issue L3DigitalNet/project-standards#142 and owner decisions of 2026-08-10'
 spec_ref: ''
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-08-11
 owners:
   - 'Project Standards maintainers'
 ---
@@ -31,7 +31,8 @@ The implementation ends with a committed Go payload fixture that proves `command
 | --- | --- | --- | --- | --- |
 | `request` | normative | Continue autonomously through v5.19.0; retain the approved 7.5-second/30-second budgets; and correct only the gate-discovered T2 exception-cause and inherited-file-descriptor audit parity gaps without changing caps, architecture, or acceptance. | 2026-08-10 | §§3–7, 9–12; T2 |
 | `issue:L3DigitalNet/project-standards#142` | normative | Approved `command` provider outcome, trust-boundary properties, Go direction, accepted `linux/amd64` narrowing, rejected alternatives, materialization, and acceptance criteria. | live through 2026-08-10T04:38:11Z | §§1, 3, 5–13; T1–T4 |
-| `repo:docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md#provider-execution-boundary` | decision | Existing 30-second bound, process-group termination/reaping, bounded result and diagnostics, third-descriptor result channel, and MCP failure-isolation obligations. | `23c0036f` | §§3–7; T1–T3 |
+| `repo:docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md#provider-execution-boundary` | stale/superseded | Historical path retained only to ground completed T1 identity metadata; replaced by the canonical short path and not an operational authority. | `23c0036f` | T1 terminal history |
+| `repo:docs/adr/adr-0025-mcp-service-and-sdk-boundary.md#provider-execution-boundary` | decision | Existing 30-second bound, process-group termination/reaping, bounded result and diagnostics, third-descriptor result channel, and MCP failure-isolation obligations. | `4f4a3644` | §§3–7; T2–T3 |
 | `repo:docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md` | decision | Repository Go lane and neutral Python/Go tooling boundary. | `23c0036f` | §§3, 5, 7; T1, T4 |
 | `repo:docs/adr/adr-0029-agents-root-allocation.md` | current-state evidence | Integrated release ADR that consumes number 0029 and makes 0030 the next free command-provider allocation. | `8dbdf9b1` | §§4–5, 9, 11; T1 |
 | `repo:standards/adr/versions/1.5/README.md` | normative | Adopted ADR authoring, numbering, frontmatter, indexing, and relationship rules for the prerequisite decision record. | `23c0036f` | §§3, 7–9; T1 |
@@ -313,7 +314,7 @@ External gates:
 - **dependency_reason:** consumes `command-provider-execution-adr-v1`, which fixes runner ownership, ABI direction, limits, environment split, and confirmation obligations before source movement
 - **requirements:** [REQ-003, REQ-004, REQ-008, REQ-012]
 - **proof:** [PV-T2-001]
-- **source_refs:** [request, issue:L3DigitalNet/project-standards#142, repo:docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md#provider-execution-boundary, repo:src/project_standards/control_plane/providers.py::invoke_provider, repo:src/project_standards/control_plane/diagnostics.py::ControlPlaneError, repo:src/project_standards/mcp_services/providers.py::_run_worker, repo:src/project_standards/mcp_services/provider_worker.py::run_request, repo:tests/mcp_services/test_providers.py::test_slow_provider_returns_bounded_diagnostic_and_worker_is_reaped, repo:tests/control_plane/test_providers.py::test_provider_returns_typed_findings_mutation_plan_and_migration_report, repo:tests/mcp_services/security/test_consumer_boundaries.py::OpenAudit, repo:tests/package_compatibility/test_catalog_matrix.py::deny_provider_child_processes, repo:tests/package_compatibility/test_performance.py::test_real_catalog_plans_inside_scale_and_time_boundary]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#142, repo:docs/adr/adr-0025-mcp-service-and-sdk-boundary.md#provider-execution-boundary, repo:src/project_standards/control_plane/providers.py::invoke_provider, repo:src/project_standards/control_plane/diagnostics.py::ControlPlaneError, repo:src/project_standards/mcp_services/providers.py::_run_worker, repo:src/project_standards/mcp_services/provider_worker.py::run_request, repo:tests/mcp_services/test_providers.py::test_slow_provider_returns_bounded_diagnostic_and_worker_is_reaped, repo:tests/control_plane/test_providers.py::test_provider_returns_typed_findings_mutation_plan_and_migration_report, repo:tests/mcp_services/security/test_consumer_boundaries.py::OpenAudit, repo:tests/package_compatibility/test_catalog_matrix.py::deny_provider_child_processes, repo:tests/package_compatibility/test_performance.py::test_real_catalog_plans_inside_scale_and_time_boundary]
 - **consumes:** [command-provider-execution-adr-v1, current Python provider input/resource/output and exception-cause contract, qualified InstalledPayload object seams, sanitized child error frame kind/detail, OpenAudit path-access oracle, revision-4 fast-gate receipt, ADR 0025 bounded transport behavior, approved 7.5-second and 30-second performance budgets]
 - **produces:** [bounded-provider-runner-v1, python-provider-execution-capsule-v1, bounded-python-provider-dispatch-v1]
 - **preserves:** [all V2 Python operations/effects, schemas, typed results, output notice semantics, live-path integrity, qualified synthetic and monkeypatched InstalledPayload behavior, public MCP DTO/service results, request qualification, finding ordering, content-safe public errors, safe ValueError cause/detail parity, path-like filesystem audit coverage, V1 runner behavior, one-child architecture, existing caps, 7.5-second real-catalog budget, 30-second deterministic-order budget]
@@ -350,7 +351,7 @@ External gates:
 - **dependency_reason:** consumes `bounded-provider-runner-v1` and `bounded-python-provider-dispatch-v1`; command execution must extend the proven single runner rather than create another process implementation
 - **requirements:** [REQ-005, REQ-006, REQ-007, REQ-008, REQ-010]
 - **proof:** [PV-T3-001]
-- **source_refs:** [issue:L3DigitalNet/project-standards#142, repo:docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md#provider-execution-boundary, repo:src/project_standards/package_contract/payload.py::ProviderDeclaration, repo:src/project_standards/control_plane/providers.py::invoke_provider, repo:src/project_standards/control_plane/planner.py::_verification_requests, repo:src/project_standards/provider_runner.py::_run_python_provider]
+- **source_refs:** [issue:L3DigitalNet/project-standards#142, repo:docs/adr/adr-0025-mcp-service-and-sdk-boundary.md#provider-execution-boundary, repo:src/project_standards/package_contract/payload.py::ProviderDeclaration, repo:src/project_standards/control_plane/providers.py::invoke_provider, repo:src/project_standards/control_plane/planner.py::_verification_requests, repo:src/project_standards/provider_runner.py::_run_python_provider]
 - **consumes:** [bounded-provider-runner-v1, V2 provider/input/output/resource/integrity contracts, normalized host platform, ADR command ABI]
 - **produces:** [v2-command-provider-declaration-v1, command-provider-wire-v1, command-provider-materialization-v1]
 - **preserves:** [existing schema version, all existing manifests/generated schema compatibility, Python entrypoint grammar/behavior, documentation-only behavior, V1 command refusal, generic package-independent routing]
