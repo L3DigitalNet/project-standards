@@ -3,9 +3,9 @@ plan_format: 3
 title: 'v5.19 ADR Corpus Corrections Implementation Plan'
 slug: 'v519-adr-corpus-corrections'
 status: active
-revision: 1
-revises_revision: 0
-revision_reason: 'initial plan'
+revision: 2
+revises_revision: 1
+revision_reason: 'clarify operational path oracle and bridge-required plan metadata exception'
 pause_reason: ''
 source: 'issues L3DigitalNet/project-standards#161, #160, #159, and #162; owner decisions recorded 2026-08-10'
 spec_ref: ''
@@ -21,7 +21,7 @@ owners:
 
 ## 1. Objective
 
-Make the active Architecture Decision Record (ADR) corpus state one unambiguous authority for each of four settled documentation concerns before v5.19: ADR 0026 owns the four-segment Model Context Protocol (MCP) resource URI grammar while ADR 0010 adopts it by reference; ADR 0024 records why its coupled version-channel decision stays together; a new ADR allocates the platform-owned `.agents/` root; and every active ADR distinguishes evidence from current authority before ADRs 0025 and 0026 are atomically renamed with all tracked inbound references.
+Make the active Architecture Decision Record (ADR) corpus state one unambiguous authority for each of four settled documentation concerns before v5.19: ADR 0026 owns the four-segment Model Context Protocol (MCP) resource URI grammar while ADR 0010 adopts it by reference; ADR 0024 records why its coupled version-channel decision stays together; a new ADR allocates the platform-owned `.agents/` root; and every active ADR distinguishes evidence from current authority before ADRs 0025 and 0026 are atomically renamed with all operational and reader-facing tracked inbound references. Exact old paths may remain only in an enumerated set of identity-bearing plan metadata required by bridge 3.5.0: Authority/Source Map coverage rows and task `source_refs`/`files` claims. Narrative prose, acceptance text, procedures, and non-plan operational references never qualify.
 
 The work is documentation-only. It preserves every accepted `## Decision Outcome` sentence as historical decision text, adds cumulative amendments or a new record where governance changes, preserves stable ADR IDs, and changes no immutable standard payload, implementation behavior, release policy, GitHub work item, or Agent Handoff state.
 
@@ -29,15 +29,15 @@ The work is documentation-only. It preserves every accepted `## Decision Outcome
 
 | Source | Source Role | Authority / Use | Version / Date | Affected Plan Surface |
 | --- | --- | --- | --- | --- |
-| `request` | normative | Exact four-task sequence, settled outcomes, release-wide T4 corpus-freeze entry gate, preservation rules, docs-only release boundary, validation floor, and prohibited mutations. | 2026-08-10 | §§1, 3–13; T1–T4 |
+| `request` | normative | Exact four-task sequence, settled outcomes, release-wide T4 corpus-freeze entry gate, preservation rules, docs-only release boundary, prohibited mutations, and clarification that T4's old-path oracle excludes only enumerated bridge-required plan identity metadata. | 2026-08-10 | §§1, 3–13; T1–T4 |
 | `issue:L3DigitalNet/project-standards#161` | normative | Owner comment `5235622130`: ADR 0026 owns the four-segment grammar; ADR 0010 adopts it by reference and keeps its exclusion; producer divergence was resolved by `e400f83f`; no edge work or payload cut. | 2026-08-10 | §§3–6; T1 |
 | `issue:L3DigitalNet/project-standards#160` | normative | Owner comment `5235640800`: ADR 0024 stays one record because the alternatives jointly determine advertisement, selectors, and classification; add rationale and a reader map; do not touch `meta/versioning.md`. | 2026-08-10 | §§3–6; T2 |
 | `issue:L3DigitalNet/project-standards#159` | normative | Owner comment `5235656273`: a new ADR makes `.agents/` platform-owned and allocates subtrees per artifact class, defines coexistence/keying, grandfathers skills, accepts collision risk, and relates to ADRs 0016, 0021, and 0022. | 2026-08-10 | §§3–6; T3 |
 | `issue:L3DigitalNet/project-standards#162` | normative | Owner comment `5235798257`: apply the repository-local evidence-versus-authority convention across all active ADRs; rename ADRs 0025/0026 last; use a Git-tracked census whose recorded scope is 46 hits across 17 files. | 2026-08-10 | §§3–7; T4 |
 | `issue:L3DigitalNet/project-standards#157` | normative | Owner comment `5235741187` requires an ADR 0028 amendment recording the create-only generated-file decision; its integrated ADR checkpoint is a minimum input to T4's release-wide corpus freeze. | 2026-08-10 | §§3–7, 9–12; T4 entry gate |
 | `issue:L3DigitalNet/project-standards#142` | normative | The owner decision requires a control-plane ADR recording the accepted command-provider direction, portability posture, and rejected alternative; its integrated ADR checkpoint is a minimum input to T4's release-wide corpus freeze. | 2026-08-10 | §§3–7, 9–12; T4 entry gate |
-| `issue:L3DigitalNet/project-standards#169` | current-state evidence | The issue is open and permits either an ADR or changelog record for its MCP decision; no owner-approved ADR-writing outcome is settled at plan authoring. | 2026-08-10 | §§3, 9–12; conditional T4 entry gate |
-| `issue:L3DigitalNet/project-standards#167` | current-state evidence | The issue is open and its final decision-record shape is not settled at plan authoring. | 2026-08-10 | §§3, 9–12; conditional T4 entry gate |
+| `issue:L3DigitalNet/project-standards#169` | normative | The release coordinator settled that #169 contributes no ADR to the frozen v5.19 corpus. | 2026-08-10 | §§3, 9–12; T4 entry gate |
+| `issue:L3DigitalNet/project-standards#167` | normative | The release coordinator settled that #167 contributes no ADR to the frozen v5.19 corpus. | 2026-08-10 | §§3, 9–12; T4 entry gate |
 | `repo:standards/adr/versions/1.5/README.md#amendment-workflow` | decision | Amendments are cumulative, do not rewrite accepted outcome prose, keep active status, and use reciprocal fields only for an external ADR amendment. A widened concern needs a new record. | `5e1b04f1` | §§3–5, 9–10; T1–T3 |
 | `repo:docs/adr/README.md#reading-this-corpus` | decision | Repository-local convention: `source` and More Information retain frozen evidence; `related` and body prose point to current authority. | `5e1b04f1` | §§4–7; T4 |
 | `repo:docs/adr/adr-0010-standard-resource-uris-and-index.md#decision-outcome` | current-state evidence | Existing declaration/index boundary, explicit MCP wire-grammar exclusion, reciprocal relation to ADR 0026, and stale open-divergence statement. | `5e1b04f1` | §§4–5; T1 |
@@ -49,6 +49,8 @@ The work is documentation-only. It preserves every accepted `## Decision Outcome
 | `repo:docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md#decision-outcome` | current-state evidence | Special-case ownership and installed skill destination that the new root ADR must relate without widening. | `5e1b04f1` | §§4–6; T3 |
 | `repo:docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md#decision-outcome` | current-state evidence | Skill-subtree decision that expressly reserves `.agents/` root authority for a new ADR. | `5e1b04f1` | §§4–6; T3 |
 | `repo:docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md#decision-outcome` | current-state evidence | Hook-subtree decision that expressly reserves `.agents/` root authority for a new ADR. | `5e1b04f1` | §§4–6; T3 |
+| `repo:docs/plans/2026-08-10-v519-adr-corpus-corrections-plan.md` | current-state evidence | Active format-3 master containing bridge-required source coverage and task identity metadata that must remain historically exact through T4. | revision 1 execution state | §§3–7, 9–12; T4 |
+| `repo:docs/plans/2026-08-10-command-provider-execution-plan.md` | current-state evidence | Active format-3 master containing bridge-required source coverage and task identity metadata for the ADR 0025 pre-rename path. | integrated execution state | §§3–7, 9–12; T4 |
 | `repo:.standards/config.toml` | operational evidence | ADR `1.5`, required ADR body sections, and Markdown Frontmatter validation are selected for the dogfood corpus. | `5e1b04f1` | §§3, 7, 12; T1–T4 |
 | `repo:docs/handoff/conventions.md#13-keep-documentation-only-closeout-proportional` | operational evidence | Documentation-only work uses changed-surface validation rather than the implementation/release battery. | `5e1b04f1` | §§3, 7, 12–13; T1–T4 |
 
@@ -62,8 +64,8 @@ Conflict precedence: the explicit request fixes the sequence and preservation bo
 - Self-amend ADR 0024 with the owner-approved joint-determination rationale, a reader map, and the accepted cost of keeping two review populations in one record.
 - Add ADR 0029 as the next repository ADR, making `.agents/` a platform-owned root allocated by artifact class; relate it reciprocally to ADRs 0016, 0021, and 0022; index it in `docs/adr/README.md`.
 - Apply the repository-local evidence-versus-current-authority convention to every ADR whose status is active after the release-wide corpus freeze.
-- Begin T4 only after the release coordinator freezes the complete v5.19 ADR-writing set, confirms at minimum the integrated #157 ADR 0028 amendment and #142 control-plane ADR checkpoints, and includes every other owner-approved v5.19 ADR creation or amendment in the active-ADR census.
-- Atomically rename the two consumer-owned ADR files and every tracked inbound path reference:
+- Begin T4 only after the release coordinator freezes the complete v5.19 ADR-writing set, confirms the integrated #157 ADR 0028 amendment and #142 control-plane ADR checkpoints, records that #167/#169 contribute no ADR, and includes every other owner-approved v5.19 ADR creation or amendment in the active-ADR census.
+- Atomically rename the two consumer-owned ADR files and every operational or reader-facing tracked inbound path reference:
   - `docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md` → `docs/adr/adr-0025-mcp-service-and-sdk-boundary.md`
   - `docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md` → `docs/adr/adr-0026-mcp-local-read-only-transport.md`
 - Produce four serial, reviewable documentation checkpoints, each starting and ending green.
@@ -76,7 +78,7 @@ Conflict precedence: the explicit request fixes the sequence and preservation bo
 - No ADR renumbering or ID change. Filenames change; canonical frontmatter `id` values remain stable.
 - No ADR package cut, catalog/digest/manifest change, v5.19 release cut, issue mutation/closure, pull request, Agent Handoff edit, or generated `.project-pipeline` state during authoring.
 - No promotion of the repository-local evidence convention into the reusable ADR package. That would require separately authorized package work.
-- No implementation or issue-state ownership for #157, #142, #169, #167, or any other external v5.19 stream. This plan consumes their integrated ADR checkpoints only when the owner has settled an ADR-writing outcome.
+- No implementation or issue-state ownership for #157, #142, #169, #167, or any other external v5.19 stream. This plan consumes #157/#142's integrated ADR checkpoints and #167/#169's settled no-ADR dispositions.
 
 ### 3.3 Ownership and Preserved Behavior
 
@@ -85,8 +87,8 @@ Conflict precedence: the explicit request fixes the sequence and preservation bo
 | T1 owns | The two cumulative grammar-reconciliation amendments and proof that the accepted URI grammar did not change. |
 | T2 owns | The cumulative ADR 0024 no-split rationale and reader map, with `meta/versioning.md` excluded. |
 | T3 owns | ADR 0029's new root-allocation decision plus reciprocal relations and index entry. |
-| T4 owns / aggregates | Final bytes of the active ADR corpus, `docs/adr/README.md`, both renamed ADR paths, and every tracked inbound path-reference update. Earlier tasks may contribute to these shared ADR/index paths only in the declared sequence. |
-| Release coordinator owns | The final v5.19 ADR-writing-set declaration and integrated checkpoint inventory. It must include #157's ADR 0028 amendment, #142's required control-plane ADR, and every other issue later settled to create or amend an ADR. |
+| T4 owns / aggregates | Final bytes of the active ADR corpus, `docs/adr/README.md`, both renamed ADR paths, every operational/reader-facing inbound update, and the exact bridge-metadata allowlist. Earlier tasks may contribute to shared ADR/index paths only in the declared sequence. |
+| Release coordinator owns | The final v5.19 ADR-writing-set declaration and integrated checkpoint inventory. It includes #157's ADR 0028 amendment and #142's required control-plane ADR, records #167/#169 as no-ADR contributors, and includes every other issue settled to create or amend an ADR. |
 | Depends on | The four cluster decisions, the release coordinator's frozen ADR-writing set, every checkpoint in that set, ADR 1.5 amendment/boundary rules, current repository ADR numbering, and current Git-tracked reference corpus. |
 | Does not own | Standard payloads, MCP/product behavior, release classification, GitHub lifecycle, handoff truth, or any untracked/worktree copy outside Git's corpus. |
 | Must preserve | Accepted Decision Outcome wording, cumulative amendment history, ADR lifecycle status, stable canonical IDs, immutable package bytes, test semantics, and unrelated concurrent work. |
@@ -94,10 +96,11 @@ Conflict precedence: the explicit request fixes the sequence and preservation bo
 ### 3.4 Constraints and Authorization
 
 - Execute strictly `T1 → T2 → T3 → release-wide corpus freeze → T4`. The first three are disjoint in substantive intent but the owner requires this order; T4 is the universal conflictor and must be last after every v5.19 ADR-authoring checkpoint, including work outside this four-task graph.
-- Block T4 until the release coordinator supplies a settled final ADR-writing set and confirms every listed checkpoint is integrated. The minimum set includes #157's ADR 0028 amendment and #142's required control-plane ADR; #169, #167, or any other stream enters only if an owner later settles it as ADR-writing work.
+- Block T4 until the release coordinator supplies a settled final ADR-writing set, confirms #157's ADR 0028 amendment and #142's required control-plane ADR integrated, and records #167/#169 as no-ADR contributors.
 - Use self-amendment notes and `### Amendments` detail for T1/T2. Do not silently replace stale accepted prose; state the later correction and what remains in force.
 - ADR 0029 is a new decision, not an amendment to ADR 0016, 0021, or 0022. Use reciprocal `related` path edges, not `amends`/`amended_by` or supersession.
 - T4 enumerates the post-freeze tracked corpus with `git grep`/`git ls-files`. Never use recursive grep, which reaches excluded worktree copies.
+- T4 interprets “tracked inbound path/reference” and “zero old exact filename matches” as operational and reader-facing references. Residual exact strings are permitted only on a file/line/field allowlist of bridge-required Authority/Source Map coverage rows and task `source_refs`/`files` claims; reject narrative, acceptance, procedure, and non-plan operational matches.
 - Perform both renames, all inbound path substitutions, and the convention sweep in one T4 checkpoint. No intermediate commit may contain a missing target or dangling old path.
 - Run Git/index-dependent checks directly local. `.git` is not synchronized to rexec and cannot provide valid history, rename, path-census, or tracked-corpus evidence remotely.
 - In every execution worktree, run `scripts/bootstrap-worktree.sh` before candidate-wheel-backed validation. No engine or payload change is planned, so the full `scripts/verify.sh` battery is outside this docs-only plan.
@@ -114,7 +117,8 @@ Conflict precedence: the explicit request fixes the sequence and preservation bo
 - `docs/adr/README.md` defines evidence versus current authority, but the active corpus has not been swept against it.
 - ADRs 0025 and 0026 are consumer-owned documents: the central lock and package manifests manage only `docs/adr/adr.template.md` under this directory.
 - The issue #162 owner census recorded 21 `adr-0025` hits across 13 tracked files and 25 `adr-0026` hits across 16 tracked files, a union of 46 hits across 17 files. At base `5e1b04f1`, exact old filename strings occupy 40 lines across 16 files; the broader owner census also counts stable IDs and non-path textual citations. T4 must remeasure after the release-wide corpus freeze because both this graph and external checkpoints change the corpus.
-- Outside this graph, #157 has a settled obligation to amend ADR 0028 and #142 has a settled obligation to deliver its required control-plane ADR checkpoint. Issues #169 and #167 remain open without an owner-approved ADR-writing outcome, so neither is presumed to create a record; the complete v5.19 ADR-writing set is not frozen at plan authoring.
+- Outside this graph, #157 has a settled obligation to amend ADR 0028 and #142 has a settled obligation to deliver its required control-plane ADR checkpoint. The release coordinator settled that #169 and #167 contribute no ADR to the frozen v5.19 corpus.
+- The active v5.19 and command-provider format-3 masters retain exact old paths in bridge-required Authority/Source Map coverage and task `source_refs`/`files` identity metadata. Those historical metadata lines are not operational navigation references and cannot be rewritten without invalidating execution identity.
 
 ### 4.2 Target State
 
@@ -122,7 +126,7 @@ Conflict precedence: the explicit request fixes the sequence and preservation bo
 - ADR 0024 remains one active record. Its amendment explains joint determination from the considered-options set, maps each reader to the relevant outcome subsections, and explicitly accepts review coupling without changing policy.
 - ADR 0029 is active and indexed. Its Decision Outcome alone identifies allocation authority, governed population, applicability, exclusions, coexistence, keying, grandfathering, and accepted collision risk. ADRs 0016, 0021, and 0022 point back to it.
 - Every ADR active after the release-wide corpus freeze consistently reserves frozen evidence for `source`/More Information and points `related`/body authority references at current owners. The census includes ADR 0029, the integrated #157/#142 ADR checkpoints, and every other owner-approved v5.19 ADR creation or amendment.
-- The repository contains the short ADR 0025/0026 filenames, zero tracked references to either old filename, unchanged canonical IDs, and no partial rename checkpoint.
+- The repository contains the short ADR 0025/0026 filenames, zero operational or reader-facing tracked references to either old filename, unchanged canonical IDs, and no partial rename checkpoint. Every residual exact old path is enumerated and mechanically proven to be bridge-required plan identity metadata.
 
 ### 4.3 Delta Summary
 
@@ -132,7 +136,7 @@ Conflict precedence: the explicit request fixes the sequence and preservation bo
 | Catalog-channel record shape | Split question remains unrecorded. | One cumulative amendment records joint determination and reader map. | Original Decision Outcome, status, versioning policy, `meta/versioning.md`. |
 | `.agents/` authority | Two subtrees and one special case exist without a root allocator. | New ADR 0029 owns platform allocation and relates to all three records. | Existing layout/destinations and consumer-authored coexistence. |
 | Link semantics | Convention exists only in the index prose. | Every active ADR distinguishes frozen evidence from current authority. | Historical evidence links and immutable payload addresses. |
-| ADR paths | Two filenames include the repository name. | Short title-derived filenames and every tracked inbound reference agree. | ADR numbers, IDs, titles, bodies except authorized amendments/link corrections. |
+| ADR paths | Two filenames include the repository name; active execution masters also carry historical path identity. | Short title-derived filenames and every operational/reader-facing tracked inbound reference agree; only enumerated bridge-required plan metadata retains old strings. | ADR numbers, IDs, titles, bodies except authorized amendments/link corrections, and format-3 execution identity. |
 
 ## 5. Change Surface and Architecture
 
@@ -145,9 +149,9 @@ Conflict precedence: the explicit request fixes the sequence and preservation bo
 | Catalog-channel decision | Carries coupled rules without a durable no-split rationale. | Self-amendment explains joint determination and reader routing. | ADR 0024, issue #160 | T2; final bytes T4 |
 | `.agents/` allocation | Reserved by subtree ADRs but unowned at root. | ADR 0029 allocates artifact-class subtrees and defines coexistence/keying. | ADRs 0016/0021/0022/0029 | T3; final bytes T4 |
 | ADR index | Defines reading conventions and indexes 0001–0028. | Indexes ADR 0029 and carries final short paths. | `docs/adr/README.md` | T3 contribution; T4 owner |
-| Release-wide ADR corpus | Other v5.19 streams include mandatory #157 and #142 ADR checkpoints; the final set is not yet frozen. | Release coordinator freezes the settled ADR-writing set and confirms every checkpoint integrated before T4. | #157, #142; conditionally #169/#167 or other later-settled ADR work | external T4 entry gate |
+| Release-wide ADR corpus | Other v5.19 streams include mandatory #157 and #142 ADR checkpoints; #167/#169 contribute no ADR. | Release coordinator freezes the settled ADR-writing set and confirms checkpoints/dispositions before T4. | #157, #142, #167, #169, and other later-settled ADR work | external T4 entry gate |
 | Active ADR link semantics | Mixed frozen evidence and current authority pointers. | All post-freeze active records conform to the index convention without rewriting decision substance. | post-freeze active ADR inventory | T4 |
-| Repository reference graph | Old 0025/0026 paths appear in docs and two test-module docstrings. | Every tracked inbound path names the short filename; Python behavior is unchanged. | post-freeze `git grep` inventory | T4 |
+| Repository reference graph | Old paths appear in operational references, two test docstrings, and bridge-required plan identity metadata. | Operational/reader-facing paths name the short files; residual exact strings equal the enumerated plan-metadata allowlist; Python behavior is unchanged. | post-freeze `git grep` inventory; active format-3 masters | T4 |
 
 ### 5.2 Serial Composition
 
@@ -159,7 +163,8 @@ T1 grammar ownership amendments
         (#157 ADR 0028 + #142 control-plane ADR + every other settled v5.19 ADR checkpoint)
       → T4 complete post-freeze active-corpus convention sweep
          + atomic ADR 0025/0026 renames
-         + every tracked inbound path update
+         + every operational/reader-facing tracked inbound path update
+         + bridge-required plan-metadata allowlist proof
 ```
 
 T4 owns the shared final corpus so the first three checkpoints remain independently reviewable while the universal link/path sweep sees their final records exactly once. The external gate is not a task edge this child plan can execute: absence of a settled final set or any required integrated checkpoint blocks T4.
@@ -174,7 +179,7 @@ T4 owns the shared final corpus so the first three checkpoints remain independen
 | Data / persistent state | no | No migration or generated state. | PV-T4-001 | T4 |
 | Configuration | no | `.standards/config.toml`, package config, and `meta/versioning.md` remain unchanged. | PV-T2-001, PV-T4-001 | T2, T4 |
 | Security / trust | no | No runtime boundary changes; root allocation records ownership only. | PV-T3-001 | T3 |
-| Compatibility / migration | yes | Old filename paths disappear in one checkpoint while IDs and historical evidence remain resolvable. | PV-T4-001 | T4 |
+| Compatibility / migration | yes | Operational old paths disappear in one checkpoint while IDs, historical evidence, and bridge-required plan identity remain resolvable. | PV-T4-001 | T4 |
 | Operations / deployment | no | No release, GitHub, reconciliation, or live operation. | PV-T4-001 | T4 |
 | Documentation / ownership truth | yes | Four issue outcomes become explicit, navigable corpus truth. | PV-T1-001 through PV-T4-001 | T1–T4 |
 | Durable evidence | no | Commits and repeatable validators are sufficient; no external/non-repeatable evidence exists. | PV-T4-001 | T4 |
@@ -194,7 +199,8 @@ T4 owns the shared final corpus so the first three checkpoints remain independen
 | D-009 | Rename 0025/0026 by filename only and update the full tracked inbound graph in the same commit. | IDs are stable identity; a split rename creates dangling references. | ADR 1.5 filename rule; #162 | T4 |
 | D-010 | Use Git, not recursive filesystem traversal, as corpus authority. | Excluded agent worktrees contain copies and inflate unsafe recursive results. | #162 owner decision; repository convention | T4 |
 | D-011 | Run T4 only after a release-wide v5.19 ADR corpus freeze that includes at minimum the integrated #157 ADR 0028 and #142 control-plane ADR checkpoints. | A corpus-wide semantic sweep and rename census is stale if any release ADR lands afterward. | request; #157; #142 | T4 |
-| D-012 | Add other v5.19 work to the freeze only after its owner settles that it creates or amends an ADR; do not infer an ADR outcome for #169, #167, or another unresolved issue. | The final corpus must be exhaustive without converting unresolved alternatives into plan decisions. | request; live #169/#167 state | T4 |
+| D-012 | Record #167 and #169 as no-ADR contributors; add any other v5.19 work only after its owner settles that it creates or amends an ADR. | The final corpus must be exhaustive without inventing a missing record or revisiting settled dispositions. | request; #169; #167 | T4 |
+| D-013 | “Tracked inbound path/reference” and “zero old exact filename matches” govern operational and reader-facing references. Residual strings are allowed only on an enumerated set of bridge-required Authority/Source Map coverage rows and task `source_refs`/`files` claims. | Bridge 3.5.0 preserves source coverage and task identity, so those metadata lines are historical claims rather than navigable links; every other residual is stale. | request; active v5.19 and command-provider masters | T4 |
 
 ## 6. Requirements and Acceptance
 
@@ -204,10 +210,10 @@ T4 owns the shared final corpus so the first three checkpoints remain independen
 | REQ-002 | ADR 0024 shall remain active and unsplit, with a cumulative self-amendment explaining joint determination, mapping reader questions to outcome sections, and accepting review coupling; `meta/versioning.md` shall not change. | #160; request | Must | T2 | T2 | PV-T2-001 |
 | REQ-003 | ADR 0029 shall allocate the platform-owned `.agents/` root per artifact class, define coexistence/keying/grandfathering and accepted risk, pass the four-part reader test, and have reciprocal `related` edges with ADRs 0016, 0021, and 0022 plus an index entry. | #159; request | Must | T3 | T3 | PV-T3-001 |
 | REQ-004 | Every ADR active after the release-wide corpus freeze shall conform to the repository evidence-versus-current-authority convention while retaining historical evidence and accepted decision substance. | #162; request | Must | T4 | T4 | PV-T4-001 |
-| REQ-005 | ADR 0025 and ADR 0026 shall use their short title-derived filenames in one atomic checkpoint, every tracked inbound path shall be updated, canonical IDs shall remain unchanged, and the old filename strings shall have zero tracked matches. | #162; request | Must | T4 | T4 | PV-T4-001 |
+| REQ-005 | ADR 0025 and ADR 0026 shall use their short title-derived filenames in one atomic checkpoint, every operational and reader-facing tracked inbound path shall be updated, canonical IDs shall remain unchanged, and exact old-path matches shall be zero outside an enumerated allowlist limited to bridge-required Authority/Source Map coverage rows and task `source_refs`/`files` claims. Narrative, acceptance, procedure, and non-plan operational matches are forbidden. | #162; request | Must | T4 | T4 | PV-T4-001 |
 | REQ-006 | The implementation shall remain documentation-only: no immutable payload, product behavior, `meta/versioning.md`, GitHub state, handoff state, release state, or generated pipeline state shall change. | request | Must | T4 | T1, T2, T3, T4 | PV-T1-001, PV-T2-001, PV-T3-001, PV-T4-001 |
 | REQ-007 | Execution shall be serial `T1 → T2 → T3 → release-wide corpus freeze → T4`, with one green commit per plan task and no partial rename commit. | request; #162 owner decision | Must | T4 | T4 | PV-T4-001 |
-| REQ-008 | Before T4, the release coordinator shall settle the final v5.19 ADR-writing set and confirm all its checkpoints integrated, including at minimum #157's ADR 0028 amendment and #142's required control-plane ADR; any other issue enters only after an owner-approved ADR-writing decision, and an unsettled set or missing checkpoint shall block. | request; #157; #142; live #169/#167 state | Must | T4 | T4 | PV-T4-001 |
+| REQ-008 | Before T4, the release coordinator shall settle the final v5.19 ADR-writing set, confirm #157's ADR 0028 amendment and #142's required control-plane ADR integrated, record #167/#169 as no-ADR contributors, and include any other owner-approved ADR-writing outcome; an unsettled set or missing checkpoint/disposition shall block. | request; #157; #142; #169; #167 | Must | T4 | T4 | PV-T4-001 |
 
 ## 7. Verification and Evidence Strategy
 
@@ -215,12 +221,12 @@ T4 owns the shared final corpus so the first three checkpoints remain independen
 - **ADR/frontmatter oracle:** with `PYTHONPATH="$PWD/build/wheel-runtime"`, run `uv run project-standards validate`. The selected ADR 1.5 configuration has `require_sections = true`, and the selected Markdown Frontmatter provider validates canonical fields, IDs, dates, and references.
 - **Frontmatter formatting:** with the same candidate runtime, run `uv run format-frontmatter --check` and require no ordering/quoting/list findings in the managed corpus.
 - **Git-tracked changed-surface formatting:** after reviewing and staging only task-owned paths, run `git diff --cached --name-only -z --diff-filter=ACMR -- '*.md' '*.json' '*.jsonc' '*.yml' '*.yaml' | xargs -0 -r npx prettier --check --` and `git diff --cached --name-only -z --diff-filter=ACMR -- '*.md' | sed -z 's|^|:|' | xargs -0 -r npx markdownlint-cli2 --no-globs`. This is the documentation-only scoped form of the repository's Git-authoritative Markdown gate and excludes unrelated tracked symlink projections.
-- **Path and rename proof:** run direct-local `git grep` separately for `adr-0025` and `adr-0026` to retain the owner census; enumerate exact old filename matches and file union; after T4 require both exact-old-path searches to exit 1 with empty output, both new files tracked, and `git diff-tree --summary --find-renames T3_CHECKPOINT T4_CHECKPOINT` to report both renames.
-- **Corpus-freeze oracle:** before T4, record the release coordinator's final v5.19 ADR-writing-set declaration and integrated checkpoint OIDs; require #157's ADR 0028 amendment and #142's control-plane ADR, then reconcile every other owner-approved ADR-writing issue into the set. If #169, #167, or another candidate remains unresolved such that the final set cannot be declared, stop before inventory.
+- **Path and rename proof:** run direct-local `git grep` separately for `adr-0025` and `adr-0026`; enumerate every exact old-path result as file, physical line, field, task ID where applicable, and bridge reason. Require each residual to be an Authority/Source Map row needed to cover a task source ref or a task `source_refs`/`files` claim; mechanically subtract the exact allowlist and require an empty remainder. Reject narrative prose, acceptance, procedures, and every non-plan operational reference. Require both new files tracked and `git diff-tree --summary --find-renames T3_CHECKPOINT T4_CHECKPOINT` to report both renames.
+- **Corpus-freeze oracle:** before T4, record the release coordinator's final v5.19 ADR-writing-set declaration and integrated checkpoint OIDs; require #157's ADR 0028 amendment and #142's control-plane ADR, record #167/#169 as no-ADR contributors, and reconcile every other owner-approved ADR-writing issue into the set. A missing checkpoint/disposition or unsettled set blocks inventory.
 - **Corpus/link oracle:** after the freeze, derive active ADRs from frontmatter `status`, inspect each active record's `source`, `related`, body links, and More Information against `docs/adr/README.md` line 46 semantics, and retain a concise per-file checklist in ephemeral task notes. `project-standards validate` then supplies the independent broken-reference/schema oracle.
 - **Preservation proof:** use `git diff --word-diff=porcelain` scoped to each amended ADR to confirm original Decision Outcome prose remains and only frontmatter bookkeeping, amendment notes/details, and path/link corrections are added. Use `git diff --name-status` and `git diff --check` at every checkpoint.
 - **Python citation-only proof:** T4 may change literal ADR paths in `tests/mcp_server/test_repo_access.py` and `tests/mcp_server/test_transport.py`; run `uv run ruff format --check` and `uv run ruff check` on every touched Python path and confirm no executable token outside the docstring/comment citation changes.
-- **Negative controls:** a rewritten accepted sentence, a second ADR claiming grammar ownership, a missing reciprocal root-allocation edge, a missing #157/#142 checkpoint, an unsettled final ADR-writing set, a post-freeze ADR omitted from the census, an evidence link moved to current authority, a current-authority link left on a frozen version, one surviving old filename, an ID change, or a partial one-file rename must each fail the corresponding diff/search/manual oracle.
+- **Negative controls:** a rewritten accepted sentence, a second ADR claiming grammar ownership, a missing reciprocal root-allocation edge, a missing #157/#142 checkpoint or #167/#169 disposition, an unsettled final set, a post-freeze ADR omitted from the census, an evidence link moved to current authority, a current-authority link left on a frozen version, any old path outside the exact metadata allowlist, an allowlisted narrative/acceptance/procedure/non-plan reference, an ID change, or a partial rename must each fail the corresponding oracle.
 - **External environments:** live GitHub issue text is read-only authority for the final-set decision; implementation proof remains repository-local, with Git/index-dependent gates run directly local.
 - **Evidence:** repeatable command output and the four Git checkpoints are sufficient; no durable `EV-###` artifact is required.
 - **Late failure:** block the owning task. If a completed checkpoint is disproved, append a correction task with `corrects:` and `discovered_from:`; never rewrite completed task definitions or commit a partial rename as recovery.
@@ -377,16 +383,16 @@ T4 owns the shared final corpus so the first three checkpoints remain independen
 1. T1 lands and validates the reconciled URI decision graph without any path rename.
 2. T2 lands and validates ADR 0024's self-amendment; its dependency is ordering-only and its diff remains disjoint from T1.
 3. T3 lands ADR 0029, the three reciprocal relations, and index coverage.
-4. The release coordinator settles the final v5.19 ADR-writing set and confirms every checkpoint integrated, including at minimum #157's ADR 0028 amendment and #142's control-plane ADR. Any later owner-approved #169/#167 or other ADR work joins the set; an unresolved set blocks here.
-5. T4 re-inventories the post-freeze tracked state, performs the convention pass and both renames as one transaction, runs the integrated validation battery, and creates the final checkpoint.
+4. The release coordinator settles the final v5.19 ADR-writing set, confirms #157's ADR 0028 amendment and #142's control-plane ADR integrated, records #167/#169 as no-ADR contributors, and includes any other owner-approved ADR work; an unresolved set blocks here.
+5. T4 re-inventories the post-freeze tracked state, enumerates bridge-required plan identity metadata, performs the convention pass and both renames as one transaction, proves the residual exact strings equal only that metadata allowlist, runs the integrated validation battery, and creates the final checkpoint.
 
-No task may begin from a red prior checkpoint. T4 does not rely on the author's static file list as exhaustive; it resolves every current tracked inbound path after the release-wide freeze. The external prerequisite is an entry gate, not an invitation for this child plan to implement or mutate the prerequisite issues.
+No task may begin from a red prior checkpoint. T4 does not rely on the author's static file list as exhaustive; it resolves every operational/reader-facing tracked inbound path after the release-wide freeze and separately field-validates every residual plan-metadata line. The external prerequisite is an entry gate, not an invitation for this child plan to implement or mutate the prerequisite issues.
 
 ### 10.2 Documentation and Path Transition
 
 - Required: yes, for ADR path identity only; no data/config/runtime migration exists.
-- Compatibility period: none. Tracked repository references switch atomically in T4; stable ADR IDs continue to identify the records.
-- Idempotency: after T4, rerunning exact-old-path searches returns no matches and applying the same substitution set yields no diff.
+- Compatibility period: none. Operational and reader-facing repository references switch atomically in T4; stable ADR IDs and bridge-required execution identity continue to identify records and task history.
+- Idempotency: after T4, rerunning exact-old-path searches returns exactly the enumerated plan-metadata allowlist, subtracting it returns no matches, and applying the same substitution set yields no diff.
 - Point of no return: the T4 checkpoint commit. Before it, both moves and substitutions are one reversible uncommitted task-owned set; a changed freeze invalidates that set.
 - Rollback / forward repair: prefer forward repair to make the full path graph green. If a new ADR-writing checkpoint is admitted before commit, reverse both moves and all T4 substitutions together, integrate it, refreeze, and restart the census. After checkpoint, use an append-only correction task and a new commit.
 - Recovery proof: PV-T4-001.
@@ -401,13 +407,14 @@ If final validation exposes a missed inbound path, post-freeze ADR omission, mis
 
 | ID | Risk | Likelihood | Impact | Treatment | Owner / Task |
 | --- | --- | --- | --- | --- | --- |
-| R-001 | A static pre-plan reference list misses paths added by this graph or another v5.19 ADR-writing stream. | medium | high | Freeze the release-wide ADR-writing set, then re-run Git-tracked broad and exact censuses and require zero old paths. | release coordinator, T4 |
+| R-001 | A static pre-plan reference list misses paths added by this graph or another v5.19 ADR-writing stream. | medium | high | Freeze the release-wide ADR-writing set, then re-run Git-tracked broad/exact censuses and require an empty non-allowlisted remainder. | release coordinator, T4 |
 | R-002 | A correction silently rewrites accepted governance instead of preserving amendment history. | medium | high | Scoped word-diff preservation checks and cumulative amendment form gate T1/T2; T4 changes only link targets/path literals in accepted prose. | T1, T2, T4 |
 | R-003 | Evidence links are modernized and lose the version actually used to decide, or stale evidence is mistaken for authority. | medium | high | Per-active-record classification checklist uses the index's four-position convention and keeps frozen evidence resolvable. | T4 |
-| R-004 | The rename is committed partially or recursive grep causes edits in excluded worktrees. | low | high | One T4 checkpoint, `git mv` both targets, Git-only census, rename-summary inspection, and zero-old-path gate. | T4 |
+| R-004 | The rename is committed partially or recursive grep causes edits in excluded worktrees. | low | high | One T4 checkpoint, `git mv` both targets, Git-only census, rename-summary inspection, and exact allowlist gate. | T4 |
 | R-005 | ADR 0029 widens subtree records or implies package ownership of consumer content. | low | high | Four-part boundary review, reciprocal `related` only, explicit coexistence/destination ownership, and no layout mutation. | T3 |
-| R-006 | T4 starts before #157/#142 land or while another possible ADR outcome such as #169/#167 remains unsettled. | medium | high | Make the final-set declaration and integrated checkpoint inventory an explicit entry gate; absence blocks T4 without inventing an outcome. | release coordinator, T4 |
+| R-006 | T4 starts before #157/#142 land or without the settled #169/#167 no-ADR dispositions. | medium | high | Make the final-set declaration, checkpoint inventory, and dispositions an explicit entry gate; absence blocks T4. | release coordinator, T4 |
 | R-007 | New ADR-writing work is admitted after T4 inventory, making the sweep stale. | low | high | Invalidate the freeze, reverse the uncommitted atomic rename set, integrate the checkpoint, refreeze, and restart the census. | release coordinator, T4 |
+| R-008 | The bridge-metadata allowlist widens to hide an operational stale reference. | medium | high | Enumerate file/line/field/task/reason entries, admit only required source-map coverage and task source/file claims, mechanically reject all other residuals. | T4 |
 
 ### 11.2 Assumptions
 
@@ -419,17 +426,17 @@ If final validation exposes a missed inbound path, post-freeze ADR omission, mis
 
 ### 11.3 Open Questions
 
-None within T1–T3. The owner decisions resolve grammar ownership, ADR 0024 record shape, and `.agents/` allocation. The release-wide ADR-writing set is an external T4 entry condition, not an executor choice; until it is settled, T4 is blocked.
+None. The owner decisions resolve grammar ownership, ADR 0024 record shape, `.agents/` allocation, #167/#169's no-ADR dispositions, and the bridge-metadata interpretation of T4's path oracle. The release-wide ADR-writing set remains an external T4 entry condition, not an executor choice.
 
 ## 12. Final Verification
 
 - Re-run bridge `3.5.0` validation against the durable plan with `--no-scratch`; all four checkpoints and required trailers must exist in dependency order.
 - Reconcile REQ-001 through REQ-008 to passing PV-T1-001 through PV-T4-001; no task may defer its own acceptance to final verification.
-- Confirm the release coordinator's final ADR-writing-set declaration and checkpoint inventory precede T4, include #157's ADR 0028 amendment and #142's control-plane ADR, and include every other issue then settled to create or amend an ADR.
+- Confirm the release coordinator's final ADR-writing-set declaration and checkpoint inventory precede T4, include #157's ADR 0028 amendment and #142's control-plane ADR, record #167/#169 as no-ADR contributors, and include every other issue then settled to create or amend an ADR.
 - From a bootstrapped candidate-wheel runtime, run `project-standards validate` and `format-frontmatter --check`; ADR required sections, frontmatter, IDs, and local references must pass.
 - Stage only task-owned paths, then run the §7 Git-tracked task-diff Prettier and markdownlint commands; run targeted Ruff format/lint for any Python citation paths T4 touched.
-- Run separate direct-local Git searches for both exact old filenames and require empty output/exit 1. Confirm both short target paths are tracked and canonical ADR IDs did not change.
-- Inspect the broad owner census, post-freeze exact inbound-file inventory, T4 rename summary, and final `git diff --check`. Every inventoried path must either change to the short path or be documented as a stable non-path ADR ID/textual citation.
+- Run separate direct-local Git searches for both exact old filenames; enumerate every residual by file/line/field/task/reason; require exact equality with the reviewed bridge-metadata allowlist and an empty remainder after subtraction. Confirm no narrative, acceptance, procedure, or non-plan operational match, both short targets tracked, and canonical ADR IDs unchanged.
+- Inspect the broad owner census, post-freeze exact inbound-file inventory, T4 rename summary, allowlist comparison, and final `git diff --check`. Every operational/reader-facing path must change to the short path; every residual must be required source coverage or a task `source_refs`/`files` claim.
 - Inspect all post-freeze active ADRs against the evidence-versus-current-authority checklist, including ADR 0029, the T1/T2 amendments, and records from every external checkpoint in the frozen set.
 - Confirm the task range contains no changes under `standards/**`, `src/**`, package/catalog/lock/config surfaces, `meta/versioning.md`, GitHub state, Agent Handoff, or generated `.project-pipeline` state, except the two authorized Python test docstring/comment citation substitutions if present.
 - Any failure routes to an append-only correction task; final verification does not edit implementation artifacts directly.
@@ -438,7 +445,7 @@ None within T1–T3. The owner decisions resolve grammar ownership, ADR 0024 rec
 
 - **Completed:** pending all four green checkpoints and final verification.
 - **Decisions / deviations harvested:** retain the four cluster issue IDs, the external freeze's issue/checkpoint inventory, and applicable owner decisions in the plan/checkpoint trail; record any approved deviation before completion.
-- **Risks closed / accepted:** close R-001–R-007 from observed proof; do not silently accept a failed freeze, census, or prose-preservation check.
+- **Risks closed / accepted:** close R-001–R-008 from observed proof; do not silently accept a failed freeze, census, allowlist, or prose-preservation check.
 - **Deferred/discovered work filed:** this plan does not mutate GitHub. Report any independently governed follow-up to the parent workflow for separate issue handling.
 - **Source/ADR/handoff reconciliation:** the ADR corpus is the durable source outcome. Do not edit Agent Handoff or issue state under this child plan.
 - **Scratch teardown:** remove only this plan's ephemeral execution directory after all task evidence is represented by commits and the final validation receipt; never remove the shared `.project-pipeline/` root.
@@ -450,9 +457,10 @@ None within T1–T3. The owner decisions resolve grammar ownership, ADR 0024 rec
 | URI grammar authority | T1 | T4, ADR readers | ADR 0026 freezes grammar; both ADRs cite stale divergence. | ADR 0026 owner, ADR 0010 adopter; `e400f83f` closes producers. | No grammar/error change; v2 successor must carry grammar or repair reference. | Preserve accepted text, exclusion, reciprocal edges, four-segment form. | #161 owner comment |
 | Catalog-channel record shape | T2 | T4, release/consumer readers | One record with no durable no-split rationale. | One amended record with joint-determination rationale and reader map. | No split/supersession or `meta/versioning.md` edit. | Amendment explains; it does not create or alter policy. | #160 owner comment |
 | `.agents/` allocation | T3 | T4, future artifact-class ADRs/packages/consumers | Root reserved; skills/hooks subtrees and one special case exist. | Platform allocates artifact classes; new class needs ADR and standard-id key; skills grandfathered. | Package owns only declared destination; consumer coexistence stays valid. | Existing paths/layouts unchanged; 0016/0021/0022 remain in force. | #159 owner comment |
-| Release-wide ADR corpus freeze | release coordinator (external) | T4 | #157 and #142 require ADR checkpoints; other v5.19 ADR-writing outcomes may still be unsettled. | Settled final issue/checkpoint set, all integrated, with #157 ADR 0028 and #142 control-plane ADR mandatory. | Missing checkpoint or unsettled final set blocks; no issue outcome may be inferred. | T4 inventories only after the freeze and includes every active record from it. | request; #157; #142; live #169/#167 state |
+| Release-wide ADR corpus freeze | release coordinator (external) | T4 | #157/#142 require ADR checkpoints; #167/#169 contribute no ADR. | Settled final issue/checkpoint set with #157/#142 integrated and #167/#169 dispositions recorded. | Missing checkpoint/disposition or unsettled final set blocks. | T4 inventories only after the freeze and includes every active record from it. | request; #157; #142; #169; #167 |
 | Evidence/current-authority placement | T4 | Active ADR readers | Convention documented but inconsistently applied. | `source`/More Information = frozen evidence; `related`/body = current authority. | Active ADRs only for semantic sweep; do not erase historical evidence. | Accepted policy prose and immutable evidence addresses remain intact. | `docs/adr/README.md` |
-| ADR 0025/0026 paths | T4 | Every tracked inbound reference | Long filenames include repository name. | Short filenames; zero exact old paths. | One atomic commit; IDs/numbers unchanged; Git corpus only. | Both target files and all inbound paths resolve together. | #162 owner comment; ADR 1.5 |
+| ADR 0025/0026 paths | T4 | Every operational/reader-facing tracked inbound reference | Long filenames and bridge-required plan identity metadata contain old paths. | Short filenames; zero exact old paths outside the enumerated plan-metadata allowlist. | One atomic commit; IDs/numbers unchanged; Git corpus only. | Both targets and operational references resolve together; execution identity remains intact. | #162 owner comment; ADR 1.5 |
+| Bridge-required plan path identity | T4 | Bridge 3.5.0 validation/resume | Active masters contain required source-map coverage and task source/file claims with exact old paths. | Exact file/line/field/task/reason allowlist; all other matches removed. | Authority/Source Map and task `source_refs`/`files` only; no narrative, acceptance, procedure, or non-plan link. | Historical identity remains byte-stable and is never treated as navigation. | request; active v5.19 and command-provider masters |
 
 ## Appendix B. Requirement-to-Proof Traceability
 
@@ -461,7 +469,7 @@ None within T1–T3. The owner decisions resolve grammar ownership, ADR 0024 rec
 | PV-T1-001 | REQ-001, REQ-006 | T1 | amendment/diff/reference inspection | #161 owner decision, ADR 1.5 accepted-text rule, `e400f83f`, frozen grammar table | Inspect scoped word diff and `e400f83f`; run targeted Markdown checks and candidate-wheel `project-standards validate`. | Two cumulative amendments state sole ownership/adoption and resolved producers; original outcomes, grammar, IDs, edges, and non-doc files are unchanged. | Delete/rewrite the stale outcome sentence, change one grammar token, make ADR 0010 a second owner, or remove its exclusion; inspection must reject each shape. | isolated local execution worktree | ephemeral |
 | PV-T2-001 | REQ-002, REQ-006 | T2 | amendment/reader-map/digest inspection | #160 owner decision, existing considered options/subsections, ADR 1.5 self-amendment rule | Snapshot `meta/versioning.md`; inspect scoped word diff; run targeted Markdown and candidate-wheel validation. | One cumulative self-amendment records joint determination, reader routing, and accepted cost; original outcome and `meta/versioning.md` are unchanged. | Split/supersede the ADR, add a new policy sentence, omit one reader population, or alter `meta/versioning.md`; proof must fail. | isolated local execution worktree | ephemeral |
 | PV-T3-001 | REQ-003, REQ-006 | T3 | boundary/frontmatter/reciprocity/index inspection | #159 owner decision, ADR 1.5 four-part boundary/amendment distinction, existing reserved-authority text | Inspect ADR 0029 and pairwise `related` paths; run frontmatter/ID/reference validation plus targeted Markdown gates. | ADR 0029 is active/indexed, states the entire settled decision from Outcome alone, and has reciprocal edges with 0016/0021/0022; no layout/payload change exists. | Omit 0016, use one-way relation, claim a package owns a subtree, key a new class by skill-id, or treat existing layout as violating; proof must fail. | isolated local execution worktree | ephemeral |
-| PV-T4-001 | REQ-004, REQ-005, REQ-006, REQ-007, REQ-008 | T4 | release-freeze inspection, full active-corpus classification, atomic rename census, integrated static validation | Release coordinator's final issue/checkpoint set; #157/#142 decisions; live state for conditionally included issues; `docs/adr/README.md` convention; ADR 1.5 filename/ID rule; Git-tracked owner census; repository validators | Verify the settled set and integrated OIDs, requiring #157 ADR 0028 and #142 control-plane ADR; reconcile every other owner-approved ADR-writing issue; re-inventory with `git grep`/`git ls-files`; perform both `git mv`s and substitutions; require zero exact old paths; run candidate-wheel validate/frontmatter formatting, Git-tracked Prettier/markdownlint, targeted Ruff, rename-summary, and diff checks. | The release-wide set is settled and integrated before T4; every post-freeze active ADR is classified; both renames appear together; all tracked paths resolve; IDs/prose/payloads/runtime remain preserved; four plan checkpoints are green. | Omit #157 or #142, proceed with an unsettled set, omit a later-settled ADR, admit a new ADR after inventory without refreezing, leave one old path, rename an ID, modernize frozen evidence, retain stale authority in `related`, commit one move alone, or edit an excluded worktree; proof rejects each. | isolated local execution worktree with direct-local Git/index access and read-only live issue access | ephemeral |
+| PV-T4-001 | REQ-004, REQ-005, REQ-006, REQ-007, REQ-008 | T4 | release-freeze inspection, full active-corpus classification, atomic rename census, exact bridge-metadata allowlist comparison, integrated static validation | Final issue/checkpoint set; #157/#142 checkpoints; #167/#169 no-ADR dispositions; `docs/adr/README.md` convention; ADR 1.5 filename/ID rule; bridge 3.5.0 source coverage/task identity; Git-tracked census; repository validators | Verify the settled set and OIDs/dispositions; re-inventory with direct-local `git grep`/`git ls-files`; perform both `git mv`s and operational substitutions; enumerate residual file/line/field/task/reason entries; require each to be Authority/Source Map coverage or a task `source_refs`/`files` claim and require an empty remainder; run candidate-wheel validation/frontmatter formatting, scoped Git-tracked Prettier/markdownlint, targeted Ruff, rename-summary, and diff checks. | The release-wide set is settled before T4; every post-freeze active ADR is classified; both renames appear together; operational/reader-facing paths resolve; residual exact old paths equal only the bridge-required plan-metadata allowlist; IDs/prose/payloads/runtime/history remain preserved; four checkpoints are green. | Omit #157/#142 or #167/#169 disposition, use an unsettled set, omit later-settled ADR work, admit new ADR work without refreezing, retain narrative/acceptance/procedure/non-plan old paths, include unneeded source coverage or task metadata, widen the allowlist, rename an ID, modernize frozen evidence, retain stale authority, commit one move alone, or edit an excluded worktree; proof rejects each. | isolated local execution worktree with direct-local Git/index access and read-only live issue access | ephemeral |
 
 ## Appendix C. Durable Evidence
 
