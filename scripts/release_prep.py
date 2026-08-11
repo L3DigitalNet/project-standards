@@ -62,6 +62,68 @@ RELEASE_BRANCH = "main"
 _SEMVER = re.compile(
     r"^(?P<major>0|[1-9][0-9]*)\.(?P<minor>0|[1-9][0-9]*)\.(?P<patch>0|[1-9][0-9]*)$"
 )
+# Cross-file contract: these forms and historical classifiers mirror
+# package_contract/release_consistency.py. This bare-stdlib script cannot import the
+# candidate package before release setup, so representative tests keep the copies aligned.
+_PACKAGE_VERSION_TEXT = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+_PACKAGE_VERSION = re.compile(r"^(?P<major>0|[1-9][0-9]*)\.(?P<minor>0|[1-9][0-9]*)$")
+_FAMILY_ID = re.compile(r"^[a-z][a-z0-9-]*$")
+_EXACT_SELECTOR = re.compile(
+    rf"(?<![A-Za-z0-9_-])(?P<family>[a-z][a-z0-9-]*)@"
+    rf"(?P<version>{_PACKAGE_VERSION_TEXT})(?![0-9]|\.[0-9])"
+)
+_FULL_VERSION_PATH = re.compile(
+    rf"(?<![A-Za-z0-9_./-])standards/(?P<family>[a-z][a-z0-9-]*)/"
+    rf"versions/(?P<version>{_PACKAGE_VERSION_TEXT})(?=/)"
+)
+_SHALLOW_VERSION_PATH = re.compile(
+    rf"(?<![A-Za-z0-9_./-])versions/(?P<version>{_PACKAGE_VERSION_TEXT})(?=/)"
+)
+_ENABLE_COMMAND = re.compile(
+    rf"project-standards\s+standards\s+enable\s+"
+    rf"(?P<family>[a-z][a-z0-9-]*)\s+--version(?:=|\s+)"
+    rf"(?P<version>{_PACKAGE_VERSION_TEXT})(?![0-9]|\.[0-9])"
+)
+_FAMILY_VERSION = re.compile(
+    rf"(?<![A-Za-z0-9_-])(?P<family>[a-z][a-z0-9-]*)\s+version\s+"
+    rf"`?(?P<version>{_PACKAGE_VERSION_TEXT})`?(?![0-9]|\.[0-9])",
+    re.IGNORECASE,
+)
+_BARE_PACKAGE_VERSION = re.compile(
+    rf"\b(?:Internal package|Package(?:\s+version)?)\s+`?"
+    rf"(?P<version>{_PACKAGE_VERSION_TEXT})`?(?![0-9]|\.[0-9])",
+    re.IGNORECASE,
+)
+_REFERENCE_MARKER = re.compile(
+    r"<!-- release-consistency: "
+    r"(?P<kind>historical|historical-characterization|catalog-range|inventory) "
+    r"(?P<family>[a-z][a-z0-9-]*)"
+    r"(?: (?P<source>catalog|family))? -->"
+)
+_HISTORICAL_SECTIONS = frozenset(
+    {
+        "deviations",
+        "legacy boundary",
+        "migration",
+        "released-version errata",
+        "revision history",
+    }
+)
+_NATURAL_HISTORY_PHRASES = (
+    "correction from",
+    "historical #",
+    "historical limitations",
+    "immutable ",
+    "released history",
+    "remain advertised as released history",
+    "migration evidence only",
+    "previous behavior",
+    "prior internal",
+    "superseded package",
+)
+_CATALOG_ROLES = frozenset({"default", "retained", "candidate", "reference-only", "internal"})
+_SELECTED_ROLES = frozenset({"default", "reference-only", "internal"})
+_PACKAGE_REFERENCE_DOCUMENTS = ("README.md", "adopt.md", "agent-summary.md")
 _RELEASE_TAG = re.compile(
     r"^v(?P<version>(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))$"
 )
@@ -90,6 +152,50 @@ class StepResult:
     name: str
     status: str
     detail: str
+
+
+@dataclass(frozen=True)
+class _CatalogPackage:
+    family: str
+    version: str
+    version_key: tuple[int, int]
+    role: str
+
+
+@dataclass(frozen=True)
+class PackageSelection:
+    """One catalog-selected package version used by the review."""
+
+    family: str
+    version: str
+    role: str
+
+
+@dataclass(frozen=True)
+class _PackageReference:
+    family: str
+    version: str
+    kind: str
+
+
+@dataclass(frozen=True)
+class PackageReferenceMismatch:
+    """One release-current package reference that needs owner review."""
+
+    family: str
+    path: str
+    line: int
+    observed: str
+    expected: str
+    kind: str
+
+
+@dataclass(frozen=True)
+class PackageReferenceReview:
+    """A fully validated, immutable package-reference report plan."""
+
+    selections: tuple[PackageSelection, ...]
+    mismatches: tuple[PackageReferenceMismatch, ...]
 
 
 @dataclass(frozen=True)
@@ -285,6 +391,218 @@ def sweep_version_references(current: Version) -> StepResult:
         "3. reference sweep",
         "ok",
         f"{len(hits)} occurrence(s) of {current} reported for review",
+    )
+
+
+def _parse_package_version(text: str, *, context: str) -> tuple[int, int]:
+    match = _PACKAGE_VERSION.fullmatch(text)
+    if match is None:
+        raise ReleasePrepError(f"{context} has non-canonical package version {text!r}")
+    return (int(match["major"]), int(match["minor"]))
+
+
+def _catalog_selections(target: Version) -> tuple[PackageSelection, ...]:
+    path = REPO_ROOT / "catalogs" / f"{target.major}.toml"
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, tomllib.TOMLDecodeError) as error:
+        raise ReleasePrepError(
+            f"cannot read candidate catalog {path.relative_to(REPO_ROOT)}: {error}"
+        ) from error
+
+    catalog_major = data.get("catalog_major")
+    if type(catalog_major) is not int or catalog_major != target.major:
+        raise ReleasePrepError(
+            f"{path.relative_to(REPO_ROOT)} catalog_major must equal target major {target.major}"
+        )
+    raw_packages = data.get("packages")
+    if not isinstance(raw_packages, list):
+        raise ReleasePrepError(f"{path.relative_to(REPO_ROOT)} packages must be an array of tables")
+
+    by_family: dict[str, list[_CatalogPackage]] = {}
+    identities: set[tuple[str, str]] = set()
+    for index, raw_package in enumerate(raw_packages, start=1):
+        if not isinstance(raw_package, dict):
+            raise ReleasePrepError(f"candidate catalog package row {index} must be a table")
+        package = cast("dict[str, object]", raw_package)
+        family = package.get("id")
+        version = package.get("version")
+        role = package.get("role")
+        if not isinstance(family, str) or _FAMILY_ID.fullmatch(family) is None:
+            raise ReleasePrepError(f"candidate catalog package row {index} has invalid id")
+        if not isinstance(version, str):
+            raise ReleasePrepError(f"candidate catalog package row {index} has invalid version")
+        version_key = _parse_package_version(version, context=f"package row {index}")
+        if not isinstance(role, str) or role not in _CATALOG_ROLES:
+            raise ReleasePrepError(f"candidate catalog package row {index} has invalid role")
+        identity = (family, version)
+        if identity in identities:
+            raise ReleasePrepError(
+                f"candidate catalog duplicates package/version {family}@{version}"
+            )
+        identities.add(identity)
+        by_family.setdefault(family, []).append(_CatalogPackage(family, version, version_key, role))
+
+    selections: list[PackageSelection] = []
+    for family, packages in sorted(by_family.items()):
+        selected_roles = {package.role for package in packages if package.role in _SELECTED_ROLES}
+        defaults = [package for package in packages if package.role == "default"]
+        if len(defaults) > 1 or len(selected_roles) > 1:
+            raise ReleasePrepError(f"candidate catalog has ambiguous selection for {family}")
+        selected: _CatalogPackage | None = None
+        if defaults:
+            selected = defaults[0]
+        elif selected_roles:
+            role = next(iter(selected_roles))
+            selected = max(
+                (package for package in packages if package.role == role),
+                key=lambda package: package.version_key,
+            )
+        if selected is not None:
+            selections.append(PackageSelection(family, selected.version, selected.role))
+    return tuple(selections)
+
+
+def _marker_before(lines: list[str], index: int) -> re.Match[str] | None:
+    previous = index - 1
+    while previous >= 0 and not lines[previous].strip():
+        previous -= 1
+    if previous < 0:
+        return None
+    return _REFERENCE_MARKER.fullmatch(lines[previous].strip())
+
+
+def _historical_package_reference(lines: list[str], index: int, family: str) -> bool:
+    marker = _marker_before(lines, index)
+    if marker is not None and marker.group("family") == family:
+        return True
+    for line in reversed(lines[: index + 1]):
+        heading = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
+        if heading is not None:
+            if heading.group(2).strip().casefold() in _HISTORICAL_SECTIONS:
+                return True
+            break
+    folded = lines[index].casefold()
+    return any(phrase in folded for phrase in _NATURAL_HISTORY_PHRASES)
+
+
+def _package_references(
+    line: str,
+    *,
+    shallow_family: str,
+    selections: dict[str, PackageSelection],
+) -> tuple[_PackageReference, ...]:
+    references: list[_PackageReference] = []
+    for expression, kind in (
+        (_EXACT_SELECTOR, "exact-selector"),
+        (_FULL_VERSION_PATH, "versioned-link"),
+        (_ENABLE_COMMAND, "enable-command"),
+        (_FAMILY_VERSION, "family-prose"),
+    ):
+        for match in expression.finditer(line):
+            family = match.group("family").casefold()
+            if family in selections:
+                references.append(_PackageReference(family, match.group("version"), kind))
+
+    for expression, kind in (
+        (_SHALLOW_VERSION_PATH, "versioned-link"),
+        (_BARE_PACKAGE_VERSION, "family-prose"),
+    ):
+        for match in expression.finditer(line):
+            references.append(_PackageReference(shallow_family, match.group("version"), kind))
+
+    folded = line.casefold()
+    for family in selections:
+        display_name = family.replace("-", " ")
+        for match in re.finditer(
+            rf"(?<![a-z0-9_-]){re.escape(display_name)}\s+`?"
+            rf"(?P<version>{_PACKAGE_VERSION_TEXT})`?(?![0-9]|\.[0-9])",
+            folded,
+        ):
+            references.append(_PackageReference(family, match.group("version"), "named-prose"))
+
+    unique: dict[tuple[str, str, str], _PackageReference] = {}
+    for reference in references:
+        unique[(reference.family, reference.version, reference.kind)] = reference
+    return tuple(unique.values())
+
+
+def plan_package_version_references(target: Version) -> PackageReferenceReview:
+    """Validate and compute the package-reference review without writing files.
+
+    Catalog selection and every document read finish before release mutation, so a
+    malformed candidate or unsafe root document cannot leave a partial release tree.
+    """
+    selections = _catalog_selections(target)
+    by_family = {selection.family: selection for selection in selections}
+    mismatches: list[PackageReferenceMismatch] = []
+    for selection in selections:
+        family_root = REPO_ROOT / "standards" / selection.family
+        for name in _PACKAGE_REFERENCE_DOCUMENTS:
+            path = family_root / name
+            if not path.exists() and not path.is_symlink():
+                continue
+            if path.is_symlink() or not path.is_file():
+                raise ReleasePrepError(
+                    f"package reference surface is not a regular file: "
+                    f"{path.relative_to(REPO_ROOT)}"
+                )
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeError) as error:
+                raise ReleasePrepError(
+                    f"cannot read package reference surface {path.relative_to(REPO_ROOT)}: {error}"
+                ) from error
+            relative = path.relative_to(REPO_ROOT).as_posix()
+            for index, line in enumerate(lines):
+                for reference in _package_references(
+                    line,
+                    shallow_family=selection.family,
+                    selections=by_family,
+                ):
+                    expected = by_family[reference.family].version
+                    if reference.version == expected or _historical_package_reference(
+                        lines, index, reference.family
+                    ):
+                        continue
+                    mismatches.append(
+                        PackageReferenceMismatch(
+                            reference.family,
+                            relative,
+                            index + 1,
+                            reference.version,
+                            expected,
+                            reference.kind,
+                        )
+                    )
+    mismatches.sort(
+        key=lambda mismatch: (
+            mismatch.family,
+            mismatch.path,
+            mismatch.line,
+            mismatch.observed,
+            mismatch.kind,
+        )
+    )
+    return PackageReferenceReview(selections, tuple(mismatches))
+
+
+def report_package_version_references(review: PackageReferenceReview) -> StepResult:
+    """Print the prepared package-reference review without reading or writing files."""
+    print("\n-- package-version references (review; nothing was rewritten) --")
+    if review.mismatches:
+        for mismatch in review.mismatches:
+            print(
+                f"  {mismatch.path}:{mismatch.line}: family={mismatch.family} "
+                f"observed={mismatch.observed} expected={mismatch.expected} "
+                f"reason=current {mismatch.kind}"
+            )
+    else:
+        print("  none")
+    return StepResult(
+        "3b. package reference review",
+        "ok",
+        f"{len(review.mismatches)} package-version mismatch occurrence(s) reported for review",
     )
 
 
@@ -538,9 +856,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         # release tag" failure is a precondition, not a step outcome.
         changelog = plan_changelog(target, today=date.today().isoformat())
         baseline = _previous_release_tag(target)
+        package_references = plan_package_version_references(target)
         results = [precondition]
         results.append(bump_version(current, target, dry_run=dry_run))
         results.append(sweep_version_references(current))
+        results.append(report_package_version_references(package_references))
         results.append(apply_changelog(changelog, dry_run=dry_run))
         results.extend(verify_chain(target, baseline, dry_run=dry_run))
     except ReleasePrepError as error:
