@@ -22,21 +22,21 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:66e1e71fbdafa74ca7c8f38703843fdfb54a72006ae29ab1f7e6ee18bd807a7c"
+digest = "sha256:c21073c9b942df280e60ea34439a455a063f94f9aaa458090b5b0420992a17f9"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:91d7bff5b69f955b886857d47a022e4ec1753c36c5245257b47252de9da165fa"
+digest = "sha256:f2c49180dba86da26edb8fc6db6423dfc70d80093f3d12cdb3d1a0b069fc3e22"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:dba1e9373ee2cec9722a5540b4fc511fde90426b646248746a301f150b84851d"
+digest = "sha256:44a64f38414ac53b4365077c33fa673957f62a718408ee21f09353df9667c791"
 
 [[resources]]
 id = "config-schema"
@@ -106,14 +106,14 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/project_spec.py"
 media_type = "text/x-python"
-digest = "sha256:d894ed525d6d5e112224d125e720d345deceffd0225d8654b88c9becc75cffb4"
+digest = "sha256:14f552d21cbe2f41e4aafd17e27a8ffc60e85b8538079a181fb63f91eb3b0a10"
 
 [[resources]]
 id = "provider-input"
 role = "provider-resource"
 path = "schemas/provider-input.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:0d32b22cb5c49b98fc7e94c984f8bf00bdd863e634b6b390d96756d30881ed89"
+digest = "sha256:23f5c40f9abbf0eafad87e3fa2dd1fc1a39f52f8f3b09f39f1e840d8b4fab35f"
 
 [[resources]]
 id = "provider-findings"
@@ -281,6 +281,17 @@ entrypoint = "payload:provider-code#run_render_preview"
 input_schema = "provider-input"
 output_schema = "provider-content"
 resources = ["template-full", "template-light", "template-standard"]
+
+[[providers]]
+id = "verify-runner-labels"
+operation = "verify"
+kind = "python"
+phase = "verify"
+effect = "findings"
+entrypoint = "payload:provider-code#run_verify_runner_labels"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = []
 
 [[providers]]
 id = "migrate-legacy"

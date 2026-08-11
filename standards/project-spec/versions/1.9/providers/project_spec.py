@@ -494,3 +494,50 @@ def run_migrate(
         "claims": claims,
         "findings": findings,
     }
+
+
+def run_verify_runner_labels(
+    request: Mapping[str, object], _resources: Mapping[str, bytes]
+) -> dict[str, object]:
+    """Warn when configured runner labels cannot reach the reusable workflow."""
+    config = _config(request)
+    labels = _sequence(config.get("runner_labels"), name="config.runner_labels")
+    if not labels:
+        return {"findings": []}
+
+    version = request.get("version")
+    if config.get("workflow_mode") == "self-hosted":
+        reason = (
+            f"Project Specification {version} runner_labels are unreachable from the "
+            "direct self-hosted validate-specs workflow"
+        )
+        hint = (
+            'set workflow_mode = "caller" with workflow_ownership = "managed", '
+            "or keep a consumer-owned workflow and pin its runs-on selection directly"
+        )
+    elif config.get("workflow_ownership") == "consumer-owned":
+        reason = (
+            f"Project Specification {version} runner_labels are unreachable because "
+            ".github/workflows/validate-specs.yml is consumer-owned"
+        )
+        hint = (
+            "pass runner-labels from the consumer-owned validate-specs caller, or set "
+            'workflow_ownership = "managed"'
+        )
+    else:
+        return {"findings": []}
+
+    return {
+        "findings": [
+            {
+                "code": "PS-RUNNER-LABELS-UNREACHABLE",
+                "severity": "warning",
+                "path": ".github/workflows/validate-specs.yml",
+                "identity": "$file",
+                "message": reason,
+                "hint": hint,
+                "line": None,
+                "locus": None,
+            }
+        ]
+    }

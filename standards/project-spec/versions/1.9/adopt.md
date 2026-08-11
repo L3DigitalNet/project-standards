@@ -79,6 +79,8 @@ Package 1.8 makes that selection reachable from `caller` mode through the `runne
 
 The input reaches the job only over `workflow_call`. The self-hosted workflow also triggers directly on `push` and `pull_request`, and on those events `inputs` is empty, so `runs-on` falls through to `ubuntu-latest` and the job runs on the GitHub-hosted runner. A repository that must keep every run off hosted minutes cannot rely on the input alone; take `workflow_ownership = "consumer-owned"` and pin `runs-on` directly.
 
+Reconciliation emits the non-fatal `PS-RUNNER-LABELS-UNREACHABLE` warning when non-empty labels are inert. For `workflow_ownership = "consumer-owned"`, pass `runner-labels` from the owned caller or return it to managed ownership. For `workflow_mode = "self-hosted"`, use the managed caller path or own the workflow and pin its `runs-on` selection directly. Empty labels and non-empty labels on the managed caller path produce no reachability warning.
+
 Verify the selected state and the reconciled caller:
 
 ```bash

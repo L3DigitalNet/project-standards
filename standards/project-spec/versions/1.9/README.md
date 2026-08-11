@@ -146,6 +146,8 @@ Project Specification 1.9 reports `SL-BOILERPLATE` when Lifecycle, Quality, or t
 
 These checks establish exact structural prose and phrasing, not semantic correctness. Human or agent semantic review must still confirm that each requirement is atomic, testable, coherent with its rationale and acceptance criteria, and faithful to the intended system behavior.
 
+Reconciliation reports `PS-RUNNER-LABELS-UNREACHABLE` as a non-fatal warning when non-empty `runner_labels` cannot reach this package's validation caller. A consumer-owned caller must pass `runner-labels` itself or return to managed ownership. Direct self-hosted mode must move to the managed caller path, or the consumer must own the workflow and pin its `runs-on` selection. Empty labels and a managed caller remain clean.
+
 #### External references vs. spec-local IDs
 
 Uppercase `PFX-NNN` tokens are **spec-local IDs** you mint — they must be declared in Appendix A and are width- and tier-checked. Tokens you only **reference** are exempt:
