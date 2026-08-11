@@ -5,7 +5,7 @@ slug: 'runner-label-advisory'
 status: active
 revision: 2
 revises_revision: 1
-revision_reason: "bind T3 to the integrated #62 revision-2 Project Specification 1.9 checkpoint"
+revision_reason: 'bind T3 to the integrated #62 revision-2 Project Specification 1.9 checkpoint'
 pause_reason: ''
 source: 'issue L3DigitalNet/project-standards#143; verified triage and coordinated 5.19 release constraints'
 spec_ref: ''
