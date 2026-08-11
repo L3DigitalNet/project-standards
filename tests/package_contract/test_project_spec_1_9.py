@@ -263,14 +263,14 @@ def test_project_spec_1_9__projection_and_unadvertised_catalog_role_are_exact() 
         for package in cast("list[dict[str, str]]", catalog["packages"])
         if package["id"] == "project-spec"
     }
-    assert roles["1.8"] == "default"
-    assert "1.9" not in roles
+    assert roles["1.8"] == "retained"
+    assert roles["1.9"] == "default"
 
     generated = (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
-    assert "| [`project-spec`](project-spec/README.md) | active | 1.9 | unadvertised |" in generated
+    assert "| [`project-spec`](project-spec/README.md) | active | 1.9 | default |" in generated
 
     selected = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
-    assert selected["standards"]["project-spec"]["resolved"] == "1.8"
+    assert selected["standards"]["project-spec"]["resolved"] == "1.9"
 
 
 def test_project_spec_1_9__manifest_declares_one_config_only_verify_provider() -> None:

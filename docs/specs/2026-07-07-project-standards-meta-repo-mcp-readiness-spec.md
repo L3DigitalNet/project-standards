@@ -45,6 +45,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.5 | 2026-08-11 | Codex | Restore Project Specification 1.9 conformance at only reported shared surfaces and requirement openings; preserve requirement IDs, intent, rationale, acceptance, priority, and lifecycle history. Prior lifecycle record: This approved document is re-locked after narrow review of its current package-authority correction and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. Its accepted requirements and evidence describe the path that completed on 2026-07-12; the Completion State subsection under §3.2 records the current successor architecture that the MCP server shall consume. This spec still excludes MCP server implementation. |
 | 1.4 | 2026-07-27 | Codex | Synchronize current completion-state context with the Project Standards 5.9.0 release candidate and Standard Bundle Authoring 2.6 without changing the accepted readiness contract or evidence. |
 | 1.3 | 2026-07-24 | Codex with Claude Opus review | Approve and re-lock the narrow Standard Bundle Authoring 2.5 current-authority correction after high-effort Opus review convergence. |
 | 1.2 | 2026-07-24 | Codex | Correct the current Standard Bundle Authoring package authority from 2.2 to 2.5 without changing the accepted historical readiness contract or evidence. |
@@ -60,7 +61,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full specification for preparing the `project-standards` meta-repository for a future scalable MCP server. |
 
-**Spec lifecycle:** This approved document is re-locked after narrow review of its current package-authority correction and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. Its accepted requirements and evidence describe the path that completed on 2026-07-12; the Completion State subsection under §3.2 records the current successor architecture that the MCP server shall consume. This spec still excludes MCP server implementation.
+**Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
 ---
 
@@ -299,47 +300,49 @@ The historical target tree, examples, requirements, and traceability below are r
 
 ## 7. Requirements
 
+> **Quality rule:** Each requirement is one testable statement with a stable ID, a rationale, an acceptance criterion, and a priority. Priorities: **Must** (release-blocking), **Should** (important, briefly deferrable), **Could** (nice-to-have, must not delay release). Anything "Won't" belongs in §2.3, not here.
+
 ### 7.1 Functional Requirements
 
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
-| FR-001 | The repository shall define a Standard Bundle Authoring Standard. | New standards need a uniform authoring contract. | `standards/standard-bundle-authoring/README.md` exists, validates, and defines required files, manifests, authority rules, relationship rules, resource rules, and CI gates. | Must |
-| FR-002 | Each standard shall declare a validated `standard.toml` manifest. | Future tooling and MCP must discover standards without hardcoding. | Every active/adoptable standard has `standard.toml`; graph validation fails on missing or invalid manifests. | Must |
-| FR-003 | The existing `adopt.toml` model shall be retained or evolved as an artifact-focused manifest. | The current adopt engine already solves artifact planning and write safety. | Artifact declarations remain generic and are referenced from `standard.toml` or embedded without losing current behavior. | Must |
-| FR-004 | Each standard shall declare authority tuples for every concern it governs. | Conflict-free composition requires a formal ownership model. | Authority declarations include domain, target, concern, owner, mutability, and conflict policy. | Must |
-| FR-005 | The repository shall maintain a config namespace registry. | Multiple standards must not collide in `.project-standards.yml`. | Graph validation rejects duplicate namespaces and undeclared top-level config keys. | Must |
-| FR-006 | Each standard shall declare provided capabilities, consumed platform capabilities, optional companions, extension relationships, and conflicts without implying hidden hard dependencies. | Generic tooling needs relevance resolution while preserving independent standards packages. | Capability and relation declarations are validated against registries; standard-to-standard hard dependencies fail unless modeled as explicit extension ADRs. | Must |
-| FR-007 | Each standard shall declare resource descriptors for canonical docs, adoption docs, templates, examples, schemas, agent summaries, and rationale/source docs. | Future MCP/resource consumers must lazy-load relevant content. | `standard.toml` exposes URI-safe resource IDs and file paths; validation fails when paths are missing. | Must |
-| FR-008 | Each standard shall declare lifecycle and compatibility metadata. | Tooling must know draft/active/deprecated status and version relationships. | Manifest includes status, default contract, supported versions, release behavior, and compatibility notes. | Must |
-| FR-009 | Standards shall declare provider hooks for validators, fixers, drift checks, ID generation, extraction, rendering, and semantic review when applicable. | Tool operations should remain generic while behavior varies by standard. | Provider declarations resolve to importable or documented implementations; missing optional providers are explicit. | Must |
-| FR-010 | The package shall provide a standards graph validator. | The repository must fail fast when standard metadata conflicts or drifts. | `project-standards standards validate-graph` or equivalent runs in CI and reports structured findings. | Must |
-| FR-011 | Existing repository verification shall include manifest and graph validation. | New contracts must be enforced continuously. | `scripts/check.py` and/or CI run manifest/schema/graph tests before success. | Must |
-| FR-012 | Existing standards shall be retrofitted to the new manifest model. | MCP readiness is not achieved while standards remain partially implicit. | Markdown Frontmatter, ADR, Python Tooling, Markdown Tooling, Project Specification, CLI Documentation, and Python Coding have manifests or explicit draft/non-adoptable manifests. | Must |
-| FR-013 | Each standard shall include or declare a compact agent summary when useful. | Agents need day-to-day context efficiency without weakening canonical standards. | Active standards either provide `agent-summary.md` or explain why not. | Should |
-| FR-014 | The repository shall generate a standards index from manifests. | Human and machine views should not drift. | Generated or checked index lists all standards, statuses, versions, capabilities, relationships, resources, and adoption mode. | Must |
-| FR-015 | The repository shall document upgrade and migration behavior for manifest adoption. | Current consumers need a safe transition path. | `UPGRADING.md` or standard-specific adopt guides explain compatibility and migration steps. | Should |
-| FR-016 | The repository shall add ADRs for the major alignment decisions in this spec. | Long-term alignment requires durable decisions, not only implementation code. | ADRs listed in §8.3 exist or are tracked as blocking deliverables. | Must |
-| FR-017 | The graph validator shall prove safe arbitrary co-adoption within declared constraints. | The design goal is arbitrary selection of non-conflicting standards. | Pairwise tests across all active standards pass; selected all-standard and profile-based combinations pass. | Must |
-| FR-018 | The repository shall include dogfood consumer fixtures for adoption/composition. | Unit tests alone do not prove consumer experience. | Fixtures simulate representative consumer repos and verify adoption, validation, drift, and conflict behavior. | Must |
-| FR-019 | The repository shall define MCP-readiness criteria without implementing MCP. | MCP work should start only when the meta-repo is prepared. | A documented readiness checklist passes and is referenced by the downstream roadmap spec. | Must |
-| FR-020 | The repository shall document the exception path for standards that cannot follow a rule. | Real standards may need documented deviation while preserving auditability. | Meta-standard includes exception ADR requirements and graph annotation format. | Should |
-| FR-021 | The graph validator shall reject undeclared standard-to-standard hard dependencies and surface companion/extension relationships explicitly. | Arbitrary adoption cannot be safe when standards silently rely on one another. | Fixture standards prove optional companions do not block adoption; extension standards require explicit `extends` metadata and ADR; hidden `requires` relationships fail validation. | Must |
-| FR-022 | The repository shall define a standard relationship taxonomy. | `requires`/`depends_on` language is too ambiguous for scalable composition. | Manifest schema allows explicit relationship kinds and rejects undeclared or ambiguous dependency fields. | Must |
+| FR-001 | The system shall satisfy the following requirement: The repository shall define a Standard Bundle Authoring Standard. | New standards need a uniform authoring contract. | `standards/standard-bundle-authoring/README.md` exists, validates, and defines required files, manifests, authority rules, relationship rules, resource rules, and CI gates. | Must |
+| FR-002 | The system shall satisfy the following requirement: Each standard shall declare a validated `standard.toml` manifest. | Future tooling and MCP must discover standards without hardcoding. | Every active/adoptable standard has `standard.toml`; graph validation fails on missing or invalid manifests. | Must |
+| FR-003 | The system shall satisfy the following requirement: The existing `adopt.toml` model shall be retained or evolved as an artifact-focused manifest. | The current adopt engine already solves artifact planning and write safety. | Artifact declarations remain generic and are referenced from `standard.toml` or embedded without losing current behavior. | Must |
+| FR-004 | The system shall satisfy the following requirement: Each standard shall declare authority tuples for every concern it governs. | Conflict-free composition requires a formal ownership model. | Authority declarations include domain, target, concern, owner, mutability, and conflict policy. | Must |
+| FR-005 | The system shall satisfy the following requirement: The repository shall maintain a config namespace registry. | Multiple standards must not collide in `.project-standards.yml`. | Graph validation rejects duplicate namespaces and undeclared top-level config keys. | Must |
+| FR-006 | The system shall satisfy the following requirement: Each standard shall declare provided capabilities, consumed platform capabilities, optional companions, extension relationships, and conflicts without implying hidden hard dependencies. | Generic tooling needs relevance resolution while preserving independent standards packages. | Capability and relation declarations are validated against registries; standard-to-standard hard dependencies fail unless modeled as explicit extension ADRs. | Must |
+| FR-007 | The system shall satisfy the following requirement: Each standard shall declare resource descriptors for canonical docs, adoption docs, templates, examples, schemas, agent summaries, and rationale/source docs. | Future MCP/resource consumers must lazy-load relevant content. | `standard.toml` exposes URI-safe resource IDs and file paths; validation fails when paths are missing. | Must |
+| FR-008 | The system shall satisfy the following requirement: Each standard shall declare lifecycle and compatibility metadata. | Tooling must know draft/active/deprecated status and version relationships. | Manifest includes status, default contract, supported versions, release behavior, and compatibility notes. | Must |
+| FR-009 | The system shall satisfy the following requirement: Standards shall declare provider hooks for validators, fixers, drift checks, ID generation, extraction, rendering, and semantic review when applicable. | Tool operations should remain generic while behavior varies by standard. | Provider declarations resolve to importable or documented implementations; missing optional providers are explicit. | Must |
+| FR-010 | The system shall satisfy the following requirement: The package shall provide a standards graph validator. | The repository must fail fast when standard metadata conflicts or drifts. | `project-standards standards validate-graph` or equivalent runs in CI and reports structured findings. | Must |
+| FR-011 | The system shall satisfy the following requirement: Existing repository verification shall include manifest and graph validation. | New contracts must be enforced continuously. | `scripts/check.py` and/or CI run manifest/schema/graph tests before success. | Must |
+| FR-012 | The system shall satisfy the following requirement: Existing standards shall be retrofitted to the new manifest model. | MCP readiness is not achieved while standards remain partially implicit. | Markdown Frontmatter, ADR, Python Tooling, Markdown Tooling, Project Specification, CLI Documentation, and Python Coding have manifests or explicit draft/non-adoptable manifests. | Must |
+| FR-013 | The system shall satisfy the following requirement: Each standard shall include or declare a compact agent summary when useful. | Agents need day-to-day context efficiency without weakening canonical standards. | Active standards either provide `agent-summary.md` or explain why not. | Should |
+| FR-014 | The system shall satisfy the following requirement: The repository shall generate a standards index from manifests. | Human and machine views should not drift. | Generated or checked index lists all standards, statuses, versions, capabilities, relationships, resources, and adoption mode. | Must |
+| FR-015 | The system shall satisfy the following requirement: The repository shall document upgrade and migration behavior for manifest adoption. | Current consumers need a safe transition path. | `UPGRADING.md` or standard-specific adopt guides explain compatibility and migration steps. | Should |
+| FR-016 | The system shall satisfy the following requirement: The repository shall add ADRs for the major alignment decisions in this spec. | Long-term alignment requires durable decisions, not only implementation code. | ADRs listed in §8.3 exist or are tracked as blocking deliverables. | Must |
+| FR-017 | The system shall satisfy the following requirement: The graph validator shall prove safe arbitrary co-adoption within declared constraints. | The design goal is arbitrary selection of non-conflicting standards. | Pairwise tests across all active standards pass; selected all-standard and profile-based combinations pass. | Must |
+| FR-018 | The system shall satisfy the following requirement: The repository shall include dogfood consumer fixtures for adoption/composition. | Unit tests alone do not prove consumer experience. | Fixtures simulate representative consumer repos and verify adoption, validation, drift, and conflict behavior. | Must |
+| FR-019 | The system shall satisfy the following requirement: The repository shall define MCP-readiness criteria without implementing MCP. | MCP work should start only when the meta-repo is prepared. | A documented readiness checklist passes and is referenced by the downstream roadmap spec. | Must |
+| FR-020 | The system shall satisfy the following requirement: The repository shall document the exception path for standards that cannot follow a rule. | Real standards may need documented deviation while preserving auditability. | Meta-standard includes exception ADR requirements and graph annotation format. | Should |
+| FR-021 | The system shall satisfy the following requirement: The graph validator shall reject undeclared standard-to-standard hard dependencies and surface companion/extension relationships explicitly. | Arbitrary adoption cannot be safe when standards silently rely on one another. | Fixture standards prove optional companions do not block adoption; extension standards require explicit `extends` metadata and ADR; hidden `requires` relationships fail validation. | Must |
+| FR-022 | The system shall satisfy the following requirement: The repository shall define a standard relationship taxonomy. | `requires`/`depends_on` language is too ambiguous for scalable composition. | Manifest schema allows explicit relationship kinds and rejects undeclared or ambiguous dependency fields. | Must |
 
 ### 7.2 Non-Functional Requirements
 
 | ID | Category | Requirement | Measurement / Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
-| NFR-001 | Scalability | Adding a normal new standard shall not require adding a new generic operation or MCP tool. | New-standard fixture adds a manifest and docs; existing graph tooling discovers it automatically. | Must |
-| NFR-002 | Determinism | Graph validation shall produce stable, structured findings. | Re-running the command on unchanged input yields identical JSON findings except timestamps if explicitly enabled. | Must |
-| NFR-003 | Maintainability | Manifest schemas shall be readable, documented, and tested. | Schema docs include examples and invalid cases; tests cover missing required fields and collisions. | Must |
-| NFR-004 | Backward compatibility | Current consumers shall not break merely because manifests are added. | Existing validation/adoption workflows continue unless intentionally migrated. | Must |
-| NFR-005 | Context efficiency | Agent summaries shall be compact and link to full canonical docs. | Each summary stays below a documented size target or records an exception. | Should |
-| NFR-006 | Safety | Write-path metadata shall reject unsafe paths, symlink escape risk, and undeclared writes. | Existing adopt safety tests remain passing; new manifest tests cover path traversal and ownership collisions. | Must |
-| NFR-007 | Extensibility | Provider hooks shall support new standards without central switch statements. | Provider loading is registry-based and tested with a fake provider. | Must |
-| NFR-008 | Observability | Validation failures shall identify standard ID, file path, rule ID, and remediation hint. | JSON and human outputs include these fields. | Should |
-| NFR-009 | Human usability | Humans shall be able to understand standard relationships without running MCP. | Generated docs and diagrams explain graph, authorities, relationships, and compatibility. | Must |
-| NFR-010 | Independence | Standard packages shall not become indivisible suites merely because a group recommends them together. | A fixture proves each active standard can validate/adopt alone, with optional companion warnings but no hard failure. | Must |
+| NFR-001 | Scalability | The system shall satisfy the following requirement: Adding a normal new standard shall not require adding a new generic operation or MCP tool. | New-standard fixture adds a manifest and docs; existing graph tooling discovers it automatically. | Must |
+| NFR-002 | Determinism | The system shall satisfy the following requirement: Graph validation shall produce stable, structured findings. | Re-running the command on unchanged input yields identical JSON findings except timestamps if explicitly enabled. | Must |
+| NFR-003 | Maintainability | The system shall satisfy the following requirement: Manifest schemas shall be readable, documented, and tested. | Schema docs include examples and invalid cases; tests cover missing required fields and collisions. | Must |
+| NFR-004 | Backward compatibility | The system shall satisfy the following requirement: Current consumers shall not break merely because manifests are added. | Existing validation/adoption workflows continue unless intentionally migrated. | Must |
+| NFR-005 | Context efficiency | The system shall satisfy the following requirement: Agent summaries shall be compact and link to full canonical docs. | Each summary stays below a documented size target or records an exception. | Should |
+| NFR-006 | Safety | The system shall satisfy the following requirement: Write-path metadata shall reject unsafe paths, symlink escape risk, and undeclared writes. | Existing adopt safety tests remain passing; new manifest tests cover path traversal and ownership collisions. | Must |
+| NFR-007 | Extensibility | The system shall satisfy the following requirement: Provider hooks shall support new standards without central switch statements. | Provider loading is registry-based and tested with a fake provider. | Must |
+| NFR-008 | Observability | The system shall satisfy the following requirement: Validation failures shall identify standard ID, file path, rule ID, and remediation hint. | JSON and human outputs include these fields. | Should |
+| NFR-009 | Human usability | The system shall satisfy the following requirement: Humans shall be able to understand standard relationships without running MCP. | Generated docs and diagrams explain graph, authorities, relationships, and compatibility. | Must |
+| NFR-010 | Independence | The system shall satisfy the following requirement: Standard packages shall not become indivisible suites merely because a group recommends them together. | A fixture proves each active standard can validate/adopt alone, with optional companion warnings but no hard failure. | Must |
 
 ### 7.3 Interface Requirements
 
@@ -357,15 +360,15 @@ The historical target tree, examples, requirements, and traceability below are r
 
 | ID | Data Entity | Requirement | Validation Rules | Ownership |
 | --- | --- | --- | --- | --- |
-| DR-001 | Standard manifest | Store standard identity, lifecycle, versions, resources, capabilities, authorities, providers, and adoption mode. | Required fields; unique `standard.id`; valid status; valid paths; no unknown capability unless declared experimental. | `standards_graph` package. |
-| DR-002 | Authority tuple | Represent ownership of a concern over a target. | Unique non-conflicting tuple unless explicitly declared as extension; mutating authorities cannot overlap silently. | Authority graph validator. |
-| DR-003 | Capability and relation | Represent provided features, consumed platform capabilities, optional companions, explicit extensions, and conflicts. | Namespaced kebab/dot notation; declared in capability/relationship registries; no hidden standard-to-standard hard dependency; extension graph acyclic and ADR-backed. | Capability and relationship registry. |
-| DR-004 | Config namespace | Reserve top-level or nested config keys. | Unique namespace; declared owning standard; no duplicate ownership. | Config namespace registry. |
-| DR-005 | Resource descriptor | Identify lazy-loadable standard content. | Resource ID unique per standard; path exists; MIME type known; audience declared. | Resource index generator. |
-| DR-006 | Provider declaration | Bind generic operations to standard-specific behavior. | Operation type enum; import path/command exists or is marked planned; output schema declared for structured providers. | Provider registry. |
-| DR-007 | Relationship edge | Represent independent, companion, extension, conflict, and platform-capability relationships. | No undeclared standard IDs; no ambiguous dependency language; no hidden `requires` edge; extensions need ADR, independent-mode analysis, and tests. | Relationship graph. |
-| DR-008 | Standard group | Represent recommended bundles of independent standards for project profiles. | Group membership may not imply hidden adoption dependency; all member packages retain standalone adoption paths. | Generated standards index. |
-| DR-009 | ADR backlog item | Track required architecture decisions. | ADR ID/filename, status, owning requirement, target milestone. | Documentation owner. |
+| DR-001 | Standard manifest | The system shall satisfy the following requirement: Store standard identity, lifecycle, versions, resources, capabilities, authorities, providers, and adoption mode. | Required fields; unique `standard.id`; valid status; valid paths; no unknown capability unless declared experimental. | `standards_graph` package. |
+| DR-002 | Authority tuple | The system shall satisfy the following requirement: Represent ownership of a concern over a target. | Unique non-conflicting tuple unless explicitly declared as extension; mutating authorities cannot overlap silently. | Authority graph validator. |
+| DR-003 | Capability and relation | The system shall satisfy the following requirement: Represent provided features, consumed platform capabilities, optional companions, explicit extensions, and conflicts. | Namespaced kebab/dot notation; declared in capability/relationship registries; no hidden standard-to-standard hard dependency; extension graph acyclic and ADR-backed. | Capability and relationship registry. |
+| DR-004 | Config namespace | The system shall satisfy the following requirement: Reserve top-level or nested config keys. | Unique namespace; declared owning standard; no duplicate ownership. | Config namespace registry. |
+| DR-005 | Resource descriptor | The system shall satisfy the following requirement: Identify lazy-loadable standard content. | Resource ID unique per standard; path exists; MIME type known; audience declared. | Resource index generator. |
+| DR-006 | Provider declaration | The system shall satisfy the following requirement: Bind generic operations to standard-specific behavior. | Operation type enum; import path/command exists or is marked planned; output schema declared for structured providers. | Provider registry. |
+| DR-007 | Relationship edge | The system shall satisfy the following requirement: Represent independent, companion, extension, conflict, and platform-capability relationships. | No undeclared standard IDs; no ambiguous dependency language; no hidden `requires` edge; extensions need ADR, independent-mode analysis, and tests. | Relationship graph. |
+| DR-008 | Standard group | The system shall satisfy the following requirement: Represent recommended bundles of independent standards for project profiles. | Group membership may not imply hidden adoption dependency; all member packages retain standalone adoption paths. | Generated standards index. |
+| DR-009 | ADR backlog item | The system shall satisfy the following requirement: Track required architecture decisions. | ADR ID/filename, status, owning requirement, target milestone. | Documentation owner. |
 
 ---
 
@@ -1114,34 +1117,32 @@ Priority values (`Must/Should/Could`) are column values, not ID prefixes — IDs
 
 ## Appendix B: Agent Implementation Contract
 
-Binding when this spec is implemented by a coding agent.
+Binding when this spec is implemented by a coding agent. (Applies equally well to human contractors.)
 
 ### B.1 Implementation Rules
 
 The implementer shall:
 
-- Read this entire specification before making changes; per session thereafter, re-read at minimum §7 (Requirements), §8.3 (Design Decisions), §17.3 (Traceability), §21 (Open Questions), and the Deviations Log.
+- Read this entire specification before making changes; per session thereafter, re-read at minimum §7 (Requirements), §21 (Open Questions), and the Deviations Log — Background and References may be read once.
 - Preserve all explicit non-goals, won't-haves, constraints, and design constraints.
 - Treat **Must** requirements as mandatory and **blocking** open questions as hard stops for the affected work.
-- On encountering underspecified behavior: file an `OQ-` row with a proposed default assumption and proceed on it only if non-blocking.
-- On any divergence from the spec: record a `DEV-` row rather than adapting silently.
-- Add or update tests for every implemented requirement; keep §17.3 current.
+- On encountering underspecified behavior: file an `OQ-` row **with a proposed default assumption** and proceed on it only if non-blocking — never guess silently.
+- On any divergence from the spec: record a `DEV-` row (spec reference, what, why) rather than adapting silently.
+- Add or update tests for every implemented requirement; keep §17.3 (traceability) current.
 - Follow the milestone order in §19; do not build later milestones on unproven earlier ones.
 - Prefer small, reviewable changes; avoid broad refactors unless the spec requires them.
-- Preserve existing standards behavior unless a requirement explicitly changes it.
-- Do not introduce MCP runtime code under this spec.
+- Document any discovered mismatch between the spec and existing code as a `DEV-` or `OQ-` row.
 
 ### B.2 Prohibited Behaviors
 
 The implementer shall not:
 
-- Implement the MCP server in this work.
-- Add per-standard MCP tools or tool-code assumptions.
-- Treat future MCP needs as a reason to bypass current CLI/docs/CI contracts.
-- Remove existing standard behavior unless explicitly required.
-- Weaken current validation to make new graph checks pass.
-- Add external services or network dependencies.
-- Add dependencies outside §8.6 without an approved `OQ-`.
+- Invent requirements not present in this spec.
+- Remove existing behavior unless explicitly required.
+- Introduce external services or dependencies outside §8.6 without an approved `OQ-`.
+- Store secrets in source control or print them in CI logs.
+- Ignore failing tests unrelated to the change without documenting them.
+- Treat examples (including Appendix C) as exhaustive or normative unless explicitly stated.
 - Mark a requirement complete without a verification entry in §17.3.
 
 ### B.3 Required Completion Report (verification gate)
@@ -1149,17 +1150,15 @@ The implementer shall not:
 At completion, provide:
 
 - Summary of changes and files changed.
-- Requirements implemented, each mapped to tests or commands.
+- **Requirements implemented, each mapped to the test or command that proves it** — i.e., the completed §17.3 matrix. Claims without verification entries are not accepted.
 - Tests added or changed.
-- ADRs created or updated.
-- Generated docs/indexes updated.
-- Deviations and approval status.
+- Deviations (`DEV-` rows) and their approval status.
 - Known limitations and remaining open questions.
-- Whether MCP-readiness gate passed or which blockers remain.
+- Documentation deliverables completed (§18.7).
 
 ### B.4 Session Handoff
 
-For multi-session implementation, record current milestone, in-progress requirement IDs, unresolved `OQ-` items, unresolved `DEV-` items, and failing checks in the repository's session-state/handoff documents at the end of each session.
+For multi-session implementations: record current milestone, in-progress requirement IDs, and unresolved `OQ-`/`DEV-` items in the repository's session-state/handoff documents at the end of each session, per the repo's documentation convention. The spec records _what and why_; handoff docs record _where work stands_.
 
 ---
 
@@ -1195,4 +1194,19 @@ No relational database is used. The manifest schema and graph model are file-bac
 
 ## Appendix D: Tailoring Guide
 
-This is intentionally a **Full** spec because it modifies repository governance, standards architecture, validation layers, ADRs, and future integration readiness. A Standard-tier spec would be too small because it would under-specify authority conflicts, lifecycle, security, and operations. A Light-tier spec would be inappropriate because this is multi-step, cross-standard, and foundational.
+This is the **Full** template. Pick the smallest profile that fits; upgrade if the project grows. A section that genuinely does not apply is deleted with a one-line reason, not left empty.
+
+| Profile | Template File | Use For |
+| --- | --- | --- |
+| **Light** | `spec-light-template.md` | Scripts, small tools, single-session agent tasks |
+| **Standard** | `spec-standard-template.md` | Typical features and services |
+| **Full** | `spec-full-template.md` (this file) | Multi-service systems, data platforms, anything with durable data, external integrations, or multiple stakeholders |
+
+Rules of thumb:
+
+- Owns durable data → §18.6 Backup/DR is required regardless of profile.
+- Talks to external paid/rate-limited APIs → C.1 + C.2 + cost rows in §20.
+- Makes automated decisions users must trust → C.4's provenance list is required.
+- Implemented by a coding agent → Appendix B is required regardless of profile (it is the cheapest section and the highest-leverage one).
+
+Each template is self-contained: if you started in a smaller one and outgrew it, copy your filled-in sections into the larger template and update `profile:` in the frontmatter.

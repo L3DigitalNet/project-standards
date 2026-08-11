@@ -38,6 +38,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.8 | 2026-08-11 | Codex | Restore Project Specification 1.9 conformance at only reported shared surfaces and requirement openings; preserve requirement IDs, intent, rationale, acceptance, priority, and lifecycle history. Prior lifecycle record: This approved revision remains change-controlled. `SPEC-MT01` and Steps 08 through 14 are complete. The no-code protocol, SDK, client, and service-boundary decision gate closed on 2026-07-28 with ADR 0025 and ADR 0026 accepted and exact `mcp==2.0.0` pinned; the local read-only server was delivered in 5.12.0. Controlled-write and remote-transport phases remain deferred and require separate approval. |
 | 1.7 | 2026-08-01 | Codex with owner authorization | Re-lock the current-state record after the read-only local MCP server shipped in 5.12.0: preserve the completed Step 09-through-14 sequencing and prior decision evidence; mark delivered read-only requirement evidence Passing; resolve v1 semantic-review omission under ADR 0026; and retain controlled-write and remote-transport work as separately approved future phases. |
 | 1.6 | 2026-07-28 | Claude (T1 decision gate) | Resolve OQ-001 and OQ-002 from the Step 09 decision gate: final 2026-07-28 protocol with exact mcp==2.0.0 accepted under ADR 0025, resource URI grammar frozen under ADR 0026 with the shipped-index divergence disclosed; the roadmap's related-ADR links, the §3 protocol/SDK current-state paragraph, and the protocol/SDK reference entries now point at the accepted ADRs and the final publication. Step 09 is recorded complete with current traceability statuses; no roadmap requirement text was rewritten beyond recording the gate outcome. |
 | 1.5 | 2026-07-24 | Codex with Claude Opus review | Correct the stale Step 08 current-state paragraph after closeout quality review: documentation reconciliation and both reviews are complete, while Step 09 remains the next no-code T1 gate after final publication evidence becomes available. |
@@ -56,7 +57,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form and updated prior-spec references. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial ordered roadmap from meta-repository preparation through future MCP server implementation. |
 
-**Spec lifecycle:** This approved revision remains change-controlled. `SPEC-MT01` and Steps 08 through 14 are complete. The no-code protocol, SDK, client, and service-boundary decision gate closed on 2026-07-28 with ADR 0025 and ADR 0026 accepted and exact `mcp==2.0.0` pinned; the local read-only server was delivered in 5.12.0. Controlled-write and remote-transport phases remain deferred and require separate approval.
+**Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
 ---
 
@@ -222,64 +223,66 @@ Layer 4 — Optional future expansion
 
 ## 7. Requirements
 
+> **Quality rule:** Each requirement is one testable statement with a stable ID, a rationale, an acceptance criterion, and a priority. Priorities: **Must** (release-blocking), **Should** (important, briefly deferrable), **Could** (nice-to-have, must not delay release). Anything "Won't" belongs in §2.3, not here.
+
 ### 7.1 Functional Requirements
 
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
-| FR-001 | The roadmap shall require baseline inventory before design changes. | Existing strengths and gaps must be known before refactoring. | The completed inventory and this refresh cover Catalog 5 families/payloads, catalog channels, provider contracts, control-plane APIs, validators, workflows, tests, and docs. | Must |
-| FR-002 | The roadmap shall require ADRs before implementing irreversible architecture choices. | Decisions should be durable and reviewable. | ADRs for manifest model, authority graph, generic tooling interface, provider model, and MCP readiness are approved or explicitly deferred. | Must |
-| FR-003 | The roadmap shall require `SPEC-MT01` implementation before MCP implementation. | MCP must consume stable repo contracts. | `SPEC-MT01` Definition of Done passes. | Must |
-| FR-004 | The roadmap shall preserve docs/CLI/CI as first-class interfaces. | MCP is optional access/orchestration, not the canonical system. | No phase removes existing non-MCP workflows. | Must |
-| FR-005 | The roadmap shall require a typed package service boundary before MCP registration code. | MCP should not duplicate package loading, manifest parsing, relationship logic, or provider dispatch. | The boundary wraps installed-distribution and control-plane APIs, has direct tests, and returns SDK-independent models. | Must |
-| FR-006 | The roadmap shall require the selected Catalog 5 payloads to pass package, graph, resource, and provider validation before MCP resource exposure. | MCP resources must come from version-qualified immutable package contracts. | All selected payloads validate and adding a new fixture payload requires no MCP registration branch. | Must |
-| FR-007 | The first MCP implementation phase shall be read-only and local. | Early value with low risk. | Local stdio server lists/reads standards resources and returns repo status without writes. | Must |
-| FR-008 | MCP resources shall be derived from exact V2 payload declarations exposed by `InstalledDistribution`. | New standards should appear without tool-code updates. | Adding a valid fixture payload creates resources automatically, while an invalid installed payload prevents startup. | Must |
-| FR-009 | MCP tools shall be generic, not per-standard. | Tool surface must remain small and scalable. | Tool list remains stable when a new fixture standard is added. | Must |
-| FR-010 | The roadmap shall add planning tools before write tools. | Writes should be reviewable and deterministic. | `reconcile_preview` or an equivalent control-plane preview exists before any apply tool. | Must |
-| FR-011 | The roadmap shall require structured MCP tool outputs. | Agents and clients need reliable parsing and traceability. | Every tool result includes typed JSON structured content; findings-bearing results additionally include bounded human-readable text. | Should |
-| FR-012 | The roadmap shall require validation/drift tools before adoption apply tools. | Users need confidence before mutating repos. | Read-only validation and drift reports work against at least one consumer fixture. | Must |
-| FR-013 | The roadmap shall defer remote transport until local MCP proves useful. | Remote transport adds auth and DNS rebinding concerns. | Remote phase remains blocked until local server adoption criteria pass. | Must |
-| FR-014 | The roadmap shall require security review before exposing write tools. | MCP tools can perform arbitrary actions if poorly scoped. | Write-tool ADR/spec includes approval, path allowlist, plan identity, and audit behavior. | Must |
-| FR-015 | Controlled write tools shall require prior reviewed plan identity. | Prevents agent from applying unreviewed mutation. | Apply tool rejects stale/missing/mismatched plan IDs. | Should |
-| FR-016 | The roadmap shall require a separate detailed MCP implementation spec before coding the server. | This roadmap is sequencing, not implementation design. | Refreshed MCP spec passes local gates and semantic review, then receives owner approval before Step 10 / MS-2 server coding starts. | Must |
-| FR-017 | The roadmap shall include fleet/multi-repo reporting only after single-repo accuracy. | Fleet reports multiply errors if primitives are wrong. | Single-repo resource, status, validation, and drift tools pass fixtures first. | Should |
-| FR-018 | The roadmap shall require independent-standard-package validation before server implementation. | The MCP server should consume explicit relationships, not infer hidden dependencies. | `SPEC-MT01` graph tests reject hidden hard dependencies and generated indexes show companions/extensions before Step 08 starts. | Must |
-| FR-019 | The roadmap shall require MCP protocol/SDK source recheck before dependency selection. | MCP Python SDK and protocol guidance are version-sensitive. | MCP server implementation preflight cannot complete until the latest final protocol, stable SDK line, licenses, conformance status, and target-client capabilities are rechecked, recorded, and exactly constrained. | Must |
-| FR-020 | The roadmap shall require a durable, validated, review-converged implementation plan before server code. | The refreshed specifications are too broad to execute safely from milestone prose alone. | One active master plan under `docs/plans/` traces every `SPEC-MS01` Must and Should requirement to dependency-ordered RED-GREEN-REFACTOR tasks and passes its plan validator plus opposite-provider review. | Must |
+| FR-001 | The system shall satisfy the following requirement: The roadmap shall require baseline inventory before design changes. | Existing strengths and gaps must be known before refactoring. | The completed inventory and this refresh cover Catalog 5 families/payloads, catalog channels, provider contracts, control-plane APIs, validators, workflows, tests, and docs. | Must |
+| FR-002 | The system shall satisfy the following requirement: The roadmap shall require ADRs before implementing irreversible architecture choices. | Decisions should be durable and reviewable. | ADRs for manifest model, authority graph, generic tooling interface, provider model, and MCP readiness are approved or explicitly deferred. | Must |
+| FR-003 | The system shall satisfy the following requirement: The roadmap shall require `SPEC-MT01` implementation before MCP implementation. | MCP must consume stable repo contracts. | `SPEC-MT01` Definition of Done passes. | Must |
+| FR-004 | The system shall satisfy the following requirement: The roadmap shall preserve docs/CLI/CI as first-class interfaces. | MCP is optional access/orchestration, not the canonical system. | No phase removes existing non-MCP workflows. | Must |
+| FR-005 | The system shall satisfy the following requirement: The roadmap shall require a typed package service boundary before MCP registration code. | MCP should not duplicate package loading, manifest parsing, relationship logic, or provider dispatch. | The boundary wraps installed-distribution and control-plane APIs, has direct tests, and returns SDK-independent models. | Must |
+| FR-006 | The system shall satisfy the following requirement: The roadmap shall require the selected Catalog 5 payloads to pass package, graph, resource, and provider validation before MCP resource exposure. | MCP resources must come from version-qualified immutable package contracts. | All selected payloads validate and adding a new fixture payload requires no MCP registration branch. | Must |
+| FR-007 | The system shall satisfy the following requirement: The first MCP implementation phase shall be read-only and local. | Early value with low risk. | Local stdio server lists/reads standards resources and returns repo status without writes. | Must |
+| FR-008 | The system shall satisfy the following requirement: MCP resources shall be derived from exact V2 payload declarations exposed by `InstalledDistribution`. | New standards should appear without tool-code updates. | Adding a valid fixture payload creates resources automatically, while an invalid installed payload prevents startup. | Must |
+| FR-009 | The system shall satisfy the following requirement: MCP tools shall be generic, not per-standard. | Tool surface must remain small and scalable. | Tool list remains stable when a new fixture standard is added. | Must |
+| FR-010 | The system shall satisfy the following requirement: The roadmap shall add planning tools before write tools. | Writes should be reviewable and deterministic. | `reconcile_preview` or an equivalent control-plane preview exists before any apply tool. | Must |
+| FR-011 | The system shall satisfy the following requirement: The roadmap shall require structured MCP tool outputs. | Agents and clients need reliable parsing and traceability. | Every tool result includes typed JSON structured content; findings-bearing results additionally include bounded human-readable text. | Should |
+| FR-012 | The system shall satisfy the following requirement: The roadmap shall require validation/drift tools before adoption apply tools. | Users need confidence before mutating repos. | Read-only validation and drift reports work against at least one consumer fixture. | Must |
+| FR-013 | The system shall satisfy the following requirement: The roadmap shall defer remote transport until local MCP proves useful. | Remote transport adds auth and DNS rebinding concerns. | Remote phase remains blocked until local server adoption criteria pass. | Must |
+| FR-014 | The system shall satisfy the following requirement: The roadmap shall require security review before exposing write tools. | MCP tools can perform arbitrary actions if poorly scoped. | Write-tool ADR/spec includes approval, path allowlist, plan identity, and audit behavior. | Must |
+| FR-015 | The system shall satisfy the following requirement: Controlled write tools shall require prior reviewed plan identity. | Prevents agent from applying unreviewed mutation. | Apply tool rejects stale/missing/mismatched plan IDs. | Should |
+| FR-016 | The system shall satisfy the following requirement: The roadmap shall require a separate detailed MCP implementation spec before coding the server. | This roadmap is sequencing, not implementation design. | Refreshed MCP spec passes local gates and semantic review, then receives owner approval before Step 10 / MS-2 server coding starts. | Must |
+| FR-017 | The system shall satisfy the following requirement: The roadmap shall include fleet/multi-repo reporting only after single-repo accuracy. | Fleet reports multiply errors if primitives are wrong. | Single-repo resource, status, validation, and drift tools pass fixtures first. | Should |
+| FR-018 | The system shall satisfy the following requirement: The roadmap shall require independent-standard-package validation before server implementation. | The MCP server should consume explicit relationships, not infer hidden dependencies. | `SPEC-MT01` graph tests reject hidden hard dependencies and generated indexes show companions/extensions before Step 08 starts. | Must |
+| FR-019 | The system shall satisfy the following requirement: The roadmap shall require MCP protocol/SDK source recheck before dependency selection. | MCP Python SDK and protocol guidance are version-sensitive. | MCP server implementation preflight cannot complete until the latest final protocol, stable SDK line, licenses, conformance status, and target-client capabilities are rechecked, recorded, and exactly constrained. | Must |
+| FR-020 | The system shall satisfy the following requirement: The roadmap shall require a durable, validated, review-converged implementation plan before server code. | The refreshed specifications are too broad to execute safely from milestone prose alone. | One active master plan under `docs/plans/` traces every `SPEC-MS01` Must and Should requirement to dependency-ordered RED-GREEN-REFACTOR tasks and passes its plan validator plus opposite-provider review. | Must |
 
 ### 7.2 Non-Functional Requirements
 
 | ID | Category | Requirement | Measurement / Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
-| NFR-001 | Sequencing | Later phases shall not start until prerequisite gates pass. | Completion report for each milestone names gate evidence. | Must |
-| NFR-002 | Safety | Mutating features shall be delayed until read-only and planning features are stable. | No apply/write tools in first MCP release. | Must |
-| NFR-003 | Maintainability | MCP implementation shall call package/control-plane service APIs instead of parsing prose, V1 manifests, or CLI text. | Code review verifies no per-standard switch statements and no duplicate package, provider, reconciliation, or finding semantics in the MCP layer. | Must |
-| NFR-004 | Context efficiency | MCP resources shall support lazy access to standard docs/summaries/templates. | Client can fetch one standard summary without loading all standards. | Must |
-| NFR-005 | Portability | Local server shall run from source checkout and an extracted/installed wheel with equivalent exposed package facts. | Contract tests cover both modes and compare normalized resource/tool results. | Should |
-| NFR-006 | Observability | MCP tools shall return explicit findings and traceable resource links. | Structured outputs include rule IDs, standard IDs, paths, severity, and remediation. | Should |
-| NFR-007 | Security | Remote transport shall require a separate threat model. | No remote phase begins without security ADR/spec. | Must |
+| NFR-001 | Sequencing | The system shall satisfy the following requirement: Later phases shall not start until prerequisite gates pass. | Completion report for each milestone names gate evidence. | Must |
+| NFR-002 | Safety | The system shall satisfy the following requirement: Mutating features shall be delayed until read-only and planning features are stable. | No apply/write tools in first MCP release. | Must |
+| NFR-003 | Maintainability | The system shall satisfy the following requirement: MCP implementation shall call package/control-plane service APIs instead of parsing prose, V1 manifests, or CLI text. | Code review verifies no per-standard switch statements and no duplicate package, provider, reconciliation, or finding semantics in the MCP layer. | Must |
+| NFR-004 | Context efficiency | The system shall satisfy the following requirement: MCP resources shall support lazy access to standard docs/summaries/templates. | Client can fetch one standard summary without loading all standards. | Must |
+| NFR-005 | Portability | The system shall satisfy the following requirement: Local server shall run from source checkout and an extracted/installed wheel with equivalent exposed package facts. | Contract tests cover both modes and compare normalized resource/tool results. | Should |
+| NFR-006 | Observability | The system shall satisfy the following requirement: MCP tools shall return explicit findings and traceable resource links. | Structured outputs include rule IDs, standard IDs, paths, severity, and remediation. | Should |
+| NFR-007 | Security | The system shall satisfy the following requirement: Remote transport shall require a separate threat model. | No remote phase begins without security ADR/spec. | Must |
 
 ### 7.3 Interface Requirements
 
 | ID | Interface | Requirement | Contract / Format | Acceptance Criteria |
 | --- | --- | --- | --- | --- |
-| IR-001 | Project specs | Each major phase shall have or reference an approved spec. | Full/Standard/Light project-spec docs as appropriate. | MCP coding does not begin without MCP-specific spec. |
-| IR-002 | ADRs | Architecture decisions shall be recorded in ADRs. | ADR Standard. | ADRs referenced from specs and implementation PRs. |
-| IR-003 | Package/control-plane APIs | MCP shall consume typed package, resource, provider, and reconciliation-plan APIs behind an SDK-independent facade. | Python typed interfaces; JSON CLI output is a compatibility oracle, not the in-process implementation boundary. | Read-only MCP can list resources and inspect/plan against a consumer fixture without parsing subprocess prose. |
-| IR-004 | MCP transport | First MCP version shall use stdio. | MCP stdio server process. | Client can launch server locally as subprocess. |
-| IR-005 | MCP resources | Standards resources shall use exact payload-derived URIs. | Generation- and version-qualified `standards://...` scheme. | Resource discovery matches the complete validated `InstalledDistribution` and every read rechecks declaration, contained path, and digest integrity. |
-| IR-006 | MCP tools | Tools shall expose generic operations. | Stable tool names and input/output schemas. | New standard fixture does not add tools. |
-| IR-007 | Controlled writes | Apply tools shall require plan ID/hash. | Plan output + apply input contract. | Apply rejects mismatched plan. |
+| IR-001 | Project specs | The system shall satisfy the following requirement: Each major phase shall have or reference an approved spec. | Full/Standard/Light project-spec docs as appropriate. | MCP coding does not begin without MCP-specific spec. |
+| IR-002 | ADRs | The system shall satisfy the following requirement: Architecture decisions shall be recorded in ADRs. | ADR Standard. | ADRs referenced from specs and implementation PRs. |
+| IR-003 | Package/control-plane APIs | The system shall satisfy the following requirement: MCP shall consume typed package, resource, provider, and reconciliation-plan APIs behind an SDK-independent facade. | Python typed interfaces; JSON CLI output is a compatibility oracle, not the in-process implementation boundary. | Read-only MCP can list resources and inspect/plan against a consumer fixture without parsing subprocess prose. |
+| IR-004 | MCP transport | The system shall satisfy the following requirement: First MCP version shall use stdio. | MCP stdio server process. | Client can launch server locally as subprocess. |
+| IR-005 | MCP resources | The system shall satisfy the following requirement: Standards resources shall use exact payload-derived URIs. | Generation- and version-qualified `standards://...` scheme. | Resource discovery matches the complete validated `InstalledDistribution` and every read rechecks declaration, contained path, and digest integrity. |
+| IR-006 | MCP tools | The system shall satisfy the following requirement: Tools shall expose generic operations. | Stable tool names and input/output schemas. | New standard fixture does not add tools. |
+| IR-007 | Controlled writes | The system shall satisfy the following requirement: Apply tools shall require plan ID/hash. | Plan output + apply input contract. | Apply rejects mismatched plan. |
 
 ### 7.4 Data Requirements
 
 | ID | Data Entity | Requirement | Validation Rules | Ownership |
 | --- | --- | --- | --- | --- |
-| DR-001 | Roadmap phase | Track step order, prerequisites, required inputs, exit criteria, and unlocks. | Unique step label; dependencies exist; no circular dependency. | This roadmap spec. |
-| DR-002 | Readiness gate | Track blocking conditions before MCP. | All Must checklist items pass. | `SPEC-MT01`. |
-| DR-003 | MCP resource descriptor | Generated from the exact selected payload's declared resources. | URI unique; payload identity/version and digest retained; path exists; media type declared. | Package service boundary. |
-| DR-004 | MCP tool descriptor | Stable generic tool schemas. | Names stable; input/output schema defined; safety class declared. | MCP implementation spec. |
-| DR-005 | Plan identity | Identifies reviewed mutation plan. | Hash or opaque ID tied to standard IDs, repo state, and action list. | Future write-tool design. |
+| DR-001 | Roadmap phase | The system shall satisfy the following requirement: Track step order, prerequisites, required inputs, exit criteria, and unlocks. | Unique step label; dependencies exist; no circular dependency. | This roadmap spec. |
+| DR-002 | Readiness gate | The system shall satisfy the following requirement: Track blocking conditions before MCP. | All Must checklist items pass. | `SPEC-MT01`. |
+| DR-003 | MCP resource descriptor | The system shall satisfy the following requirement: Generated from the exact selected payload's declared resources. | URI unique; payload identity/version and digest retained; path exists; media type declared. | Package service boundary. |
+| DR-004 | MCP tool descriptor | The system shall satisfy the following requirement: Stable generic tool schemas. | Names stable; input/output schema defined; safety class declared. | MCP implementation spec. |
+| DR-005 | Plan identity | The system shall satisfy the following requirement: Identifies reviewed mutation plan. | Hash or opaque ID tied to standard IDs, repo state, and action list. | Future write-tool design. |
 
 ---
 
@@ -915,6 +918,8 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 
 ## Appendix A: ID Conventions
 
+Stable IDs allow requirements to be referenced from commits, tests, issues, ADRs, and review comments — and let an implementer's completion claims be mechanically checked.
+
 | Prefix | Meaning                     | Defined In     |
 | ------ | --------------------------- | -------------- |
 | `G-`   | Goal                        | §4             |
@@ -935,51 +940,54 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 | `OQ-`  | Open question               | §21            |
 | `DEV-` | Deviation                   | Deviations Log |
 
-Priority values (`Must/Should/Could`) are column values, not ID prefixes.
+Priority values (`Must/Should/Could`) are column values, not ID prefixes — IDs never change when priorities do.
 
 ---
 
 ## Appendix B: Agent Implementation Contract
 
+Binding when this spec is implemented by a coding agent. (Applies equally well to human contractors.)
+
 ### B.1 Implementation Rules
 
 The implementer shall:
 
-- Read this roadmap, `SPEC-MT01`, and relevant ADRs before starting any phase.
-- Do phases in order unless an approved `DEV-` row permits reordering.
-- Treat completed Step 07 plus the Step 08-09 review and dependency gates as hard prerequisites to MCP implementation.
-- Treat Step 15 as a hard gate before controlled writes.
-- Record phase completion evidence in §17.3 or a linked completion report.
-- Keep tool additions generic and justify any new top-level MCP tool through ADR/OQ.
-- Preserve non-MCP workflows and tests throughout.
+- Read this entire specification before making changes; per session thereafter, re-read at minimum §7 (Requirements), §21 (Open Questions), and the Deviations Log — Background and References may be read once.
+- Preserve all explicit non-goals, won't-haves, constraints, and design constraints.
+- Treat **Must** requirements as mandatory and **blocking** open questions as hard stops for the affected work.
+- On encountering underspecified behavior: file an `OQ-` row **with a proposed default assumption** and proceed on it only if non-blocking — never guess silently.
+- On any divergence from the spec: record a `DEV-` row (spec reference, what, why) rather than adapting silently.
+- Add or update tests for every implemented requirement; keep §17.3 (traceability) current.
+- Follow the milestone order in §19; do not build later milestones on unproven earlier ones.
+- Prefer small, reviewable changes; avoid broad refactors unless the spec requires them.
+- Document any discovered mismatch between the spec and existing code as a `DEV-` or `OQ-` row.
 
 ### B.2 Prohibited Behaviors
 
 The implementer shall not:
 
-- Start MCP server code before the refreshed specifications, plan, MCP ADRs, and dependency/client gate pass.
-- Add per-standard MCP tools by default.
-- Add remote transport before local stdio proof and remote security spec.
-- Add write tools before planning tools and safety ADR.
-- Store standards policy only in MCP server code.
-- Bypass existing CLI/CI to make MCP tests pass.
-- Reintroduce legacy V1 manifests, `.project-standards.yml`, copy-adopt, or package-specific provenance as current authorities.
+- Invent requirements not present in this spec.
+- Remove existing behavior unless explicitly required.
+- Introduce external services or dependencies outside §8.6 without an approved `OQ-`.
+- Store secrets in source control or print them in CI logs.
+- Ignore failing tests unrelated to the change without documenting them.
+- Treat examples (including Appendix C) as exhaustive or normative unless explicitly stated.
+- Mark a requirement complete without a verification entry in §17.3.
 
 ### B.3 Required Completion Report (verification gate)
 
-At completion of each phase, provide:
+At completion, provide:
 
-- Step label and summary.
-- Deliverables completed.
-- Requirements/milestones satisfied.
-- Tests and commands run.
-- ADRs/specs updated.
-- Deviations and open questions.
-- Whether the next phase is unblocked.
+- Summary of changes and files changed.
+- **Requirements implemented, each mapped to the test or command that proves it** — i.e., the completed §17.3 matrix. Claims without verification entries are not accepted.
+- Tests added or changed.
+- Deviations (`DEV-` rows) and their approval status.
+- Known limitations and remaining open questions.
+- Documentation deliverables completed (§18.7).
 
 ### B.4 Session Handoff
 
-For multi-session work, record current step, next blocked/unblocked phase, unresolved `OQ-`/`DEV-` items, failing checks, and the next required gate in repository handoff docs.
+For multi-session implementations: record current milestone, in-progress requirement IDs, and unresolved `OQ-`/`DEV-` items in the repository's session-state/handoff documents at the end of each session, per the repo's documentation convention. The spec records _what and why_; handoff docs record _where work stands_.
 
 ---
 
@@ -1016,4 +1024,19 @@ No database in v1.
 
 ## Appendix D: Tailoring Guide
 
-This is a Full spec because the roadmap spans repository governance, standards metadata, validation architecture, ADRs, future MCP server design, safety gates, and multi-phase sequencing. Smaller profiles would under-specify dependencies and gates.
+This is the **Full** template. Pick the smallest profile that fits; upgrade if the project grows. A section that genuinely does not apply is deleted with a one-line reason, not left empty.
+
+| Profile | Template File | Use For |
+| --- | --- | --- |
+| **Light** | `spec-light-template.md` | Scripts, small tools, single-session agent tasks |
+| **Standard** | `spec-standard-template.md` | Typical features and services |
+| **Full** | `spec-full-template.md` (this file) | Multi-service systems, data platforms, anything with durable data, external integrations, or multiple stakeholders |
+
+Rules of thumb:
+
+- Owns durable data → §18.6 Backup/DR is required regardless of profile.
+- Talks to external paid/rate-limited APIs → C.1 + C.2 + cost rows in §20.
+- Makes automated decisions users must trust → C.4's provenance list is required.
+- Implemented by a coding agent → Appendix B is required regardless of profile (it is the cheapest section and the highest-leverage one).
+
+Each template is self-contained: if you started in a smaller one and outgrew it, copy your filled-in sections into the larger template and update `profile:` in the frontmatter.

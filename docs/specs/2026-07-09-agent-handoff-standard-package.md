@@ -33,6 +33,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.1 | 2026-08-11 | Codex | Restore Project Specification 1.9 conformance at only reported shared surfaces and requirement openings; preserve requirement IDs, intent, rationale, acceptance, priority, and lifecycle history. Prior lifecycle record: This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval; implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line. |
 | 0.1 | 2026-07-09 | Codex with owner review | Initial full specification from the approved agent-handoff ingestion design. |
 | 0.2 | 2026-07-09 | Codex with adversarial review | Map package commands to generic providers, specify platform and artifact-lifecycle work, add hook-placement ADR, scope config strictness, and restore workflow/error identifiers. |
 | 0.3 | 2026-07-09 | Codex with owner approval | Name the canonical hook source and bundle-anatomy change required by accepted ADR 0022; approve the specification for implementation planning. |
@@ -44,7 +45,7 @@ related:
 | 0.9 | 2026-08-01 | Codex with owner approval | Require an adaptive Python 3.14 launcher for both automatic harness profiles after the managed hook failed under `uv-strict-python` shims. |
 | 1.0 | 2026-08-01 | Codex with owner authorization | Retire the completed Task 18 plan, transfer the remaining manual consumer verification and retirement-record closeout to T32 of the open-issue resolution program, and preserve the approved V1 requirements and historical Task 18 evidence. |
 
-**Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval; implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line.
+**Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
 **Normative precedence and current implementation:** This specification preserves the approved V1 baseline and its stable requirement IDs. For Catalog 5 package anatomy, configuration, version selection, adoption, reconciliation, and lifecycle mechanics, [SPEC-CP01](2026-07-10-consumer-standards-control-plane-spec.md), [SPEC-BA02](2026-07-10-standard-bundle-authoring-v2-spec.md), [ADR 0023](../adr/adr-0023-unified-consumer-standards-control-plane.md), and [ADR 0024](../adr/adr-0024-catalog-scoped-package-version-channels.md) take precedence over conflicting V1 mechanics below. The currently released successor is immutable payload `agent-handoff@1.7`; the adaptive launcher correction specified by revision 0.9 requires new payload `1.8`. The repository-local ownership, knowledge layout, safety, validation, and migration principles remain normative unless one of those authorities explicitly supersedes them. The remaining legacy-engine retirement gates are owned by the [T32 operational closeout](../plans/2026-08-01-open-issue-resolution-program-plan.md#t32-finish-agent-handoff-consumer-retirement): two protected-consumer validations, authoritative-branch proof, and owner-approved retirement-record closure.
 
@@ -227,74 +228,76 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 
 ## 7. Requirements
 
+> **Quality rule:** Each requirement is one testable statement with a stable ID, a rationale, an acceptance criterion, and a priority. Priorities: **Must** (release-blocking), **Should** (important, briefly deferrable), **Could** (nice-to-have, must not delay release). Anything "Won't" belongs in §2.3, not here.
+
 ### 7.1 Functional Requirements
 
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
 | FR-001 | The system shall publish an adoptable `standards/agent-handoff/` bundle with `standard.toml`, `README.md`, `adopt.md`, templates, resources, `hooks/session-start/session_start.py`, and the `agent-handoff` skill, and shall choose to ship the optional `agent-summary.md` resource. | The package must satisfy the Standard Bundle Authoring contract, follow ADR 0022's canonical hook-source convention, and choose the optional summary for agent discoverability. | Graph validation accepts the bundle, the hook source resolves under the declared package, and generated catalog output includes the standard. | Must |
 | FR-002 | The system shall declare `agent-handoff` package version `1.0` and shall not continue a legacy version line. | The new package has a new contract and ownership model. | Manifest, docs, config fragments, policy, and tests consistently identify version `1.0`. | Must |
-| FR-003 | Every operation shall confine consumer-data access and all mutation to the resolved adopting repository; it may read immutable resources from the installed `project-standards` distribution and invoke declared toolchain executables. | The standard owns project-level knowledge only but must load its own package resources. | Boundary tests reject absolute consumer paths, traversal, symlink escape, outside-root consumer reads, and every attempted write outside the root while permitting package-resource loads. | Must |
+| FR-003 | The system shall satisfy the following requirement: Every operation shall confine consumer-data access and all mutation to the resolved adopting repository; it may read immutable resources from the installed `project-standards` distribution and invoke declared toolchain executables. | The standard owns project-level knowledge only but must load its own package resources. | Boundary tests reject absolute consumer paths, traversal, symlink escape, outside-root consumer reads, and every attempted write outside the root while permitting package-resource loads. | Must |
 | FR-004 | The system shall define `docs/STATUS.md`, `docs/TODO.md`, and the required `docs/handoff/` files and directories as the canonical v1 knowledge layout. | Root status/task files are no longer desired. | Fresh adoption produces the exact required layout and validation rejects misplaced canonical files. | Must |
-| FR-005 | Adoption shall create missing consumer-knowledge files but shall never overwrite existing consumer-knowledge content during adoption, repair, drift checking, or package upgrade. | Project knowledge belongs to the consumer. | Fixtures with existing content remain byte-identical after every mutation command. | Must |
-| FR-006 | Adoption shall install the standard-owned skill only at `.agents/skills/agent-handoff/` and validation shall detect missing or drifted skill files. | Agents need the operating procedure that matches the adopted standard version. | Package parity, installation, drift, and invalid-global-destination tests pass. | Must |
-| FR-007 | Automatic-mode adoption shall install one dependency-free shared hook at `.agents/hooks/agent-handoff/session_start.py`; manual mode shall not require or register it. | One repo-local hook avoids duplicated harness copies and external sources without adding unused runtime files to manual consumers. | Both supported profiles reference the same file and hook parity validation passes; manual fixtures conform without it. | Must |
-| FR-008 | The Claude Code profile shall register the shared hook as a project-local `SessionStart` command hook and shall inject startup context through a documented Claude Code output path. | Claude Code is a first-class v1 harness. | A Claude-shaped input probe receives valid context for startup, resume, clear, and compact sources, including when a rejecting `python3` shim is first on `PATH`. | Must |
-| FR-009 | The Codex profile shall register the shared hook in the trusted project `.codex/config.toml` layer and shall inject startup context through a documented Codex output path. | Codex is a first-class v1 harness. | A Codex-shaped input probe receives valid context when a rejecting `python3` shim is first on `PATH`, and the adoption guide documents project trust and hook review. | Must |
+| FR-005 | The system shall satisfy the following requirement: Adoption shall create missing consumer-knowledge files but shall never overwrite existing consumer-knowledge content during adoption, repair, drift checking, or package upgrade. | Project knowledge belongs to the consumer. | Fixtures with existing content remain byte-identical after every mutation command. | Must |
+| FR-006 | The system shall satisfy the following requirement: Adoption shall install the standard-owned skill only at `.agents/skills/agent-handoff/` and validation shall detect missing or drifted skill files. | Agents need the operating procedure that matches the adopted standard version. | Package parity, installation, drift, and invalid-global-destination tests pass. | Must |
+| FR-007 | The system shall satisfy the following requirement: Automatic-mode adoption shall install one dependency-free shared hook at `.agents/hooks/agent-handoff/session_start.py`; manual mode shall not require or register it. | One repo-local hook avoids duplicated harness copies and external sources without adding unused runtime files to manual consumers. | Both supported profiles reference the same file and hook parity validation passes; manual fixtures conform without it. | Must |
+| FR-008 | The system shall satisfy the following requirement: The Claude Code profile shall register the shared hook as a project-local `SessionStart` command hook and shall inject startup context through a documented Claude Code output path. | Claude Code is a first-class v1 harness. | A Claude-shaped input probe receives valid context for startup, resume, clear, and compact sources, including when a rejecting `python3` shim is first on `PATH`. | Must |
+| FR-009 | The system shall satisfy the following requirement: The Codex profile shall register the shared hook in the trusted project `.codex/config.toml` layer and shall inject startup context through a documented Codex output path. | Codex is a first-class v1 harness. | A Codex-shaped input probe receives valid context when a rejecting `python3` shim is first on `PATH`, and the adoption guide documents project trust and hook review. | Must |
 | FR-010 | The system shall record startup mode and selected harness profiles in the `agent_handoff` namespace of `.project-standards.yml`; automatic mode shall require working injection for each declared supported profile, while manual mode shall claim no automatic profile. | Declared conformance must be mechanically testable without excluding unsupported agents. | Validation rejects unknown keys inside `agent_handoff`, fails when automatic mode lacks a registration, hook, or expected output behavior, and fails when manual mode declares an automatic profile; it makes no whole-file unknown-key claim. | Must |
-| FR-011 | Adoption shall add or update one delimiter-bounded `agent-handoff` block in each selected profile's root instruction file, or in `AGENTS.md` for manual mode, while preserving all content outside the markers. | The skill and session-end procedure must be reliably discoverable without owning the entire file. | First-run, update, automatic/manual, duplicate-marker, malformed-marker, and byte-preservation fixtures pass. | Must |
-| FR-012 | Adoption shall structurally merge only the required hook registration into existing Claude Code and Codex project configuration while preserving unrelated values. | Consumer configurations are often bespoke. | Semantic before/after comparisons prove unrelated configuration unchanged; malformed or ambiguous input blocks all mutation. | Must |
-| FR-013 | The hook shall inject bounded `docs/handoff/state.md` content, current Git branch, recent commits, working-tree status, and lazy pointers to the canonical knowledge files. | The next session needs current state without loading the whole knowledge base. | Golden-output tests cover Git and non-Git repositories, missing optional files, Unicode boundaries, and both transports. | Must |
-| FR-014 | The hook shall wrap repository-derived content as untrusted reference data and shall never execute, source, import, or interpolate commands from handoff documents. | Tracked content can contain prompt injection or malicious text. | Adversarial fixtures remain inert text and cannot alter the hook command or output envelope. | Must |
+| FR-011 | The system shall satisfy the following requirement: Adoption shall add or update one delimiter-bounded `agent-handoff` block in each selected profile's root instruction file, or in `AGENTS.md` for manual mode, while preserving all content outside the markers. | The skill and session-end procedure must be reliably discoverable without owning the entire file. | First-run, update, automatic/manual, duplicate-marker, malformed-marker, and byte-preservation fixtures pass. | Must |
+| FR-012 | The system shall satisfy the following requirement: Adoption shall structurally merge only the required hook registration into existing Claude Code and Codex project configuration while preserving unrelated values. | Consumer configurations are often bespoke. | Semantic before/after comparisons prove unrelated configuration unchanged; malformed or ambiguous input blocks all mutation. | Must |
+| FR-013 | The system shall satisfy the following requirement: The hook shall inject bounded `docs/handoff/state.md` content, current Git branch, recent commits, working-tree status, and lazy pointers to the canonical knowledge files. | The next session needs current state without loading the whole knowledge base. | Golden-output tests cover Git and non-Git repositories, missing optional files, Unicode boundaries, and both transports. | Must |
+| FR-014 | The system shall satisfy the following requirement: The hook shall wrap repository-derived content as untrusted reference data and shall never execute, source, import, or interpolate commands from handoff documents. | Tracked content can contain prompt injection or malicious text. | Adversarial fixtures remain inert text and cannot alter the hook command or output envelope. | Must |
 | FR-015 | The system shall provide a non-mutating validator that accumulates layout, config, instruction-block, skill, hook, provenance, path, reference, shape, and budget failures in one run. | Consumers need a useful conformance gate. | Human and JSON outputs enumerate all fixture failures and use documented exit codes. | Must |
 | FR-016 | The system shall provide a repository-confined, read-only legacy report for recognized old paths, names, registrations, duplicates, stale engine references, and likely conflicts. | Local agents need evidence without unsafe automatic transformation. | Historical-layout fixtures produce deterministic findings with no created, updated, or deleted paths. | Must |
-| FR-017 | The standard shall publish a general legacy migration guide centered on preservation, reconciliation, target-state installation, cleanup, and final validation. | Migration requires project-local judgment. | The guide covers known layout families without promising exhaustive detection or automated conversion. | Must |
-| FR-018 | Every reusable artifact ingested from the legacy repository shall receive one canonical owner here, declared provenance, and parity or deterministic-transform tests before the old source is retired. | Deleting the old repository must not discard required behavior or create parallel sources. | An ingestion inventory maps each retained artifact and proves no package artifact lacks provenance. | Must |
-| FR-019 | The released `project-standards` distribution shall contain all resources and executable providers needed for adoption and validation without either repository checkout. | Clone independence is a primary goal. | Installed-wheel tests pass from a temporary directory with both source repositories unavailable. | Must |
-| FR-020 | Package upgrades shall refresh standard-owned hook, skill, policy, and integration blocks while preserving consumer knowledge and unrelated configuration. | Standard-owned artifacts need an explicit lifecycle. | Upgrade and drift fixtures cover current, stale, locally modified, and ambiguous artifacts. | Must |
-| FR-021 | Unsupported agents shall have a documented manual startup path that reads the same eager state and uses the same repo-local skill. | Project knowledge should remain useful beyond the first-class profiles. | The adoption guide contains a harness-neutral procedure without claiming automatic conformance. | Should |
-| FR-022 | The project shall define and enforce a retirement gate requiring release, representative pilots, migration of all known consumers, and absence of operational legacy dependencies before repository deletion. | The old source must remain available until migration is proven complete. | A signed-off retirement checklist and final cross-repository inventory are complete before deletion. | Must |
-| FR-023 | Handoff credential documentation shall permit references only and shall prohibit secret values in standard-owned artifacts and consumer guidance. | Tracked project knowledge must not become a secret store. | Templates contain reference-only examples and secret-pattern fixtures are rejected or reported. | Must |
-| FR-024 | Mutation commands shall support preview output and shall report exact planned, created, updated, skipped, and blocked paths. | Reviewable changes reduce adoption risk. | `--dry-run` produces the same plan as apply without filesystem mutation; JSON output matches its schema. | Must |
+| FR-017 | The system shall satisfy the following requirement: The standard shall publish a general legacy migration guide centered on preservation, reconciliation, target-state installation, cleanup, and final validation. | Migration requires project-local judgment. | The guide covers known layout families without promising exhaustive detection or automated conversion. | Must |
+| FR-018 | The system shall satisfy the following requirement: Every reusable artifact ingested from the legacy repository shall receive one canonical owner here, declared provenance, and parity or deterministic-transform tests before the old source is retired. | Deleting the old repository must not discard required behavior or create parallel sources. | An ingestion inventory maps each retained artifact and proves no package artifact lacks provenance. | Must |
+| FR-019 | The system shall satisfy the following requirement: The released `project-standards` distribution shall contain all resources and executable providers needed for adoption and validation without either repository checkout. | Clone independence is a primary goal. | Installed-wheel tests pass from a temporary directory with both source repositories unavailable. | Must |
+| FR-020 | The system shall satisfy the following requirement: Package upgrades shall refresh standard-owned hook, skill, policy, and integration blocks while preserving consumer knowledge and unrelated configuration. | Standard-owned artifacts need an explicit lifecycle. | Upgrade and drift fixtures cover current, stale, locally modified, and ambiguous artifacts. | Must |
+| FR-021 | The system shall satisfy the following requirement: Unsupported agents shall have a documented manual startup path that reads the same eager state and uses the same repo-local skill. | Project knowledge should remain useful beyond the first-class profiles. | The adoption guide contains a harness-neutral procedure without claiming automatic conformance. | Should |
+| FR-022 | The system shall satisfy the following requirement: The project shall define and enforce a retirement gate requiring release, representative pilots, migration of all known consumers, and absence of operational legacy dependencies before repository deletion. | The old source must remain available until migration is proven complete. | A signed-off retirement checklist and final cross-repository inventory are complete before deletion. | Must |
+| FR-023 | The system shall satisfy the following requirement: Handoff credential documentation shall permit references only and shall prohibit secret values in standard-owned artifacts and consumer guidance. | Tracked project knowledge must not become a secret store. | Templates contain reference-only examples and secret-pattern fixtures are rejected or reported. | Must |
+| FR-024 | The system shall satisfy the following requirement: Mutation commands shall support preview output and shall report exact planned, created, updated, skipped, and blocked paths. | Reviewable changes reduce adoption risk. | `--dry-run` produces the same plan as apply without filesystem mutation; JSON output matches its schema. | Must |
 
 ### 7.2 Non-Functional Requirements
 
 | ID | Category | Requirement | Measurement / Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
 | NFR-001 | Isolation | The system shall perform no consumer-state access or mutation outside the resolved repository root; read-only access to its installed package resources and execution of declared toolchain binaries are the only exceptions. | Instrumented boundary tests observe no outside-root consumer reads and no outside-root writes, while package-resource loading remains functional. | Must |
-| NFR-002 | Idempotency | Repeating a successful adoption or repair with the same inputs shall produce no further diff. | All fresh and existing-config fixtures are clean on the second run. | Must |
-| NFR-003 | Context efficiency | `state.md` input shall not exceed 2 KiB and total injected context shall not exceed 4 KiB, counted as UTF-8 bytes with truncation on a valid boundary. | Boundary tests cover ASCII, multibyte Unicode, exact caps, and over-cap inputs. | Must |
-| NFR-004 | Startup performance | The launcher and hook together shall finish within 2 seconds at the 95th percentile across 100 local fixture runs on the repository's supported Linux test environment. | Direct-Python and `uv`-fallback benchmarks record p95 below 2 seconds with network disabled. | Should |
-| NFR-005 | Portability | The hook shall use only the Python standard library, shall not import `project_standards`, and shall retain Python 3.14 as its minimum runtime. Each automatic harness launcher shall prefer a usable `python3` version 3.14 or newer, then fall back to `uv run --no-project --python 3.14 --no-python-downloads` without consuming hook input during interpreter selection. | Isolated command tests succeed with a valid `python3` and no `uv`, and with a rejecting or older `python3` plus `uv`; neither path accesses the network or adopts the consumer project's Python constraint. | Must |
-| NFR-006 | Diagnostics | Human errors shall name the path, violated rule, and safe next action; JSON findings shall have stable codes and loci. | Error-contract tests cover every expected failure class. | Must |
-| NFR-007 | Maintainability | New Python code shall satisfy the repository's Ruff, BasedPyright, pytest, coverage, and audit gates. | The complete repository verification gate passes with coverage not reduced below the enforced threshold. | Must |
-| NFR-008 | Determinism | Identical repository content and command arguments shall produce identical plans, findings, and generated artifacts. | Snapshot and repeated-run tests match byte-for-byte except explicitly documented timestamps. | Must |
-| NFR-009 | Compatibility | Harness-profile contracts shall be pinned to verified upstream behavior and rechecked before each `agent-handoff` release. | Release checklist records current Claude Code and Codex hook documentation/schema evidence. | Must |
+| NFR-002 | Idempotency | The system shall satisfy the following requirement: Repeating a successful adoption or repair with the same inputs shall produce no further diff. | All fresh and existing-config fixtures are clean on the second run. | Must |
+| NFR-003 | Context efficiency | The system shall satisfy the following requirement: `state.md` input shall not exceed 2 KiB and total injected context shall not exceed 4 KiB, counted as UTF-8 bytes with truncation on a valid boundary. | Boundary tests cover ASCII, multibyte Unicode, exact caps, and over-cap inputs. | Must |
+| NFR-004 | Startup performance | The system shall satisfy the following requirement: The launcher and hook together shall finish within 2 seconds at the 95th percentile across 100 local fixture runs on the repository's supported Linux test environment. | Direct-Python and `uv`-fallback benchmarks record p95 below 2 seconds with network disabled. | Should |
+| NFR-005 | Portability | The system shall satisfy the following requirement: The hook shall use only the Python standard library, shall not import `project_standards`, and shall retain Python 3.14 as its minimum runtime. Each automatic harness launcher shall prefer a usable `python3` version 3.14 or newer, then fall back to `uv run --no-project --python 3.14 --no-python-downloads` without consuming hook input during interpreter selection. | Isolated command tests succeed with a valid `python3` and no `uv`, and with a rejecting or older `python3` plus `uv`; neither path accesses the network or adopts the consumer project's Python constraint. | Must |
+| NFR-006 | Diagnostics | The system shall satisfy the following requirement: Human errors shall name the path, violated rule, and safe next action; JSON findings shall have stable codes and loci. | Error-contract tests cover every expected failure class. | Must |
+| NFR-007 | Maintainability | The system shall satisfy the following requirement: New Python code shall satisfy the repository's Ruff, BasedPyright, pytest, coverage, and audit gates. | The complete repository verification gate passes with coverage not reduced below the enforced threshold. | Must |
+| NFR-008 | Determinism | The system shall satisfy the following requirement: Identical repository content and command arguments shall produce identical plans, findings, and generated artifacts. | Snapshot and repeated-run tests match byte-for-byte except explicitly documented timestamps. | Must |
+| NFR-009 | Compatibility | The system shall satisfy the following requirement: Harness-profile contracts shall be pinned to verified upstream behavior and rechecked before each `agent-handoff` release. | Release checklist records current Claude Code and Codex hook documentation/schema evidence. | Must |
 
 ### 7.3 Interface Requirements
 
 | ID | Interface | Requirement | Contract / Format | Acceptance Criteria |
 | --- | --- | --- | --- | --- |
-| IR-001 | Adoption CLI | Scaffold the standard with explicit automatic profiles or explicit manual mode. | `project-standards adopt agent-handoff --dest PATH (--harness {claude-code,codex}... \| --manual) [--dry-run] [--json]` | At least one repeated harness is required for automatic mode; `--manual` is mutually exclusive and claims no automatic profile. The manifest maps this mutation to generic `scaffold`. |
-| IR-002 | Command group | Expose package-specific read and maintenance operations without a second executable. | `project-standards agent-handoff {validate,drift-check,size-report,shape-check,legacy-report,upgrade}` | Help, human output, JSON output, and exit-code tests pass. `validate`, `size-report`, and `shape-check` use the generic `validate` provider; `drift-check` uses `drift-check`; `legacy-report` uses read-only `extract`; and `upgrade` uses `upgrade`. Diagnostic view names are CLI subcommands, not new manifest operations. |
-| IR-003 | Consumer config | Declare contract version, startup mode, and selected profiles. | `.project-standards.yml` key `agent_handoff` with quoted `version: "1.0"`, `startup: automatic\|manual`, and `harnesses` list | Automatic mode requires one or more unique known harnesses; manual mode requires an empty list; unknown keys inside this namespace fail validation. Other top-level namespaces remain outside this parser's authority. |
-| IR-004 | Claude Code hook | Register one project `SessionStart` command hook. | `.claude/settings.json` uses the adaptive launcher with `${CLAUDE_PROJECT_DIR}/.agents/hooks/agent-handoff/session_start.py` | Official input/output fixtures and real smoke probes pass through direct-Python and `uv`-fallback lanes. |
-| IR-005 | Codex hook | Register one trusted project `SessionStart` command hook. | `.codex/config.toml` uses the adaptive launcher with the Git-rooted `.agents/hooks/agent-handoff/session_start.py` path | Official schema fixtures, trust guidance, and real smoke probes pass through direct-Python and `uv`-fallback lanes. |
-| IR-006 | Instruction integration | Own one marked block without owning the file. | HTML-comment start/end markers containing the exact token `agent-handoff` | Duplicate, nested, missing-end, and reordered markers fail closed. |
-| IR-007 | Validation output | Report all conformance findings. | Human text by default; JSON schema with repository, standard version, findings, and summary | Exit `0` clean, `1` findings, `2` usage/config error, `3` prerequisite/internal failure. |
-| IR-008 | Legacy output | Report recognized evidence without mutation. | Human text or JSON findings with `kind`, `path`, `evidence`, `severity`, and `guidance` | Unknown layouts are reported as unclassified evidence, not guessed migrations. A successfully emitted inventory exits `0` even when it contains findings; every finding remains in the selected output format. This exception does not alter the `validate` or `drift-check` exit contracts. |
+| IR-001 | Adoption CLI | The system shall satisfy the following requirement: Scaffold the standard with explicit automatic profiles or explicit manual mode. | `project-standards adopt agent-handoff --dest PATH (--harness {claude-code,codex}... \| --manual) [--dry-run] [--json]` | At least one repeated harness is required for automatic mode; `--manual` is mutually exclusive and claims no automatic profile. The manifest maps this mutation to generic `scaffold`. |
+| IR-002 | Command group | The system shall satisfy the following requirement: Expose package-specific read and maintenance operations without a second executable. | `project-standards agent-handoff {validate,drift-check,size-report,shape-check,legacy-report,upgrade}` | Help, human output, JSON output, and exit-code tests pass. `validate`, `size-report`, and `shape-check` use the generic `validate` provider; `drift-check` uses `drift-check`; `legacy-report` uses read-only `extract`; and `upgrade` uses `upgrade`. Diagnostic view names are CLI subcommands, not new manifest operations. |
+| IR-003 | Consumer config | The system shall satisfy the following requirement: Declare contract version, startup mode, and selected profiles. | `.project-standards.yml` key `agent_handoff` with quoted `version: "1.0"`, `startup: automatic\|manual`, and `harnesses` list | Automatic mode requires one or more unique known harnesses; manual mode requires an empty list; unknown keys inside this namespace fail validation. Other top-level namespaces remain outside this parser's authority. |
+| IR-004 | Claude Code hook | The system shall satisfy the following requirement: Register one project `SessionStart` command hook. | `.claude/settings.json` uses the adaptive launcher with `${CLAUDE_PROJECT_DIR}/.agents/hooks/agent-handoff/session_start.py` | Official input/output fixtures and real smoke probes pass through direct-Python and `uv`-fallback lanes. |
+| IR-005 | Codex hook | The system shall satisfy the following requirement: Register one trusted project `SessionStart` command hook. | `.codex/config.toml` uses the adaptive launcher with the Git-rooted `.agents/hooks/agent-handoff/session_start.py` path | Official schema fixtures, trust guidance, and real smoke probes pass through direct-Python and `uv`-fallback lanes. |
+| IR-006 | Instruction integration | The system shall satisfy the following requirement: Own one marked block without owning the file. | HTML-comment start/end markers containing the exact token `agent-handoff` | Duplicate, nested, missing-end, and reordered markers fail closed. |
+| IR-007 | Validation output | The system shall satisfy the following requirement: Report all conformance findings. | Human text by default; JSON schema with repository, standard version, findings, and summary | Exit `0` clean, `1` findings, `2` usage/config error, `3` prerequisite/internal failure. |
+| IR-008 | Legacy output | The system shall satisfy the following requirement: Report recognized evidence without mutation. | Human text or JSON findings with `kind`, `path`, `evidence`, `severity`, and `guidance` | Unknown layouts are reported as unclassified evidence, not guessed migrations. A successfully emitted inventory exits `0` even when it contains findings; every finding remains in the selected output format. This exception does not alter the `validate` or `drift-check` exit contracts. |
 
 ### 7.4 Data Requirements
 
 | ID | Data Entity | Requirement | Validation Rules | Ownership |
 | --- | --- | --- | --- | --- |
-| DR-001 | Standard manifest | Describe identity, version, `adoption = "cli"`, `[config].namespaces = ["agent_handoff"]`, resources, capabilities, authorities, relationships, artifacts, and providers. Declare only the existing generic provider operations `scaffold`, `validate`, `drift-check`, `extract`, and `upgrade`. | Must pass standard-manifest and graph validation; CLI diagnostic views map to these providers and do not expand `ProviderOperation`. | `standards/agent-handoff/standard.toml` |
-| DR-002 | Default policy | Define required files, shape profiles, hard byte caps, working targets, and blocked content patterns. | TOML parses dependency-free; docs and tooling derive the same values. | `standards/agent-handoff/resources/policy.toml` |
-| DR-003 | Artifact manifest | Describe all materialized files, destinations, modes, provenance, and `install_policy = "managed" \| "create-only"`. | The schema defaults to `managed` for existing manifests. Knowledge templates declare `create-only` and cannot be overwritten even by force or upgrade; hook and skill artifacts declare `managed` and refresh only through the owned upgrade path after drift/precondition checks. Declared artifact mode is the consumer contract: Agent Handoff 1.2 stores hook source as payload data mode `100644` and installs it at declared mode `0755`. No unsafe destination, collision, undeclared mirror, or global skill/hook path is allowed. | Packaged `adopt.toml` |
-| DR-004 | Consumer configuration | Record version, startup mode, and selected harnesses. | Version is quoted and supported; automatic mode has a unique non-empty known list; manual mode has an empty list. | Consumer `.project-standards.yml` |
-| DR-005 | Consumer knowledge | Store current and durable project facts by lifetime. | Required paths and document profiles pass; credentials contain references only. | Consumer repository |
-| DR-006 | Standard-owned copies | Carry hook, skill, policy, and integration content matching the package version. | Drift and provenance checks identify exact expected source and local changes. | Standard package; installed copies in consumer repo |
-| DR-007 | Finding | Represent one validation, drift, or legacy observation. | Stable code, severity, path/locus, message, and remediation; deterministic order. | Provider output only; not persisted by default |
-| DR-008 | Change plan | Represent proposed creates and owned updates. | Every path is contained; no consumer knowledge overwrite; full preflight succeeds before apply. | Provider memory/output; not persisted by default |
+| DR-001 | Standard manifest | The system shall satisfy the following requirement: Describe identity, version, `adoption = "cli"`, `[config].namespaces = ["agent_handoff"]`, resources, capabilities, authorities, relationships, artifacts, and providers. Declare only the existing generic provider operations `scaffold`, `validate`, `drift-check`, `extract`, and `upgrade`. | Must pass standard-manifest and graph validation; CLI diagnostic views map to these providers and do not expand `ProviderOperation`. | `standards/agent-handoff/standard.toml` |
+| DR-002 | Default policy | The system shall satisfy the following requirement: Define required files, shape profiles, hard byte caps, working targets, and blocked content patterns. | TOML parses dependency-free; docs and tooling derive the same values. | `standards/agent-handoff/resources/policy.toml` |
+| DR-003 | Artifact manifest | The system shall satisfy the following requirement: Describe all materialized files, destinations, modes, provenance, and `install_policy = "managed" \| "create-only"`. | The schema defaults to `managed` for existing manifests. Knowledge templates declare `create-only` and cannot be overwritten even by force or upgrade; hook and skill artifacts declare `managed` and refresh only through the owned upgrade path after drift/precondition checks. Declared artifact mode is the consumer contract: Agent Handoff 1.2 stores hook source as payload data mode `100644` and installs it at declared mode `0755`. No unsafe destination, collision, undeclared mirror, or global skill/hook path is allowed. | Packaged `adopt.toml` |
+| DR-004 | Consumer configuration | The system shall satisfy the following requirement: Record version, startup mode, and selected harnesses. | Version is quoted and supported; automatic mode has a unique non-empty known list; manual mode has an empty list. | Consumer `.project-standards.yml` |
+| DR-005 | Consumer knowledge | The system shall satisfy the following requirement: Store current and durable project facts by lifetime. | Required paths and document profiles pass; credentials contain references only. | Consumer repository |
+| DR-006 | Standard-owned copies | The system shall satisfy the following requirement: Carry hook, skill, policy, and integration content matching the package version. | Drift and provenance checks identify exact expected source and local changes. | Standard package; installed copies in consumer repo |
+| DR-007 | Finding | The system shall satisfy the following requirement: Represent one validation, drift, or legacy observation. | Stable code, severity, path/locus, message, and remediation; deterministic order. | Provider output only; not persisted by default |
+| DR-008 | Change plan | The system shall satisfy the following requirement: Represent proposed creates and owned updates. | Every path is contained; no consumer knowledge overwrite; full preflight succeeds before apply. | Provider memory/output; not persisted by default |
 
 ---
 
@@ -973,72 +976,76 @@ No implementation-blocking questions remain after design approval.
 
 ## Appendix A: ID Conventions
 
-| Prefix | Meaning                                       | Defined In     |
-| ------ | --------------------------------------------- | -------------- |
-| `G-`   | Goal                                          | §4             |
-| `NG-`  | Permanent non-goal                            | §2.2           |
-| `WH-`  | Deferred v1 capability                        | §2.3           |
-| `A-`   | Assumption                                    | §3.3           |
-| `C-`   | Constraint                                    | §3.4           |
-| `FR-`  | Functional requirement                        | §7.1           |
-| `NFR-` | Non-functional requirement                    | §7.2           |
-| `IR-`  | Interface requirement                         | §7.3           |
-| `DR-`  | Data requirement                              | §7.4           |
-| `D-`   | Design decision                               | §8.3           |
-| `AW-`  | Alternate workflow                            | §10.2          |
-| `EC-`  | Edge case                                     | §10.3          |
-| `ERR-` | Error-handling requirement                    | §12.1          |
-| `R-`   | Project risk                                  | §15            |
-| `MS-`  | Implementation milestone                      | §19            |
-| `OQ-`  | Design question or recorded resolution        | §21            |
-| `DEV-` | Approved or proposed implementation deviation | Deviations Log |
+Stable IDs allow requirements to be referenced from commits, tests, issues, ADRs, and review comments — and let an implementer's completion claims be mechanically checked.
 
-IDs are stable. Rows may be added but existing IDs are not renumbered. Commits, plans, tests, review findings, and completion reports reference these IDs directly.
+| Prefix | Meaning                     | Defined In     |
+| ------ | --------------------------- | -------------- |
+| `G-`   | Goal                        | §4             |
+| `NG-`  | Non-goal (never)            | §2.2           |
+| `WH-`  | Won't have in v1 (deferred) | §2.3           |
+| `A-`   | Assumption                  | §3.3           |
+| `C-`   | Constraint                  | §3.4           |
+| `FR-`  | Functional requirement      | §7.1           |
+| `NFR-` | Non-functional requirement  | §7.2           |
+| `IR-`  | Interface requirement       | §7.3           |
+| `DR-`  | Data requirement            | §7.4           |
+| `D-`   | Design decision             | §8.3           |
+| `AW-`  | Alternate workflow          | §10.2          |
+| `EC-`  | Edge case                   | §10.3          |
+| `ERR-` | Error-handling requirement  | §12.1          |
+| `R-`   | Risk                        | §15            |
+| `MS-`  | Milestone                   | §19            |
+| `OQ-`  | Open question               | §21            |
+| `DEV-` | Deviation                   | Deviations Log |
+
+Priority values (`Must/Should/Could`) are column values, not ID prefixes — IDs never change when priorities do.
 
 ---
 
 ## Appendix B: Agent Implementation Contract
 
+Binding when this spec is implemented by a coding agent. (Applies equally well to human contractors.)
+
 ### B.1 Implementation Rules
 
-- Treat this specification and accepted ADRs as the implementation contract.
-- Use the approved TDD workflow for every feature and bug fix.
-- Preserve unrelated dirty-tree work, especially consumer knowledge and configuration.
-- Keep the package generic: provider behavior is declared through bundle metadata, not hardcoded into unrelated standards.
-- Reuse one policy/model/path-guard implementation across scaffold and validation paths.
-- Verify current upstream harness contracts before implementing or changing a profile.
-- Use source-owned artifacts, deterministic transforms, and package parity tests as declared.
-- Update requirement traceability as each milestone completes.
-- Record any scope or behavior divergence in the Deviations Log and obtain approval before continuing.
+The implementer shall:
+
+- Read this entire specification before making changes; per session thereafter, re-read at minimum §7 (Requirements), §21 (Open Questions), and the Deviations Log — Background and References may be read once.
+- Preserve all explicit non-goals, won't-haves, constraints, and design constraints.
+- Treat **Must** requirements as mandatory and **blocking** open questions as hard stops for the affected work.
+- On encountering underspecified behavior: file an `OQ-` row **with a proposed default assumption** and proceed on it only if non-blocking — never guess silently.
+- On any divergence from the spec: record a `DEV-` row (spec reference, what, why) rather than adapting silently.
+- Add or update tests for every implemented requirement; keep §17.3 (traceability) current.
+- Follow the milestone order in §19; do not build later milestones on unproven earlier ones.
+- Prefer small, reviewable changes; avoid broad refactors unless the spec requires them.
+- Document any discovered mismatch between the spec and existing code as a `DEV-` or `OQ-` row.
 
 ### B.2 Prohibited Behaviors
 
-- Do not copy the legacy repository wholesale.
-- Do not retain old product names outside migration evidence, fixtures, and history references.
-- Do not add global installation, home-directory inspection, sibling-repository scans, or fleet rollout.
-- Do not overwrite consumer project knowledge or unrelated config.
-- Do not follow symlinks or paths beyond the resolved repository root.
-- Do not create a deterministic legacy transformer disguised as repair logic.
-- Do not make the hook import the installed package, contact a network, resolve secrets, or write persistent state.
-- Do not delete the old repository or mutate external consumers without explicit owner authorization.
-- Do not mark a requirement complete without the verification evidence required by §17.3.
+The implementer shall not:
+
+- Invent requirements not present in this spec.
+- Remove existing behavior unless explicitly required.
+- Introduce external services or dependencies outside §8.6 without an approved `OQ-`.
+- Store secrets in source control or print them in CI logs.
+- Ignore failing tests unrelated to the change without documenting them.
+- Treat examples (including Appendix C) as exhaustive or normative unless explicitly stated.
+- Mark a requirement complete without a verification entry in §17.3.
 
 ### B.3 Required Completion Report (verification gate)
 
 At completion, provide:
 
-- Summary of the standard, provider, runtime, migration, and rollout changes.
-- Files changed, grouped by canonical source, packaged mirror, provider code, tests, and docs.
-- Every implemented requirement mapped to its test or verification command.
-- Fresh results for the complete repository gate and installed-wheel gate.
-- Harness contract versions/evidence used for the release.
-- Deviations and approval status.
-- Known limitations, especially manual migration and unsupported harnesses.
-- Consumer migration and retirement-gate status.
+- Summary of changes and files changed.
+- **Requirements implemented, each mapped to the test or command that proves it** — i.e., the completed §17.3 matrix. Claims without verification entries are not accepted.
+- Tests added or changed.
+- Deviations (`DEV-` rows) and their approval status.
+- Known limitations and remaining open questions.
+- Documentation deliverables completed (§18.7).
 
 ### B.4 Session Handoff
 
-At the end of each implementation session, update only changed facts in this repository's current handoff layout. Until MS-4 migrates this repository, follow the existing layout and skill. After dogfood migration, use `docs/STATUS.md`, `docs/TODO.md`, and `.agents/skills/agent-handoff/`. Keep the spec in `docs/handoff/specs-plans.md`, record the active milestone and requirement IDs in state, and never duplicate the full specification into handoff files.
+For multi-session implementations: record current milestone, in-progress requirement IDs, and unresolved `OQ-`/`DEV-` items in the repository's session-state/handoff documents at the end of each session, per the repo's documentation convention. The spec records _what and why_; handoff docs record _where work stands_.
 
 ---
 
@@ -1050,16 +1057,19 @@ No optional Full-template modules apply. `agent-handoff` has no external data in
 
 ## Appendix D: Tailoring Guide
 
-The Full profile is intentional because this work spans a durable standards contract, packaged artifacts, mutation providers, two external harness profiles, a security boundary, legacy migration, multi-repository rollout, and retirement of a separate source repository.
+This is the **Full** template. Pick the smallest profile that fits; upgrade if the project grows. A section that genuinely does not apply is deleted with a one-line reason, not left empty.
 
-The implementation plan may split milestones into separate execution sessions, but it must not split the following cross-cutting contracts into inconsistent sources:
+| Profile | Template File | Use For |
+| --- | --- | --- |
+| **Light** | `spec-light-template.md` | Scripts, small tools, single-session agent tasks |
+| **Standard** | `spec-standard-template.md` | Typical features and services |
+| **Full** | `spec-full-template.md` (this file) | Multi-service systems, data platforms, anything with durable data, external integrations, or multiple stakeholders |
 
-- Repository containment and path safety.
-- Consumer-owned versus standard-owned artifacts.
-- Harness declarations and automatic-injection conformance.
-- Policy, size, and shape semantics.
-- Legacy detection versus migration judgment.
-- Artifact provenance and package parity.
-- Release and retirement gates.
+Rules of thumb:
 
-If scope grows to include a new harness profile, consumer policy overrides, remote services, global administration, or automatic semantic migration, revise and reapprove this specification before implementation.
+- Owns durable data → §18.6 Backup/DR is required regardless of profile.
+- Talks to external paid/rate-limited APIs → C.1 + C.2 + cost rows in §20.
+- Makes automated decisions users must trust → C.4's provenance list is required.
+- Implemented by a coding agent → Appendix B is required regardless of profile (it is the cheapest section and the highest-leverage one).
+
+Each template is self-contained: if you started in a smaller one and outgrew it, copy your filled-in sections into the larger template and update `profile:` in the frontmatter.
