@@ -1,0 +1,157 @@
+schema_version = "1.0"
+
+[payload]
+standard = "adr"
+version = "1.6"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["adr.validation"]
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = ["markdown-frontmatter"]
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:619a7e485e4c99f98791a8806226a073de618dc6292561e108bb8786add922c9"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:e4298e6955ea134059784938d728814e6608fa0b494af3a4ae36053941cad6ac"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:1c58d4c7b73818249b5787cda39bee64eb7cb878a2bcef21382f7ebd5b8b7044"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:07025b59d58542ce35ad614857a49d7defd97601a9cb770c4dd71e6881eba7fb"
+
+[[resources]]
+id = "example"
+role = "example"
+path = "examples/adr.example.md"
+media_type = "text/markdown"
+digest = "sha256:b0366e0dccb6029f76b5d1035f18c69c17259982c69b60e5c6260dd66f81d45d"
+
+[[resources]]
+id = "example-amended"
+role = "example"
+path = "examples/adr-amended.example.md"
+media_type = "text/markdown"
+digest = "sha256:c8ba4c4bb712c552d9eadd9cdb95e52bb2044685ef69535da2c4417db12b3106"
+
+[[resources]]
+id = "template-bare-minimal"
+role = "template"
+path = "templates/adr-bare-minimal.md"
+media_type = "text/markdown"
+digest = "sha256:3cbe8f488abf8878255d85b523638b615e6b6a0b6ef87be5fcb13336c90adf91"
+
+[[resources]]
+id = "template-bare"
+role = "template"
+path = "templates/adr-bare.md"
+media_type = "text/markdown"
+digest = "sha256:ea7de83be031f3e7ab6be420678b2fec466feedc124f9008ffb311964476d653"
+
+[[resources]]
+id = "template-minimal"
+role = "template"
+path = "templates/adr-minimal.md"
+media_type = "text/markdown"
+digest = "sha256:6a02959cea05d3d972a3fdca0981da0da40cf1a2894baa9033ff96d3ef2a670d"
+
+[[resources]]
+id = "provider-code"
+role = "provider-resource"
+path = "providers/adr.py"
+media_type = "text/x-python"
+digest = "sha256:4daa2d86223c3baa1ca8d6e26fd1af557dc2852e0673f66e1e6ecb810d5448b1"
+
+[[resources]]
+id = "provider-input"
+role = "provider-resource"
+path = "schemas/provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:1eb662c1512d9de9ca4613a2501aae69dec66f9c52359d2a479e230428f9b23b"
+
+[[resources]]
+id = "provider-findings"
+role = "provider-resource"
+path = "schemas/findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:b9b10baef03565b623509c63c3d7cd3fea18021ac11307c5e887b3aa698d75de"
+
+[[resources]]
+id = "provider-migration-report"
+role = "provider-resource"
+path = "schemas/migration-report.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:ee15ffe775c7f2c8a65230d6c7be61644085531ae7a822d4ef528192b7eccac3"
+
+[[artifacts]]
+id = "adr-template"
+target = "docs/adr/adr.template.md"
+source = "templates/adr.md"
+digest = "sha256:4ffaf7d1329992ae90b710a0651d8d98cc3e5fb6d38029c9b46548dadd05d429"
+policy = "create-only"
+
+[[providers]]
+id = "validate-adr"
+operation = "validate"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_validate"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = []
+
+[[providers]]
+id = "migrate-legacy"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#run_migrate"
+input_schema = "provider-input"
+output_schema = "provider-migration-report"
+resources = []
+
+[[legacy_states]]
+id = "v4-adr"
+
+[[migrations]]
+id = "legacy-v4-to-1-6"
+from = "legacy:v4-adr"
+to = "package:1.6"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = ["artifact:adr-template", "config:*"]
+signatures = ["legacy-adr-template"]
+
+[[legacy_signatures]]
+id = "legacy-adr-template"
+kind = "whole-file"
+targets = ["docs/adr/adr.template.md"]
+known_content_digests = ["sha256:f6ac2567ea1116a1596ecf0477f194d8ad360401e06a64f6a5d2f1b09f3135d7"]

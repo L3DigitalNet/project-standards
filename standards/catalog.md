@@ -13,6 +13,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`adr`](adr/README.md) | active | 1.3 | retained | consumer | 12 | 2 | 1 |
 | [`adr`](adr/README.md) | active | 1.4 | retained | consumer | 12 | 2 | 1 |
 | [`adr`](adr/README.md) | active | 1.5 | default | consumer | 13 | 2 | 1 |
+| [`adr`](adr/README.md) | active | 1.6 | unadvertised | consumer | 13 | 2 | 1 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.1 | retained | consumer | 29 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.2 | retained | consumer | 29 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.3 | retained | consumer | 29 | 8 | 18 |
@@ -99,6 +100,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `adr@1.3` | `adr.validation` | `project-standards.reconcile` |
 | `adr@1.4` | `adr.validation` | `project-standards.reconcile` |
 | `adr@1.5` | `adr.validation` | `project-standards.reconcile` |
+| `adr@1.6` | `adr.validation` | `project-standards.reconcile` |
 | `agent-handoff@1.1` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `agent-handoff@1.2` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `agent-handoff@1.3` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
@@ -185,6 +187,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `adr@1.3` | companion | `markdown-frontmatter` |
 | `adr@1.4` | companion | `markdown-frontmatter` |
 | `adr@1.5` | companion | `markdown-frontmatter` |
+| `adr@1.6` | companion | `markdown-frontmatter` |
 | `github-workflow@1.0` | companion | `agent-handoff` |
 | `github-workflow@1.1` | companion | `agent-handoff` |
 | `markdown-frontmatter@1.2` | companion | `adr` |
@@ -312,6 +315,19 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `adr@1.5` | `provider-input` | `provider-resource` | `standards://adr/1.5/resources/provider-input` | `schemas/provider-input.schema.json` |
 | `adr@1.5` | `provider-findings` | `provider-resource` | `standards://adr/1.5/resources/provider-findings` | `schemas/findings.schema.json` |
 | `adr@1.5` | `provider-migration-report` | `provider-resource` | `standards://adr/1.5/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `adr@1.6` | `readme` | `canonical-standard` | `standards://adr/1.6/resources/readme` | `README.md` |
+| `adr@1.6` | `adopt` | `adoption-guide` | `standards://adr/1.6/resources/adopt` | `adopt.md` |
+| `adr@1.6` | `agent-summary` | `agent-summary` | `standards://adr/1.6/resources/agent-summary` | `agent-summary.md` |
+| `adr@1.6` | `config-schema` | `config-schema` | `standards://adr/1.6/resources/config-schema` | `config.schema.json` |
+| `adr@1.6` | `example` | `example` | `standards://adr/1.6/resources/example` | `examples/adr.example.md` |
+| `adr@1.6` | `example-amended` | `example` | `standards://adr/1.6/resources/example-amended` | `examples/adr-amended.example.md` |
+| `adr@1.6` | `template-bare-minimal` | `template` | `standards://adr/1.6/resources/template-bare-minimal` | `templates/adr-bare-minimal.md` |
+| `adr@1.6` | `template-bare` | `template` | `standards://adr/1.6/resources/template-bare` | `templates/adr-bare.md` |
+| `adr@1.6` | `template-minimal` | `template` | `standards://adr/1.6/resources/template-minimal` | `templates/adr-minimal.md` |
+| `adr@1.6` | `provider-code` | `provider-resource` | `standards://adr/1.6/resources/provider-code` | `providers/adr.py` |
+| `adr@1.6` | `provider-input` | `provider-resource` | `standards://adr/1.6/resources/provider-input` | `schemas/provider-input.schema.json` |
+| `adr@1.6` | `provider-findings` | `provider-resource` | `standards://adr/1.6/resources/provider-findings` | `schemas/findings.schema.json` |
+| `adr@1.6` | `provider-migration-report` | `provider-resource` | `standards://adr/1.6/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
 | `agent-handoff@1.1` | `readme` | `canonical-standard` | `standards://agent-handoff/1.1/resources/readme` | `README.md` |
 | `agent-handoff@1.1` | `adopt` | `adoption-guide` | `standards://agent-handoff/1.1/resources/adopt` | `adopt.md` |
 | `agent-handoff@1.1` | `agent-summary` | `agent-summary` | `standards://agent-handoff/1.1/resources/agent-summary` | `agent-summary.md` |
@@ -1801,6 +1817,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `adr@1.4` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `adr@1.5` | `validate-adr` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
 | `adr@1.5` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `adr@1.6` | `validate-adr` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
+| `adr@1.6` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `agent-handoff@1.1` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
 | `agent-handoff@1.1` | `validate` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
 | `agent-handoff@1.1` | `verify` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
@@ -2208,6 +2226,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `adr@1.3` | artifact | `adr-template` | `docs/adr/adr.template.md` | `create-only` | whole-file |
 | `adr@1.4` | artifact | `adr-template` | `docs/adr/adr.template.md` | `create-only` | whole-file |
 | `adr@1.5` | artifact | `adr-template` | `docs/adr/adr.template.md` | `create-only` | whole-file |
+| `adr@1.6` | artifact | `adr-template` | `docs/adr/adr.template.md` | `create-only` | whole-file |
 | `agent-handoff@1.1` | artifact | `status` | `docs/STATUS.md` | `create-only` | whole-file |
 | `agent-handoff@1.1` | artifact | `todo` | `docs/TODO.md` | `create-only` | whole-file |
 | `agent-handoff@1.1` | artifact | `architecture` | `docs/handoff/architecture.md` | `create-only` | whole-file |
