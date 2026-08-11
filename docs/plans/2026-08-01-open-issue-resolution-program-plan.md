@@ -4,14 +4,14 @@ title: 'Open-Issue Resolution Program Plan'
 slug: 'open-issue-resolution-program'
 size: full
 status: active
-revision: 4
-revises_revision: 3
-revision_reason: 'owner widened the v5.15.0 boundary to the full Agent Handoff surface plus the mid-cycle control-plane unblock'
+revision: 5
+revises_revision: 4
+revision_reason: 'replace the stale per-issue Project Spec publication boundary with one unpublished #62 checkpoint and one consolidated v5.19 release after #55'
 pause_reason: ''
-source: 'GitHub open-issue inventory frozen 2026-08-01T09:21:01Z; owner-approved TODO and v5.15.0 decisions; owner-authorized format-3 migration'
+source: 'GitHub open-issue inventory frozen 2026-08-01T09:21:01Z; owner-approved release decisions; owner-authorized format-3 migration and 2026-08-11 v5.19 consolidation correction'
 spec_ref: ''
 created: 2026-08-01
-updated: 2026-08-04
+updated: 2026-08-11
 owners:
   - 'Chris Purcell / L3DigitalNet'
   - 'Coding agent under human review'
@@ -37,11 +37,14 @@ The first release is v5.15.0. Revision 4 widens it from twelve issues to the who
 
 | Source | Source Role | Authority / Use | Version / Date | Affected Plan Surface |
 | --- | --- | --- | --- | --- |
-| request | normative | owner-approved issue boundary, prioritization, release policy, format-3 migration, and the 2026-08-04 decision to fold adr@1.4 into v5.15.0 | 2026-08-04 | §§1–13, T1–T37 |
+| request | normative | owner-approved issue boundary, prioritization, release policy, format-3 migration, the 2026-08-04 decision to fold adr@1.4 into v5.15.0, and the 2026-08-11 direction to complete #62 unpublished before #55 and publish both through one v5.19 release | 2026-08-11 | §§1–13, T1–T43 |
 | `external:https://github.com/L3DigitalNet/project-standards/pull/120` | current-state evidence | merged adr@1.4 candidate payload, its provider-input and example corrections, and the deferred release-boundary items | merged 2026-08-04 | REQ-907, T37 |
 | `repo:docs/TODO.md` | normative | user and agent work queue, including retirement and program execution | 2026-08-02 | §§3–6, T29–T32 |
 | `repo:docs/STATUS.md` | current-state evidence | published release and prepared-plan baseline | 2026-08-02 | §§4–5, T1, T35 |
-| `repo:meta/versioning.md` | decision | accepted release classification and immutability contract | 2026-08-02 | §§3, 5, 10, T8, T28, T30, T35–T36, T41 |
+| `repo:meta/versioning.md` | decision | accepted release classification, exact-main release verification, and immutability contract | current at `ef12c72d` | §§3, 5, 10, T8, T30, T35–T36, T41, T43 |
+| `repo:ROADMAP.md#5190` | decision | v5.19 is one consolidation train and orders #62 before #55 inside the Project Specification feature phase | current at `ef12c72d` | §§3–12, T25–T29, T42–T43 |
+| `repo:docs/plans/2026-08-01-project-spec-conformance-plan.md#t5-complete-19-activation-and-targeted-dogfood-proof` | decision | child #62 completion ends at a verified unpublished Project Specification 1.9 checkpoint and defers repository-wide gates and publication to the final release coordinator | revision 3 | T25, T42–T43 |
+| `repo:docs/plans/2026-08-10-github-workflow-1-2-guidance-plan.md#t2-activate-12-and-prove-release-facing-package-selection` | decision | GitHub Workflow 1.2 activation supplies a separate v5.19 checkpoint and defers its repository-wide gate to final release preparation | revision 2 | T43 |
 | `repo:docs/research/2026-07-09-agent-handoff-retirement-inventory.md` | operational evidence | bounded consumer-retirement inventory and remaining targets | 2026-08-02 | T32, Appendix C |
 | `issue:L3DigitalNet/project-standards#55` | normative | accepted frozen issue outcome and issue-specific acceptance context | freeze 2026-08-01 | REQ and task owning issue #55 |
 | `issue:L3DigitalNet/project-standards#62` | normative | accepted frozen issue outcome and issue-specific acceptance context | freeze 2026-08-01 | REQ and task owning issue #62 |
@@ -83,6 +86,7 @@ Conflict precedence: current explicit owner decisions govern release boundaries 
 - v5.15.0 as the exact owner-approved combined correction release, including the merged adr@1.4 candidate folded into its boundary on 2026-08-04 and the widened Agent Handoff surface folded in later the same day.
 - Immutable successor payloads, control-plane and tooling corrections, release qualification, issue disposition, MCP release documentation, and the two remaining Agent Handoff consumers.
 - Deferred tooling, Project Spec conformance, and conversion trains already retained by the approved program. The separate Agent Handoff authority train no longer exists; T35 qualifies its work.
+- One unpublished #62 child-completion checkpoint before #55, followed by one consolidated v5.19 qualification/publication that consumes both Project Spec feature checkpoints and the separately governed GitHub Workflow 1.2 activation checkpoint.
 - Format-3 execution control through the repository-local bridge and identity-bearing task checkpoints.
 
 ### 3.2 Out of Scope and Deferred
@@ -92,6 +96,7 @@ Conflict precedence: current explicit owner decisions govern release boundaries 
 - Rewriting published tags, release assets, predecessor payload bytes, or prior Git history.
 - Treating legacy scratch completion markers as format-3 checkpoints; T30 and T1 evidence must be replayed.
 - Issues #88 and #99 in v5.15.0; T36 owns their later release.
+- An intermediate #62 release, per-task Project Spec full gate, or separate #55 publication before the consolidated v5.19 release.
 
 ### 3.3 Ownership and Preserved Behavior
 
@@ -107,9 +112,9 @@ Conflict precedence: current explicit owner decisions govern release boundaries 
 
 | ID | Constraint / Authorization Boundary | Source | Affected Task(s) |
 | --- | --- | --- | --- |
-| C-001 | Run `scripts/verify.sh` for intermediate product tasks and `scripts/verify.sh --full` only at final content and release qualification gates. | `repo:AGENTS.md` | T2–T20, T25, T27–T28, T30–T36, T38–T40 |
-| C-002 | Build and extract a fresh candidate wheel before installed-authority claims. | `repo:AGENTS.md` | T25, T28, T35–T36, T41 |
-| C-003 | Publication, pushes, protected merges, releases, and issue writes require action-and-target-specific authorization. | request | T1, T25, T28–T29, T32, T35–T36, T41 |
+| C-001 | Run task-focused checks proportionally; after the final v5.19 content change, run exactly one direct-local `scripts/verify.sh --full` on the prepared release commit. Do not repeat repository-wide gates in T42, T26, T27, or T29. | `repo:AGENTS.md`; request | T2–T20, T26–T27, T30–T36, T38–T43 |
+| C-002 | Build and extract one fresh candidate wheel from the exact prepared release commit before v5.19 installed-authority claims. | `repo:AGENTS.md`; `repo:meta/versioning.md#release-requirements` | T35–T36, T41, T43 |
+| C-003 | Publication, pushes, protected merges, releases, and issue writes require action-and-target-specific authorization. | request | T1, T29, T32, T35–T36, T41, T43 |
 | C-006 | Verify each task proportionally to what it changes, per `repo:docs/handoff/conventions.md` §13. Payload text and owner documentation need only the Markdown gates; catalog, digest, and projection edits need only the standards validators; engine edits need the focused tests for the modules they touch. A candidate-wheel build is a release-qualification cost under C-002, not a per-task one. | Owner decision 2026-08-04; `repo:docs/handoff/conventions.md` | all active tasks |
 | C-004 | Preserve immutable package predecessors and unrelated work; stage only task-owned changes. | request | all active tasks |
 | C-005 | One serialized format-3 executor owns the whole plan; every state transition uses `scripts/plan.py state`. | request | all active tasks |
@@ -120,9 +125,11 @@ Conflict precedence: current explicit owner decisions govern release boundaries 
 
 Project Standards 5.14.0 is published. CLI Documentation 1.6 and the merged adr@1.4 payload exist as unreleased candidates, and the approved v5.15.0 boundary is frozen apart from the owner's 2026-08-04 addition of adr@1.4. The adr@1.4 merge deliberately deferred its release-boundary items, so the tool release still reads 5.14.0, four root `README.md` references still name adr@1.3, and the `.standards` consumer-catalog projection is stale. T30 product changes and T1.1–T1.5 observations exist in Git and legacy scratch, but their commits/checklists do not carry the ordered format-3 `Plan-Id`, `Plan-Task`, `Plan-Revision`, `Plan-Definition-Digest`, `Plan-Status`, `Plan-Requirements`, and `Plan-Proofs` trailers. The byte-identical format-3 bridge and fresh execution state are present, every task is unstarted, and T30 is solely ready. Execution preflight remains blocked because the canonical bridge fails this repository's Ruff formatting, lint, and BasedPyright profiles.
 
+At revision 5 base `ef12c72d`, the historical release trains and T24 are terminal. T25 is in progress only as the parent boundary for the active #62 child; that child has T1–T3 terminal and replacement T5 in progress. The accepted child now ends at an unpublished, targeted-proof checkpoint. T26–T29 have not started, GitHub Workflow T2 is separately ready, and the published tool version remains 5.18.0. T25's requirement to publish #62 before T26 is therefore stale operational routing, not unfinished #62 product behavior: it would force a release between two features that `ROADMAP.md` and the approved #62 design require in one Project Specification successor cut.
+
 ### 4.2 Target State
 
-The durable master validates as `plan_format: 3`; the byte-identical repository-local bridge passes repository static gates while retaining authoring, validation, state, recovery, and checkpoint identity. Execution resumes the existing generated format-3 state, replays T30 and T1 proof under valid checkpoints, completes v5.15.0 before later trains, and preserves durable operational/release evidence through close-out.
+The durable master validates as `plan_format: 3`; the byte-identical repository-local bridge preserves completed history and drives the remaining graph. T42 records #62 child completion without publication, T26/T27 specify and implement #55 against the same unreleased Project Specification successor, and T43 consumes those checkpoints plus the separately governed GitHub Workflow T2 checkpoint to prepare, verify, and publish one v5.19 release. T29 then reconciles tracker and repository truth from T43's retained receipts without rebuilding or rerunning release verification.
 
 ### 4.3 Delta Summary
 
@@ -130,7 +137,7 @@ The durable master validates as `plan_format: 3`; the byte-identical repository-
 | --- | --- | --- | --- | --- |
 | Execution contract | valid format-3 master and fresh `execution/` state; canonical bridge blocked by repository static profiles | byte-identical bridge passes repository gates and drives atomic transitions from T30 | old logs remain historical and untouched | no terminal state can be credited automatically |
 | v5.15.0 | approved but unimplemented | published exact combined release | v5.14 and all payload predecessors | release aggregation remains broad |
-| Later trains | approved dependency graph | sequenced after v5.15.0 | issue scope and owner gates | external approval latency |
+| Later trains | #62 child nearly complete, but stale T25 publication blocks T26 | unpublished #62 checkpoint → #55 specification/implementation → one v5.19 release | issue product acceptance, one-release consolidation, and owner gates | #55 design/implementation and external approval latency |
 | Consumer retirement | two protected consumers remain | verified retirement and remote parity | unrelated consumer changes | protected merge authorization |
 
 ## 5. Change Surface and Architecture
@@ -142,8 +149,8 @@ The durable master validates as `plan_format: 3`; the byte-identical repository-
 | Agent Handoff engine/package | released 1.8 plus open authority issues | corrected successor and verified retirement | `src/project_standards/agent_handoff/`, package family | T1–T8, T32 |
 | Control plane and adapters | planner/migration/TOML/JSONC current behavior | issue-specific corrections without intermediate release | `src/project_standards/control_plane/` | T9–T14 |
 | Python/Markdown/CLI tooling | released predecessors plus candidates | bounded successors and exact release activation | `standards/` families | T16–T21, T31, T33–T36 |
-| Project Spec features | accepted issues without approved child designs | approved spec/plan followed by implementation | `docs/specs/`, `docs/plans/` | T24–T28 |
-| Release and tracker truth | published 5.14 plus frozen open set | qualified releases and reconciled frozen inventory | release metadata, GitHub, handoff | T8, T28–T30, T35–T36, T41 |
+| Project Spec features | #62 child approaching an unpublished checkpoint; #55 still awaits its approved specification | #62 checkpoint unlocks #55 without intermediate publication; both land in one successor release | `docs/specs/`, `docs/plans/` | T24–T27, T42 |
+| Release and tracker truth | published 5.18 plus terminal v5.19 checkpoints and remaining Project Spec/GitHub Workflow tails | one qualified v5.19 release followed by receipt-consuming tracker closeout | release metadata, GitHub, handoff | T29–T30, T35–T36, T41, T43 |
 | Execution state | byte-identical format-3 bridge, fresh identity-bound projection, and repository-static incompatibility | repository-compatible canonical bridge drives the existing projection | `scripts/plan.py`, `.project-pipeline/.../execution/` | plan authoring boundary |
 
 ### 5.2 Context / Control / Data / State Views
@@ -163,7 +170,7 @@ The control plane remains the sole package-composition and consumer-file authori
 | Compatibility / migration | migration planner and package predecessors | actionable V4/V5 transition and successor coexistence | prior payload bytes unchanged | TC-T10-001, TC-T12-001 | T10, T12 |
 | Operations / deployment | owner plus release/consumer workflows | explicit approval, proof, and recovery | no implied publication authority | TC-T32-001, TC-T35-001 | T32, T35 |
 | Documentation / owner truth | repository docs and GitHub | current install/release/tracker truth | historical releases remain factual | TC-T22-001, TC-T29-001 | T22, T29 |
-| Durable acceptance evidence | release and operational tasks | sanitized EV records | no secrets or unbounded logs | Appendix C | T1, T8, T23, T25, T28–T30, T32, T35–T36, T41 |
+| Durable acceptance evidence | release and operational tasks | sanitized EV records | no secrets or unbounded logs | Appendix C | T1, T8, T23, T29–T30, T32, T35–T36, T41–T43 |
 
 ### 5.4 Binding Decisions
 
@@ -174,6 +181,7 @@ The control plane remains the sole package-composition and consumer-file authori
 | D-003 | Legacy task observations are replayed under format-3 checkpoints. | identity-less history cannot be credited safely | backfilled or inferred checkpoint identity rejected | request | T1, T30 |
 | D-004 | T15 and T21 remain as superseded non-executable history. | preserve permanent task IDs while replacement qualifiers own acceptance | deletion or executable no-op tasks rejected | request | T15, T21, T35–T36, T41 |
 | D-005 | T31's retained “activated and qualified by T35” acceptance phrase declares release routing, not prior completion of T35. | preserve T31 task identity while preventing a circular completion interpretation | a separate release train or T35-before-T31 ordering rejected | request | T31, T35 |
+| D-006 | Supersede unfinished T25 and T28. T42 accepts #62 as an unpublished child checkpoint, T26/T27 complete #55 without a repository-wide gate, and T43 owns one consolidated v5.19 candidate, full local gate, hosted CI, publication, and #62/#55 closures. | preserves the approved #62/#55 order and one-successor-cut boundary without mutating an in-progress task's acceptance or checking the same integrated tree twice | separate #62 and #55 releases, silently repurposing T25, and per-task full gates rejected | request; `ROADMAP.md`; #62 child revision 3 | T25–T29, T42–T43 |
 
 ## 6. Requirements and Acceptance
 
@@ -203,9 +211,9 @@ The control plane remains the sole package-composition and consumer-file authori
 | REQ-108 | Prevent published MCP docs from presenting candidate installation as current. | #108 | Must | T22 | T22 | TC-T22-001 |
 | REQ-109 | Reject fresh Python Tooling adoption before writing when consumer-owned PEP 621 project metadata is absent. | #109; owner decision 2026-08-01 | Must | T33 | T33 | TC-T33-001 |
 | REQ-084 | Reproduce and fix, or evidence-dispose, the transient PyYAML failure. | #84 | Must | T23 | T23 | TC-T23-001 |
-| REQ-062 | Add an approved conformance surface for shared Project Spec boilerplate. | #62 | Should | T24 | T24, T25 | TC-T24-001, TC-T25-001 |
+| REQ-062 | Add an approved conformance surface for shared Project Spec boilerplate. | #62 | Should | T24 | T24, T42 | TC-T24-001, TC-T42-001 |
 | REQ-055 | Add an approved preservation-first house-format conversion path. | #55 | Should | T26 | T26, T27 | TC-T26-001, TC-T27-001 |
-| REQ-900 | Preserve immutable predecessors and qualify each release train once. | Release contract | Must | T35 | T28, T35, T36 | TC-T28-001, TC-T35-001, TC-T36-001 |
+| REQ-900 | Preserve immutable predecessors and qualify each release train once. | Release contract | Must | T35 | T35, T36, T43 | TC-T35-001, TC-T36-001, TC-T43-001 |
 | REQ-901 | Leave no frozen issue open without an accepted disposition. | Owner request | Must | T29 | T29 | TC-T29-001 |
 | REQ-902 | Classify owner-designated catalog majors as MAJOR, releases with a standard-package version advance as MINOR, and releases without one as PATCH. A newly introduced package or a newly advertised version above that package's prior advertised maximum is an advance; internal and reference-only packages count, while older retained history and unadvertised payloads do not. Advertised versions are permanent and cannot be removed in any release. | `docs/TODO.md`; owner decisions 2026-08-01 | Must | T30 | T30 | TC-T30-001 |
 | REQ-903 | Replace Python Tooling 1.10's stale V1-authority statement in the already-planned compatible successor without changing 1.10. | `docs/TODO.md`; owner decision 2026-08-01 | Must | T31 | T31 | TC-T31-001 |
@@ -220,7 +228,7 @@ The control plane remains the sole package-composition and consumer-file authori
 
 ### 7.1 Commands and Layers
 
-- **Authoritative commands:** focused pytest/package tests; `uv run ruff format --check .`; `uv run ruff check .`; `uv run basedpyright`; package/graph/schema/projection checks; `scripts/verify.sh`; final `scripts/verify.sh --full`; Markdown tooling; Agent Handoff validation/drift; release and hosted checks.
+- **Authoritative commands:** focused pytest/package tests; `uv run ruff format --check .`; `uv run ruff check .`; `uv run basedpyright`; package/graph/schema/projection checks; Markdown tooling; Agent Handoff validation/drift; and one final release verification block on the exact v5.19 release commit containing a fresh candidate, direct-local `scripts/verify.sh --full`, the release package checks, and hosted CI. T42, T26, T27, and T29 do not repeat that block.
 - **Layers:** characterization, regression, property/layout, contract/schema, migration, real-tool integration, candidate/installed-wheel, release recovery, documentation inspection, and authorized operational acceptance.
 
 ### 7.2 Oracle and Negative-Control Policy
@@ -233,8 +241,8 @@ The control plane remains the sole package-composition and consumer-file authori
 
 | Environment | Purpose | Prerequisites | Version / Provenance | Durable Evidence |
 | --- | --- | --- | --- | --- |
-| local source and candidate wheel | task regressions and installed parity | locked uv/npm inputs and fresh extracted wheel | commit, tool versions, wheel digest | EV-001–EV-005, EV-007–EV-010 |
-| hosted GitHub checks/releases/issues | hosted acceptance and publication truth | exact commit and explicit action authorization | run IDs, tag/assets, issue IDs | EV-001–EV-005, EV-007–EV-009 |
+| local source and candidate wheel | task regressions and final installed parity | locked uv/npm inputs; one fresh extraction after final v5.19 content | commit, tool versions, wheel digest | EV-001–EV-005, EV-007–EV-010 |
+| hosted GitHub checks/releases/issues | hosted acceptance and publication truth | exact v5.19 release commit and explicit action authorization | run IDs, tag/assets, issue IDs | EV-001–EV-005, EV-007–EV-008 |
 | protected consumer repositories | Agent Handoff retirement | exact repository/branch, clean review, merge authority | branch OIDs and selected control plane | EV-006 |
 
 Repeatable local output remains ephemeral. Release, issue, protected-branch, version-bound investigation, and program-closeout evidence is durable under Appendix C.
@@ -274,11 +282,13 @@ A verification or operational task records the failed boundary, appends an owner
 | T22 | Correct MCP release docs for #108 | active | documentation | P5 | T1 | REQ-108 | TC-T22-001 | no / serialized whole-plan executor |
 | T23 | Dispose of the PyYAML transient for #84 | active | brownfield-behavior | P1 | T30 | REQ-084 | TC-T23-001 | no / serialized whole-plan executor |
 | T24 | Specify conformance linting for #62 | active | documentation | P7 | T36 | REQ-062 | TC-T24-001 | no / serialized whole-plan executor |
-| T25 | Implement conformance linting for #62 | active | operational | P7 | T24 | REQ-062 | TC-T25-001 | no / serialized whole-plan executor |
-| T26 | Specify house-format conversion for #55 | active | documentation | P8 | T25 | REQ-055 | TC-T26-001 | no / serialized whole-plan executor |
+| T25 | Implement conformance linting for #62 | superseded | operational | P7 | T24 | None | None | no / historical in-progress publication boundary replaced by T42 |
+| T42 | Accept the unpublished #62 child checkpoint | active | verification | P7 | T24 | REQ-062 | TC-T42-001 | no / child checkpoint boundary before T26 |
+| T26 | Specify house-format conversion for #55 | active | documentation | P8 | T42 | REQ-055 | TC-T26-001 | no / serialized whole-plan executor |
 | T27 | Implement preservation-first conversion for #55 | active | behavior | P8 | T26 | REQ-055 | TC-T27-001 | no / serialized whole-plan executor |
-| T28 | Qualify the feature release | active | operational | P8 | T27 | REQ-900 | TC-T28-001 | no / serialized whole-plan executor |
-| T29 | Reconcile the tracker and close the program | active | operational | P9 | T22, T23, T24, T25, T26, T27, T28, T32 | REQ-901 | TC-T29-001 | no / serialized whole-plan executor |
+| T28 | Qualify the feature release | superseded | operational | P8 | T27 | None | None | no / historical #55-only release boundary replaced by T43 |
+| T43 | Qualify and publish consolidated v5.19 | active | operational | P8 | T27 | REQ-900 | TC-T43-001 | no / sole final candidate, gate, hosted, and publication owner |
+| T29 | Reconcile the tracker and close the program | active | operational | P9 | T22, T23, T24, T26, T27, T32, T42, T43 | REQ-901 | TC-T29-001 | no / receipt-consuming closeout after T43 |
 | T30 | Align catalog release-level classification | active | verification | P1 | None | REQ-902 | TC-T30-001 | no / serialized whole-plan executor |
 | T31 | Correct the Python Tooling successor's authority statement | active | behavior | P3 | T20, T30 | REQ-903 | TC-T31-001 | no / serialized whole-plan executor |
 | T32 | Finish Agent Handoff consumer retirement | active | operational | P1 | T30 | REQ-904 | TC-T32-001 | no / serialized whole-plan executor |
@@ -1332,36 +1342,60 @@ A verification or operational task records the failed boundary, appends an owner
 
 #### T25: Implement conformance linting for #62
 
-- **disposition:** active
+- **disposition:** superseded
 - **outcome:** Execute the approved child plan and publish its behavior.
 - **work_type:** operational
-- **checkpoint:** one green commit containing EV-009 and the required ordered `Plan-*` trailers
+- **checkpoint:** historical non-executable in-progress boundary retained by revision 5
 - **boundary:** deployment
 - **depends_on:** [T24]
 - **dependency_reason:** ordering-only: preserve the approved prerequisite order T24 before this outcome
-- **requirements:** [REQ-062]
-- **proof:** [TC-T25-001]
+- **requirements:** []
+- **proof:** []
 - **source_refs:** [request, issue:L3DigitalNet/project-standards#62]
-- **consumes:** [approved #62 specification and child-plan checkpoints, exact release state, action-specific authorization]
-- **produces:** [published conformance feature and issue disposition recorded in EV-009]
-- **preserves:** [child-plan acceptance, predecessor behavior, immutable release history, and unrelated work]
-- **invariants:** [the child plan completes before publication; no external effect occurs before authorization]
-- **executor_discretion:** [release evidence capture and repository-conforming aggregation mechanics]
-- **files:** [`docs/plans/2026-08-01-project-spec-conformance-plan.md` (modify or create; owner T25), `docs/research/2026-08-01-project-spec-conformance-release-evidence.md` (modify or create; owner T25)]
+- **consumes:** [historical approved #62 specification and child-plan checkpoints]
+- **produces:** [none; T42 owns the replacement unpublished checkpoint]
+- **preserves:** [historical child-plan acceptance target and the record of the rejected intermediate-publication boundary]
+- **invariants:** [non-executable; no publication, issue mutation, or verification is credited to T25]
+- **executor_discretion:** [none]
+- **files:** [`docs/plans/2026-08-01-project-spec-conformance-plan.md` (historical claim; owner T25)]
 - **parallel_safe:** no
 - **conflicts_with:** []
 - **supersedes:** []
+- **superseded_by:** [T42]
+- **evidence:** []
+- **recovery:** not executable; T42 consumes the preserved child state and owns replacement acceptance without publishing or repeating child proof
+- **acceptance:** historical rejected boundary only; T42 owns #62 child completion and T43 owns release publication and issue closure
+
+#### T42: Accept the unpublished #62 child checkpoint
+
+- **disposition:** active
+- **outcome:** Record the approved #62 child plan as complete and release-eligible without publishing, closing #62, rebuilding a candidate, or running a repository-wide gate.
+- **work_type:** verification
+- **checkpoint:** one green commit containing EV-009 and the required ordered `Plan-*` trailers
+- **boundary:** cross-task
+- **depends_on:** [T24]
+- **dependency_reason:** ordering-only: T24's approved #62 specification must precede the separately governed child plan and this parent checkpoint; T42 additionally requires terminal child T1–T3/T5 checkpoints
+- **requirements:** [REQ-062]
+- **proof:** [TC-T42-001]
+- **source_refs:** [request, issue:L3DigitalNet/project-standards#62, repo:docs/plans/2026-08-01-project-spec-conformance-plan.md#t5-complete-19-activation-and-targeted-dogfood-proof, repo:ROADMAP.md#project-specification-conformance]
+- **consumes:** [approved #62 specification, terminal Project Spec child checkpoints and proofs, unpublished activated Project Specification 1.9 candidate]
+- **produces:** [project-spec-62-unpublished-checkpoint-v1, EV-009 parent completion record]
+- **preserves:** [child-plan acceptance, predecessor behavior, unpublished Project Specification 1.9 mutability for #55, immutable release history, unrelated work]
+- **invariants:** [every active child task is terminal and identity-matched; child targeted proof is consumed rather than rerun; #62 remains open; no release candidate build, repository-wide gate, hosted run, tag, asset, publication, or GitHub mutation occurs]
+- **executor_discretion:** [concise checkpoint/evidence formatting and repository-conforming child checkpoint inspection]
+- **files:** [`docs/research/2026-08-01-project-spec-conformance-release-evidence.md` (create as unpublished child-completion record; owner T42)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** [T25]
 - **superseded_by:** []
 - **evidence:** [EV-009]
-- **recovery:** stop at the last verified child-plan or release boundary, do not repeat an unproven publication, and qualify a successor rather than rewriting history
-- **acceptance:** TC-T25-001 proves canonical/divergent/tailored/predecessor documents produce approved results and #62 closes after release.
+- **recovery:** if any child checkpoint, proof identity, exact candidate state, or unpublished boundary is missing, leave T42 blocked and return the failure to the child owner; do not publish, repeat already-green proof, or weaken child acceptance
+- **acceptance:** TC-T42-001 proves the approved #62 child plan has terminal identity-matched checkpoints for every active task, all child requirements/proofs are satisfied, the activated Project Specification 1.9 candidate remains unpublished and mutable for #55, and EV-009 records that bounded handoff without any broad gate or external effect.
 - **sub-tasks:**
-  - **T25.1 AUTHORIZATION** — obtain exact authorization to execute the approved child plan and publish/close #62 after its gates pass.
-  - **T25.2 PREFLIGHT** — validate the child plan, branch, candidate inputs, publication target, rollback boundary, and EV-009 destination.
-  - **T25.3 APPLY** — execute the child plan, then perform only the authorized release and issue effects.
-  - **T25.4 VERIFY** — verify child completion, fresh candidate, full/hosted gates, assets, and issue state independently.
-  - **T25.5 PROVE NO-OP OR RECOVERY** — prove repeat convergence or qualify a successor without rewriting published history.
-  - **T25.6 CAPTURE EVIDENCE** — run TC-T25-001; commit EV-009 and the format-3 checkpoint.
+  - **T42.1 ANCHOR** — validate revision 3 of the Project Spec child, its terminal T1–T3/T5 checkpoints, exact Plan identities/digests, and absence of a published #62 release.
+  - **T42.2 VERIFY PREREQUISITES** — inspect the child requirement/proof reconciliation and retained T5 evidence; do not rerun child implementation or already-green targeted commands.
+  - **T42.3 RUN** — record the child checkpoint identities, unpublished Project Specification 1.9 state, deferred final-release proof, and #62-open boundary in EV-009.
+  - **T42.4 Verify Task** — run TC-T42-001, commit EV-009 with the T42 checkpoint, and stop without candidate, repository-wide, hosted, publication, or issue effects.
 
 ### Phase P8: Project Spec Conversion Feature
 
@@ -1372,8 +1406,8 @@ A verification or operational task records the failed boundary, appends an owner
 - **work_type:** documentation
 - **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
 - **boundary:** internal
-- **depends_on:** [T25]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T25 before this outcome
+- **depends_on:** [T42]
+- **dependency_reason:** ordering-only: T42's verified unpublished #62 child checkpoint must precede #55 so the conversion specification extends the same release-eligible Project Specification successor without an intermediate publication
 - **requirements:** [REQ-055]
 - **proof:** [TC-T26-001]
 - **source_refs:** [request, issue:L3DigitalNet/project-standards#55]
@@ -1394,7 +1428,7 @@ A verification or operational task records the failed boundary, appends an owner
 #### T27: Implement preservation-first conversion for #55
 
 - **disposition:** active
-- **outcome:** Execute the approved child plan, whose tasks own the behavior-change files, and publish the safe conversion surface.
+- **outcome:** Execute the approved child plan, whose tasks own the behavior-change files, and leave the safe conversion surface verified but unpublished for T43.
 - **work_type:** behavior
 - **checkpoint:** one green commit with the required ordered `Plan-*` checkpoint trailers
 - **boundary:** internal
@@ -1417,40 +1451,66 @@ A verification or operational task records the failed boundary, appends an owner
   - **T27.3 GREEN** — execute the child plan's minimal preview/guarded apply implementation within its declared file ownership.
   - **T27.4 Verify GREEN** — run property/integration/round-trip/rollback suites.
   - **T27.5 REFACTOR** — do not add heuristic rewriting.
-  - **T27.6 Verify Task** — child completion, semantic audit, fresh candidate/full gate; create the format-3 checkpoint commit.
+  - **T27.6 Verify Task** — complete the child plan, semantic audit, focused/property/integration/round-trip/rollback proof, applicable package checks, and scoped documentation/diff checks; create the format-3 checkpoint without building the final release candidate or running a repository-wide gate.
 
 #### T28: Qualify the feature release
 
-- **disposition:** active
+- **disposition:** superseded
 - **outcome:** Publish #55 without regressing #62 or correction trains.
+- **work_type:** operational
+- **checkpoint:** historical non-executable #55-only publication boundary retained by revision 5
+- **boundary:** deployment
+- **depends_on:** [T27]
+- **dependency_reason:** ordering-only: preserve the approved prerequisite order T27 before this outcome
+- **requirements:** []
+- **proof:** []
+- **source_refs:** [request]
+- **consumes:** [historical T27 checkpoint and #55-only release boundary]
+- **produces:** [none; T43 owns consolidated v5.19 qualification and publication]
+- **preserves:** [historical #55 release acceptance target and the record of the rejected separate-publication boundary]
+- **invariants:** [non-executable; no candidate, gate, hosted run, publication, or issue closure is credited to T28]
+- **executor_discretion:** [none]
+- **files:** [`docs/research/2026-08-01-project-spec-feature-release-evidence.md` (historical claim; owner T28)]
+- **parallel_safe:** no
+- **conflicts_with:** []
+- **supersedes:** []
+- **superseded_by:** [T43]
+- **evidence:** []
+- **recovery:** not executable; T43 owns the one consolidated v5.19 release and consumes T27 without repeating task-level proof
+- **acceptance:** historical rejected #55-only release boundary; T43 owns the replacement acceptance
+
+#### T43: Qualify and publish consolidated v5.19
+
+- **disposition:** active
+- **outcome:** Prepare, verify, and publish one v5.19 release containing the terminal #62 and #55 Project Specification outcomes, GitHub Workflow 1.2 activation, and every other release-ready v5.19 checkpoint, then close #62 and #55 against that release.
 - **work_type:** operational
 - **checkpoint:** one green commit containing EV-004 and the required ordered `Plan-*` trailers
 - **boundary:** deployment
 - **depends_on:** [T27]
-- **dependency_reason:** ordering-only: preserve the approved prerequisite order T27 before this outcome
+- **dependency_reason:** ordering-only: T27's verified unpublished #55 conversion surface must precede release; T27 transitively follows T42, while T43 preflight separately requires terminal GitHub Workflow T2 and all other v5.19 checkpoints
 - **requirements:** [REQ-900]
-- **proof:** [TC-T28-001]
-- **source_refs:** [request]
-- **consumes:** [approved task inputs, exact repository and external state at authorization]
-- **produces:** [t28 verified operational result]
-- **preserves:** [immutable history, predecessor bytes, unrelated work, and action-specific authorization]
-- **invariants:** [no external effect before authorization; failed proof cannot be reported as success]
-- **executor_discretion:** [bounded evidence-capture mechanics and repository-conforming private helpers]
-- **files:** [`docs/research/2026-08-01-project-spec-feature-release-evidence.md` (modify or create; owner T28)]
+- **proof:** [TC-T43-001]
+- **source_refs:** [request, repo:meta/versioning.md#release-requirements, repo:ROADMAP.md#5190, repo:docs/plans/2026-08-01-project-spec-conformance-plan.md#12-final-verification, repo:docs/plans/2026-08-10-github-workflow-1-2-guidance-plan.md#12-final-verification]
+- **consumes:** [project-spec-62-unpublished-checkpoint-v1, T27 verified #55 checkpoint, terminal GitHub Workflow T2 activation checkpoint, all other terminal v5.19 task checkpoints, exact release-prep source state, action-specific authorization]
+- **produces:** [one prepared v5.19 release commit on main, one candidate and release verification receipt, signed immutable full-version tag, moving-major tag, byte-verified wheel/sdist publication, #62/#55 release dispositions, EV-004]
+- **preserves:** [every published predecessor and tag, exact retained package selections, unrelated work, one-release consolidation, action-specific authorization]
+- **invariants:** [release preparation and release-current edits land on clean main before the candidate build; exactly one fresh candidate and one direct-local full gate cover the final content; hosted CI covers that same release commit; no task-level full gate is replayed; tags/assets/issues change only after green proof and authorization; a failed or partially published release is never rewritten]
+- **executor_discretion:** [repository-conforming release-current judgment edits, release-note wording, and bounded evidence formatting within `meta/versioning.md`]
+- **files:** [`docs/research/2026-08-01-project-spec-feature-release-evidence.md` (create as consolidated v5.19 release evidence; owner T43)]
 - **parallel_safe:** no
 - **conflicts_with:** []
-- **supersedes:** []
+- **supersedes:** [T28]
 - **superseded_by:** []
 - **evidence:** [EV-004]
-- **recovery:** stop at the last verified boundary, do not repeat an unproven release or issue effect, retain EV-004, and qualify a successor rather than rewriting history
-- **acceptance:** TC-T28-001 proves source/candidate/installed parity, migration safety, hosted checks, assets, recovery decision, and #55 closure verify.
+- **recovery:** stop before tags on any local or hosted failure; if an external effect has begun, retain exact receipts, complete only the authorized idempotent step or publish a fully qualified successor, and never move an immutable full-version tag or replace an asset silently
+- **acceptance:** TC-T43-001 proves the clean-main v5.19 release commit contains the terminal #62/#55 and GitHub Workflow T2 checkpoints plus every other approved v5.19 outcome; one fresh candidate passes the direct-local full release block and hosted CI; classification, package/current-reference, migration, predecessor, and asset-digest checks are green; authorized signed tags/assets publish once; and #62/#55 close with exact release references.
 - **sub-tasks:**
-  - **T28.1 AUTHORIZATION** — obtain exact release, issue-write, tag, asset, and publication authorization.
-  - **T28.2 PREFLIGHT** — anchor T27, candidate inputs, hosted prerequisites, recovery boundary, and EV-004 destination.
-  - **T28.3 APPLY** — perform only the authorized feature release and issue-closure effects.
-  - **T28.4 VERIFY** — verify source/candidate/installed parity, migration safety, hosted checks, assets, and issue state.
-  - **T28.5 PROVE NO-OP OR RECOVERY** — prove repeat convergence or qualify a successor without rewriting history.
-  - **T28.6 CAPTURE EVIDENCE** — run TC-T28-001; commit EV-004 and the format-3 checkpoint.
+  - **T43.1 AUTHORIZATION** — obtain exact main integration, push, hosted, tag, release, asset, and issue-write authorization.
+  - **T43.2 PREFLIGHT** — validate T42/T27, the terminal GitHub Workflow T2 checkpoint, every other v5.19 checkpoint, clean-main eligibility, target 5.19.0, previous-release baseline, signing/hosted prerequisites, and EV-004 recovery boundary.
+  - **T43.3 APPLY** — on clean main, advance final catalog/default state and reconcile, run `release_prep.py 5.19.0`, apply only its owner-reviewed release-current/roadmap edits, and commit the exact prepared release tree before building.
+  - **T43.4 VERIFY ONCE** — build/extract one candidate from the release commit; run the direct-local `scripts/verify.sh --full` once plus the candidate-runtime Markdown/package/graph/schema/catalog/check-release block; push that commit once for hosted CI and do not repeat completed task gates.
+  - **T43.5 PUBLISH** — after local/hosted green and authorization, create/push signed `v5.19.0`, advance `v5` by the governed delete-and-re-push procedure, publish wheel/sdist assets, byte-verify downloads, and close #62/#55 with the release reference.
+  - **T43.6 CAPTURE EVIDENCE** — run TC-T43-001; record commit, gate/run IDs, tags, artifact digests, issue dispositions, and recovery/no-op observations in EV-004; create the T43 checkpoint.
 
 ### Phase P9: Program Reconciliation and Close-out
 
@@ -1461,15 +1521,15 @@ A verification or operational task records the failed boundary, appends an owner
 - **work_type:** operational
 - **checkpoint:** one green commit containing EV-005 and the required ordered `Plan-*` trailers
 - **boundary:** operational
-- **depends_on:** [T22, T23, T24, T25, T26, T27, T28, T32]
-- **dependency_reason:** ordering-only: closeout follows every frozen-issue release/disposition train, MCP documentation, PyYAML disposition, feature train, and consumer retirement; revision 4 dropped the T8 edge when T35 absorbed that qualification, and T35 remains transitively upstream through T16/T19 → T36 → T24
+- **depends_on:** [T22, T23, T24, T26, T27, T32, T42, T43]
+- **dependency_reason:** ordering-only: closeout follows every frozen-issue disposition, the unpublished #62/#55 checkpoints, the one consolidated v5.19 publication, MCP documentation, PyYAML disposition, and consumer retirement; T43 supplies the final release receipts, so T29 reconciles them without repeating qualification
 - **requirements:** [REQ-901]
 - **proof:** [TC-T29-001]
 - **source_refs:** [request]
 - **consumes:** [approved task inputs, exact repository and external state at authorization]
 - **produces:** [t29 verified operational result]
 - **preserves:** [immutable history, predecessor bytes, unrelated work, and action-specific authorization]
-- **invariants:** [no external effect before authorization; failed proof cannot be reported as success]
+- **invariants:** [no external effect before authorization; failed proof cannot be reported as success; T29 consumes T43 receipts and never rebuilds the candidate or reruns local/hosted release verification]
 - **executor_discretion:** [bounded evidence-capture mechanics and repository-conforming private helpers]
 - **files:** [`docs/research/2026-08-01-open-issue-program-closeout-evidence.md` (modify or create; owner T29)]
 - **parallel_safe:** no
@@ -1483,7 +1543,7 @@ A verification or operational task records the failed boundary, appends an owner
   - **T29.1 AUTHORIZATION** — obtain current action-and-target-specific approval for every external write, publication, merge, or closure.
   - **T29.2 PREFLIGHT** — confirm exact targets, branch/release state, prerequisites, rollback boundary, and clean attributable scope.
   - **T29.3 APPLY** — perform only the authorized operational changes in the declared order.
-  - **T29.4 VERIFY** — verify remote/installed/issue state and repository truth from independent observations.
+  - **T29.4 VERIFY** — reconcile issue, release, ledger, roadmap, status, TODO, changelog, handoff, and scratch truth against T43's retained receipts; do not rebuild, rerun gates/hosted CI, redownload assets, or repeat product proof.
   - **T29.5 PROVE NO-OP OR RECOVERY** — prove repeat convergence or the declared recovery path without rewriting immutable history.
   - **T29.6 CAPTURE EVIDENCE** — run TC-T29-001; commit sanitized durable evidence and the format-3 checkpoint.
 
@@ -1495,7 +1555,8 @@ A verification or operational task records the failed boundary, appends an owner
 2. Complete T9–T14, then T17/T18, T20, T31, and T33.
 3. Qualify and publish only the approved v5.15.0 aggregate in T35.
 4. Complete Agent Handoff authority/MCP documentation and deferred tooling successors.
-5. Complete separately approved Project Spec feature trains, then reconcile the program in T29.
+5. Complete the Project Spec #62 child at T42 without publication, then T26/T27 for #55. Require the separately governed GitHub Workflow T2 checkpoint before T43.
+6. T43 prepares and publishes one consolidated v5.19 release, running the final local/hosted verification once; T29 consumes its receipts to reconcile and close the program without rerunning verification.
 
 ### 10.2 Migration and Compatibility
 
@@ -1507,7 +1568,7 @@ A verification or operational task records the failed boundary, appends an owner
 
 ### 10.3 Rollout / Operational Authorization
 
-T1, T8, T25, T28–T29, T32, and T35–T36 stop at AUTHORIZATION until the user approves the exact issue writes, publication, protected merge, push, tag, release, or closeout effect. Plan approval and generic continuation do not satisfy this gate.
+T1, T8, T29, T32, T35–T36, and T43 stop at AUTHORIZATION until the user approves the exact issue writes, publication, protected merge, push, tag, release, or closeout effect. T42, T26, and T27 have no publication authority. Plan approval and generic continuation do not satisfy this gate.
 
 ### 10.4 Late Failure and Correction Loop
 
@@ -1520,10 +1581,10 @@ A task-level failure stays within the open task when its approved outcome is unc
 | ID | Risk | Likelihood | Impact | Treatment / Contingency | Owner / Task |
 | --- | --- | --- | --- | --- | --- |
 | R-001 | The combined v5.15.0 train becomes unreviewable. | medium | high | keep issue-local proofs and aggregate only after every owning checkpoint | T35 |
-| R-002 | Predecessor bytes or published history drift. | low | high | successor-only edits, byte gates, and no rewrite recovery | T8, T28, T35–T36, T41 |
+| R-002 | Predecessor bytes or published history drift. | low | high | successor-only edits, byte gates, and no rewrite recovery | T8, T35–T36, T41, T43 |
 | R-003 | Legacy evidence is mistaken for format-3 completion. | medium | high | isolate layouts and replay T30/T1 with required trailers | T1, T30 |
 | R-004 | Adapter cleanup damages consumer-owned bytes. | medium | high | layout/property matrices and byte-preservation controls | T13, T14 |
-| R-005 | External issues/releases/merges change without exact approval. | low | high | operational AUTHORIZATION stages and durable receipts | T1, T8, T25, T28–T29, T32, T35–T36, T41 |
+| R-005 | External issues/releases/merges change without exact approval. | low | high | operational AUTHORIZATION stages and durable receipts | T1, T8, T29, T32, T35–T36, T41, T43 |
 | R-006 | Deferred #88/#99 changes leak into v5.15.0. | medium | high | keep T16/T19 behind T35 and reject unexpected release content | T35, T36 |
 | R-007 | A late failure is fixed inside verification and escapes task proof. | medium | high | append correction work and rerun from ANCHOR | verification tasks |
 
@@ -1542,9 +1603,10 @@ None.
 ## 12. Final Verification
 
 - Every Must/Should requirement maps to a terminal owning task and passing Appendix B proof.
-- Every active task has a validated identity-bearing checkpoint; superseded T15/T21 remain non-executable.
+- Every active task has a validated identity-bearing checkpoint; superseded T15/T21/T25/T28 remain non-executable.
 - Focused regressions, Ruff, BasedPyright, package/graph/schema/projection checks, Markdown gates, and applicable Agent Handoff gates pass.
-- Final release tasks pass fresh source/candidate/installed checks, `scripts/verify.sh --full`, hosted checks, classification, artifact parity, and recovery gates.
+- T42 proves #62 child completion without publication; T26/T27 prove #55 without a broad gate; the separately governed GitHub Workflow T2 checkpoint is terminal before T43.
+- T43 alone prepares the exact v5.19 release commit on main, builds one fresh candidate, runs one direct-local `scripts/verify.sh --full` plus the release package block, obtains hosted green on that commit, and proves classification, publication, asset parity, and recovery. T29 consumes those receipts without rerunning them.
 - Immutable predecessors, consumer-owned configuration, unrelated work, and exact approved release contents are preserved.
 - Appendix C evidence exists, is sanitized, and matches independently observed external state.
 - GitHub, releases, status, TODO, roadmap, changelog, and handoff truth agree.
@@ -1569,6 +1631,8 @@ None.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Package successor selection | qualification task | consumers and later tasks | released predecessor selected | additive immutable successor advertised | missing/tampered payload fails closed | all predecessors remain selectable | one canonical payload per advertised version | request |
 | Combined v5.15.0 boundary | T35 | later trains and consumers | approved, unpublished | exact twelve issues plus CLI Documentation 1.6 | unexpected issue/package content blocks | follows v5.14.0 without rewrite | one combined qualification and publication | request |
+| Unpublished #62 parent checkpoint | T42 | T26, T27, T43 | T25 would publish #62 before #55 | terminal child checkpoints and EV-009, with #62 still open and Project Specification 1.9 unpublished | missing/mismatched child checkpoint or published state blocks | same unreleased successor remains extendable by #55 | no candidate, broad gate, hosted run, publication, or issue mutation | request; #62 child revision 3 |
+| Consolidated v5.19 release boundary | T43 | T29 and consumers | T28 would publish #55 separately after T25 published #62 | one exact-main release commit and one local/hosted qualification for #62, #55, GitHub Workflow T2, and all other v5.19 checkpoints | missing checkpoint, failed gate, missing authorization, or partial external effect blocks | published predecessors and full tags are immutable | one candidate, one full gate, one hosted run, one publication receipt | request; `ROADMAP.md`; `meta/versioning.md` |
 | Format-3 checkpoint | repository-local bridge | executor and recovery | identity-less legacy records | ordered `Plan-*` trailers bound to revision/digest | malformed, missing, or foreign identity is declined | legacy records receive no credit | commit exists before terminal state | request |
 
 ### A.2 State Transitions
@@ -1585,7 +1649,7 @@ None.
 | Artifact | Format | Owned Span / Entry | Preserved Content | Atomicity / Conflict Rule | Owner Task |
 | --- | --- | --- | --- | --- | --- |
 | consumer configuration | TOML/JSONC/Markdown | typed package-owned units only | undeclared consumer bytes and comments | plan complete edit set before atomic apply | T9–T14, T19, T33 |
-| package catalog/projection/lock | TOML/files/symlinks | qualification aggregation | predecessor files and selections | package/graph/schema/projection checks before release | T8, T28, T35–T36, T41 |
+| package catalog/projection/lock | TOML/files/symlinks | qualification aggregation | predecessor files and selections | package/graph/schema/projection checks before release | T8, T35–T36, T41, T43 |
 | protected consumer branches | Git | reviewed Agent Handoff retirement commit/merge | unrelated branch work | exact target and authorization before mutation | T32 |
 
 ## Appendix B. Requirement-to-Proof Traceability
@@ -1616,10 +1680,10 @@ None.
 | TC-T22-001 | REQ-108 | T22 | documentation inspection | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | targeted contract/documentation validation. | candidate instructions are development-only and future releases cannot ship candidate-as-current prose. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
 | TC-T23-001 | REQ-084 | T23 | characterization and regression | accepted issue reproduction, package integrity checks, and the frozen isolated matrix | execute the T23 characterization/fix-or-disposition lifecycle | fresh installs, concurrent install/launch, and repeated paired previews establish cause or a documented threshold; T35 remains blocked until the evidence-backed disposition is accepted. | an environment-only failure, incomplete matrix, hollow fix, or unsupported no-reproduction claim remains detectable | isolated locked local environments | EV-003 |
 | TC-T24-001 | REQ-062 | T24 | documentation inspection | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | doc gates, converged review, owner approval. | byte-exact/structural/advisory checks and existing-consumer impact are explicit and reviewed. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
-| TC-T25-001 | REQ-062 | T25 | operational acceptance | approved #62 specification and child-plan checkpoints plus independently observed release/issue state | execute the child plan and T25 operational publication lifecycle | canonical/divergent/tailored/predecessor documents produce approved results and #62 closes after release. | incomplete child state, missing authorization, wrong artifact, or premature issue closure prevents completion | local, hosted checks, and authorized GitHub release scope | EV-009 |
+| TC-T42-001 | REQ-062 | T42 | checkpoint contract inspection | approved #62 specification, validated child master, identity-bearing child checkpoints, and child requirement/proof reconciliation | validate the child plan and inspect terminal T1–T3/T5 checkpoint trailers plus retained T5 evidence; record the parent handoff without rerunning child proof | every active child task is terminal and identity-matched, child requirements/proofs are satisfied, Project Specification 1.9 is activated but unpublished and remains available for #55, EV-009 records the handoff, and #62 remains open with no candidate/gate/hosted/publication effect | remove or mismatch one child checkpoint, leave one child requirement/proof incomplete, present a published release, close #62, or record a repeated broad-gate receipt; T42 must fail | local Git-aware checkpoint inspection only | EV-009 |
 | TC-T26-001 | REQ-055 | T26 | documentation inspection | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | doc gates, converged review, owner approval. | unrecognized prose cannot be discarded; ambiguous choices remain explicit; rollback is defined; safe adoption for future canonical specs with an excluded/no-match legacy corpus remains supported and never forces conversion. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
-| TC-T27-001 | REQ-055 | T27 | contract regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | child completion, semantic audit, fresh candidate/full gate. | conversion is explicit and opt-in; recognized structure maps deterministically; unmapped content stays intact/review-visible; apply is guarded; new-spec-only/no-match consumers retain their existing successful behavior. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
-| TC-T28-001 | REQ-900 | T28 | operational acceptance | owner-approved release contract plus independently observed repository and external state | execute the T28 operational lifecycle and action-specific authorization gates | source/candidate/installed parity, migration safety, the full local gate, hosted checks, assets, recovery decision, and #55 closure verify. | missing authorization, wrong target, failed external proof, or non-idempotent repeat prevents completion | local plus authorized GitHub release scope | EV-004 |
+| TC-T27-001 | REQ-055 | T27 | contract regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | child completion, semantic audit, focused/property/integration/round-trip/rollback suites, applicable package checks, and scoped documentation/diff checks | conversion is explicit and opt-in; recognized structure maps deterministically; unmapped content stays intact/review-visible; apply is guarded; new-spec-only/no-match consumers retain their existing successful behavior; the checkpoint remains unpublished with no repository-wide gate | the prior reproduction, a plausible hollow fix, predecessor-byte mutation, forced conversion, dropped unmapped content, or task-level full-gate receipt remains detectable | locked local source and task-focused package environment | ephemeral |
+| TC-T43-001 | REQ-900 | T43 | consolidated operational release acceptance | `meta/versioning.md`, `ROADMAP.md`, terminal T42/T27 and GitHub Workflow T2 checkpoints, exact prepared main commit, and independently observed hosted/release state | execute T43 authorization/preflight; prepare 5.19.0 on clean main; build one candidate; run direct-local `scripts/verify.sh --full` once plus the release package/current-reference block; obtain hosted green; publish/byte-verify authorized tags/assets; close #62/#55 | the exact release commit contains every approved v5.19 checkpoint; one local/hosted qualification is green; classification/current references/migration/predecessors pass; signed tags and matching assets publish once; #62/#55 close with release references | omit or mismatch T42, T27, or GitHub Workflow T2; run a task-level duplicate full gate; build before the final content commit; use a non-main release commit; fail hosted/package/asset proof; or mutate/close before authorization; T43 must stop | clean main plus authorized GitHub release scope; Git-dependent release checks direct local | EV-004 |
 | TC-T29-001 | REQ-901 | T29 | operational acceptance | owner-approved release or operational contract plus independently observed repository and external state | execute the T29 operational lifecycle and its action-specific approval gates | all 24 issues are closed or explicitly accepted; docs/releases/ledger agree; scratch is harvested and removed. | missing authorization, wrong target, failed external proof, or non-idempotent repeat prevents completion | local plus authorized GitHub/consumer scope | EV-005 |
 | TC-T30-001 | REQ-902 | T30 | contract verification | owner-approved release policy, immutable predecessor fixtures, and the focused exact-level matrix | execute the T30 verification lifecycle without changing implementation | a matching tool/catalog major increment is accepted as the owner's MAJOR designation unless another contract is forbidden; otherwise any standard-package version advance requires exactly MINOR and no standard-package version advance requires exactly PATCH. Per package ID, a newly introduced package or a newly advertised version above the prior advertised maximum is an advance; internal and reference-only packages count, while older retained history and unadvertised payloads do not. Advertised-version removal, package downgrade, immutable-byte violations, and same-catalog breaking-default promotion remain forbidden, and ADR 0024 plus `meta/versioning.md` use the same rule. | a stale policy, hollow classifier, removed advertised version, downgrade, or predecessor-byte mutation remains detectable | locked local source and package-contract environment | EV-010 |
 | TC-T31-001 | REQ-903 | T31 | contract regression | accepted issue reproduction, immutable predecessor behavior, and task acceptance boundary | run Python Tooling package tests, package/graph/schema/projection checks, and `scripts/verify.sh`. | Python Tooling 1.10 remains byte-identical; its planned successor contains no claim that the V1 root manifest is current authority, consistently identifies the selected V5 package/control plane as authoritative, and is routed to the T35 release train with no separate release train declared. | the prior reproduction, a plausible hollow fix, or predecessor-byte mutation remains detectable | locked local source/candidate environment and hosted gate where declared | ephemeral |
@@ -1637,13 +1701,13 @@ None.
 | --- | --- | --- | --- | --- | --- |
 | EV-001 | T1 | docs/research/2026-08-01-agent-handoff-1-8-closeout-evidence.md | published v5.13/v5.14 launcher probes, hosted run, assets, and issue disposition | no credentials, private harness configuration, or unbounded logs | preserve the external issue-close basis after scratch teardown |
 | EV-003 | T23 | docs/research/2026-08-01-pyyaml-transient-disposition.md | isolated installation matrix, versions, integrity observations, and accepted disposition | no environment secrets, cache contents, or unrelated package inventory | retain the version-bound no-reproduction or defect-cause decision |
-| EV-004 | T28 | docs/research/2026-08-01-project-spec-feature-release-evidence.md | feature release candidate, migration safety, hosted, asset, and issue-closure proof | no credentials, private consumer configuration, or raw CI logs | retain external release acceptance after scratch teardown |
+| EV-004 | T43 | docs/research/2026-08-01-project-spec-feature-release-evidence.md | exact v5.19 release commit, terminal checkpoint census, one candidate/full-gate/hosted receipt, classification, tags, asset digests, recovery state, and #62/#55 dispositions | no credentials, signing material, private consumer configuration, or raw CI logs | retain the consolidated v5.19 acceptance after scratch teardown without repeating verification |
 | EV-005 | T29 | docs/research/2026-08-01-open-issue-program-closeout-evidence.md | frozen-issue reconciliation, release mapping, accepted dispositions, and final status | no credentials, private issue drafts, or unbounded API responses | retain the program completion basis |
 | EV-006 | T32 | docs/research/2026-07-09-agent-handoff-retirement-inventory.md | per-consumer authoritative-branch, validation, drift, and parity outcomes | no credentials, private configuration bytes, or unrelated consumer diffs | retain the operational retirement record |
 | EV-007 | T35 | docs/research/2026-08-01-v5-15-release-evidence.md | v5.15 source, wheel, installed, migration, hosted, artifact, publication, and issue matrix | no signing secrets, tokens, private consumer configuration, or raw CI logs | retain the combined release acceptance and recovery basis |
 | EV-008 | T36 | docs/research/2026-08-01-deferred-tooling-release-evidence.md | deferred successor source, installed, hosted, artifact, publication, and issue matrix | no signing secrets, tokens, private consumer configuration, or raw CI logs | retain the post-v5.15 release acceptance basis |
 | EV-011 | T41 | docs/research/2026-08-04-widened-v5-15-closure-evidence.md | issue-closure and disposition matrix for the widened v5.15.0 surface | no credentials, private consumer configuration, or raw CI logs | retain closure evidence for the widened boundary |
-| EV-009 | T25 | docs/research/2026-08-01-project-spec-conformance-release-evidence.md | child-plan completion, candidate, hosted, artifact, publication, and issue-closure proof | no signing secrets, tokens, private consumer configuration, or raw CI logs | retain the #62 release acceptance basis |
+| EV-009 | T42 | docs/research/2026-08-01-project-spec-conformance-release-evidence.md | terminal #62 child checkpoint identities, requirement/proof reconciliation, unpublished Project Specification 1.9 state, and deferred final-release boundary | no signing secrets, tokens, private consumer configuration, or repeated command logs | retain the #62 parent handoff that unlocks #55 without intermediate publication |
 | EV-010 | T30 | docs/research/2026-08-01-release-level-classification-evidence.md | landed commit, owner policy, focused classification matrix, package gates, and verification summary | no credentials, private configuration, or unbounded command logs | create an identity-bearing verification checkpoint without backfilling legacy task history |
 
 ## Appendix D. Deferred Work
