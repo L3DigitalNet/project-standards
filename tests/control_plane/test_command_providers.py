@@ -5,13 +5,18 @@ import json
 import stat
 import sys
 from pathlib import Path
-from typing import cast
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
+import project_standards.control_plane.planner as planner_runtime
+import project_standards.control_plane.provider_subprocess as provider_subprocess
 import project_standards.control_plane.providers as provider_runtime
+from project_standards.control_plane.command_resolution import SelectedCommandPackage
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledPayload
+from project_standards.control_plane.provider_inputs import provider_dispatch_input
 from project_standards.control_plane.provider_subprocess import (
     RESULT_LIMIT_BYTES,
     CapturedStream,
@@ -19,14 +24,22 @@ from project_standards.control_plane.provider_subprocess import (
     ProviderSubprocessOutcome,
     run_provider_subprocess,
 )
-from project_standards.control_plane.providers import invoke_provider
+from project_standards.control_plane.provider_worker import authoritative_provider_input
+from project_standards.control_plane.providers import (
+    ProviderInvocation,
+    ProviderResult,
+    invoke_provider,
+)
+from project_standards.control_plane.schemas import control_plane_schema_documents
 from project_standards.package_contract.integrity import validate_payload_integrity
+from project_standards.package_contract.paths import PackageVersion
 from project_standards.package_contract.payload import (
     JsonObject,
     PayloadManifest,
     ProviderEffect,
     ProviderOperation,
 )
+from tests.control_plane.planner_helpers import resolution_request, write_payload
 from tests.control_plane.test_providers import provider_invocation, write_provider_payload
 
 
@@ -94,6 +107,249 @@ def _command_payload(
 
 
 command_payload = _command_payload
+
+
+_PLAN_BOUND_CONTENT = b"command-provider-fixture|render|fixture-resource\n"
+_PLAN_BOUND_TARGET = ".standards/command-provider-fixture.txt"
+_PLAN_BOUND_PRECONDITION = "sha256:77ed2d5d1b55425244f0247ac95488fe1891e9667d98ce4c003790151fed6988"
+
+
+def _plan_bound_command_source() -> bytes:
+    return (
+        b"#!/usr/bin/python3\n"
+        b"import base64\nimport json\nimport os\nimport sys\n"
+        b"request = json.load(sys.stdin)\n"
+        b"provider_input = request['input']\n"
+        b"fixture = base64.b64decode("
+        b"request['resources']['fixture-data'], validate=True).decode().strip()\n"
+        b"if provider_input['operation'] == 'render':\n"
+        b"    result = {'content': f'command-provider-fixture|render|{fixture}\\n'}\n"
+        b"else:\n"
+        b"    snapshot = provider_input['snapshots']["
+        b"'.standards/command-provider-fixture.txt']\n"
+        b"    content = base64.b64decode(snapshot['content_base64'], validate=True)\n"
+        b"    expected = f'command-provider-fixture|render|{fixture}\\n'.encode()\n"
+        b"    result = {'findings': [] if content == expected else "
+        b"[{'code': 'FIXTURE', 'severity': 'error', 'message': 'wrong content'}]}\n"
+        b"payload = json.dumps(result, sort_keys=True, separators=(',', ':')).encode()\n"
+        b"os.write(int(sys.argv[1]), payload)\n"
+    )
+
+
+def _plan_bound_command_payload(root: Path) -> InstalledPayload:
+    original = write_payload(
+        root,
+        "command-provider-fixture",
+        contributions=[
+            {
+                "id": "render-fixture",
+                "target": _PLAN_BOUND_TARGET,
+                "adapter": "whole-file",
+                "scope": "$file",
+                "provider": "render-fixture",
+            }
+        ],
+        render_providers=["render-fixture"],
+        verify_providers=["verify-fixture"],
+    )
+    executable = _plan_bound_command_source()
+    input_schema = json.dumps(
+        control_plane_schema_documents()["provider-input.schema.json"],
+        sort_keys=True,
+    ).encode()
+    output_schema = json.dumps(
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "oneOf": [
+                {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {"content": {"type": "string"}},
+                    "required": ["content"],
+                },
+                {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {"findings": {"type": "array"}},
+                    "required": ["findings"],
+                },
+            ],
+        },
+        sort_keys=True,
+    ).encode()
+    files = {
+        "providers/command": executable,
+        "schemas/provider-input.json": input_schema,
+        "schemas/provider-output.json": output_schema,
+        "fixture-data.txt": b"fixture-resource\n",
+    }
+    for relative, content in files.items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+    raw = cast("dict[str, object]", original.manifest.model_dump(mode="json"))
+    resources = cast("list[dict[str, object]]", raw["resources"])
+    resources.extend(
+        [
+            {
+                "id": "provider-command",
+                "role": "provider",
+                "path": "providers/command",
+                "media_type": "application/octet-stream",
+                "digest": _digest(executable),
+            },
+            {
+                "id": "provider-input",
+                "role": "provider-input-schema",
+                "path": "schemas/provider-input.json",
+                "media_type": "application/schema+json",
+                "digest": _digest(input_schema),
+            },
+            {
+                "id": "provider-output",
+                "role": "provider-output-schema",
+                "path": "schemas/provider-output.json",
+                "media_type": "application/schema+json",
+                "digest": _digest(output_schema),
+            },
+            {
+                "id": "fixture-data",
+                "role": "provider-resource",
+                "path": "fixture-data.txt",
+                "media_type": "text/plain",
+                "digest": _digest(files["fixture-data.txt"]),
+            },
+        ]
+    )
+    providers = cast("list[dict[str, object]]", raw["providers"])
+    for declaration in providers:
+        declaration.update(
+            {
+                "kind": "command",
+                "entrypoint": "payload:provider-command",
+                "input_schema": "provider-input",
+                "output_schema": "provider-output",
+                "resources": ["fixture-data"],
+                "platforms": ["linux/amd64"],
+                "mode": "0755",
+            }
+        )
+    manifest = PayloadManifest.model_validate(raw)
+    return InstalledPayload(root, manifest, validate_payload_integrity(root, manifest))
+
+
+def _plan_bound_selection(repo: Path, payload: InstalledPayload) -> SelectedCommandPackage:
+    return cast(
+        "SelectedCommandPackage",
+        SimpleNamespace(repo=repo, payload=payload, distribution=object()),
+    )
+
+
+def test_plan_bound_command_input__command_render__uses_real_plan_then_target_child(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    target = repo / _PLAN_BOUND_TARGET
+    target.parent.mkdir(parents=True)
+    target.write_bytes(_PLAN_BOUND_CONTENT)
+    target.chmod(0o644)
+    payload = _plan_bound_command_payload(tmp_path / "payload")
+    request = planner_runtime.PlannerRequest(
+        repo=repo,
+        resolution=resolution_request((payload,)),
+        payloads=(payload,),
+    )
+    selected = _plan_bound_selection(repo, payload)
+    plans: list[planner_runtime.ReconciliationPlan] = []
+    planner_calls: list[ProviderInvocation] = []
+    spawned: list[tuple[object, ...]] = []
+    real_plan = planner_runtime.plan_reconciliation
+    real_popen = provider_subprocess.subprocess.Popen
+
+    def build_request(*_args: object, **_kwargs: object) -> planner_runtime.PlannerRequest:
+        return request
+
+    def record_plan(
+        planner_request: planner_runtime.PlannerRequest,
+    ) -> planner_runtime.ReconciliationPlan:
+        plan = real_plan(planner_request)
+        plans.append(plan)
+        return plan
+
+    def run_planning_provider(invocation: ProviderInvocation) -> ProviderResult:
+        planner_calls.append(invocation)
+        return invoke_provider(invocation)
+
+    def counted_popen(*args: Any, **kwargs: Any) -> Any:
+        spawned.append(args)
+        return real_popen(*args, **kwargs)
+
+    monkeypatch.setattr(
+        "project_standards.control_plane.cli.build_planner_request",
+        build_request,
+    )
+    monkeypatch.setattr(planner_runtime, "plan_reconciliation", record_plan)
+    monkeypatch.setattr(provider_subprocess.subprocess, "Popen", counted_popen)
+
+    snapshots = authoritative_provider_input(
+        selected,
+        ProviderOperation.VERIFY,
+        provider_id="verify-fixture",
+        planner_runner=run_planning_provider,
+    )
+
+    assert len(plans) == 1
+    assert [(call.provider_id, call.operation) for call in planner_calls] == [
+        ("render-fixture", ProviderOperation.RENDER)
+    ]
+    assert planner_calls[0].snapshots == {
+        _PLAN_BOUND_TARGET: {
+            "kind": "regular",
+            "precondition_digest": _PLAN_BOUND_PRECONDITION,
+            "content_digest": _digest(_PLAN_BOUND_CONTENT),
+            "mode": "0644",
+        },
+        "referenced_inputs": [],
+        "planned_contribution": {
+            "id": "render-fixture",
+            "target": _PLAN_BOUND_TARGET,
+            "adapter": "whole-file",
+            "scope": "$file",
+        },
+    }
+    assert snapshots == dict(
+        provider_dispatch_input(
+            None,
+            ProviderOperation.VERIFY,
+            repo=repo,
+            standard_id="command-provider-fixture",
+            plan=plans[0],
+            provider_id="verify-fixture",
+        )
+    )
+    assert snapshots is not None
+    assert cast("dict[str, object]", snapshots[_PLAN_BOUND_TARGET])["content_digest"] == _digest(
+        _PLAN_BOUND_CONTENT
+    )
+    assert len(spawned) == 1
+    assert all(call.provider_id != "verify-fixture" for call in planner_calls)
+
+    verification = invoke_provider(
+        ProviderInvocation(
+            repo=repo,
+            payload=payload,
+            standard_id="command-provider-fixture",
+            version=PackageVersion("1.0"),
+            provider_id="verify-fixture",
+            operation=ProviderOperation.VERIFY,
+            effective_config={},
+            snapshots=cast(JsonObject, snapshots),
+        )
+    )
+
+    assert verification.findings == ()
+    assert len(spawned) == 2
 
 
 def test_command_provider_receives_canonical_input_and_declared_resource_bytes(

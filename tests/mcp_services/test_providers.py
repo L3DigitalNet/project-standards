@@ -1490,7 +1490,9 @@ def test_mcp_command_parent_uses_authoritative_composite_input(
         operation: ProviderOperation,
         *,
         provider_id: str,
+        planner_runner: Any,
     ) -> dict[str, Any] | None:
+        assert planner_runner is providers.invoke_provider
         authority_calls.append((qualified, operation, provider_id))
         return authority_input
 

@@ -608,7 +608,12 @@ def _dispatch_command(
     *,
     input_authority: str,
 ) -> ProviderOperationResult:
-    """Dispatch a command directly so its process is the MCP call's only child."""
+    """Dispatch a command directly so each required provider is its only child.
+
+    Plan-bound input may require another command provider's content first. That
+    contribution uses this same kind-aware parent runner; the target command is
+    still invoked only afterward with the completed plan's input.
+    """
     try:
         with selected_command(
             root,
@@ -637,6 +642,7 @@ def _dispatch_command(
                     qualified,
                     selection.declaration.operation,
                     provider_id=selection.declaration.id,
+                    planner_runner=invoke_provider,
                 )
                 snapshots = {} if authoritative is None else dict(authoritative)
             result = invoke_provider(

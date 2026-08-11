@@ -16,6 +16,7 @@ import io
 import json
 import os
 import sys
+from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -32,6 +33,7 @@ type JsonObject = dict[str, JsonValue]
 
 if TYPE_CHECKING:  # pragma: no cover - annotations only; see the import note below
     from project_standards.control_plane.command_resolution import SelectedCommandPackage
+    from project_standards.control_plane.providers import ProviderInvocation, ProviderResult
     from project_standards.package_contract.payload import ProviderOperation
 
 # The request field that names who builds the provider's typed input. Absent or
@@ -60,6 +62,7 @@ def authoritative_provider_input(
     operation: ProviderOperation,
     *,
     provider_id: str,
+    planner_runner: Callable[[ProviderInvocation], ProviderResult] | None = None,
 ) -> dict[str, Any] | None:
     """Build one provider's authoritative typed input, or ``None`` if none exists.
 
@@ -94,8 +97,9 @@ def authoritative_provider_input(
     MCP Python dispatch builds here because authoritative inputs measured on a
     real consumer are 290 KB to 4.8 MB (2026-07-30), beyond ADR 0025's 256 KiB
     request bound. MCP command dispatch calls this same authority in the parent
-    and sends its result through the command's own stdin, avoiding a nested
-    Python worker while preserving one authority implementation.
+    and supplies its kind-aware runner for planning contributions. The default
+    remains the Python in-child runner for Python-worker callers, so command
+    planning never gains a nested worker and both contexts keep one authority.
     """
     from project_standards.control_plane.provider_inputs import (
         NoDeclaredProviderInput,
@@ -116,7 +120,14 @@ def authoritative_provider_input(
     from project_standards.control_plane.providers import invoke_provider_in_child
 
     request = build_planner_request(selected.repo, selected.distribution, frozenset())
-    plan = plan_reconciliation(replace(request, provider_runner=invoke_provider_in_child))
+    plan = plan_reconciliation(
+        replace(
+            request,
+            provider_runner=(
+                invoke_provider_in_child if planner_runner is None else planner_runner
+            ),
+        )
+    )
     try:
         return dict(
             provider_dispatch_input(
