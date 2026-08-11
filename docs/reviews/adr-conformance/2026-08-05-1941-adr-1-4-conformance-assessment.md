@@ -144,8 +144,8 @@ This is the mechanical root cause of the boundary gap, and it will keep reproduc
 
 | File | Current | Convention-conformant |
 | --- | --- | --- |
-| 0025 | `adr-0025-project-standards-mcp-service-and-sdk-boundary.md` | `adr-0025-mcp-service-and-sdk-boundary.md` |
-| 0026 | `adr-0026-project-standards-mcp-local-read-only-transport.md` | `adr-0026-mcp-local-read-only-transport.md` |
+| 0025 | Included the repository-name segment after `0025-` | `adr-0025-mcp-service-and-sdk-boundary.md` |
+| 0026 | Included the repository-name segment after `0026-` | `adr-0026-mcp-local-read-only-transport.md` |
 
 Both filenames were derived from the `id` rather than from the short title. The `id` values themselves are correct. All 21 other ADR filenames conform. Renaming touches the index table, five inbound `related`/`source` frontmatter references, and several inline links — it is not free, and it is cosmetic, so it belongs low in the backlog.
 

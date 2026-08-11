@@ -22,7 +22,7 @@ related:
   - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
-  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
 supersedes: []
 superseded_by: null
 source: []
@@ -62,7 +62,7 @@ Chosen option: **use provider registries for validators, fixers, drift checks, I
 
 This decision governs how a generic operation binds to the standard-specific behavior it needs, and applies whenever a standard package supplies behavior for such an operation. Within that population, a standard that supplies no implementation for an operation must declare that explicitly rather than silently no-op, and shared dispatch code must not gain a branch per standard.
 
-It does not govern which operations exist, how a package's payload is selected or trusted, or where provider code executes. [ADR 0023](adr-0023-unified-consumer-standards-control-plane.md) governs payload trust and the declaration plane, and [ADR 0025](adr-0025-project-standards-mcp-service-and-sdk-boundary.md) governs execution isolation under the MCP server. A change to the resolution mechanism that keeps behavior out of shared dispatch code is within this decision's principle and requires no exception to it.
+It does not govern which operations exist, how a package's payload is selected or trusted, or where provider code executes. [ADR 0023](adr-0023-unified-consumer-standards-control-plane.md) governs payload trust and the declaration plane, and [ADR 0025](adr-0025-mcp-service-and-sdk-boundary.md) governs execution isolation under the MCP server. A change to the resolution mechanism that keeps behavior out of shared dispatch code is within this decision's principle and requires no exception to it.
 
 ### Consequences
 

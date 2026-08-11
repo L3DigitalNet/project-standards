@@ -20,10 +20,10 @@ aliases:
   - 'Frontmatter value policy'
   - 'Metadata field values'
 related:
-  - 'standards/markdown-frontmatter/versions/1.2/README.md'
-  - 'standards/markdown-frontmatter/versions/1.2/structure.md'
-  - 'standards/markdown-frontmatter/versions/1.2/field-values.md'
-  - 'standards/markdown-frontmatter/versions/1.2/templates/repository-frontmatter-adr.md'
+  - 'standards/markdown-frontmatter/README.md'
+  - 'standards/markdown-frontmatter/versions/1.10/structure.md'
+  - 'standards/markdown-frontmatter/versions/1.10/field-values.md'
+  - 'standards/markdown-frontmatter/versions/1.10/templates/repository-frontmatter-adr.md'
   - '.standards/config.toml'
   - 'docs/adr/README.md'
   - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
@@ -252,4 +252,4 @@ This decision is confirmed when:
 
 ## More Information
 
-The reusable template lives at [`standards/markdown-frontmatter/versions/1.2/templates/repository-frontmatter-adr.md`](../../standards/markdown-frontmatter/versions/1.2/templates/repository-frontmatter-adr.md). The global value guidance lives at [`standards/markdown-frontmatter/versions/1.2/field-values.md`](../../standards/markdown-frontmatter/versions/1.2/field-values.md).
+Decision evidence: the record was accepted against the [`markdown-frontmatter` 1.2 repository ADR template](../../standards/markdown-frontmatter/versions/1.2/templates/repository-frontmatter-adr.md) and [1.2 field-value guidance](../../standards/markdown-frontmatter/versions/1.2/field-values.md). The `related` links name the current authority.

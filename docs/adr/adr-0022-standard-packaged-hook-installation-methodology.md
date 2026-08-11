@@ -21,8 +21,8 @@ aliases:
   - 'Standard-packaged hook installation methodology'
 related:
   - 'docs/specs/2026-07-09-agent-handoff-standard-package.md'
-  - 'standards/standard-bundle-authoring/versions/2.0/README.md'
-  - 'standards/agent-handoff/versions/1.1/hooks/session-start/session_start.py'
+  - 'standards/standard-bundle-authoring/README.md'
+  - 'standards/agent-handoff/README.md'
   - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
@@ -89,7 +89,7 @@ This decision governs hooks shipped by standard packages as a class. It does not
 
 Chosen option: **install one shared project-local hook under `.agents/hooks/`**.
 
-Under Catalog 5, a standard-owned hook's canonical authored source lives under `standards/<standard-id>/versions/<version>/hooks/<hook-id>/` and its versioned `payload.toml` declares the managed destination. The current Agent Handoff source is `standards/agent-handoff/versions/1.1/hooks/session-start/session_start.py`; the symlink-only `src/project_standards/payloads/agent-handoff/1.1/` projection carries that byte-identical source into built distributions. Historical V1 bundle copies are migration evidence only.
+Under Catalog 5, a standard-owned hook's canonical authored source lives under `standards/<standard-id>/versions/<version>/hooks/<hook-id>/` and its versioned `payload.toml` declares the managed destination. The current Agent Handoff source is `standards/agent-handoff/versions/1.11/hooks/session-start/session-start`; the symlink-only `src/project_standards/payloads/agent-handoff/1.11/` projection carries that byte-identical source into built distributions. Historical V1 bundle copies are migration evidence only.
 
 Standard adoption installs hook files under `.agents/hooks/<standard-id>/` at the consuming project root. Harness-specific project configuration may reference that shared installed path. A package with multiple hook entrypoints may place them together under the standard's directory, while filenames remain part of that standard's declared contract.
 
@@ -122,9 +122,9 @@ Graph and payload-manifest validation reject standard-packaged hook destinations
 ## More Information
 
 - Agent Handoff v1 package specification: [`docs/specs/2026-07-09-agent-handoff-standard-package.md`](../specs/2026-07-09-agent-handoff-standard-package.md)
-- Standard bundle authoring contract: [`standards/standard-bundle-authoring/versions/2.0/README.md`](../../standards/standard-bundle-authoring/versions/2.0/README.md)
-- Agent Handoff 1.1 hook source: [`standards/agent-handoff/versions/1.1/hooks/session-start/session_start.py`](../../standards/agent-handoff/versions/1.1/hooks/session-start/session_start.py)
-- Agent Handoff 1.1 payload manifest: [`standards/agent-handoff/versions/1.1/payload.toml`](../../standards/agent-handoff/versions/1.1/payload.toml)
+- Decision evidence — Standard Bundle Authoring 2.0 contract: [`versions/2.0/README.md`](../../standards/standard-bundle-authoring/versions/2.0/README.md)
+- Decision evidence — Agent Handoff 1.1 hook source: [`session_start.py`](../../standards/agent-handoff/versions/1.1/hooks/session-start/session_start.py)
+- Decision evidence — Agent Handoff 1.1 payload manifest: [`payload.toml`](../../standards/agent-handoff/versions/1.1/payload.toml)
 - ADR 0003, separate standard and artifact manifests: [`adr-0003-separate-standard-and-artifact-manifests.md`](adr-0003-separate-standard-and-artifact-manifests.md)
 - ADR 0005, stable generic agent and tooling interface: [`adr-0005-stable-generic-agent-tooling-interface.md`](adr-0005-stable-generic-agent-tooling-interface.md)
 - ADR 0007, standard graph validation gate: [`adr-0007-standard-graph-validation-gate.md`](adr-0007-standard-graph-validation-gate.md)

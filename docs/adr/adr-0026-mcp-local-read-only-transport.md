@@ -28,7 +28,7 @@ related:
   - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
   - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
-  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
 supersedes: []
 superseded_by: null
 source:
@@ -62,7 +62,7 @@ MADR status: **accepted** (2026-07-28; owner approval recorded in the T1 session
 
 ## Context and Problem Statement
 
-With the protocol implementation and service boundary settled by [ADR 0025](adr-0025-project-standards-mcp-service-and-sdk-boundary.md), the externally visible surface of the server still has to be fixed before any code is written: which transport and effect class v1 ships, how the server is launched, how a client names a standard resource, how the repository under inspection is identified, which protocol capabilities are declared, and which tools and prompts exist.
+With the protocol implementation and service boundary settled by [ADR 0025](adr-0025-mcp-service-and-sdk-boundary.md), the externally visible surface of the server still has to be fixed before any code is written: which transport and effect class v1 ships, how the server is launched, how a client names a standard resource, how the repository under inspection is identified, which protocol capabilities are declared, and which tools and prompts exist.
 
 Each of these is a compatibility commitment. A resource URI that is not canonical becomes a permanent alias; a declared capability that is not implemented becomes a client-visible failure; a tool added in v1 cannot be withdrawn without breaking consumers. The client evidence also constrains the answers: Codex CLI 0.145.0 advertises no roots and has no established model-initiated resource access, and revision `2026-07-28` deprecates Roots. See the [protocol, SDK, and client evidence matrix](../research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md).
 
@@ -236,7 +236,7 @@ Contract tests assert the declared capability set equals the registration set, t
 ## More Information
 
 - Evidence register: [`2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md`](../research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md)
-- Service and SDK boundary: [`adr-0025-project-standards-mcp-service-and-sdk-boundary.md`](adr-0025-project-standards-mcp-service-and-sdk-boundary.md)
+- Service and SDK boundary: [`adr-0025-mcp-service-and-sdk-boundary.md`](adr-0025-mcp-service-and-sdk-boundary.md)
 - Existing standard resource URI and index decision: [`adr-0010-standard-resource-uris-and-index.md`](adr-0010-standard-resource-uris-and-index.md)
 - Catalog version channels that make version-qualified URIs necessary: [`adr-0024-catalog-scoped-package-version-channels.md`](adr-0024-catalog-scoped-package-version-channels.md)
 - Owning specifications: [`SPEC-RD01`](../specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md) and [`SPEC-MS01`](../specs/2026-07-07-project-standards-mcp-server-implementation-spec.md)

@@ -23,8 +23,8 @@ related:
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
   - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
   - 'docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md'
-  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
-  - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+  - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0026-mcp-local-read-only-transport.md'
 supersedes: []
 superseded_by: null
 source: []
@@ -44,7 +44,7 @@ project:
 
 MADR status: **accepted**. Records decision D-012 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
-> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings §4 and backlog item 17).** The readiness gate this record deferred against **has passed**. Manifests, resource declarations, and graph validation are in place, and the server ships under [ADR 0025](adr-0025-project-standards-mcp-service-and-sdk-boundary.md) and [ADR 0026](adr-0026-project-standards-mcp-local-read-only-transport.md). The deferral is therefore **discharged** and withholds no work: this record prohibits nothing that has already shipped. `status` stays `active` because the sequencing rule it decided is still the record that governs the next server surface built on repository metadata; the outcome now carries its own expiry condition rather than leaving a reader to infer one.
+> **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings §4 and backlog item 17).** The readiness gate this record deferred against **has passed**. Manifests, resource declarations, and graph validation are in place, and the server ships under [ADR 0025](adr-0025-mcp-service-and-sdk-boundary.md) and [ADR 0026](adr-0026-mcp-local-read-only-transport.md). The deferral is therefore **discharged** and withholds no work: this record prohibits nothing that has already shipped. `status` stays `active` because the sequencing rule it decided is still the record that governs the next server surface built on repository metadata; the outcome now carries its own expiry condition rather than leaving a reader to infer one.
 
 ## Context and Problem Statement
 
@@ -61,7 +61,7 @@ Chosen option: **defer MCP server implementation until the meta-repo readiness g
 
 This decision governs the sequencing of server work against the meta-repository readiness gate, and applies to a server surface whose correctness depends on repository manifests, resource declarations, and graph validation being complete. Within that population, implementation waits until the gate passes.
 
-**The applicability condition is satisfied and the deferral is discharged.** The gate passed, and the resulting server is governed by [ADR 0025](adr-0025-project-standards-mcp-service-and-sdk-boundary.md) and [ADR 0026](adr-0026-project-standards-mcp-local-read-only-transport.md). This record withholds no MCP work and prohibits nothing that has shipped; it remains active as the sequencing precedent for the next such surface.
+**The applicability condition is satisfied and the deferral is discharged.** The gate passed, and the resulting server is governed by [ADR 0025](adr-0025-mcp-service-and-sdk-boundary.md) and [ADR 0026](adr-0026-mcp-local-read-only-transport.md). This record withholds no MCP work and prohibits nothing that has shipped; it remains active as the sequencing precedent for the next such surface.
 
 It does not govern the server's transport, scope, dependency, tool registry, execution model, or release timing once the gate has passed — ADRs 0025 and 0026 govern those. Work that does not depend on repository metadata being complete is outside this decision and requires no exception to it.
 

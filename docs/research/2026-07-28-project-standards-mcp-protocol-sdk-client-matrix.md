@@ -24,8 +24,8 @@ related:
   - 'docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md'
   - 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
   - 'docs/research/2026-07-07-project-standards-mcp-specification-reference-pack.md'
-  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
-  - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+  - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0026-mcp-local-read-only-transport.md'
 source:
   - 'https://blog.modelcontextprotocol.io/posts/2026-07-28/'
   - 'https://modelcontextprotocol.io/specification/2026-07-28/changelog'
@@ -51,7 +51,7 @@ This document is the final Step 09 official-source, license, conformance, and cl
 
 Every external fact below was verified on 2026-07-28 against the cited primary source, twice: once by an independent researcher and once by a fresh-context adversarial verifier re-fetching the same sources. One qualification: the attributions to the lifecycle and resources pages were corrected after that review as a citation reassignment of facts already verified twice, not as a fresh fetch of those two pages (see the Revision History). Version-sensitive claims about the protocol, the SDK, and the two installed clients belong here; the ADRs and specifications cite this register rather than restating it.
 
-Decisions frozen against this evidence are recorded in [ADR 0025](../adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md) and [ADR 0026](../adr/adr-0026-project-standards-mcp-local-read-only-transport.md).
+Decisions frozen against this evidence are recorded in [ADR 0025](../adr/adr-0025-mcp-service-and-sdk-boundary.md) and [ADR 0026](../adr/adr-0026-mcp-local-read-only-transport.md).
 
 ---
 

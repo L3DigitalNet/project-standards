@@ -19,15 +19,15 @@ related:
   - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'standards/adr/versions/1.5/README.md'
   - 'docs/reviews/adr-conformance/2026-08-05-1941-adr-1-4-conformance-assessment.md'
-  - 'standards/standard-bundle-authoring/versions/2.0/README.md'
-  - 'standards/markdown-frontmatter/versions/1.2/field-values.md'
+  - 'standards/standard-bundle-authoring/README.md'
+  - 'standards/markdown-frontmatter/README.md'
   - '.standards/config.toml'
   - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
   - 'docs/specs/archive/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
   - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
-  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
-  - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+  - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0026-mcp-local-read-only-transport.md'
   - 'docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md'
   - 'docs/adr/adr-0029-agents-root-allocation.md'
   - 'docs/adr/adr-0030-command-provider-execution-boundary.md'
@@ -73,8 +73,8 @@ That discipline is now applied rather than merely intended. The [2026-08-05 conf
 | [0022](adr-0022-standard-packaged-hook-installation-methodology.md) | Standard-Packaged Hook Installation Methodology | local | active |
 | [0023](adr-0023-unified-consumer-standards-control-plane.md) | Unified Consumer Standards Control Plane | local | active |
 | [0024](adr-0024-catalog-scoped-package-version-channels.md) | Catalog-Scoped Package Version Channels | local | active |
-| [0025](adr-0025-project-standards-mcp-service-and-sdk-boundary.md) | MCP Service and SDK Boundary | local | active |
-| [0026](adr-0026-project-standards-mcp-local-read-only-transport.md) | MCP Local Read-Only Transport | local | active |
+| [0025](adr-0025-mcp-service-and-sdk-boundary.md) | MCP Service and SDK Boundary | local | active |
+| [0026](adr-0026-mcp-local-read-only-transport.md) | MCP Local Read-Only Transport | local | active |
 | [0027](adr-0027-adopt-go-alongside-python-with-neutral-tooling.md) | Adopt Go Alongside Python with Neutral Tooling | local | active |
 | [0028](adr-0028-create-only-artifact-refresh.md) | Create-Only Artifact Refresh | local | active |
 | [0029](adr-0029-agents-root-allocation.md) | .agents Root Allocation | local | active |

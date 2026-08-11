@@ -26,8 +26,8 @@ related:
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
-  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
-  - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+  - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0026-mcp-local-read-only-transport.md'
 supersedes:
   - 'adr-0020-project-standards-standard-package-versioning-methodology'
 superseded_by: null

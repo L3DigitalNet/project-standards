@@ -20,8 +20,8 @@ related:
     - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
     - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
     - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
-    - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
-    - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+    - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
+    - 'docs/adr/adr-0026-mcp-local-read-only-transport.md'
 
   tickets: []
   repositories:
@@ -130,7 +130,7 @@ The unified `.standards/` control plane now owns consumer desired state, install
 
 `SPEC-MT01` Step 07 passed on 2026-07-12. The old readiness gap no longer exists. Step 08 documentation reconciliation and its separate specification and implementation-plan reviews are complete. Step 09 was executed by implementation-plan T1 on 2026-07-28 against the final protocol and stable SDK evidence, freezing the protocol, SDK, client, and service boundary under ADR 0025 and ADR 0026 with exact `mcp==2.0.0` pinned. Steps 10 through 14 then delivered the local read-only server in 5.12.0; controlled-write and remote-transport phases remain deferred.
 
-External MCP inputs were unusually time-sensitive at the 2026-07-24 review date, and that window has now closed. The breaking `2026-07-28` revision was published as final on 2026-07-28 and supersedes `2025-11-25`; the official Python SDK v2 line reached stable release alongside it while v1.x moved to maintenance mode. The roadmap's prohibition on selecting a pre-release merely to make this document look current was honoured: the Step 09 selection is exact `mcp==2.0.0` against the final publication under [ADR 0025](../adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md), evidenced by the 2026-07-28 protocol/SDK/client matrix.
+External MCP inputs were unusually time-sensitive at the 2026-07-24 review date, and that window has now closed. The breaking `2026-07-28` revision was published as final on 2026-07-28 and supersedes `2025-11-25`; the official Python SDK v2 line reached stable release alongside it while v1.x moved to maintenance mode. The roadmap's prohibition on selecting a pre-release merely to make this document look current was honoured: the Step 09 selection is exact `mcp==2.0.0` against the final publication under [ADR 0025](../adr/adr-0025-mcp-service-and-sdk-boundary.md), evidenced by the 2026-07-28 protocol/SDK/client matrix.
 
 ### 3.2 Target State
 

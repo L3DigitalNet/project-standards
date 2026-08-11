@@ -26,7 +26,7 @@ related:
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
   - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
-  - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+  - 'docs/adr/adr-0026-mcp-local-read-only-transport.md'
   - 'docs/adr/adr-0030-command-provider-execution-boundary.md'
 supersedes: []
 superseded_by: null
@@ -177,7 +177,7 @@ An IPC-cleanup test asserts that after each of the four completion paths — suc
 ## More Information
 
 - Evidence register: [`2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md`](../research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md)
-- Transport, scope, and registry decision: [`adr-0026-project-standards-mcp-local-read-only-transport.md`](adr-0026-project-standards-mcp-local-read-only-transport.md)
+- Transport, scope, and registry decision: [`adr-0026-mcp-local-read-only-transport.md`](adr-0026-mcp-local-read-only-transport.md)
 - Sequencing precedent: [`adr-0012-mcp-readiness-before-server-implementation.md`](adr-0012-mcp-readiness-before-server-implementation.md)
 - Generic tool-surface constraint this facade satisfies: [`adr-0005-stable-generic-agent-tooling-interface.md`](adr-0005-stable-generic-agent-tooling-interface.md)
 - Dispatcher and control-plane authority: [`adr-0023-unified-consumer-standards-control-plane.md`](adr-0023-unified-consumer-standards-control-plane.md)

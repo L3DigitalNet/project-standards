@@ -26,7 +26,7 @@ review F1). The revision strings are read out of ``mcp_types.version`` rather
 than spelled here, so a future SDK that adds a revision widens this suite
 instead of silently escaping it.
 
-*ADR 0026* (``adr-0026-project-standards-mcp-local-read-only-transport.md``) —
+*ADR 0026* (``adr-0026-mcp-local-read-only-transport.md``) —
 the frozen adapter configuration: server name ``project-standards``, one
 optional launch-time root-boundary CLI option, capabilities that declare only
 what is implemented with ``listChanged`` false and ``subscribe`` absent, a

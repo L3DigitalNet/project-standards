@@ -20,9 +20,9 @@ aliases:
   - 'ADR 0021'
   - 'Standard-packaged skill installation methodology'
 related:
-  - 'standards/standard-bundle-authoring/versions/2.0/README.md'
-  - 'standards/markdown-frontmatter/versions/1.2/README.md'
-  - 'standards/markdown-frontmatter/versions/1.2/adopt.md'
+  - 'standards/standard-bundle-authoring/README.md'
+  - 'standards/markdown-frontmatter/README.md'
+  - 'standards/markdown-frontmatter/versions/1.10/adopt.md'
   - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
@@ -134,10 +134,10 @@ That exception path exists for an **in-population** case: a standard-packaged sk
 
 ## More Information
 
-- Standard bundle authoring contract: [`standards/standard-bundle-authoring/versions/2.0/README.md`](../../standards/standard-bundle-authoring/versions/2.0/README.md)
-- Markdown Frontmatter Standard skill guidance: [`standards/markdown-frontmatter/versions/1.2/README.md`](../../standards/markdown-frontmatter/versions/1.2/README.md)
-- Markdown Frontmatter adoption procedure: [`standards/markdown-frontmatter/versions/1.2/adopt.md`](../../standards/markdown-frontmatter/versions/1.2/adopt.md)
-- Markdown Frontmatter payload manifest: [`standards/markdown-frontmatter/versions/1.2/payload.toml`](../../standards/markdown-frontmatter/versions/1.2/payload.toml)
+- Decision evidence — Standard Bundle Authoring 2.0 contract: [`versions/2.0/README.md`](../../standards/standard-bundle-authoring/versions/2.0/README.md)
+- Decision evidence — Markdown Frontmatter 1.2 guidance: [`versions/1.2/README.md`](../../standards/markdown-frontmatter/versions/1.2/README.md)
+- Decision evidence — Markdown Frontmatter 1.2 adoption procedure: [`versions/1.2/adopt.md`](../../standards/markdown-frontmatter/versions/1.2/adopt.md)
+- Decision evidence — Markdown Frontmatter 1.2 payload manifest: [`versions/1.2/payload.toml`](../../standards/markdown-frontmatter/versions/1.2/payload.toml)
 - ADR 0001, standard bundle authoring contract: [`adr-0001-standard-bundle-authoring-contract.md`](adr-0001-standard-bundle-authoring-contract.md)
 - ADR 0003, separate standard and artifact manifests: [`adr-0003-separate-standard-and-artifact-manifests.md`](adr-0003-separate-standard-and-artifact-manifests.md)
 - ADR 0005, stable generic agent and tooling interface: [`adr-0005-stable-generic-agent-tooling-interface.md`](adr-0005-stable-generic-agent-tooling-interface.md)

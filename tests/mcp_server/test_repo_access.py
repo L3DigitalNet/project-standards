@@ -15,7 +15,7 @@ is the whole security property: "client roots may reject an input but never
 replace a missing ``repo_root``, select a different repository, or widen the
 boundary."
 
-*ADR 0026* (``adr-0026-project-standards-mcp-local-read-only-transport.md``),
+*ADR 0026* (``adr-0026-mcp-local-read-only-transport.md``),
 root rules — the explicit argument is "the authoritative repository identity for
 that call"; advertised roots "may only validate or narrow containment". The
 optional configured launch-time boundary "narrows containment exactly as

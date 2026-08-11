@@ -20,7 +20,7 @@ aliases:
   - 'ADR 0019'
   - 'Packaged artifact parity and provenance'
 related:
-  - 'standards/standard-bundle-authoring/versions/2.0/README.md'
+  - 'standards/standard-bundle-authoring/README.md'
   - 'docs/adr/adr-0002-manifest-first-standard-discovery.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
@@ -126,7 +126,7 @@ That requirement applies only to an **exception**: a reusable standard artifact 
 
 ## More Information
 
-- Standard bundle authoring contract: [`standards/standard-bundle-authoring/versions/2.0/README.md`](../../standards/standard-bundle-authoring/versions/2.0/README.md)
+- Decision evidence — Standard Bundle Authoring 2.0 contract: [`versions/2.0/README.md`](../../standards/standard-bundle-authoring/versions/2.0/README.md)
 - ADR 0002, manifest-first standard discovery: [`adr-0002-manifest-first-standard-discovery.md`](adr-0002-manifest-first-standard-discovery.md)
 - ADR 0003, separate standard and artifact manifests: [`adr-0003-separate-standard-and-artifact-manifests.md`](adr-0003-separate-standard-and-artifact-manifests.md)
 - ADR 0007, standard graph validation gate: [`adr-0007-standard-graph-validation-gate.md`](adr-0007-standard-graph-validation-gate.md)

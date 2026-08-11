@@ -35,8 +35,8 @@ related:
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
   - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
   - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
-  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
-  - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+  - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0026-mcp-local-read-only-transport.md'
   - 'docs/adr/adr-0028-create-only-artifact-refresh.md'
   - 'docs/research/2026-07-12-python-tooling-consumer-owned-workflow-migration.md'
 supersedes:

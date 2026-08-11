@@ -17,8 +17,8 @@ tags:
 aliases: []
 related:
   - 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
-  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
-  - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+  - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0026-mcp-local-read-only-transport.md'
   - 'docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md'
 source: []
 confidence: 'high'

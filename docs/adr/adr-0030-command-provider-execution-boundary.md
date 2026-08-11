@@ -21,13 +21,13 @@ aliases:
   - 'ADR 0030'
   - 'Command provider execution boundary'
 related:
-  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
   - 'docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md'
 supersedes: []
 superseded_by: null
 source:
   - 'https://github.com/L3DigitalNet/project-standards/issues/142'
-  - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
+  - 'docs/adr/adr-0025-mcp-service-and-sdk-boundary.md'
   - 'docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md'
 confidence: 'high'
 visibility: 'internal'
@@ -48,7 +48,7 @@ MADR status: **accepted** (2026-08-10; owner approval recorded on issue 142).
 
 ## Context and Problem Statement
 
-The V2 payload contract already recognizes `command` as a provider kind, but its executable-provider grammar and runtime support only Python. Direct control-plane dispatch compiles and executes trusted Python payload bytes in the caller, while the MCP path adds the bounded worker process required by [ADR 0025](adr-0025-project-standards-mcp-service-and-sdk-boundary.md). Adding a native executable without a common boundary would leave direct calls unbounded or create a second process implementation whose timeout, teardown, caps, and diagnostics could drift.
+The V2 payload contract already recognizes `command` as a provider kind, but its executable-provider grammar and runtime support only Python. Direct control-plane dispatch compiles and executes trusted Python payload bytes in the caller, while the MCP path adds the bounded worker process required by [ADR 0025](adr-0025-mcp-service-and-sdk-boundary.md). Adding a native executable without a common boundary would leave direct calls unbounded or create a second process implementation whose timeout, teardown, caps, and diagnostics could drift.
 
 A command provider also cannot execute bytes in memory. Executing its installed payload path would depend on wheel installers preserving an executable mode and would separate the digest check from the file actually used. The executable needs a defined platform, wire ABI, environment, materialization sequence, and cleanup contract.
 
@@ -182,7 +182,7 @@ Declaration and wire tests cover the exact Python and command entrypoint grammar
 ## More Information
 
 - Owner decision and implementation findings: [issue 142](https://github.com/L3DigitalNet/project-standards/issues/142)
-- Existing MCP service and process requirements: [ADR 0025](adr-0025-project-standards-mcp-service-and-sdk-boundary.md)
+- Existing MCP service and process requirements: [ADR 0025](adr-0025-mcp-service-and-sdk-boundary.md)
 - Neutral Go and Python tooling boundary: [ADR 0027](adr-0027-adopt-go-alongside-python-with-neutral-tooling.md)
 
 Migrating Agent Handoff or another production package is a separate successor decision after this platform boundary is implemented and verified. Revisit this record before adding another platform, changing the command wire or environment, weakening a bound or cleanup rule, executing an installed resource path, or introducing sandboxing or additional privileges.
