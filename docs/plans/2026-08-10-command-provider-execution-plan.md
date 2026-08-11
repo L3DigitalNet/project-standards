@@ -3,9 +3,9 @@ plan_format: 3
 title: 'Command Provider Execution Implementation Plan'
 slug: 'command-provider-execution'
 status: active
-revision: 7
-revises_revision: 6
-revision_reason: 'retarget T2 current-state authority from removed MCP-local runner to the shared control-plane runner'
+revision: 8
+revises_revision: 7
+revision_reason: 'record the durable T2 checkpoint OID in the Source Map'
 pause_reason: ''
 source: 'issue L3DigitalNet/project-standards#142 and owner decisions of 2026-08-10'
 spec_ref: ''
@@ -37,8 +37,8 @@ The implementation ends with a committed Go payload fixture that proves `command
 | `repo:docs/adr/adr-0029-agents-root-allocation.md` | current-state evidence | Integrated release ADR that consumes number 0029 and makes 0030 the next free command-provider allocation. | `8dbdf9b1` | §§4–5, 9, 11; T1 |
 | `repo:standards/adr/versions/1.5/README.md` | normative | Adopted ADR authoring, numbering, frontmatter, indexing, and relationship rules for the prerequisite decision record. | `23c0036f` | §§3, 7–9; T1 |
 | `repo:src/project_standards/control_plane/providers.py::invoke_provider` | current-state evidence | V2 selection, payload integrity, resource loading, input/output schema validation, typed results, and current in-process Python execution. | `23c0036f` | §§4–5; T2–T4 |
-| `repo:src/project_standards/control_plane/provider_subprocess.py::run_provider_subprocess` | current-state evidence | Shared bounded transport, caps, environment/spawn seam, termination, reaping, and deterministic diagnostic composition now owned by the control plane. | `3cbde095` | §§4–5; T2–T3 |
-| `repo:src/project_standards/control_plane/provider_worker.py::run_request` | current-state evidence | Shared control-plane worker-side capsule dispatch and third-descriptor frame production. | `3cbde095` | §§4–5; T2 |
+| `repo:src/project_standards/control_plane/provider_subprocess.py::run_provider_subprocess` | current-state evidence | Shared bounded transport, caps, environment/spawn seam, termination, reaping, and deterministic diagnostic composition now owned by the control plane. | `78fb946b` | §§4–5; T2–T3 |
+| `repo:src/project_standards/control_plane/provider_worker.py::run_request` | current-state evidence | Shared control-plane worker-side capsule dispatch and third-descriptor frame production. | `78fb946b` | §§4–5; T2 |
 | `repo:src/project_standards/package_contract/payload.py::ProviderDeclaration` | current-state evidence | V2 provider schema, payload-qualified Python entrypoint grammar, resource closure, operation/phase/effect contract, and declared `ProviderKind.COMMAND`. | `23c0036f` | §§4–6; T3–T4 |
 | `repo:src/project_standards/control_plane/planner.py::_verification_requests` | current-state evidence | Current Python/documentation-only verification filter that must admit supported command declarations without package-specific dispatch. | `23c0036f` | §§4–6; T3–T4 |
 | `repo:src/project_standards/provider_runner.py::_run_python_provider` | current-state evidence | Legacy V1 installed-bundle runner that deliberately rejects external-process provider kinds. | `23c0036f` | §§3–5; T3 |
