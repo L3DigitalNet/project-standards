@@ -1,27 +1,27 @@
 # Architecture Decision Record (ADR) Standard
 
-This is the Catalog 5 family landing page for the active consumer package `adr@1.5`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
+This is the Catalog 5 family landing page for the active consumer package `adr@1.6`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
 
 ## Current authority
 
-- [ADR 1.5 standard](versions/1.5/README.md) — normative MADR, document, and decision-boundary guidance
-- [ADR 1.5 adoption guide](versions/1.5/adopt.md) — exact options, outputs, migration, and verification
+- [ADR 1.6 standard](versions/1.6/README.md) — normative MADR, document, and decision-boundary guidance
+- [ADR 1.6 adoption guide](versions/1.6/adopt.md) — exact options, outputs, migration, and verification
 - [Current family adoption guide](adopt.md) — concise enable/reconcile workflow
-- [ADR 1.5 agent summary](versions/1.5/agent-summary.md) — compact operating rules
+- [ADR 1.6 agent summary](versions/1.6/agent-summary.md) — compact operating rules
 - [Family index](standard.toml) — indexed payload and digest
 
 ## Use this standard when
 
-Use ADRs for significant, costly-to-reverse architecture decisions. Package 1.5 retains the MADR 1.0 body contract while adding explicit authoring guidance for the governed concern, governed population, applicability condition, exclusions, and reserved authority. It also supplies a create-only ADR scaffold and optional validation of MADR's three required level-2 sections.
+Use ADRs for significant, costly-to-reverse architecture decisions. Package 1.6 retains the MADR 1.0 body contract while supplying a create-only ADR scaffold, decision-boundary guidance, optional validation of MADR's three required level-2 sections, and independent opt-in validation of reciprocal amendment relationships.
 
-1.5 adds a sanctioned vocabulary for **partial amendment** — the relationship MADR's all-or-nothing supersession cannot express. Reciprocal `project.amends` / `project.amended_by` frontmatter lists, a blockquote amendment note between the title and Context and Problem Statement, and an optional `### Amendments` subsection under Decision Outcome record a change that narrows, restates, or partially replaces a decision while the remainder stays in force; the amended record keeps `status: active`. The change is strictly additive — both fields are optional and default to empty, no section becomes required, and every ADR valid under 1.4 validates under 1.5 untouched.
+The sanctioned **partial amendment** vocabulary uses reciprocal `project.amends` / `project.amended_by` frontmatter lists, a blockquote amendment note between the title and Context and Problem Statement, and an optional `### Amendments` subsection under Decision Outcome. Package 1.6 can validate the reciprocal lists and reject amendment of a superseded ADR when `validate_amendments = true`. The option defaults to `false` and is independent of `require_sections`, so existing consumers keep their prior result until they opt in.
 
 Markdown Frontmatter is a companion, not a package dependency; enable it separately when ADR metadata also needs schema and ID validation.
 
 ## Adopt
 
 ```bash
-project-standards standards enable adr --version 1.5
+project-standards standards enable adr --version 1.6
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -34,4 +34,4 @@ The immutable 1.1 README incorrectly says this repository has no `docs/adr/` tre
 
 ## Legacy boundary
 
-Copy-adopt commands, `.project-standards.yml` fragments, and unversioned V1 templates are migration evidence only. They do not define current Catalog 5 behavior. Use `.standards/config.toml`, the central lock, and the exact `versions/1.5/` payload.
+Copy-adopt commands, `.project-standards.yml` fragments, and unversioned V1 templates are migration evidence only. They do not define current Catalog 5 behavior. Use `.standards/config.toml`, the central lock, and the exact `versions/1.6/` payload.

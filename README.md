@@ -80,11 +80,11 @@ The standard defines **eleven required fields** plus a recommended optional set.
 
 Architecture Decision Records capture significant, hard-to-reverse decisions, using the [MADR](https://adr.github.io/madr/) format on top of the frontmatter profile above.
 
-- **Standard:** [`standards/adr/versions/1.5/README.md`](standards/adr/versions/1.5/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession and amendment workflows.
-- **Templates:** [`templates/adr.md`](standards/adr/versions/1.5/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
-- **Example:** [`examples/adr.example.md`](standards/adr/versions/1.5/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/versions/1.5/adopt.md).
+- **Standard:** [`standards/adr/versions/1.6/README.md`](standards/adr/versions/1.6/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession and amendment workflows.
+- **Templates:** [`templates/adr.md`](standards/adr/versions/1.6/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
+- **Example:** [`examples/adr.example.md`](standards/adr/versions/1.6/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/versions/1.6/adopt.md).
 
-Package 1.5 adds a sanctioned vocabulary for **partial amendment** — reciprocal `project.amends` / `project.amended_by` lists, a blockquote amendment note after the title, and an optional `### Amendments` subsection — for a later change that narrows or restates part of a decision while the rest stays in force. Supersession remains the all-or-nothing relationship. The addition is optional and default-empty, so every record valid under 1.4 validates under 1.5 untouched.
+Package 1.6 keeps the sanctioned **partial amendment** vocabulary introduced in 1.5: reciprocal `project.amends` / `project.amended_by` lists, a blockquote amendment note after the title, and an optional `### Amendments` subsection. It adds independent opt-in validation that external relationships are reciprocal and that an `amends` edge does not target a superseded ADR. Supersession remains the all-or-nothing relationship. The new check is off by default, and the relationship fields remain optional.
 
 ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` — the **`id`** embeds the repo-name for cross-repo uniqueness, while the **filename** omits it (`adr-0001-short-title.md`). ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, keeping the universal vocabulary small.
 
@@ -180,7 +180,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | Package | Current payload | Adoption guide |
 | --- | --- | --- |
 | Markdown Frontmatter | `1.10` | [`standards/markdown-frontmatter/versions/1.10/adopt.md`](standards/markdown-frontmatter/versions/1.10/adopt.md) |
-| ADR | `1.5` | [`standards/adr/versions/1.5/adopt.md`](standards/adr/versions/1.5/adopt.md) |
+| ADR | `1.6` | [`standards/adr/versions/1.6/adopt.md`](standards/adr/versions/1.6/adopt.md) |
 | Python Tooling | `1.13` | [`standards/python-tooling/versions/1.13/adopt.md`](standards/python-tooling/versions/1.13/adopt.md) |
 | Markdown Tooling | `1.14` | [`standards/markdown-tooling/versions/1.14/adopt.md`](standards/markdown-tooling/versions/1.14/adopt.md) |
 | Project Specification | `1.8` | [`standards/project-spec/versions/1.8/adopt.md`](standards/project-spec/versions/1.8/adopt.md) |

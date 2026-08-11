@@ -29,6 +29,12 @@ role = "retained"
 id = "adr"
 version = "1.5"
 digest = "sha256:52be37d8f0d26ed41971de6a508dae5a6a4cd796c8e31945f06e000a11c31b92"
+role = "retained"
+
+[[packages]]
+id = "adr"
+version = "1.6"
+digest = "sha256:12b9490be7cf3284bfb7f510b03b2cd555ab7c57f0a7628c9f95c659c241ba42"
 role = "default"
 
 [[packages]]

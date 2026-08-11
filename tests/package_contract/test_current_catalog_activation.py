@@ -33,7 +33,7 @@ from project_standards.package_contract.repository import (
 from project_standards.standards_graph import StandardsGraph, render_catalog
 
 _ROOT = Path(__file__).resolve().parents[2]
-_BASELINE_REF = "v5.17.0"
+_BASELINE_REF = "v5.18.0"
 _RELEASE_VERSION = "5.18.0"
 
 

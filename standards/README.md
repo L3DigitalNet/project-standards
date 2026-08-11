@@ -9,7 +9,7 @@ Consumer packages are enabled through `.standards/config.toml` and reconciled as
 | Standard | What it governs | Package | Catalog role | Bundle | Adopt |
 | --- | --- | --- | --- | --- | --- |
 | Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | 1.10 | default | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) |
-| ADR | Architecture Decision Records (MADR on the frontmatter profile) | 1.5 | default | [adr/](adr/) | [adopt](adr/adopt.md) |
+| ADR | Architecture Decision Records (MADR on the frontmatter profile) | 1.6 | default | [adr/](adr/) | [adopt](adr/adopt.md) |
 | Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | 1.13 | default | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
 | Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | 1.14 | default | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
 | Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | 1.8 | default | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |

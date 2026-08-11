@@ -6,7 +6,7 @@ catalog = "5"
 [standards.adr]
 enabled = true
 version = "latest"
-config = { contract_version = "1.0", require_sections = true }
+config = { contract_version = "1.0", require_sections = true, validate_amendments = true }
 
 [standards.agent-handoff]
 enabled = true

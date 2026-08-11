@@ -12,8 +12,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`adr`](adr/README.md) | active | 1.2 | retained | consumer | 12 | 2 | 1 |
 | [`adr`](adr/README.md) | active | 1.3 | retained | consumer | 12 | 2 | 1 |
 | [`adr`](adr/README.md) | active | 1.4 | retained | consumer | 12 | 2 | 1 |
-| [`adr`](adr/README.md) | active | 1.5 | default | consumer | 13 | 2 | 1 |
-| [`adr`](adr/README.md) | active | 1.6 | unadvertised | consumer | 13 | 2 | 1 |
+| [`adr`](adr/README.md) | active | 1.5 | retained | consumer | 13 | 2 | 1 |
+| [`adr`](adr/README.md) | active | 1.6 | default | consumer | 13 | 2 | 1 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.1 | retained | consumer | 29 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.2 | retained | consumer | 29 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.3 | retained | consumer | 29 | 8 | 18 |

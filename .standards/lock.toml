@@ -2,15 +2,15 @@
 schema_version = "1.1"
 catalog = "5"
 release = "5.18.0"
-catalog_digest = "sha256:eab100a8918d87575a11f3b41084300336a9da3bbf5f961ec83e6c532e5d4dff"
-config_digest = "sha256:faebef3855b9c1f5cf47966661f16dd227250652f874bcacf05173926c2586db"
+catalog_digest = "sha256:0e9ae88c48875788bc98b35ce8380a275db6df6348fdee2e6716697f67191a0b"
+config_digest = "sha256:a4ede89ec0b3241df495181cc1cdf24e175030dd65cf9f606c9f801a9e150257"
 
 [standards.adr]
 requested = "latest"
-resolved = "1.5"
+resolved = "1.6"
 selection = "stable"
-payload_digest = "sha256:52be37d8f0d26ed41971de6a508dae5a6a4cd796c8e31945f06e000a11c31b92"
-effective_config_digest = "sha256:7ddd7f39d1a9bff9867c1cfd91e6abb614e4e1efecf3574789161ff92c89dd38"
+payload_digest = "sha256:12b9490be7cf3284bfb7f510b03b2cd555ab7c57f0a7628c9f95c659c241ba42"
+effective_config_digest = "sha256:9738d53d42ac9c6ac8ed6afa8bd6ae817100080d9dadafd78d63237a7277b189"
 
 [standards.agent-handoff]
 requested = "latest"
@@ -1172,7 +1172,7 @@ path = "docs/adr/adr.template.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["adr"]
-versions = { adr = "1.5" }
+versions = { adr = "1.6" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:f6ac2567ea1116a1596ecf0477f194d8ad360401e06a64f6a5d2f1b09f3135d7"

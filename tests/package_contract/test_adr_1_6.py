@@ -1,15 +1,16 @@
-"""Contract for the unadvertised ADR 1.6 amendment-validation successor.
+"""Contract for the activated ADR 1.6 amendment-validation successor.
 
 ADR 1.5 introduced optional reciprocal amendment vocabulary without machine
 enforcement. ADR 1.6 adds an independent, default-off relationship check over the
 provider's existing immutable document snapshot. The tests pin the two stable finding
 families, one-finding-per-obligation behavior, exact option independence, predecessor
-immutability, and the requirement that activation remains a separate release step.
+immutability, and the atomic Catalog 5 and self-host activation.
 """
 
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import re
 import tomllib
@@ -39,6 +40,8 @@ _PREDECESSOR = _FAMILY / "versions/1.5"
 _SUCCESSOR = _FAMILY / "versions/1.6"
 _PROJECTION = _ROOT / "src/project_standards/payloads/adr/1.6"
 _PREDECESSOR_DIGEST = "sha256:52be37d8f0d26ed41971de6a508dae5a6a4cd796c8e31945f06e000a11c31b92"
+_SUCCESSOR_DIGEST = "sha256:12b9490be7cf3284bfb7f510b03b2cd555ab7c57f0a7628c9f95c659c241ba42"
+_SCAFFOLD_DIGEST = "4ffaf7d1329992ae90b710a0651d8d98cc3e5fb6d38029c9b46548dadd05d429"
 _ZERO_DIGEST = Sha256Digest(f"sha256:{'0' * 64}")
 _LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 _NEW_FILES: frozenset[str] = frozenset()
@@ -603,8 +606,8 @@ def test_adr_1_6__payload_projection__matches_successor() -> None:
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_adr_1_6__candidate__remains_unadvertised() -> None:
-    """T1 must not advance Catalog 5 or mutable family authority."""
+def test_adr_1_6__activation__selects_successor_and_retains_predecessor() -> None:
+    """Catalog, generated inventory, and root navigation expose one authority."""
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
         package["version"]: package["role"]
@@ -612,20 +615,47 @@ def test_adr_1_6__candidate__remains_unadvertised() -> None:
         if package["id"] == "adr"
     }
 
-    assert "1.6" not in roles
-    assert roles["1.5"] == "default"
-    assert "| [`adr`](adr/README.md) | active | 1.6 | unadvertised |" in (
-        _ROOT / "standards/catalog.md"
-    ).read_text(encoding="utf-8")
+    assert roles["1.6"] == "default"
+    assert roles["1.5"] == "retained"
+    rendered_catalog = (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
+    assert "| [`adr`](adr/README.md) | active | 1.6 | default |" in rendered_catalog
+    assert "| [`adr`](adr/README.md) | active | 1.5 | retained |" in rendered_catalog
+    standards_index = (_ROOT / "standards/README.md").read_text(encoding="utf-8")
+    assert (
+        "| ADR | Architecture Decision Records (MADR on the frontmatter profile) | 1.6 | default |"
+        in standards_index
+    )
 
 
-def test_adr_1_6__candidate__does_not_repoint_mutable_navigation() -> None:
+def test_adr_1_6__activation__aligns_navigation_config_lock_and_scaffold() -> None:
+    """Self-hosting enables the guard without mutating the create-only artifact."""
     expected_links = {
-        _FAMILY / "README.md": "versions/1.5/README.md",
-        _FAMILY / "adopt.md": "versions/1.5/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.5/agent-summary.md",
+        _FAMILY / "README.md": "versions/1.6/README.md",
+        _FAMILY / "adopt.md": "versions/1.6/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.6/agent-summary.md",
     }
     for path, expected_link in expected_links.items():
         content = path.read_text(encoding="utf-8")
         assert expected_link in content
-        assert "versions/1.6/" not in content
+        assert "versions/1.5/" not in content
+
+    config = tomllib.loads((_ROOT / ".standards/config.toml").read_text(encoding="utf-8"))
+    assert config["standards"]["adr"] == {
+        "enabled": True,
+        "version": "latest",
+        "config": {
+            "contract_version": "1.0",
+            "require_sections": True,
+            "validate_amendments": True,
+        },
+    }
+    lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
+    assert lock["standards"]["adr"] == {
+        "requested": "latest",
+        "resolved": "1.6",
+        "selection": "stable",
+        "payload_digest": _SUCCESSOR_DIGEST,
+        "effective_config_digest": "sha256:9738d53d42ac9c6ac8ed6afa8bd6ae817100080d9dadafd78d63237a7277b189",
+    }
+    scaffold = (_ROOT / "docs/adr/adr.template.md").read_bytes()
+    assert hashlib.sha256(scaffold).hexdigest() == _SCAFFOLD_DIGEST
