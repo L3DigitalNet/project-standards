@@ -203,8 +203,8 @@ def test_github_workflow_1_1__family_root__carries_the_sibling_navigation_docume
         # exactly as the agent-handoff and markdown-tooling roots do. The 5.18.0
         # activation repointed them off the predecessor.
         content = document.read_text(encoding="utf-8")
-        assert "versions/1.1/" in content
-        assert "versions/1.0/" not in content
+        assert "versions/1.2/" in content
+        assert "versions/1.1/" not in content
 
 
 def test_github_workflow_1_1__payload_projection__matches_successor() -> None:
@@ -235,5 +235,6 @@ def test_github_workflow_1_1__catalog_role__selects_the_successor_as_default() -
 
     assert [(entry["version"], entry["role"]) for entry in rows] == [
         ("1.0", "retained"),
-        ("1.1", "default"),
+        ("1.1", "retained"),
+        ("1.2", "default"),
     ]

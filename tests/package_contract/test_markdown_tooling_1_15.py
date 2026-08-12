@@ -341,7 +341,7 @@ def test_markdown_tooling_1_15__drift_and_unreachable_labels__retain_both_findin
     ]
 
 
-def test_markdown_tooling_1_15__projection_and_catalog__stay_complete_and_unadvertised() -> None:
+def test_markdown_tooling_1_15__projection_and_catalog__stay_complete_and_default() -> None:
     source_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path.read_bytes()
         for path in _SUCCESSOR.rglob("*")
@@ -359,12 +359,12 @@ def test_markdown_tooling_1_15__projection_and_catalog__stay_complete_and_unadve
 
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     advertised_versions = {
-        package["version"]
+        package["version"]: package["role"]
         for package in cast("list[dict[str, str]]", catalog["packages"])
         if package["id"] == "markdown-tooling"
     }
-    assert "1.15" not in advertised_versions
+    assert advertised_versions["1.14"] == "retained"
+    assert advertised_versions["1.15"] == "default"
     assert (
-        "| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.15 | "
-        "unadvertised | consumer |"
+        "| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.15 | default | consumer |"
     ) in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")

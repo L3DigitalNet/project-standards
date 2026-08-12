@@ -264,24 +264,24 @@ def test_markdown_frontmatter_1_11__payload_projection__matches_successor() -> N
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_markdown_frontmatter_1_11__catalog_role__stays_unadvertised() -> None:
-    """Candidate composition must not advance Catalog 5 or family navigation."""
+def test_markdown_frontmatter_1_11__catalog_role_and_navigation_are_current() -> None:
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     advertised_versions = {
-        package["version"]
+        package["version"]: package["role"]
         for package in cast("list[dict[str, str]]", catalog["packages"])
         if package["id"] == "markdown-frontmatter"
     }
-    assert "1.11" not in advertised_versions
+    assert advertised_versions["1.10"] == "retained"
+    assert advertised_versions["1.11"] == "default"
     assert (
         "| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.11 | "
-        "unadvertised | consumer |"
+        "default | consumer |"
     ) in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
 
     expected_links = {
-        _FAMILY / "README.md": "versions/1.10/README.md",
-        _FAMILY / "adopt.md": "versions/1.10/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.10/agent-summary.md",
+        _FAMILY / "README.md": "versions/1.11/README.md",
+        _FAMILY / "adopt.md": "versions/1.11/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.11/agent-summary.md",
     }
     for path, expected_link in expected_links.items():
         assert expected_link in path.read_text(encoding="utf-8")

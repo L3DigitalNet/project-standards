@@ -290,19 +290,19 @@ def test_runner_label_advisory__release_and_self_host_selections__stay_unchanged
     advertised = {
         (str(package["id"]), str(package["version"])): str(package["role"]) for package in packages
     }
-    assert advertised[("markdown-frontmatter", "1.10")] == "default"
-    assert advertised[("markdown-tooling", "1.14")] == "default"
-    assert advertised[("project-spec", "1.8")] == "default"
-    assert all(
-        (standard_id, version) not in advertised for standard_id, version in _VERSIONS.items()
-    )
+    assert advertised[("markdown-frontmatter", "1.10")] == "retained"
+    assert advertised[("markdown-frontmatter", "1.11")] == "default"
+    assert advertised[("markdown-tooling", "1.14")] == "retained"
+    assert advertised[("markdown-tooling", "1.15")] == "default"
+    assert advertised[("project-spec", "1.8")] == "retained"
+    assert advertised[("project-spec", "1.9")] == "default"
 
     lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
     standards = cast("dict[str, dict[str, object]]", lock["standards"])
     assert {standard_id: standards[standard_id]["resolved"] for standard_id in _VERSIONS} == {
-        "markdown-frontmatter": "1.10",
-        "markdown-tooling": "1.14",
-        "project-spec": "1.8",
+        "markdown-frontmatter": "1.11",
+        "markdown-tooling": "1.15",
+        "project-spec": "1.9",
     }
     artifacts = cast("list[dict[str, object]]", lock["artifacts"])
     workflow_versions = {
@@ -317,15 +317,15 @@ def test_runner_label_advisory__release_and_self_host_selections__stay_unchanged
         }
     }
     assert workflow_versions == {
-        ".github/workflows/format.yml": {"markdown-tooling": "1.14"},
-        ".github/workflows/lint-markdown.yml": {"markdown-tooling": "1.14"},
-        ".github/workflows/validate-markdown-frontmatter.yml": {"markdown-frontmatter": "1.10"},
-        ".github/workflows/validate-specs.yml": {"project-spec": "1.8"},
+        ".github/workflows/format.yml": {"markdown-tooling": "1.15"},
+        ".github/workflows/lint-markdown.yml": {"markdown-tooling": "1.15"},
+        ".github/workflows/validate-markdown-frontmatter.yml": {"markdown-frontmatter": "1.11"},
+        ".github/workflows/validate-specs.yml": {"project-spec": "1.9"},
     }
 
     rendered = (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
     for standard_id, version in _VERSIONS.items():
         assert (
             f"| [`{standard_id}`]({standard_id}/README.md) | active | {version} | "
-            "unadvertised | consumer |"
+            "default | consumer |"
         ) in rendered

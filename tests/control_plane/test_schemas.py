@@ -198,6 +198,7 @@ def test_mutation_plan_import_report_is_optional_and_structurally_closed() -> No
         }
     )
     assert legacy.import_report is None
+    assert "import_report" not in legacy.model_dump(mode="json")
 
     document = control_plane_schema_documents()["mutation-plan.schema.json"]
     definitions = cast("dict[str, object]", document["$defs"])

@@ -2,7 +2,7 @@
 schema_version = "1.0"
 catalog = "5"
 release = "5.19.0"
-digest = "sha256:bad5a63251f1f2e56d4d1fe365986eb8a0d39e7245be7b17230971a7c2b2d657"
+digest = "sha256:ab4bd135326d128a60066474421f74551bfd8a1faf61daf108a29dd23886b9d8"
 
 [standards.alpha]
 status = "active"

@@ -266,7 +266,9 @@ class MutationPlanSchema(StrictModel):
     version: PackageVersion
     actions: list[MutationActionSchema] = Field(default_factory=list)
     diagnostics: list[MutationDiagnosticSchema] = Field(default_factory=list)
-    import_report: ProjectSpecImportReportSchema | None = None
+    import_report: ProjectSpecImportReportSchema | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def _validate_import_report(self) -> MutationPlanSchema:

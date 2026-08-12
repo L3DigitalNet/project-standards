@@ -174,18 +174,18 @@ def test_agent_handoff_1_11__catalog_role__selects_the_successor_as_default() ->
         if package["id"] == "agent-handoff"
     }
 
-    assert roles["1.11"] == "default"
+    assert roles["1.11"] == "retained"
     assert roles["1.10"] == "retained"
 
 
 def test_agent_handoff_1_11__mutable_navigation__names_the_new_authority() -> None:
     """Family-level readers must resolve the same current payload as the index."""
     expected_links = {
-        _FAMILY / "README.md": "versions/1.11/README.md",
-        _FAMILY / "adopt.md": "versions/1.11/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.11/agent-summary.md",
+        _FAMILY / "README.md": "versions/1.12/README.md",
+        _FAMILY / "adopt.md": "versions/1.12/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.12/agent-summary.md",
     }
     for path, expected_link in expected_links.items():
         content = path.read_text(encoding="utf-8")
         assert expected_link in content
-        assert "versions/1.10/" not in content
+        assert "versions/1.11/" not in content

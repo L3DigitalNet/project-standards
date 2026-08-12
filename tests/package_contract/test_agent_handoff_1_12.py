@@ -103,9 +103,9 @@ def test_agent_handoff_1_12__identity__is_complete_and_unadvertised() -> None:
         for package in cast("list[dict[str, str]]", catalog["packages"])
         if package["id"] == "agent-handoff"
     }
-    assert roles["1.11"] == "default"
-    assert "1.12" not in roles
-    assert "| [`agent-handoff`](agent-handoff/README.md) | active | 1.11 | default |" in (
+    assert roles["1.11"] == "retained"
+    assert roles["1.12"] == "default"
+    assert "| [`agent-handoff`](agent-handoff/README.md) | active | 1.12 | default |" in (
         _ROOT / "standards/catalog.md"
     ).read_text(encoding="utf-8")
 
@@ -146,13 +146,13 @@ def test_agent_handoff_1_12__launcher_and_projection__preserve_package_bytes() -
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_agent_handoff_1_12__mutable_navigation__still_names_1_11() -> None:
+def test_agent_handoff_1_12__mutable_navigation__names_1_12() -> None:
     expected_links = {
-        _FAMILY / "README.md": "versions/1.11/README.md",
-        _FAMILY / "adopt.md": "versions/1.11/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.11/agent-summary.md",
+        _FAMILY / "README.md": "versions/1.12/README.md",
+        _FAMILY / "adopt.md": "versions/1.12/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.12/agent-summary.md",
     }
     for path, expected_link in expected_links.items():
         content = path.read_text(encoding="utf-8")
         assert expected_link in content
-        assert "versions/1.12/" not in content
+        assert "versions/1.11/" not in content

@@ -241,7 +241,8 @@ def test_python_tooling_1_14__predecessor_tree_and_activation_stay_exact() -> No
     }
     assert roles == {
         **{f"1.{minor}": "retained" for minor in range(1, 13)},
-        "1.13": "default",
+        "1.13": "retained",
+        "1.14": "default",
     }
     desired = tomllib.loads((_ROOT / ".standards/config.toml").read_text(encoding="utf-8"))
     locked = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
@@ -252,7 +253,7 @@ def test_python_tooling_1_14__predecessor_tree_and_activation_stay_exact() -> No
         "dict[str, object]", cast("dict[str, object]", locked["standards"])["python-tooling"]
     )
     assert desired_standard["version"] == "latest"
-    assert locked_standard["resolved"] == "1.13"
+    assert locked_standard["resolved"] == "1.14"
 
 
 @pytest.mark.parametrize(
@@ -511,8 +512,8 @@ def test_python_tooling_1_14__source_projection_and_unadvertised_catalog_are_com
         for item in cast("list[dict[str, str]]", catalog["packages"])
         if item["id"] == "python-tooling"
     ]
-    assert not [item for item in advertised if item["version"] == "1.14"]
-    assert next(item for item in advertised if item["version"] == "1.13")["role"] == "default"
+    assert next(item for item in advertised if item["version"] == "1.14")["role"] == "default"
+    assert next(item for item in advertised if item["version"] == "1.13")["role"] == "retained"
     assert "python-tooling@1.14" in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
 
 

@@ -910,8 +910,10 @@ AUTHORITATIVE_INPUT_OWNER: dict[tuple[str, str], str] = {
     ("agent-handoff", "verify"): "family",
     ("agent-handoff", "drift-check"): "family",
     ("markdown-frontmatter", "validate-frontmatter"): "family",
+    ("markdown-frontmatter", "verify-runner-labels"): "plan-bound",
     ("project-spec", "validate"): "family",
     ("project-spec", "lint"): "family",
+    ("project-spec", "verify-runner-labels"): "plan-bound",
     # github-workflow splits across both authorities rather than sitting in one:
     # `validate` and `drift-check` are family-served because their providers build
     # their entire answer from `snapshots`, so the generic empty input would report

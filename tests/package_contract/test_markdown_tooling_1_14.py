@@ -240,7 +240,7 @@ def test_markdown_tooling_1_14__catalog_role__selects_the_successor_as_default()
         if package["id"] == "markdown-tooling"
     }
 
-    assert roles["1.14"] == "default"
+    assert roles["1.14"] == "retained"
     assert roles["1.13"] == "retained"
     assert roles["1.12"] == "retained"
 
@@ -248,11 +248,11 @@ def test_markdown_tooling_1_14__catalog_role__selects_the_successor_as_default()
 def test_markdown_tooling_1_14__mutable_navigation__names_the_new_authority() -> None:
     """Family-level readers must resolve the same current payload as the index."""
     expected_links = {
-        _FAMILY / "README.md": "versions/1.14/README.md",
-        _FAMILY / "adopt.md": "versions/1.14/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.14/agent-summary.md",
+        _FAMILY / "README.md": "versions/1.15/README.md",
+        _FAMILY / "adopt.md": "versions/1.15/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.15/agent-summary.md",
     }
     for path, expected_link in expected_links.items():
         content = path.read_text(encoding="utf-8")
         assert expected_link in content
-        assert "versions/1.13/" not in content
+        assert "versions/1.14/" not in content
