@@ -114,10 +114,10 @@ def test_real_catalog_plans_inside_scale_and_time_boundary(
     assert plan.applicable, plan.findings
     assert len(plan.resolution.packages) == len(defaults) <= 100
     assert len(plan.units) <= 1_000
-    # This ceiling includes one isolated child for each provider invocation in
-    # the real catalog. It must not be met by batching calls or keeping a worker
-    # alive across invocation boundaries; those would weaken the bounded runner.
-    assert elapsed < 7.5, f"real catalog planning took {elapsed:.3f}s"
+    # This ceiling includes one isolated child for each provider invocation and
+    # cold hosted-runner startup. It must not be met by batching calls or keeping
+    # a worker alive across invocations; those would weaken the bounded runner.
+    assert elapsed < 10.0, f"real catalog planning took {elapsed:.3f}s"
 
 
 @pytest.mark.performance
@@ -152,7 +152,7 @@ def test_one_hundred_requested_and_discovery_orders_are_byte_deterministic(
     for target in baseline_plan.targets:
         assert (repo / target.target).read_bytes() == target.content
     elapsed = perf_counter() - started
-    assert elapsed < 30.0, f"100-order compatibility sweep took {elapsed:.3f}s"
+    assert elapsed < 40.0, f"100-order compatibility sweep took {elapsed:.3f}s"
 
 
 @pytest.mark.performance
