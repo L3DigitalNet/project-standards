@@ -2,41 +2,15 @@
 
 ## Current snapshot
 
-- Project Standards 5.18.0 is the published release at `68203eca`; signed `v5.18.0` (`ae2dd54e`) and `v5` (`29b2cb68`) tags are live and the `uvx` probe from the tag is green.
-- The release closed 14 issues through four package cuts: `adr` 1.5, `python-tooling` 1.13, `agent-handoff` 1.11, and `github-workflow` 1.1.
-- Catalog 5 defaults: adr 1.5, markdown-tooling 1.14, markdown-frontmatter 1.10, python-tooling 1.13, project-spec 1.8, agent-handoff 1.11, github-workflow 1.1.
-- Every predecessor payload remains byte-immutable and selectable.
-- Release assets are byte-verified: wheel `914faaa0…`, sdist `75c7dca3…`.
-- The ADR corpus assessment is closed: all 23 active records now answer the four-part reader test from Decision Outcome alone, and every partial change to an active decision is recorded on both records.
-- ADR 0028 was accepted and amended in the same release — `CP-CREATE-ONLY-ABSENT` is permanent, so the sanctioned create-only refresh is a manual copy, not delete-and-reconcile. Bug 006 is resolved; the engine gap is #157.
-- `docs/adr/adr.template.md` now carries the `adr` 1.5 bytes; the lock deliberately retains the artifact's creation digest, which is correct for a create-only artifact and is not drift.
-- Three same-class payload corrections shipped then were caught in-train: stale embedded predecessor version references in successor schemas. `assert_schema_payload_references` guards them per-test, but the class is invisible to the five validators (#156).
-- All 20 open issues except #168 are triaged as of 2026-08-09, each with a verified comment. Fourteen carried a materially wrong or stale premise, so several are now smaller or differently shaped than filed: #140's retirement defect is obsolete for V5-native installs (the live defect is `agent-handoff` 1.11 `adopt.md`), #164's acceptance criteria are unsatisfiable because the sweep reports rather than rewrites and keys on the release version, #166's performance-lane remedy already shipped, #158's bound is ADR 0025 and is not frozen, #162 touches 46 tracked references across 17 files rather than five, and #163's corpus already passes with zero findings. One triage claim was itself wrong and is withdrawn: #153's prefix option is not blocked by scope-as-lock-key — a closed enum composes from existing option-gated contributions and the planner's clean remove-and-create, needing no engine or lock change.
-- All seven owner decisions are resolved as of 2026-08-10; each issue carries its decision, rejected alternatives, and release classification. #129 stays open and deferred, with both prerequisites closed.
-- #142 builds the `command` provider kind: Go is the sanctioned direction for provider logic and the Python-shim alternative is rejected. Portability narrowing to `linux/amd64` is knowingly accepted — all consumers are internal Linux x86-64.
-- Most of that runner already exists. `mcp_services` implements bounded subprocess dispatch under ADR 0025; the control-plane CLI path dispatches in-process with no bound, so the work extracts one shared runner and closes that gap.
-- #157 keeps create-only permanent and adds a content-match advisory against every advertised payload digest. Because it reads content rather than the lock, it makes a manual copy verifiable, answering both costs the issue recorded.
-- #153 ships the closed `vscode.task_prefix` enum plus a governing-option diagnostic. The earlier triage claim that it was blocked by scope-as-lock-key is withdrawn — option-gated contributions and clean remove-and-create already express it.
-- #158 injects `PROVIDER_TIMEOUT_SECONDS` in the two flaky proofs, the idiom nine other tests already use. Neither test asserted a wall-clock bound; the production 30 s bound fired under starvation. Measure unloaded timing first.
-- ADR decisions: #161 gives ADR 0026 grammar ownership with 0010 adopting by reference; #160 records ADR 0024's coupling as load-bearing and does not split it; #159 adds a new ADR owning the `.agents/` root.
-- Two producer-side corrections surfaced: the ADR 0010/0026 URI divergence was closed at `e400f83f` on 2026-07-29, and `github-workflow` ships a linux/amd64 binary with no platform declaration or degradation path.
-- Release shape resolved 2026-08-10: 5.19.0 is a consolidation train covering all 20 triaged issues, grouped in `ROADMAP.md` by surface with the ADR cluster ordered #161 → #160 → #159 → #162 and #156 ahead of every payload cut.
-- `project-toolbox` moved to 5.20.0. #168's title already said v5.20.0 while its body said v5.19.0; the body and `ROADMAP.md` now agree with the title.
-- `rexec` v0.2.0 cut over on 2026-08-10. This repository's root `.rexec.toml` is schema 1, explicitly targets `rexec`, pins Go 1.26.5, and declares its Debian baseline; live `config show`, `doctor`, and `setup --check` are green.
-- Explicit `rexec` invocations are remote-only. Its one root configuration plus compiled defaults are authoritative; the surviving user-level file is present but inactive. Run a command directly when local execution is intended.
-- `.git` is a mandatory sync exclusion, so Git-history, branch, index, and `git ls-files` workloads remain local. The former full-gate observation remains historical: its statics lane offloaded, but the pytest lanes fail remotely because the ledger's `git log` fallback misreports missing Git metadata as amendment corruption (bug 007).
-- Do not set `UV_PROJECT_ENVIRONMENT`: this gate addresses `.venv/bin` directly and the redirect leaves it absent. A new or `rexec clean`-ed worker still needs remote `uv sync --all-groups` and `npm ci`, because those excluded workspace dependencies are not created by `rexec setup` (remote-execution#3 and #4).
-- The open-issue program has T16, T19, T24, and T36 terminal. T25's #62 child plan is active at `3bb7c4cf`; T1/T2 are ready, but no implementation is claimed. T4 waits for a separately governed verified #143 checkpoint before Catalog/self-host activation and selected dogfood remediation. Superseded pre-format-3 checklists at the work item's root recorded T16/T19/T36 as `not-started`; they are deleted and the authoritative `execution/` tree was correct all along (bug 008, agent-configs#23).
-- Work-state fields applied 2026-08-10: 19 of the 20 are `Ready` at `P1 Next` with target date 2026-08-17; #129 stays `Needs definition` and deferred, and #168 is `P2 Planned` for 5.20.0.
-- All four reusable workflows accept an optional `runner-labels` input for private same-organization callers.
-- Reviewed action pins: setup-uv 9.0.0 (`prune-cache: true`), setup-node 7.0.0, setup-python 7.0.0.
-- Dependabot stays disabled by decision; dependency currency moves through the payload cycle under the pin and width-table guards.
-- The `js-yaml` override remains until `markdownlint-cli2-action` ships >= 0.23.2 (v24 still bundles 0.23.1).
-- All four issue #133 follow-ups are delivered: #135 (`scripts/bootstrap-worktree.sh`), #136 (candidate-wheel staleness stamp enforced in the `verify.sh` preflight), #137 (`conventions.md` #18 surface-to-verification map), and #134 (`scripts/family_preflight.py` nine-site enumerating preflight, `conventions.md` #19), plus #131 (`standards list`/`show` disclose the committed-catalog basis).
-- The preflight reports `declared`/`missing`/`not applicable` per site and runs clean on all ten catalog-5 families; seam applicability is read from `AUTHORITATIVE_INPUT_OWNER`, because no `payload.toml` field separates `python-tooling` from `adr`.
-- That work landed green on the full fast gate at 14:45 — statics 4:01, ordinary 9:01, compatibility 14:17, performance 0:26 — with coverage at 90%.
-- #131 is the only consumer-visible item of the four and is recorded under `CHANGELOG.md` `[5.17.0]` for the v5.17.0 train; the other three are repository tooling.
-- Program tail otherwise unchanged: T25 implementation, T26–T29, SPEC-GSF3 T1, and the Usage Documentation Site V2 specs stay queued for later sessions.
-- The `github-workflow` package is fully staged: approved design rev 1.6 (D0–D12) and SPEC-GHW1 rev 1.6; the format-3 plan completed 2026-08-07.
-- Two Codex high-effort review rounds ran over SPEC-GHW1 and its plan; all ten round-1 findings and the round-2 residues are applied.
-- `scripts/plan.py` carries canonical plan-authoring 3.5.0 at `4c6d2b7e`; parity and self-tests passed. The #62 child plan validates with four tasks, seven requirements, four proofs, and one durable evidence record.
+- Project Standards 5.19.0 is published from release commit `127bd3dd`; signed `v5.19.0` and moving `v5` tags are live.
+- The release assets are byte-verified: wheel `134d5abc…` and source distribution `c1605cde…`.
+- The final local release battery passed with 5,016 ordinary tests, 141 compatibility cases, five performance tests, and 90% coverage.
+- Hosted verification is green on the release commit. The first run found only cold-runner timing ceilings; `127bd3dd` calibrated the test bounds.
+- Catalog 5 defaults: ADR 1.6, Agent Handoff 1.12, GitHub Workflow 1.2, Markdown Frontmatter 1.11, and Markdown Tooling 1.15.
+- Project Specification 1.9 and Python Tooling 1.14 are also defaults. Every predecessor remains retained and selectable.
+- Project Specification 1.9 ships strict conformance linting and the preservation-first import workflow. Issues #62 and #55 are closed as completed against 5.19.0.
+- The open-issue resolution program is complete. Its frozen 24 issues plus the three appended reports are terminal: 25 completed, #84 accepted as an external-cause closure, and #124 closed as a duplicate.
+- The three terminal child plans were retired after their checkpoint and release evidence was harvested. The program execution scratch was removed after its final checkpoint.
+- `@v5` consumers inherit the moving tag. No exact-pin consumer repositories were changed during this release.
+- Remaining product work is outside the completed train: #168 targets the 5.20.0 `project-toolbox` release, #129 remains deferred, and the Usage Documentation Site V2 specifications remain queued.
+- `rexec` v0.2.0 remains the CPU-work path for synchronized-tree workloads. Git-dependent operations remain direct-local because `.git` is not transferred.
