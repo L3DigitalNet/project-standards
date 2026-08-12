@@ -36,13 +36,14 @@ The format-3 open-issue resolution program completed on 2026-08-12. Its frozen 2
 
 Project Standards 5.19.0 was published from commit `127bd3dd67102b9fccee28a6eed02986c7140977`. Signed `v5.19.0` and moving `v5` tags dereference to that commit. The byte-verified wheel SHA-256 is `134d5abc5a86e5ef63dd2bd9a5844b53807f2d45a8ee930e0e39bc377b31a752`; the source distribution SHA-256 is `c1605cdecf1a75aac4668ea6e578618fc9e06a2b90a1870dd972b68b298a950b`.
 
-The retained EV-004 receipt records the one final local release battery, the hosted correction boundary, the final green hosted runs, publication, and #62/#55 closures. This closeout did not rebuild the candidate, rerun local or hosted release verification, or redownload assets.
+The retained EV-004 receipt records the one final local release battery, the hosted correction boundary, the final green hosted runs, publication, and the initial #62/#55 closures. The subsequent lifecycle reconciliation closed the other 17 issues cited by the release without rebuilding the candidate, rerunning local or hosted release verification, or redownloading assets.
 
 ## Governed issue dispositions
 
 - Completed: #55, #62, #75–#77, #80, #83, #86–#91, #95, #98, #99, #101, #102, #105–#109, #122, and #123.
 - Accepted non-completed terminal dispositions: #84 is closed as not planned after the external PyYAML transient disposition; #124 is closed as a duplicate of #122.
-- The GitHub ledger was regenerated after the final #55/#62 transitions. Unrelated open issues, including deferred #129 and 5.20.0 #168, are outside this program.
+- The 5.19.0 release train also closed #140, #142, #143, #153, #156–#167, and #169 as completed after adding release links.
+- The regenerated GitHub ledger contains only deferred #129 and 5.20.0 #168. Both are outside the completed train.
 
 ## Repository convergence
 

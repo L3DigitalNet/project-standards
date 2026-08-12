@@ -29,7 +29,7 @@ license: null
 
 ## Outcome
 
-Project Standards 5.19.0 was published from `main` commit `127bd3dd67102b9fccee28a6eed02986c7140977`. It consolidates the completed Project Specification conformance and conversion work with the rest of the 5.19 train. Issues #62 and #55 are closed as completed and carry release references.
+Project Standards 5.19.0 was published from `main` commit `127bd3dd67102b9fccee28a6eed02986c7140977`. It consolidates the completed Project Specification conformance and conversion work with the rest of the 5.19 train. All 19 issues cited by the release are closed as completed and carry release references.
 
 ## Prepared release
 
@@ -67,4 +67,4 @@ The first hosted run exposed only cold-runner timing ceilings: observed 8.887 s 
 
 ## Issue dispositions and recovery
 
-The GitHub Workflow tool closed #62 and #55 with native completed reasons and `Workflow = Done` after adding links to the published release. Full-version tags and published assets are immutable. Recovery from any later documentation or ledger discrepancy must consume these receipts; it must not move the full tag, replace an asset, rerun release qualification, or reopen completed product work merely to repair closeout prose.
+The GitHub Workflow tool closed #55, #62, #140, #142, #143, #153, #156–#167, and #169 with native completed reasons and `Workflow = Done` after adding links to the published release. The first closeout pass omitted the latter 17 lifecycle transitions; the 2026-08-12 reconciliation corrected them and regenerated the ledger. Full-version tags and published assets are immutable. Recovery from any later documentation or ledger discrepancy must consume these receipts; it must not move the full tag, replace an asset, rerun release qualification, or reopen completed product work merely to repair closeout prose.
