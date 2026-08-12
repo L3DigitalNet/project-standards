@@ -1096,7 +1096,7 @@ Exit criterion: synthetic packages prove the full contract without package-ID sh
 1. Reconstruct every current package into one or more V2 payloads.
 2. Assign exact config schemas, semantic scopes, shared identities, resources, providers, and migration signatures.
 3. Retire active V2 reads of legacy manifests/registry/locks outside migration adapters.
-4. Dogfood Standard Bundle Authoring `2.0` and create the catalog-5 declaration.
+4. Dogfood the current Standard Bundle Authoring `2.6` package and maintain its internal Catalog 5 declaration.
 
 Exit criterion: every package passes fresh and migrated individual acceptance.
 

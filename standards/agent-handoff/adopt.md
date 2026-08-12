@@ -1,13 +1,13 @@
 # Adopt the Agent Handoff Standard
 
-The current consumer package is [`agent-handoff@1.11`](versions/1.11/adopt.md). Use it for repository-local project knowledge, manual or automatic session startup, bounded harness integrations, and centrally locked standard-owned runtime artifacts. Consumer-authored `docs/**` knowledge remains create-only.
+The current consumer package is [`agent-handoff@1.12`](versions/1.12/adopt.md). Use it for repository-local project knowledge, manual or automatic session startup, bounded harness integrations, and centrally locked standard-owned runtime artifacts. Consumer-authored `docs/**` knowledge remains create-only.
 
 ## Configure and reconcile
 
 Enable the package, then set `contract_version`, `startup`, and `harnesses` under `[standards.agent-handoff.config]`. Manual startup requires an empty harness list; automatic startup accepts `claude-code`, `codex`, or both.
 
 ```bash
-project-standards standards enable agent-handoff --version 1.11
+project-standards standards enable agent-handoff --version 1.12
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -32,7 +32,7 @@ project-standards agent-handoff size-report --repo .
 project-standards agent-handoff shape-check --repo .
 ```
 
-Unsafe paths, duplicate hooks, malformed markers, provenance drift, and size-cap violations fail closed. Restore or reconcile standard-owned bytes; route oversized consumer knowledge by lifetime. See the [version-specific guide](versions/1.11/adopt.md) for exact options, outputs, provider-backed scaffold/upgrade behavior, harness trust, disable semantics, and troubleshooting.
+Unsafe paths, duplicate hooks, malformed markers, provenance drift, and size-cap violations fail closed. Restore or reconcile standard-owned bytes; route oversized consumer knowledge by lifetime. See the [version-specific guide](versions/1.12/adopt.md) for exact options, outputs, provider-backed scaffold/upgrade behavior, harness trust, disable semantics, and troubleshooting.
 
 Before enabling the package, take the read-only inventory:
 
@@ -46,7 +46,7 @@ It answers before `agent-handoff` appears in `.standards/config.toml`, resolving
 
 Where Markdown Tooling is also enabled, declare exclusions through its typed `exclusions` option rather than hand-written `.prettierignore` and `.markdownlint-cli2.jsonc` entries: one `{glob, applies_to, reason}` record covers Prettier and markdownlint together, reaches the managed instruction block, both rendered check commands, and the managed CI callers from a single declaration. Hand-written ignore files remain correct only for repositories that configure those tools independently.
 
-The compiled SessionStart launcher is roughly 3,815 KiB, so a `pre-commit` `check-added-large-files` guard at a typical `--maxkb=1024` refuses the adoption commit. Exempt that one managed path with an anchored `exclude` on the hook entry; raising the repository-wide `--maxkb` or committing with `--no-verify` are both worse trades. The [version-specific guide](versions/1.11/adopt.md) gives the exact expression and what the narrow exemption costs.
+The compiled SessionStart launcher is roughly 3,815 KiB, so a `pre-commit` `check-added-large-files` guard at a typical `--maxkb=1024` refuses the adoption commit. Exempt that one managed path with an anchored `exclude` on the hook entry; raising the repository-wide `--maxkb` or committing with `--no-verify` are both worse trades. The [version-specific guide](versions/1.12/adopt.md) gives the exact expression and what the narrow exemption costs.
 
 Versions 1.1 through 1.7 register the launcher as a bare path whose `#!/usr/bin/env python3` shebang resolves whatever interpreter is first on `PATH`. Where that is a policy shim, a missing interpreter, or one below 3.14, SessionStart injects nothing while every managed byte still matches; `validate` and `drift-check` report `AH-LAUNCHER-INTERPRETER` and direct an upgrade to 1.10 or newer, which has no interpreter prerequisite. Never edit the managed hook or its registration to work around it — both are centrally locked.
 

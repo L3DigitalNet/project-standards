@@ -1,25 +1,25 @@
 # Python Tooling SSOT Standard
 
-This is the Catalog 5 family landing page for the active consumer package `python-tooling@1.13`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
+This is the Catalog 5 family landing page for the active consumer package `python-tooling@1.14`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
 
 ## Current authority
 
-- [Python Tooling 1.13 standard](versions/1.13/README.md) — normative toolchain, configuration, ownership, and verification contract
-- [Python Tooling 1.13 adoption guide](versions/1.13/adopt.md) — complete options, outputs, migration, and recovery
+- [Python Tooling 1.14 standard](versions/1.14/README.md) — normative toolchain, configuration, ownership, and verification contract
+- [Python Tooling 1.14 adoption guide](versions/1.14/adopt.md) — complete options, outputs, migration, and recovery
 - [Current family adoption guide](adopt.md) — concise enable/reconcile workflow
-- [Python Tooling 1.13 agent summary](versions/1.13/agent-summary.md) — compact authority rules
+- [Python Tooling 1.14 agent summary](versions/1.14/agent-summary.md) — compact authority rules
 - [Family index](standard.toml) — indexed payload and digest
 
 ## Use this standard when
 
 Use Python Tooling for the uv/uv_build `src/` baseline, Ruff formatting and linting, BasedPyright strict checking, pytest with coverage.py, pip-audit, CI, VS Code, and bounded agent instructions. The control plane composes only declared package-owned tables, properties, and blocks and preserves unrelated consumer configuration.
 
-Package 1.13 adds `ruff.extend_per_file_ignores`, a typed table that exempts named Ruff rules for a path glob without disabling them anywhere else. Entries compose into the package-owned `[tool.ruff.lint.per-file-ignores]` table rather than replacing it, and both globs and selectors render in sorted order. The empty default renders the 1.12 bytes, so a consumer that does not opt in reconciles nothing.
+Package 1.14 retains the scoped `ruff.extend_per_file_ignores` table and adds the closed `vscode.task_prefix` choice (`""` or `"python: "`). The default preserves the prior task labels; the prefixed choice changes only the five labels and leaves commands, groups, problem matchers, and every other task field unchanged.
 
 ## Adopt
 
 ```bash
-project-standards standards enable python-tooling --version 1.13
+project-standards standards enable python-tooling --version 1.14
 project-standards reconcile
 project-standards reconcile --apply
 uv lock
@@ -32,7 +32,7 @@ Review [adopt.md](adopt.md) before applying. Commit unified config, catalog, loc
 
 The immutable 1.1 through 1.10 READMEs state that consumer `extraPaths` settings remain outside package ownership. That was accurate when they shipped. Python Tooling 1.11 declares the selected checker's `extraPaths` as a managed unit (issue #89) so local source resolves before an editable installation of the same distribution; a repository that owned that key moves its roots into `additional_source_roots`.
 
-The immutable 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, and 1.10 READMEs contain wording written before the atomic Catalog 5 and Project Standards v5.0.0 release. Treat their statement that the V1 root remains authoritative until that release as release-time history. Catalog 5 now selects `python-tooling@1.13`; the immutable payload bytes remain unchanged.
+The immutable 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, and 1.10 READMEs contain wording written before the atomic Catalog 5 and Project Standards v5.0.0 release. Treat their statement that the V1 root remains authoritative until that release as release-time history. Catalog 5 now selects `python-tooling@1.14`; the immutable payload bytes remain unchanged.
 
 The immutable 1.1 through 1.9 READMEs name Python Coding 0.5 as the reference-only companion. That literal was written before Python Coding 0.6 shipped and was never refreshed in the released payloads. The current companion is Python Coding 0.6; treat the earlier literal as release-time history, not as a statement that 0.5 is the compatible version. Python Tooling 1.10 and every later version name 0.6 directly.
 

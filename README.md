@@ -68,13 +68,13 @@ The standards this repository defines. Each lives in a family under [`standards/
 
 A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation, giving every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, never at the top level.
 
-- **Standard:** [`standards/markdown-frontmatter/versions/1.10/README.md`](standards/markdown-frontmatter/versions/1.10/README.md)
-- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.10/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.10/field-values.md)
-- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.10/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
-- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.10/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
-- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.10/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.10/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.10/adopt.md)
+- **Standard:** [`standards/markdown-frontmatter/versions/1.11/README.md`](standards/markdown-frontmatter/versions/1.11/README.md)
+- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.11/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.11/field-values.md)
+- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.11/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
+- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.11/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
+- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.11/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.11/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.11/adopt.md)
 
-The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.10/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.10/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.10/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
+The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.11/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.11/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.11/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
 
 ### ADR Standard
 
@@ -90,24 +90,24 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` �
 
 ### Python Tooling SSOT Standard
 
-The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration. Package 1.13 adds `ruff.extend_per_file_ignores`, a typed table that exempts named rules for a path glob and composes into the package-owned per-file-ignores table instead of disabling them repository-wide.
+The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration. Package 1.14 includes scoped `ruff.extend_per_file_ignores` and adds the closed `vscode.task_prefix` choice for unprefixed or `python: ` task labels.
 
-- **Standard:** [`standards/python-tooling/versions/1.13/README.md`](standards/python-tooling/versions/1.13/README.md)
-- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.13/adopt.md)
+- **Standard:** [`standards/python-tooling/versions/1.14/README.md`](standards/python-tooling/versions/1.14/README.md)
+- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.14/adopt.md)
 
 ### Markdown Tooling Standard
 
 The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The V5 package manages the two configs plus `lint-markdown.yml` and `format.yml` caller/self-hosted workflows while composing only declared units in shared EditorConfig, VS Code, and instruction containers.
 
-- **Standard:** [`standards/markdown-tooling/versions/1.14/README.md`](standards/markdown-tooling/versions/1.14/README.md)
-- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.14/adopt.md)
+- **Standard:** [`standards/markdown-tooling/versions/1.15/README.md`](standards/markdown-tooling/versions/1.15/README.md)
+- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.15/adopt.md)
 
 ### Project Specification Standard
 
 Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and provider-backed `validate`/`lint`/`extract`/`next`/`new`/`upgrade` commands. The selected package manages a reusable or self-hosted validation workflow; authoring writes are applied only from typed plans through the unified executor.
 
-- **Standard:** [`standards/project-spec/versions/1.8/README.md`](standards/project-spec/versions/1.8/README.md)
-- **Templates:** [`templates/`](standards/project-spec/versions/1.8/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.8/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.8/adopt.md)
+- **Standard:** [`standards/project-spec/versions/1.9/README.md`](standards/project-spec/versions/1.9/README.md)
+- **Templates:** [`templates/`](standards/project-spec/versions/1.9/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.9/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.9/adopt.md)
 
 ### CLI Documentation Standard
 
@@ -120,17 +120,17 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 
 Repository-local project knowledge and bounded session continuity for coding agents. Agent Handoff creates consumer-owned status, task, and lifetime-routed knowledge under `docs/`; installs a repo-local `agent-handoff` skill; optionally registers one shared SessionStart hook for Claude Code and Codex; and validates layout, drift, provenance, document budgets, and credential references without owning workstation-global state.
 
-- **Standard:** [`standards/agent-handoff/versions/1.11/README.md`](standards/agent-handoff/versions/1.11/README.md)
-- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.11/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
-- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.11/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.11/resources/legacy-migration.md)
+- **Standard:** [`standards/agent-handoff/versions/1.12/README.md`](standards/agent-handoff/versions/1.12/README.md)
+- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.12/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
+- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.12/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.12/resources/legacy-migration.md)
 
 ### GitHub Workflow Standard
 
 GitHub work discipline for organization-owned repositories: typed issue contracts, field vocabulary, pull-request evidence, review expectations, and an attention-first operator summary. The package installs a mandatory repo-local `github-workflow` skill that keeps judgment with the agent, plus `gh-workflow` — a committed, reproducibly built static `linux/amd64` Go binary whose nine subcommands audit the organization schema, maintain the human-facing ledger at `docs/GH-WORKFLOWS.md`, and apply validated issue mutations. The organization schema itself is skill-audited and human-applied; the tool never creates or retires an issue type, field, or value.
 
-- **Standard:** [`standards/github-workflow/versions/1.1/README.md`](standards/github-workflow/versions/1.1/README.md)
-- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.1/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
-- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.1/adopt.md)
+- **Standard:** [`standards/github-workflow/versions/1.2/README.md`](standards/github-workflow/versions/1.2/README.md)
+- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.2/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
+- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.2/adopt.md)
 
 ### Python Coding Standard (draft)
 
@@ -157,7 +157,7 @@ The version command must report `project-standards 5.18.0`. The first probe imme
 
 ```bash
 project-standards init --catalog 5
-project-standards standards enable markdown-frontmatter --version 1.10
+project-standards standards enable markdown-frontmatter --version 1.11
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -179,14 +179,14 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 
 | Package | Current payload | Adoption guide |
 | --- | --- | --- |
-| Markdown Frontmatter | `1.10` | [`standards/markdown-frontmatter/versions/1.10/adopt.md`](standards/markdown-frontmatter/versions/1.10/adopt.md) |
+| Markdown Frontmatter | `1.11` | [`standards/markdown-frontmatter/versions/1.11/adopt.md`](standards/markdown-frontmatter/versions/1.11/adopt.md) |
 | ADR | `1.6` | [`standards/adr/versions/1.6/adopt.md`](standards/adr/versions/1.6/adopt.md) |
-| Python Tooling | `1.13` | [`standards/python-tooling/versions/1.13/adopt.md`](standards/python-tooling/versions/1.13/adopt.md) |
-| Markdown Tooling | `1.14` | [`standards/markdown-tooling/versions/1.14/adopt.md`](standards/markdown-tooling/versions/1.14/adopt.md) |
-| Project Specification | `1.8` | [`standards/project-spec/versions/1.8/adopt.md`](standards/project-spec/versions/1.8/adopt.md) |
+| Python Tooling | `1.14` | [`standards/python-tooling/versions/1.14/adopt.md`](standards/python-tooling/versions/1.14/adopt.md) |
+| Markdown Tooling | `1.15` | [`standards/markdown-tooling/versions/1.15/adopt.md`](standards/markdown-tooling/versions/1.15/adopt.md) |
+| Project Specification | `1.9` | [`standards/project-spec/versions/1.9/adopt.md`](standards/project-spec/versions/1.9/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
-| Agent Handoff | `1.11` | [`standards/agent-handoff/versions/1.11/adopt.md`](standards/agent-handoff/versions/1.11/adopt.md) |
-| GitHub Workflow | `1.1` | [`standards/github-workflow/versions/1.1/adopt.md`](standards/github-workflow/versions/1.1/adopt.md) |
+| Agent Handoff | `1.12` | [`standards/agent-handoff/versions/1.12/adopt.md`](standards/agent-handoff/versions/1.12/adopt.md) |
+| GitHub Workflow | `1.2` | [`standards/github-workflow/versions/1.2/adopt.md`](standards/github-workflow/versions/1.2/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
 
