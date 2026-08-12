@@ -90,7 +90,7 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` �
 
 ### Python Tooling SSOT Standard
 
-The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration. Package 1.14 includes scoped `ruff.extend_per_file_ignores` and adds the closed `vscode.task_prefix` choice for unprefixed or `python: ` task labels.
+The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration. Package 1.14 includes scoped `ruff.extend_per_file_ignores` and adds the closed `vscode.task_prefix` choice for unprefixed or `"python: "` task labels.
 
 - **Standard:** [`standards/python-tooling/versions/1.14/README.md`](standards/python-tooling/versions/1.14/README.md)
 - **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.14/adopt.md)
@@ -146,14 +146,14 @@ The "standard for standards" — the V2 family/payload/catalog contract every pa
 
 ## Consuming the standards
 
-Project Standards 5.18.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
+Project Standards 5.19.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
 
 ```bash
-uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.18.0"
+uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.19.0"
 project-standards --version || project-standards --version
 ```
 
-The version command must report `project-standards 5.18.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.19.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
@@ -248,7 +248,7 @@ For private standards repos called by private consumers, enable cross-repository
 ```yaml
 repos:
   - repo: https://github.com/L3DigitalNet/project-standards
-    rev: v5.18.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
+    rev: v5.19.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
     hooks:
       - id: format-frontmatter-check
       - id: validate-id-check
@@ -284,7 +284,7 @@ npm ci                                                       # Prettier and mark
 uv run project-standards standards sync-payload-projection --root . --check --json # must pass before the build
 uv build --clear --wheel --out-dir build/release-wheel
 rm -rf -- build/wheel-runtime
-uv run python -m zipfile -e build/release-wheel/project_standards-5.18.0-py3-none-any.whl build/wheel-runtime
+uv run python -m zipfile -e build/release-wheel/project_standards-5.19.0-py3-none-any.whl build/wheel-runtime
 scripts/wheel-runtime-stamp.sh write         # records what the extraction was built from
 ```
 

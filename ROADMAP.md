@@ -59,9 +59,9 @@ This file tracks work planned for upcoming Project Standards releases. It is for
 
 ### 5.19.0
 
-A consolidation train covering the open backlog. Every issue below was triaged against source on 2026-08-09, and the seven that needed an owner decision were resolved on 2026-08-10; each carries its decision, rejected alternatives, and release classification. `project-toolbox` moved to [5.20.0](#5200) to make room, per #168's title.
+**Shipped as v5.19.0.** Kept for the planning record; [CHANGELOG.md](CHANGELOG.md) is the release truth. The train combines the completed backlog corrections, Project Specification 1.9, and the final Catalog 5 defaults. `project-toolbox` remains scheduled for [5.20.0](#5200), while #129 remains deferred pending a new decision derived from amended ADR 0028.
 
-Fourteen of the twenty triaged issues carried a materially wrong or stale premise, so several are smaller or differently shaped than filed. Read the decision comment before planning from the issue body.
+Fourteen of the twenty triaged issues carried a materially wrong or stale premise, so several landed in a smaller or differently shaped form than filed. The issue decision comments retain the rejected alternatives and release classification.
 
 #### ADR corpus completion
 

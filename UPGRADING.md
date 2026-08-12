@@ -30,14 +30,14 @@ The v5 tool keeps a warned fallback for a repository that still has only `.proje
 
 - Upgrade on a branch with a clean, reviewed working tree.
 - Use Python 3.14 or newer.
-- Install or invoke the exact v5 release you intend to pin. For 5.18.0:
+- Install or invoke the exact v5 release you intend to pin. For 5.19.0:
 
   ```bash
-  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.18.0"
+  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.19.0"
   project-standards --version || project-standards --version
   ```
 
-  Confirm that the command reports `project-standards 5.18.0` before continuing. The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real.
+  Confirm that the command reports `project-standards 5.19.0` before continuing. The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real.
 
 - Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
 - Review the current package-specific [adoption guide](standards/README.md) for option and output changes.
