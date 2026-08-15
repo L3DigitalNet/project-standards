@@ -79,15 +79,44 @@ def aggregate_inventory_digest(
 def _declared_files(
     manifest: PayloadManifest,
 ) -> dict[str, tuple[Sha256Digest, str]]:
+    """Map each declared payload-relative path to its digest and first declarer.
+
+    One payload file may back several declarations, so long as every one of them
+    pins the same digest. That is what lets a single packaged source install to
+    more than one consumer target — the skill trees delivered to both
+    `.agents/skills/` and `.claude/skills/` are the motivating case (issue #170),
+    since Claude Code discovers project skills only under the latter and Codex
+    only under the former. The alternative was a byte-for-byte second copy of
+    every skill file inside each payload, which would have added ~9.7 MB to every
+    future `github-workflow` version for content that is identical by contract.
+
+    The returned mapping stays keyed by path, so the aggregate inventory digest
+    still carries exactly one entry per file and repeating a declaration does not
+    change a payload's identity.
+    """
     declared: dict[str, tuple[Sha256Digest, str]] = {}
 
     def add(path: SafeRelativePath, digest: Sha256Digest, identity: str) -> None:
         normalized = path.normalized.as_posix()
-        if normalized == "payload.toml" or normalized in declared:
+        # `payload.toml` hashes itself into the inventory separately, so declaring
+        # it as a resource or artifact source would double-count the manifest.
+        if normalized == "payload.toml":
             raise PackageContractError(
                 f"{manifest.payload.standard}@{manifest.payload.version.value}: "
                 f"duplicate file declaration for {normalized}"
             )
+        existing = declared.get(normalized)
+        if existing is not None:
+            # Disagreeing digests for one path are a real integrity fault: the file
+            # has exactly one byte sequence, so at most one declaration can be
+            # right, and silently keeping the first would let the wrong bytes
+            # install at the other declaration's target.
+            if existing[0] != digest:
+                raise PackageContractError(
+                    f"{manifest.payload.standard}@{manifest.payload.version.value}: "
+                    f"conflicting digests declared for {normalized}"
+                )
+            return
         declared[normalized] = (digest, identity)
 
     for resource in manifest.resources:

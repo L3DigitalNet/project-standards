@@ -160,19 +160,76 @@ def test_integrity_rejects_other_undeclared_cache_content(tmp_path: Path) -> Non
         validate_payload_integrity(payload_dir, manifest)
 
 
-def test_integrity_rejects_duplicate_digest_bearing_declarations(tmp_path: Path) -> None:
-    _, payload_dir = _copy_payload(tmp_path)
+def _append(payload_dir: Path, declaration: str) -> Path:
     source = payload_dir / "payload.toml"
-    source.write_text(
-        source.read_text(encoding="utf-8")
-        + f'''\n[[artifacts]]
+    source.write_text(source.read_text(encoding="utf-8") + declaration, encoding="utf-8")
+    return source
+
+
+def test_integrity_accepts_one_source_backing_several_targets(tmp_path: Path) -> None:
+    """Pins issue #170: a skill file installs to `.agents/` and `.claude/` from one source.
+
+    The second declaration must not duplicate the file in the inventory, so this
+    compares the inventory against a single-declaration baseline instead of
+    merely asserting that validation returned.
+    """
+    _, payload_dir = _copy_payload(tmp_path)
+    baseline = validate_payload_integrity(
+        payload_dir, load_payload_manifest(payload_dir / "payload.toml")
+    )
+
+    source = _append(
+        payload_dir,
+        f'''\n[[artifacts]]
 id = "duplicate-readme"
 target = "copy.md"
 source = "README.md"
 digest = "{_digest((payload_dir / "README.md").read_bytes())}"
 policy = "managed"
 ''',
-        encoding="utf-8",
+    )
+    # `payload.toml` hashes itself into the inventory, so appending the declaration
+    # legitimately moves the aggregate; compare the file inventory instead.
+    integrity = validate_payload_integrity(payload_dir, load_payload_manifest(source))
+
+    readme_entries = [
+        entry for entry in integrity.inventory if entry.path.normalized.as_posix() == "README.md"
+    ]
+    assert len(readme_entries) == 1
+    assert len(integrity.inventory) == len(baseline.inventory)
+
+
+def test_integrity_rejects_conflicting_digests_for_one_path(tmp_path: Path) -> None:
+    """A path has one byte sequence, so two declarations cannot disagree about it."""
+    _, payload_dir = _copy_payload(tmp_path)
+    source = _append(
+        payload_dir,
+        """\n[[artifacts]]
+id = "duplicate-readme"
+target = "copy.md"
+source = "README.md"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+policy = "managed"
+""",
+    )
+    manifest = load_payload_manifest(source)
+
+    with pytest.raises(PackageContractError, match="conflicting digests declared"):
+        validate_payload_integrity(payload_dir, manifest)
+
+
+def test_integrity_rejects_declaring_the_manifest_as_a_source(tmp_path: Path) -> None:
+    """`payload.toml` is hashed into the inventory on its own and never declared."""
+    _, payload_dir = _copy_payload(tmp_path)
+    source = _append(
+        payload_dir,
+        f'''\n[[artifacts]]
+id = "manifest-copy"
+target = "copy.toml"
+source = "payload.toml"
+digest = "{_digest((payload_dir / "payload.toml").read_bytes())}"
+policy = "managed"
+''',
     )
     manifest = load_payload_manifest(source)
 
