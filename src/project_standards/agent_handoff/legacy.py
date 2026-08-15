@@ -164,10 +164,21 @@ _REGISTRATION_CONTAINERS: tuple[tuple[str, Syntax], ...] = (
     (".codex/config.toml", "toml"),
 )
 
+# Paths the current package installs, exempted from the `AH-LEGACY-UNCLASSIFIED`
+# sweep below. `_UNKNOWN_SCAN_ROOTS` includes `.claude`, so every tree the package
+# owns under it must appear here: agent-handoff 1.13 installs the skill to both
+# `.agents/skills/agent-handoff/` and `.claude/skills/agent-handoff/` (issue #170),
+# and omitting the second one makes legacy-report accuse a freshly reconciled
+# repository of carrying unclassified legacy evidence.
+#
+# Cross-file contract: this list must cover every skill target declared in the
+# selected agent-handoff payload's `[[artifacts]]`. A payload that adds a target
+# under a scanned root updates both ends.
 _CANONICAL_PREFIXES = (
     ".agents/agent-handoff/",
     ".agents/hooks/agent-handoff/",
     ".agents/skills/agent-handoff/",
+    ".claude/skills/agent-handoff/",
     "docs/handoff/",
 )
 _KNOWN_PATHS = frozenset(signature.path for signature in _PATH_SIGNATURES)

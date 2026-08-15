@@ -84,7 +84,7 @@ def test_agent_handoff_1_12__successor__has_exact_documentation_delta() -> None:
         assert (_SUCCESSOR / path).read_bytes() == (_PREDECESSOR / path).read_bytes()
 
 
-def test_agent_handoff_1_12__identity__is_complete_and_unadvertised() -> None:
+def test_agent_handoff_1_12__identity__is_complete_and_retained() -> None:
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     integrity = validate_payload_integrity(_SUCCESSOR, manifest)
     family = load_family_manifest(_FAMILY / "standard.toml")
@@ -104,8 +104,9 @@ def test_agent_handoff_1_12__identity__is_complete_and_unadvertised() -> None:
         if package["id"] == "agent-handoff"
     }
     assert roles["1.11"] == "retained"
-    assert roles["1.12"] == "default"
-    assert "| [`agent-handoff`](agent-handoff/README.md) | active | 1.12 | default |" in (
+    assert roles["1.12"] == "retained"
+    assert roles["1.13"] == "default"
+    assert "| [`agent-handoff`](agent-handoff/README.md) | active | 1.12 | retained |" in (
         _ROOT / "standards/catalog.md"
     ).read_text(encoding="utf-8")
 
@@ -146,13 +147,13 @@ def test_agent_handoff_1_12__launcher_and_projection__preserve_package_bytes() -
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_agent_handoff_1_12__mutable_navigation__names_1_12() -> None:
+def test_agent_handoff_1_12__mutable_navigation__names_the_new_authority() -> None:
     expected_links = {
-        _FAMILY / "README.md": "versions/1.12/README.md",
-        _FAMILY / "adopt.md": "versions/1.12/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.12/agent-summary.md",
+        _FAMILY / "README.md": "versions/1.13/README.md",
+        _FAMILY / "adopt.md": "versions/1.13/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.13/agent-summary.md",
     }
     for path, expected_link in expected_links.items():
         content = path.read_text(encoding="utf-8")
         assert expected_link in content
-        assert "versions/1.11/" not in content
+        assert "versions/1.12/" not in content

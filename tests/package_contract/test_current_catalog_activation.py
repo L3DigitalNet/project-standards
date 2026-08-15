@@ -33,7 +33,22 @@ from project_standards.package_contract.repository import (
 from project_standards.standards_graph import StandardsGraph, render_catalog
 
 _ROOT = Path(__file__).resolve().parents[2]
-_BASELINE_REF = "v5.18.0"
+
+# These two constants move on different commits, and swapping one early turns this
+# module red for a reason unrelated to the change under test.
+#
+# `_BASELINE_REF` is the released catalog the staged activation is measured
+# against. It moves in the commit that stages a new activation, because
+# `_activation_targets` derives successors as "in the current catalog, absent from
+# the baseline" and then requires exactly one per family — leaving it behind after a
+# second activation is staged makes two generations of the same family collide as
+# `assert len(targets) == len(successors)`.
+#
+# `_RELEASE_VERSION` is the release literal, asserted against `pyproject.toml`,
+# `uv.lock`, both `.standards/` release fields, and the dated CHANGELOG heading. It
+# moves only in the release commit that bumps those files; `scripts/release_prep.py`
+# reports this file in its version-reference sweep for exactly that reason.
+_BASELINE_REF = "v5.19.0"
 _RELEASE_VERSION = "5.19.0"
 
 
@@ -335,7 +350,7 @@ def test_catalog_activation__release_changelog__has_dated_candidate_section() ->
     )
 
 
-def test_catalog_activation__github_workflow_1_2__is_current_and_records_transport_boundary() -> (
+def test_catalog_activation__github_workflow_1_3__is_current_and_records_transport_boundary() -> (
     None
 ):
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
@@ -344,27 +359,36 @@ def test_catalog_activation__github_workflow_1_2__is_current_and_records_transpo
         for package in catalog["packages"]
         if package["id"] == "github-workflow"
     ]
-    assert roles == [("1.0", "retained"), ("1.1", "retained"), ("1.2", "default")]
+    assert roles == [
+        ("1.0", "retained"),
+        ("1.1", "retained"),
+        ("1.2", "retained"),
+        ("1.3", "default"),
+    ]
 
     consumer_catalog = tomllib.loads(
         (_ROOT / ".standards/catalog.toml").read_text(encoding="utf-8")
     )
     selection = consumer_catalog["standards"]["github-workflow"]
-    assert selection["available"] == ["1.0", "1.1", "1.2"]
-    assert selection["default"] == "1.2"
+    assert selection["available"] == ["1.0", "1.1", "1.2", "1.3"]
+    assert selection["default"] == "1.3"
 
     consumer_lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
-    assert consumer_lock["standards"]["github-workflow"]["resolved"] == "1.2"
+    assert consumer_lock["standards"]["github-workflow"]["resolved"] == "1.3"
 
     current_references = {
-        "standards/github-workflow/README.md": "versions/1.2/README.md",
-        "standards/github-workflow/adopt.md": "versions/1.2/adopt.md",
-        "standards/github-workflow/agent-summary.md": "versions/1.2/agent-summary.md",
-        "standards/README.md": "| 1.2 | default | [github-workflow/]",
+        "standards/github-workflow/README.md": "versions/1.3/README.md",
+        "standards/github-workflow/adopt.md": "versions/1.3/adopt.md",
+        "standards/github-workflow/agent-summary.md": "versions/1.3/agent-summary.md",
+        "standards/README.md": "| 1.3 | default | [github-workflow/]",
     }
     for relative, expected in current_references.items():
         assert expected in (_ROOT / relative).read_text(encoding="utf-8")
 
+    # The transport boundary was established by 1.2 and its CHANGELOG line is
+    # immutable history, so this still reads the 1.2 entry: 1.3 changes delivery
+    # paths only, and re-asserting the claim under a 1.3 heading would demand a
+    # CHANGELOG entry that does not exist until the release commit.
     changelog_entry = next(
         line
         for line in (_ROOT / "CHANGELOG.md").read_text(encoding="utf-8").splitlines()

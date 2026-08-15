@@ -141,7 +141,7 @@ def test_github_workflow_1_2__binary__is_the_exact_executable_predecessor_artifa
     assert declared.mode == "0755"
 
 
-def test_github_workflow_1_2__projection_and_catalog__stay_complete_and_unadvertised() -> None:
+def test_github_workflow_1_2__projection_and_catalog__stay_complete_and_retained() -> None:
     source_files = {relative: path.read_bytes() for relative, path in _files(_SUCCESSOR).items()}
     projected_links = {
         path.relative_to(_PROJECTION).as_posix(): path
@@ -161,8 +161,13 @@ def test_github_workflow_1_2__projection_and_catalog__stay_complete_and_unadvert
         for package in catalog["packages"]
         if package["id"] == "github-workflow"
     ]
-    assert roles == [("1.0", "retained"), ("1.1", "retained"), ("1.2", "default")]
+    assert roles == [
+        ("1.0", "retained"),
+        ("1.1", "retained"),
+        ("1.2", "retained"),
+        ("1.3", "default"),
+    ]
     for document in ("README.md", "adopt.md", "agent-summary.md"):
         family_navigation = (_FAMILY / document).read_text(encoding="utf-8")
-        assert "versions/1.2/" in family_navigation
-        assert "versions/1.1/" not in family_navigation
+        assert "versions/1.3/" in family_navigation
+        assert "versions/1.2/" not in family_navigation

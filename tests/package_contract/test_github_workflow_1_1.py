@@ -184,10 +184,18 @@ def test_github_workflow_1_1__adopt_guide__separates_the_read_from_the_write() -
 
 def test_github_workflow_1_1__adopt_guide__documents_the_narrow_size_guard_exemption() -> None:
     """Issue #151: a path-anchored exemption, not a raised threshold or a skipped hook."""
-    for guide in (_SUCCESSOR / "adopt.md", _FAMILY / "adopt.md"):
+    # 1.1's released bytes anchor the single tree they shipped; the mutable family
+    # root tracks the current payload, which since 1.3 installs the binary to both
+    # `.agents/skills/` and `.claude/skills/` and must exempt each path (issue #170).
+    expected_excludes = {
+        _SUCCESSOR / "adopt.md": r"exclude: ^\.agents/skills/github-workflow/bin/gh-workflow$",
+        _FAMILY
+        / "adopt.md": r"exclude: ^\.(agents|claude)/skills/github-workflow/bin/gh-workflow$",
+    }
+    for guide, expected_exclude in expected_excludes.items():
         text = guide.read_text(encoding="utf-8")
         assert "check-added-large-files" in text
-        assert r"exclude: ^\.agents/skills/github-workflow/bin/gh-workflow$" in text
+        assert expected_exclude in text
         # The two rejected escapes are named as rejected, so a reader cannot come away
         # thinking either is the sanctioned path.
         assert "--maxkb" in text
@@ -203,7 +211,7 @@ def test_github_workflow_1_1__family_root__carries_the_sibling_navigation_docume
         # exactly as the agent-handoff and markdown-tooling roots do. The 5.18.0
         # activation repointed them off the predecessor.
         content = document.read_text(encoding="utf-8")
-        assert "versions/1.2/" in content
+        assert "versions/1.3/" in content
         assert "versions/1.1/" not in content
 
 
@@ -236,5 +244,6 @@ def test_github_workflow_1_1__catalog_role__selects_the_successor_as_default() -
     assert [(entry["version"], entry["role"]) for entry in rows] == [
         ("1.0", "retained"),
         ("1.1", "retained"),
-        ("1.2", "default"),
+        ("1.2", "retained"),
+        ("1.3", "default"),
     ]
