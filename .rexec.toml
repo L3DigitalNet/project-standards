@@ -14,6 +14,15 @@ schema = 1
 # it must be declared here.
 host = "rexec"
 
+[sync]
+
+# Read-only Git context on the worker (rexec v0.3.0): history, refs, HEAD, and
+# the index are materialized from a sanitized allow-list, so the pytest lanes'
+# ledger seed (`git log`) works remotely — the #167 / remote-execution#2
+# limitation is resolved. Config, hooks, reflogs, and credentials never leave
+# this machine, and `--pull` refuses `.git` regardless of this setting.
+git_context = true
+
 [tools]
 
 # Migrates the v0.1.3 [provision.tools.go] probe ("go version"), which declared
