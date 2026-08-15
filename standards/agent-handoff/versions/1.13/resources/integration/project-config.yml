@@ -1,0 +1,6 @@
+# BEGIN agent-handoff managed config
+agent_handoff:
+  version: "1.0"
+  startup: manual
+  harnesses: []
+# END agent-handoff managed config

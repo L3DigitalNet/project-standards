@@ -1,0 +1,62 @@
+name: Validate Markdown Frontmatter
+
+on:
+  workflow_call:
+    inputs:
+      standards-ref:
+        description: "project-standards git ref to install (match the caller's uses ref)."
+        required: false
+        type: string
+        default: "v5"
+      runner-labels:
+        description: "JSON array of runner labels; empty selects the GitHub-hosted runner. Private same-organization callers only."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Frontmatter
+    # Allocated from the CALLER's context, so a private caller's self-hosted
+    # labels select its own organization's runners and nothing is attached to
+    # this public repository. Direct events leave `inputs` empty and fall
+    # through to the hosted runner, which public repos require.
+    runs-on: ${{ inputs.runner-labels && fromJSON(inputs.runner-labels) || 'ubuntu-latest' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: ${{ github.repository == 'L3DigitalNet/project-standards' }}
+          prune-cache: true
+
+      # The standards repository must validate the event commit without requiring
+      # the v5 tag that this same commit will publish.
+      - name: Install candidate wheel (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: |
+          wheel_dir="${RUNNER_TEMP}/project-standards-dist"
+          uv build --wheel --out-dir "$wheel_dir"
+          mapfile -t wheels < <(find "$wheel_dir" -maxdepth 1 -type f -name 'project_standards-*.whl' -print)
+          test "${#wheels[@]}" -eq 1
+          wheel="${wheels[0]}"
+          uv tool install "$wheel"
+
+      - name: Validate (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: project-standards validate
+
+      - name: Install (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
+        env:
+          PROJECT_STANDARDS_REF: ${{ inputs.standards-ref }}
+        run: uv tool install "git+https://github.com/L3DigitalNet/project-standards@${PROJECT_STANDARDS_REF}"
+
+      - name: Validate (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
+        run: project-standards validate

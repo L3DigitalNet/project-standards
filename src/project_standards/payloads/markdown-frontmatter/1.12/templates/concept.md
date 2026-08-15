@@ -1,0 +1,1 @@
+../../../../../../standards/markdown-frontmatter/versions/1.12/templates/concept.md

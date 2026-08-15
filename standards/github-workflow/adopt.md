@@ -1,6 +1,6 @@
 # Adopt the GitHub Workflow Standard
 
-The current consumer package is [`github-workflow@1.2`](versions/1.2/adopt.md). Use it in a repository owned by a GitHub organization whose work is tracked as issues and pull requests: it delivers the repo-local agent skill, its references, the `gh-workflow` binary, and one managed instruction block per selected harness.
+The current consumer package is [`github-workflow@1.3`](versions/1.3/adopt.md). Use it in a repository owned by a GitHub organization whose work is tracked as issues and pull requests: it delivers the repo-local agent skill, its references, and the `gh-workflow` binary into both `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, plus one managed instruction block per selected harness.
 
 It does not apply to personal-account repositories. Organization-level issue fields do not exist outside an organization, and the package offers no fallback that operates without them.
 
@@ -9,7 +9,7 @@ It does not apply to personal-account repositories. Organization-level issue fie
 Both options are required, so there is no minimal variant that omits either one. Set `organization` to the login of the organization that owns the repository, and list in `harnesses` only the harnesses the repository actually uses.
 
 ```bash
-project-standards standards enable github-workflow --version 1.2
+project-standards standards enable github-workflow --version 1.3
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -25,29 +25,30 @@ project-standards reconcile --check
 
 `audit` is read-only: it compares live organization schema against the packaged baseline and prints the result. Differences are expected on first adoption and are a report for a human — the package never creates, renames, or retires an Issue Type, field, or value.
 
-`gh-workflow ledger` is not read-only. It writes `docs/GH-WORKFLOWS.md` in the repository, so review the resulting diff and decide deliberately whether the file is committed or ignored. From 1.1 the generated body carries no read timestamp — it is a function of work state alone, so regenerating against unchanged GitHub state produces no diff and two sessions that both refresh the file do not conflict over a clock. The read time prints on stdout instead. See the [version-specific guide](versions/1.2/adopt.md) for exact options, first-run expectations, the ledger's ownership rules, and troubleshooting.
+`gh-workflow ledger` is not read-only. It writes `docs/GH-WORKFLOWS.md` in the repository, so review the resulting diff and decide deliberately whether the file is committed or ignored. From 1.1 the generated body carries no read timestamp — it is a function of work state alone, so regenerating against unchanged GitHub state produces no diff and two sessions that both refresh the file do not conflict over a clock. The read time prints on stdout instead. See the [version-specific guide](versions/1.3/adopt.md) for exact options, first-run expectations, the ledger's ownership rules, and troubleshooting.
 
 Agent sessions run the binary on linux/amd64. Elsewhere the skill and references still deliver, but every subcommand is unavailable until a payload version carrying that platform exists; reconcile cannot substitute one.
 
 ## Added-file size guards and the shipped binary
 
-`.agents/skills/github-workflow/bin/gh-workflow` is roughly 9.7 MB, so a repository running `pre-commit`'s `check-added-large-files` at a typical `--maxkb=1024` refuses the adoption commit:
+The `gh-workflow` binary is roughly 9.7 MB and is delivered to both skill trees, so a repository running `pre-commit`'s `check-added-large-files` at a typical `--maxkb=1024` refuses the adoption commit twice over:
 
 ```text
 .agents/skills/github-workflow/bin/gh-workflow (9695 KB) exceeds 1024 KB.
+.claude/skills/github-workflow/bin/gh-workflow (9695 KB) exceeds 1024 KB.
 ```
 
-Exempt that one path and leave the repository-wide threshold where it is. Add an `exclude` to the hook entry already in `.pre-commit-config.yaml`, anchored to the exact managed location rather than to a directory or an extension:
+Exempt those two paths and leave the repository-wide threshold where it is. Add an `exclude` to the hook entry already in `.pre-commit-config.yaml`, anchored to the exact managed locations rather than to a directory or an extension:
 
 ```yaml
 - id: check-added-large-files
   args: [--maxkb=1024]
-  exclude: ^\.agents/skills/github-workflow/bin/gh-workflow$
+  exclude: ^\.(agents|claude)/skills/github-workflow/bin/gh-workflow$
 ```
 
 Where another package also ships a managed binary, combine the alternatives in one anchored expression instead of widening either.
 
-Raising `--maxkb` and bypassing hooks with `--no-verify` are both worse trades: the first stops the guard noticing an unrelated large file anywhere in the repository, and the second suspends every hook rather than the one that fired. The narrow exemption still costs something — the path stops being size-checked on every future commit — which is acceptable only because the bytes are a `policy = "managed"` artifact with a digest pinned in the payload. Pair it with the managed-state check at the same boundary so the path the size guard stops watching is still watched:
+Raising `--maxkb` and bypassing hooks with `--no-verify` are both worse trades: the first stops the guard noticing an unrelated large file anywhere in the repository, and the second suspends every hook rather than the one that fired. The narrow exemption still costs something — the path stops being size-checked on every future commit — which is acceptable only because the bytes are `policy = "managed"` artifacts with a digest pinned in the payload. Pair it with the managed-state check at the same boundary so the path the size guard stops watching is still watched:
 
 ```bash
 project-standards reconcile --check
