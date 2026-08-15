@@ -37,6 +37,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added
+
+- **Packaged skills install to both `.agents/skills/` and `.claude/skills/` as byte-identical, digest-locked managed copies** ([#170](https://github.com/L3DigitalNet/project-standards/issues/170)). Verified 2026-08-15 against current official documentation: Claude Code discovers project skills only from `.claude/skills/` and has never read `.agents/skills/` (the Codex convention), so every packaged skill was silently invisible to Claude Code's Skill tool in every consumer. Agent Handoff 1.13, GitHub Workflow 1.3, and Markdown Frontmatter 1.12 declare every skill artifact at both destinations with one source and digest per pair; copies were chosen over symlinks because Git checks a symlink out as a plain text file on Windows clones without Developer Mode. Predecessors remain retained and exactly selectable. ADRs 0016 and 0021 carry matching 2026-08-15 amendment notes.
+- **The package contract accepts one payload source declared at several targets when every declaration pins the same digest** ([#170](https://github.com/L3DigitalNet/project-standards/issues/170)). The file inventory and aggregate digest keep exactly one entry per payload path, conflicting digests for one path still fail, and `payload.toml` self-declaration remains rejected — so every previously valid payload's aggregate digest is unchanged.
+- **Provider-level drift and upgrade coverage treats both skill trees symmetrically, and the control plane derives provider read sets from the payload manifest** ([#171](https://github.com/L3DigitalNet/project-standards/issues/171)). `agent-handoff drift-check` reports divergence in either tree equivalently, the GitHub Workflow provider registry expands over both roots, and `provider_inputs` replaces two literal path tables with targets derived from the selected payload's declared artifacts — a recorded step toward the payload-declared input-shape retirement.
+
+### Fixed
+
+- **The agent-handoff legacy report no longer misclassifies the freshly installed `.claude/skills/agent-handoff/` tree as unowned legacy state** ([#170](https://github.com/L3DigitalNet/project-standards/issues/170)). Caught before release by the regression suite: the canonical-prefix list now covers every skill target the selected payload declares under a scanned root.
+- **The two mode-asserting control-plane tests pass under any ambient umask** ([#172](https://github.com/L3DigitalNet/project-standards/issues/172)). Fixture files are chmod-ed to the mode their scenario declares, so Debian user-private-group environments (umask 0002) no longer produce 664-vs-644 false failures; the control plane's strict mode verification is unchanged.
+
 ## [5.19.0] — 2026-08-11
 
 ### Added
