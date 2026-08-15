@@ -20,6 +20,8 @@ This file tracks work planned for upcoming Project Standards releases. It is for
       - [Release and execution tooling](#release-and-execution-tooling)
       - [Deferred with reasoning](#deferred-with-reasoning)
     - [5.20.0](#5200)
+      - [Claude Code skill discovery](#claude-code-skill-discovery)
+    - [5.21.0](#5210)
       - [Project Toolbox standards](#project-toolbox-standards)
   - [Beyond](#beyond)
 
@@ -59,7 +61,7 @@ This file tracks work planned for upcoming Project Standards releases. It is for
 
 ### 5.19.0
 
-**Shipped as v5.19.0.** Kept for the planning record; [CHANGELOG.md](CHANGELOG.md) is the release truth. The train combines the completed backlog corrections, Project Specification 1.9, and the final Catalog 5 defaults. `project-toolbox` remains scheduled for [5.20.0](#5200), while #129 remains deferred pending a new decision derived from amended ADR 0028.
+**Shipped as v5.19.0.** Kept for the planning record; [CHANGELOG.md](CHANGELOG.md) is the release truth. The train combines the completed backlog corrections, Project Specification 1.9, and the final Catalog 5 defaults. `project-toolbox` moved to [5.21.0](#5210) when the skill-discovery repair train took [5.20.0](#5200); #129 remains deferred pending a new decision derived from amended ADR 0028.
 
 Fourteen of the twenty triaged issues carried a materially wrong or stale premise, so several landed in a smaller or differently shaped form than filed. The issue decision comments retain the rejected alternatives and release classification.
 
@@ -107,8 +109,16 @@ Ordered. [#162](https://github.com/L3DigitalNet/project-standards/issues/162) re
 
 ### 5.20.0
 
+#### Claude Code skill discovery
+
+- Verified 2026-08-15: Claude Code has never read `.agents/skills/` (Codex's convention), so every packaged skill was silently invisible to it in every consumer. [#170](https://github.com/L3DigitalNet/project-standards/issues/170) ships the fix: `agent-handoff` 1.13, `github-workflow` 1.3, and `markdown-frontmatter` 1.12 install byte-identical, digest-locked skill copies to both `.agents/skills/<id>/` and `.claude/skills/<id>/`, carried by the same-path-same-digest declaration allowance in the package contract (ADRs 0016 and 0021 amended 2026-08-15).
+- [#171](https://github.com/L3DigitalNet/project-standards/issues/171) — provider-level drift checks cover both skill trees symmetrically.
+- [#172](https://github.com/L3DigitalNet/project-standards/issues/172) — the two umask-fragile control-plane tests become umask-independent.
+
+### 5.21.0
+
 #### Project Toolbox standards
 
-- Develop and release the `project-toolbox` standards, tracked in [#168](https://github.com/L3DigitalNet/project-standards/issues/168). Owner direction 2026-08-09 originally placed this at 5.19.0; moved to 5.20.0 on 2026-08-10 so the triaged backlog consolidates first.
+- Develop and release the `project-toolbox` standards, tracked in [#168](https://github.com/L3DigitalNet/project-standards/issues/168). Owner direction 2026-08-09 originally placed this at 5.19.0; moved to 5.20.0 on 2026-08-10 so the triaged backlog consolidates first, then to 5.21.0 on 2026-08-15 when the skill-discovery repair train took 5.20.0.
 
 ## Beyond
