@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.20.0] — 2026-08-15
+
 ### Added
 
 - **Packaged skills install to both `.agents/skills/` and `.claude/skills/` as byte-identical, digest-locked managed copies** ([#170](https://github.com/L3DigitalNet/project-standards/issues/170)). Verified 2026-08-15 against current official documentation: Claude Code discovers project skills only from `.claude/skills/` and has never read `.agents/skills/` (the Codex convention), so every packaged skill was silently invisible to Claude Code's Skill tool in every consumer. Agent Handoff 1.13, GitHub Workflow 1.3, and Markdown Frontmatter 1.12 declare every skill artifact at both destinations with one source and digest per pair; copies were chosen over symlinks because Git checks a symlink out as a plain text file on Windows clones without Developer Mode. Predecessors remain retained and exactly selectable. ADRs 0016 and 0021 carry matching 2026-08-15 amendment notes.
