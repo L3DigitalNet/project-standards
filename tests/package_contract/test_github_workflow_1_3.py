@@ -14,8 +14,10 @@ assertion that would catch a regression back to a duplicated on-disk copy.
 
 from __future__ import annotations
 
+import importlib.util
 import tomllib
 from pathlib import Path
+from types import ModuleType
 from typing import cast
 
 from project_standards.package_contract.family import load_family_manifest
@@ -34,6 +36,8 @@ _SUCCESSOR_CHANGES = frozenset(
         "adopt.md",
         "agent-summary.md",
         "payload.toml",
+        # Issue #171: the artifact registry covers both installed trees.
+        "providers/gh_workflow.py",
         "schemas/provider-input.schema.json",
         # Frontmatter `version` and the platform sentence both name the package
         # version; the binary itself is byte-identical to 1.1's.
@@ -41,6 +45,21 @@ _SUCCESSOR_CHANGES = frozenset(
     }
 )
 _TOOL_BINARY_SOURCE = "skills/github-workflow/bin/gh-workflow"
+
+
+def _load_provider(relative: str, name: str) -> ModuleType:
+    """Import a payload provider by path.
+
+    Payload providers are delivered bytes, not importable package modules, so the
+    control plane loads them by location too — reaching them any other way would
+    test a copy the runtime never executes.
+    """
+    path = _SUCCESSOR / relative
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _files(root: Path) -> dict[str, Path]:
@@ -160,3 +179,43 @@ def test_github_workflow_1_3__payload_projection__matches_successor() -> None:
     for relative, link in projected_links.items():
         assert not link.readlink().is_absolute()
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
+
+
+def test_github_workflow_1_3__provider_registry__covers_every_declared_skill_target() -> None:
+    """Issue #171: the provider's drift table and the payload cannot drift apart.
+
+    The provider expands one relative-path table over both skill roots, so a root
+    dropped from `_SKILL_ROOTS` — the exact shape of the original defect — silently
+    stops reporting drift for a whole tree while every other test still passes. This
+    compares its expanded keys against the payload's own declarations, which is the
+    only place the two representations meet.
+    """
+    provider = _load_provider("providers/gh_workflow.py", "gh_workflow_1_3")
+    declared = {
+        artifact["target"]: artifact["id"]
+        for artifact in _artifacts(_SUCCESSOR).values()
+        if "/skills/github-workflow/" in artifact["target"]
+    }
+    registry = cast(
+        "dict[str, tuple[str, str | None, str | None]]",
+        provider._ARTIFACTS,  # pyright: ignore[reportPrivateUsage]  # payload-internal table
+    )
+
+    assert {path: entry[0] for path, entry in registry.items()} == declared
+
+
+def test_github_workflow_1_3__provider_registry__pairs_agree_on_mode_and_gate() -> None:
+    """A copy that lost its harness gate or its mode would install wrong, not absent."""
+    provider = _load_provider("providers/gh_workflow.py", "gh_workflow_1_3_pairs")
+    registry = cast(
+        "dict[str, tuple[str, str | None, str | None]]",
+        provider._ARTIFACTS,  # pyright: ignore[reportPrivateUsage]  # payload-internal table
+    )
+
+    for path, (identity, mode, gate) in registry.items():
+        if not path.startswith(".agents/"):
+            continue
+        twin_path = path.replace(".agents/skills/", ".claude/skills/", 1)
+        twin_identity, twin_mode, twin_gate = registry[twin_path]
+        assert twin_identity == f"{identity}-claude"
+        assert (twin_mode, twin_gate) == (mode, gate)

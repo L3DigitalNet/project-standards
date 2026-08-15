@@ -15,8 +15,10 @@ wrong on its own.
 
 from __future__ import annotations
 
+import importlib.util
 import tomllib
 from pathlib import Path
+from types import ModuleType
 from typing import cast
 
 from project_standards.package_contract.family import load_family_manifest
@@ -38,6 +40,8 @@ _SUCCESSOR_CHANGES = frozenset(
         # SKILL.md gains the second owned tree in its ownership list, and the
         # provider-resource copy is byte-locked to it.
         "provider-resources/managed/skill.md",
+        # Issue #171: the drift and upgrade registries cover both installed trees.
+        "providers/agent_handoff.py",
         "schemas/migration-report.schema.json",
         "schemas/provider-input.schema.json",
         "skills/agent-handoff/SKILL.md",
@@ -148,3 +152,48 @@ def test_agent_handoff_1_13__payload_projection__matches_successor() -> None:
     for relative, link in projected_links.items():
         assert not link.readlink().is_absolute()
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
+
+
+def _load_provider(name: str) -> ModuleType:
+    """Import the payload provider by path, the way the control plane loads it."""
+    spec = importlib.util.spec_from_file_location(name, _SUCCESSOR / "providers/agent_handoff.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_agent_handoff_1_13__provider_registries__cover_both_installed_skill_trees() -> None:
+    """Issue #171: drift and upgrade coverage reaches the `.claude/` copy too.
+
+    Before the fix `_MANAGED` held only the `.agents/` paths, so a tampered
+    `.claude/skills/agent-handoff/SKILL.md` produced no finding at all — a silence
+    indistinguishable from a clean tree. Both maps are asserted because they answer
+    different questions: `_MANAGED` decides what drift-check inspects, and
+    `_UPGRADE_TARGETS` decides what an operator is allowed to repair.
+    """
+    provider = _load_provider("agent_handoff_1_13")
+    managed = cast("dict[str, str]", provider._MANAGED)  # pyright: ignore[reportPrivateUsage]
+    upgrades = cast(
+        "dict[str, tuple[str, str]]",
+        provider._UPGRADE_TARGETS,  # pyright: ignore[reportPrivateUsage]
+    )
+    declared = {artifact["target"] for artifact in _artifacts(_SUCCESSOR).values()}
+
+    skill_targets = {path for path in managed if "/skills/agent-handoff/" in path}
+    assert skill_targets == {path for path in declared if "/skills/agent-handoff/" in path}
+    # Both copies compare against the same packaged resource: that shared expectation
+    # is what turns an accidental divergence between the trees into a finding.
+    for path in skill_targets:
+        twin = (
+            path.replace(".agents/skills/", ".claude/skills/", 1)
+            if path.startswith(".agents/")
+            else path.replace(".claude/skills/", ".agents/skills/", 1)
+        )
+        assert managed[twin] == managed[path]
+
+    assert set(upgrades) == skill_targets
+    assert {mode for _resource, mode in upgrades.values()} == {"0644"}
+
+    # Every registry path must still be something the payload actually installs.
+    assert set(managed) <= declared

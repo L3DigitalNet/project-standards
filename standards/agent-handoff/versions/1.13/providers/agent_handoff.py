@@ -203,10 +203,31 @@ def _digest(content: bytes) -> str:
     return f"sha256:{hashlib.sha256(content).hexdigest()}"
 
 
+# The skill installs to both harness roots as byte-identical copies, so the tree
+# shape is declared once here and expanded over each root. Codex reads
+# `.agents/skills/`, Claude Code reads only `.claude/skills/` (issue #170).
+#
+# Restating the paths per root was rejected: the payload already pairs each target
+# against one source and one digest, and a second literal table is exactly how one
+# root silently loses drift coverage when a later version adds a skill file. The
+# relative path is the shared key, and the resource id is shared too — both copies
+# compare against the same packaged bytes, which is what makes an accidental
+# divergence between the trees a reported finding rather than an invisible one.
+#
+# Cross-file contract: `_SKILL_ROOTS` must list every root the payload's
+# `[[artifacts]]` skill targets use, and `_SKILL_UNITS` every relative path under
+# them. `tests/package_contract/test_agent_handoff_1_13.py` pins the payload side.
+_SKILL_ROOTS = (".agents/skills/agent-handoff", ".claude/skills/agent-handoff")
+_SKILL_UNITS = (("SKILL.md", "skill"), ("agents/openai.yaml", "skill-openai"))
+_SKILL_TARGETS = {
+    f"{root}/{relative}": resource_id
+    for root in _SKILL_ROOTS
+    for relative, resource_id in _SKILL_UNITS
+}
+
 _MANAGED = {
     HOOK_TARGET: "hook",
-    ".agents/skills/agent-handoff/SKILL.md": "skill",
-    ".agents/skills/agent-handoff/agents/openai.yaml": "skill-openai",
+    **_SKILL_TARGETS,
     ".standards/packages/agent-handoff/policy.toml": "policy",
 }
 
@@ -223,10 +244,10 @@ _SCAFFOLD_TARGETS = {
     "docs/handoff/state.md": "template-state",
 }
 
-_UPGRADE_TARGETS = {
-    ".agents/skills/agent-handoff/SKILL.md": ("skill", "0644"),
-    ".agents/skills/agent-handoff/agents/openai.yaml": ("skill-openai", "0644"),
-}
+# Every installed copy is independently refreshable: an operator who repairs one
+# tree must be able to repair the other, and `run_upgrade` refuses any target
+# absent from this map.
+_UPGRADE_TARGETS = {target: (resource_id, "0644") for target, resource_id in _SKILL_TARGETS.items()}
 
 _LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]*)\)")
 _FENCE_RE = re.compile(r"^[ \t]{0,3}(?P<fence>`{3,}|~{3,})")

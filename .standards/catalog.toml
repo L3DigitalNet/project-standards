@@ -2,7 +2,7 @@
 schema_version = "1.0"
 catalog = "5"
 release = "5.19.0"
-digest = "sha256:6c29325849369b1e08feaf609174f7249eedbc74e402f9e14adfb50fbf0daf48"
+digest = "sha256:e32a631b9e1e9c80be126564f61e16ca7f74ad6634f8362f80d90be6a05aed55"
 
 [standards.adr]
 status = "active"
@@ -109,7 +109,7 @@ payload_digest = "sha256:176dceeca8b02df1eebd468eec26bc0e2713ed17cd67f4ff0651646
 [standards.agent-handoff.versions."1.13"]
 channel = "stable"
 availability = "consumer"
-payload_digest = "sha256:543d93e3743f2efe013b21da66f185a2f2000d6af1017295fcf4c6fbf4744723"
+payload_digest = "sha256:324fa4d81c62da450ea29e5b06207e94379d4cbbeb59c2d8e3baee7581ab298b"
 
 [standards.cli-documentation]
 status = "active"
@@ -171,7 +171,7 @@ payload_digest = "sha256:06041b632e15eee8258d7eaf311dfd0560f15d54d34ed2ac44076a0
 [standards.github-workflow.versions."1.3"]
 channel = "stable"
 availability = "consumer"
-payload_digest = "sha256:de88c106c44ef15fd86cb395e91e53670f6ce784c07668b7e2d6a2fe90c4034a"
+payload_digest = "sha256:0aef4418dbb4e382d5992f93c33432aafeb43501e4501c51bd0ccd2a8464d25e"
 
 [standards.markdown-frontmatter]
 status = "active"

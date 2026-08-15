@@ -16,6 +16,17 @@ package-id literals live here and nowhere else in the control plane. Retiring
 this module means declaring input shapes in the payloads themselves; that is
 recorded as the post-hold retirement path, not scheduled work.
 
+Issue #171 moved the agent-handoff and github-workflow *read sets* onto that path
+early, without waiting for a schema change. Which files those two providers read
+is now derived from the selected payload's own `[[artifacts]]` and
+`[[contributions]]` targets (`_declared_target_paths`) instead of restated as
+literals here, so a package that starts delivering a new file is sampled the
+moment it declares it. What still cannot be derived is the *key* each family
+expects and the extra facts it needs — `managed_units`, the handoff walk, the
+Markdown link discovery — which is exactly the remainder the schema change would
+have to express. Treat the surviving per-family branches as that remainder, and
+do not reintroduce a literal path table for a family whose targets are declared.
+
 `command_resolution` deliberately does NOT re-export `provider_dispatch_input`:
 this module imports the selected-package primitives from it, so a re-export would
 be an import cycle. `control_plane/executor.py` imports this module from inside
@@ -130,60 +141,48 @@ _CONSUMER_STATE_PATHS: dict[str, _ConsumerStateRead] = {
     )
 }
 
-# Relocated from `agent_handoff/cli.py` with `_walk_handoff_paths`: the declared
-# handoff read set is selection, and selection is half of this seam.
-_HANDOFF_READ_PATHS = (
-    # Both launcher paths stay in the read set because one control plane serves every
-    # selectable Agent Handoff version: 1.1 through 1.9 install the Python hook, while
-    # 1.10 and newer install the compiled `session-start`. A path the version does not own
-    # snapshots as missing and is ignored by that version's provider, so the union is
-    # safe; dropping either one would blind the seam for half the catalog.
-    ".agents/hooks/agent-handoff/session-start",
+# Paths no selectable payload declares any more, unioned into the Agent Handoff
+# read set so one control plane can still serve every selectable version.
+#
+# 1.1 through 1.9 installed the Python launcher and 1.10 replaced it with the
+# compiled `session-start`, so only the newer name is a declared artifact today.
+# The superseded name has to stay readable regardless: the providers report a
+# leftover `session_start.py` as drift, and a read set that omitted it would
+# snapshot nothing there and silently retire that rule for every repository still
+# carrying one. A path the selected version does not own snapshots as missing and
+# is ignored by that version's provider, so the union is always safe.
+#
+# The two directory entries are the containers themselves, not their contents:
+# the payload declares `docs/handoff/{bugs,sessions}/.gitkeep`, while the
+# providers ask whether the directory exists at all. `_walk_handoff_paths` adds
+# whatever is inside them.
+_HANDOFF_UNDECLARED_READ_PATHS = (
     ".agents/hooks/agent-handoff/session_start.py",
-    ".agents/skills/agent-handoff/SKILL.md",
-    ".agents/skills/agent-handoff/agents/openai.yaml",
-    ".standards/packages/agent-handoff/policy.toml",
-    ".claude/settings.json",
-    ".codex/config.toml",
-    "AGENTS.md",
-    "CLAUDE.md",
-    "docs/STATUS.md",
-    "docs/TODO.md",
-    "docs/handoff/architecture.md",
     "docs/handoff/bugs",
-    "docs/handoff/conventions.md",
-    "docs/handoff/credentials.md",
-    "docs/handoff/deployed.md",
     "docs/handoff/sessions",
-    "docs/handoff/specs-plans.md",
-    "docs/handoff/state.md",
 )
 
-# The GitHub Workflow declared read set: every artifact the payload delivers, the
-# rendered consumer policy, and the two agent-instruction files that carry its
-# managed block. Fixed rather than walked like the handoff corpus above, because
-# nothing here is consumer-authored — the package publishes exactly these targets,
-# so directory discovery could only add paths no provider ever looks up.
-#
-# The harness-gated targets (`agents/openai.yaml`, `AGENTS.md`, `CLAUDE.md`) are
-# listed unconditionally on purpose. The providers report a file left behind by a
-# harness the consumer has since dropped, and that leftover is by definition absent
-# from the lock; a read set narrowed to the current selection would capture nothing
-# at those paths and silently retire the profile-drift rules.
-_GH_WORKFLOW_READ_PATHS = (
-    ".agents/skills/github-workflow/SKILL.md",
-    ".agents/skills/github-workflow/agents/openai.yaml",
-    ".agents/skills/github-workflow/bin/gh-workflow",
-    ".agents/skills/github-workflow/references/field-vocabulary.md",
-    ".agents/skills/github-workflow/references/issue-structure.md",
-    ".agents/skills/github-workflow/references/org-schema.yaml",
-    ".agents/skills/github-workflow/references/pr-standard.md",
-    ".agents/skills/github-workflow/references/review-checklist.md",
-    ".agents/skills/github-workflow/references/summary-format.md",
-    ".standards/packages/github-workflow/policy.toml",
-    "AGENTS.md",
-    "CLAUDE.md",
-)
+
+def _declared_target_paths(selected: SelectedCommandPackage) -> tuple[str, ...]:
+    """Return every repository target the selected payload declares, sorted.
+
+    This is the payload-derived half of the provider read set: whatever the
+    manifest says the package delivers is exactly what its providers may be asked
+    about. Deriving instead of restating the paths is what keeps a package that
+    adds a target — agent-handoff 1.13 and github-workflow 1.3 adding the
+    `.claude/skills/` copies of every skill file (issue #170) — from needing a
+    matching edit here before its providers can see the new file at all.
+
+    Gating conditions are deliberately NOT evaluated. A `when_any` artifact left
+    behind by a harness the consumer has since dropped is absent from the lock and
+    is precisely what the profile-drift rules exist to report, so narrowing this to
+    the active selection would capture nothing at those paths and retire those
+    rules silently.
+    """
+    manifest = selected.payload.manifest
+    targets = {artifact.target.original for artifact in manifest.artifacts}
+    targets |= {contribution.target.original for contribution in manifest.contributions}
+    return tuple(sorted(targets, key=str.encode))
 
 
 def provider_dispatch_input(
@@ -489,11 +488,19 @@ def _spec_input(
     return {"documents": documents}
 
 
-def _walk_handoff_paths(repo: Path) -> tuple[str, ...]:
-    """Declare every handoff document without following repository symlinks."""
+def _walk_handoff_paths(selected: SelectedCommandPackage) -> tuple[str, ...]:
+    """Declare every handoff document without following repository symlinks.
+
+    Three sources union here: what the selected payload declares, the superseded
+    paths no payload declares any more, and the consumer-authored knowledge files
+    discovered under `docs/handoff`. Only the third needs a walk — the handoff
+    corpus is the one family whose read set the consumer extends by writing files.
+    """
+    repo = selected.repo
     root = repo.resolve(strict=True)
     handoff = root / "docs/handoff"
-    discovered: set[str] = set(_HANDOFF_READ_PATHS)
+    discovered: set[str] = set(_declared_target_paths(selected))
+    discovered.update(_HANDOFF_UNDECLARED_READ_PATHS)
     if handoff.is_dir() and not handoff.is_symlink():
         for current, directories, files in os.walk(handoff, followlinks=False):
             base = Path(current)
@@ -511,7 +518,7 @@ def _handoff_input(selected: SelectedCommandPackage) -> JsonObject:
     on the repository path, and the managed-unit facts are what let them tell a
     managed artifact apart from consumer prose.
     """
-    snapshots = capture_command_snapshot(selected.repo, _walk_handoff_paths(selected.repo))
+    snapshots = capture_command_snapshot(selected.repo, _walk_handoff_paths(selected))
     candidates: set[str] = set()
     for source, raw in snapshots.items():
         if not source.endswith(".md") or not isinstance(raw, dict):
@@ -540,10 +547,12 @@ def _gh_workflow_input(selected: SelectedCommandPackage) -> JsonObject:
 
     Structurally the agent-handoff shape, and for the same two reasons: these
     providers key every finding on the consumer path they inspect, and the
-    lock-bound units are the only expected-byte authority available to them — a
-    payload path may be declared once, as an artifact source or as a resource but
-    never both, so the delivered skill, references, and binary are unreachable as
-    provider resources and cannot be re-hashed inside the payload.
+    lock-bound units are the only expected-byte authority available to them —
+    github-workflow declares the delivered skill, references, and binary as
+    artifact sources and not as resources, so their bytes never reach a provider
+    and cannot be re-hashed inside the payload. (Declaring one path both ways is
+    permitted since the issue #170 integrity relaxation, as long as every
+    declaration pins the same digest; this payload simply does not do it.)
 
     An empty input is NOT an acceptable fallback for this family, which is why the
     branch exists rather than a census exemption: the providers build their whole
@@ -554,7 +563,7 @@ def _gh_workflow_input(selected: SelectedCommandPackage) -> JsonObject:
     every package's Markdown blocks to reason about files they share; these ask only
     whether their own block is current, which `managed_units` already answers.
     """
-    snapshots = capture_command_snapshot(selected.repo, _GH_WORKFLOW_READ_PATHS)
+    snapshots = capture_command_snapshot(selected.repo, _declared_target_paths(selected))
     snapshots["managed_units"] = managed_unit_snapshot(selected.lock, "github-workflow")
     return snapshots
 

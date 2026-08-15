@@ -58,6 +58,12 @@ _VERSION = "1.0"
 _PAYLOAD = _FAMILY / f"versions/{_VERSION}"
 _FIXTURES = _ROOT / "tests/fixtures/github_workflow"
 _SKILL_ROOT = ".agents/skills/github-workflow"
+# Both installed skill roots, `.agents/` first so it matches the payload's
+# unsuffixed artifact ids (issue #170).
+_SKILL_ROOTS = (_SKILL_ROOT, ".claude/skills/github-workflow")
+# The first version that installs the second tree; the expected-tree fixtures
+# above still describe 1.0, so only the symmetry test selects this one.
+_DUAL_TREE_VERSION = "1.3"
 _POLICY_TARGET = ".standards/packages/github-workflow/policy.toml"
 _BLOCK_BEGIN = "<!-- BEGIN project-standards:github-workflow -->"
 _BLOCK_END = "<!-- END project-standards:github-workflow -->"
@@ -74,23 +80,14 @@ _SELECTIONS: dict[str, tuple[str, ...]] = {
     "codex": ("codex",),
 }
 
-# Every consumer path the findings providers read. Kept explicit rather than
-# globbed: a provider that stopped reporting a missing artifact would still pass a
-# test whose snapshot only contained the files that happen to exist.
-_DECLARED_PATHS: tuple[str, ...] = (
-    f"{_SKILL_ROOT}/SKILL.md",
-    f"{_SKILL_ROOT}/agents/openai.yaml",
-    f"{_SKILL_ROOT}/bin/gh-workflow",
-    f"{_SKILL_ROOT}/references/field-vocabulary.md",
-    f"{_SKILL_ROOT}/references/issue-structure.md",
-    f"{_SKILL_ROOT}/references/org-schema.yaml",
-    f"{_SKILL_ROOT}/references/pr-standard.md",
-    f"{_SKILL_ROOT}/references/review-checklist.md",
-    f"{_SKILL_ROOT}/references/summary-format.md",
-    _POLICY_TARGET,
-    "AGENTS.md",
-    "CLAUDE.md",
-)
+# The consumer paths the findings providers read come from the selected payload's
+# own declarations, exactly as `control_plane.provider_inputs` builds them. Reading
+# them from the manifest rather than restating them keeps this harness from becoming
+# a third path table that has to be edited before it can see a newly delivered file
+# — the failure mode issue #171 fixed, where the `.claude/skills/` copies existed but
+# nothing sampled them. Declared-not-globbed still holds: a provider that stopped
+# reporting a missing artifact cannot pass, because the snapshot is built from what
+# the payload promises rather than from what happens to be on disk.
 
 
 @dataclass(frozen=True, slots=True)
@@ -165,8 +162,15 @@ def _consumer(
     root: Path,
     distribution: InstalledDistribution,
     harnesses: tuple[str, ...],
+    version: str = _VERSION,
 ) -> Path:
-    """Seed, configure, and reconcile one fixture consumer repository."""
+    """Seed, configure, and reconcile one fixture consumer repository.
+
+    `version` pins the selection explicitly rather than resolving `latest`, so the
+    expected-tree fixtures below keep describing the exact payload they were
+    recorded against. The dual-skill-tree test overrides it, because the second
+    tree only exists from 1.3 onward.
+    """
     repo = root / "consumer"
     repo.mkdir(parents=True)
     # Consumer-owned prose already in the instruction files: reconcile must insert
@@ -182,7 +186,7 @@ def _consumer(
         config.read_text(encoding="utf-8")
         + "\n[standards.github-workflow]\n"
         + "enabled = true\n"
-        + f'version = "{_VERSION}"\n\n'
+        + f'version = "{version}"\n\n'
         + "[standards.github-workflow.config]\n"
         + f'organization = "{_ORGANIZATION}"\n'
         + f"harnesses = [{selection}]\n",
@@ -361,10 +365,16 @@ def _findings(
     """Invoke one findings provider directly with the input the control plane builds."""
     selected = resolve_selected_package(repo, "github-workflow", distribution)
     assert selected is not None
-    snapshots: JsonObject = capture_command_snapshot(selected.repo, _DECLARED_PATHS)
+    manifest = selected.payload.manifest
+    declared = sorted(
+        {artifact.target.original for artifact in manifest.artifacts}
+        | {contribution.target.original for contribution in manifest.contributions},
+        key=str.encode,
+    )
+    snapshots: JsonObject = capture_command_snapshot(selected.repo, tuple(declared))
     # The providers read expected digests from the lock rather than re-hashing
-    # payload resources, because a payload path may be declared as an artifact
-    # source or as a resource but never both.
+    # payload resources: github-workflow declares the delivered files as artifact
+    # sources only, so their bytes never reach a provider as resources.
     snapshots["managed_units"] = managed_unit_snapshot(selected.lock, "github-workflow")
     return invoke_selected_provider(selected, operation, snapshots).findings
 
@@ -459,6 +469,46 @@ def test_github_workflow_dogfood__seeded_tamper__is_reported_per_artifact_class(
         for operation in _FINDINGS_OPERATIONS
     }
     assert observed == dict.fromkeys(_FINDINGS_OPERATIONS, expected)
+
+
+def test_github_workflow_dogfood__skill_tree_tamper__is_reported_in_either_root(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+) -> None:
+    """Issue #171: the two installed skill trees get identical provider coverage.
+
+    Asserted as an equivalence rather than two independent expectations, because the
+    defect this pins was not a wrong finding but a missing one: before the fix the
+    `.claude/` copy produced an empty findings list that looked exactly like a clean
+    tree. Normalizing the root away and comparing the two results is what makes
+    "reported at all" and "reported the same way" one assertion.
+    """
+    relative = "references/pr-standard.md"
+    observed: dict[str, list[tuple[str, str, str]]] = {}
+    for root in _SKILL_ROOTS:
+        repo = _consumer(
+            tmp_path / root.replace("/", "_"),
+            distribution,
+            _SELECTIONS["both"],
+            version=_DUAL_TREE_VERSION,
+        )
+        (repo / f"{root}/{relative}").write_text("tampered\n", encoding="utf-8")
+
+        observed[root] = [
+            (
+                finding.code,
+                finding.path.replace(f"{root}/", "", 1),
+                # The identity is the payload artifact id, which differs by design:
+                # the `.claude/` copy carries the `-claude` suffix. Normalizing it
+                # keeps that intended difference from hiding an unintended one.
+                finding.identity.removesuffix("-claude"),
+            )
+            for finding in _findings(repo, distribution, ProviderOperation.DRIFT_CHECK)
+        ]
+
+    agents_root, claude_root = _SKILL_ROOTS
+    assert observed[agents_root] == [("GHW-DRIFT", relative, "reference-pr-standard")]
+    assert observed[claude_root] == observed[agents_root]
 
 
 def test_github_workflow_dogfood__unselected_harness_artifact__is_profile_drift(

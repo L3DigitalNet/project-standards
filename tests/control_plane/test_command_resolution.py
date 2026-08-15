@@ -353,35 +353,46 @@ _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 # copy relocates out of `agent_handoff/cli.py` in T15.3, so the oracle keeps its
 # own and fails loudly if the declared set ever changes shape.
 _HANDOFF_DECLARED_PATHS = (
-    # 1.10 replaced the Python hook with the compiled `session-start`; the read set is
-    # the union across every selectable version, not the newest one's alone.
+    # Every target agent-handoff 1.13 declares, restated by hand. The seam derives
+    # this set from the selected payload's artifacts and contributions, so the oracle
+    # must NOT do the same or it would prove only that the derivation equals itself
+    # (issue #171).
     ".agents/hooks/agent-handoff/session-start",
-    ".agents/hooks/agent-handoff/session_start.py",
     ".agents/skills/agent-handoff/SKILL.md",
     ".agents/skills/agent-handoff/agents/openai.yaml",
-    ".standards/packages/agent-handoff/policy.toml",
     ".claude/settings.json",
+    # The skill installs to both harness roots; Claude Code reads only this one.
+    ".claude/skills/agent-handoff/SKILL.md",
+    ".claude/skills/agent-handoff/agents/openai.yaml",
     ".codex/config.toml",
+    ".standards/packages/agent-handoff/policy.toml",
     "AGENTS.md",
     "CLAUDE.md",
     "docs/STATUS.md",
     "docs/TODO.md",
     "docs/handoff/architecture.md",
-    "docs/handoff/bugs",
+    "docs/handoff/bugs/.gitkeep",
     "docs/handoff/conventions.md",
     "docs/handoff/credentials.md",
     "docs/handoff/deployed.md",
-    "docs/handoff/sessions",
+    "docs/handoff/sessions/.gitkeep",
     "docs/handoff/specs-plans.md",
     "docs/handoff/state.md",
+    # Undeclared by any current payload and unioned in anyway: 1.1 through 1.9
+    # installed the Python launcher, and the providers still report a leftover copy.
+    ".agents/hooks/agent-handoff/session_start.py",
+    # The container directories themselves, which the payload declares only through
+    # their `.gitkeep` children.
+    "docs/handoff/bugs",
+    "docs/handoff/sessions",
 )
 
-# Test-owned copy of the GitHub Workflow declared read set, kept byte-independent
-# of `provider_inputs._GH_WORKFLOW_READ_PATHS` for the same reason as the handoff
-# copy above: importing the implementation's tuple would prove only that the seam
-# agrees with itself. ORDER is load-bearing — the seam captures this tuple as
-# given rather than sorting it, and `_key_ordered` compares the dispatched
-# mapping's key order, so a reordering here is a real failure, not a nit.
+# Test-owned restatement of every target github-workflow 1.3 declares, kept
+# byte-independent of the seam for the same reason as the handoff copy above:
+# importing or re-deriving the implementation's set would prove only that the seam
+# agrees with itself. ORDER is load-bearing — `_key_ordered` compares the
+# dispatched mapping's key order — and since issue #171 the seam sorts its derived
+# paths by UTF-8 bytes, which is the order written out here.
 _GH_WORKFLOW_DECLARED_PATHS = (
     ".agents/skills/github-workflow/SKILL.md",
     ".agents/skills/github-workflow/agents/openai.yaml",
@@ -392,6 +403,15 @@ _GH_WORKFLOW_DECLARED_PATHS = (
     ".agents/skills/github-workflow/references/pr-standard.md",
     ".agents/skills/github-workflow/references/review-checklist.md",
     ".agents/skills/github-workflow/references/summary-format.md",
+    ".claude/skills/github-workflow/SKILL.md",
+    ".claude/skills/github-workflow/agents/openai.yaml",
+    ".claude/skills/github-workflow/bin/gh-workflow",
+    ".claude/skills/github-workflow/references/field-vocabulary.md",
+    ".claude/skills/github-workflow/references/issue-structure.md",
+    ".claude/skills/github-workflow/references/org-schema.yaml",
+    ".claude/skills/github-workflow/references/pr-standard.md",
+    ".claude/skills/github-workflow/references/review-checklist.md",
+    ".claude/skills/github-workflow/references/summary-format.md",
     ".standards/packages/github-workflow/policy.toml",
     "AGENTS.md",
     "CLAUDE.md",

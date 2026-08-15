@@ -2,7 +2,7 @@
 schema_version = "1.1"
 catalog = "5"
 release = "5.19.0"
-catalog_digest = "sha256:6c29325849369b1e08feaf609174f7249eedbc74e402f9e14adfb50fbf0daf48"
+catalog_digest = "sha256:e32a631b9e1e9c80be126564f61e16ca7f74ad6634f8362f80d90be6a05aed55"
 config_digest = "sha256:a4ede89ec0b3241df495181cc1cdf24e175030dd65cf9f606c9f801a9e150257"
 
 [standards.adr]
@@ -16,7 +16,7 @@ effective_config_digest = "sha256:9738d53d42ac9c6ac8ed6afa8bd6ae817100080d9dadaf
 requested = "latest"
 resolved = "1.13"
 selection = "stable"
-payload_digest = "sha256:543d93e3743f2efe013b21da66f185a2f2000d6af1017295fcf4c6fbf4744723"
+payload_digest = "sha256:324fa4d81c62da450ea29e5b06207e94379d4cbbeb59c2d8e3baee7581ab298b"
 effective_config_digest = "sha256:7d8ffcf355d1948151d6988e6b8cb809fcbeae2cc28cd3cd0bcd665563eef80f"
 
 [standards.cli-documentation]
@@ -30,7 +30,7 @@ effective_config_digest = "sha256:f468155ebc87979f1dbad12ae07ad3424eaf9122664df4
 requested = "latest"
 resolved = "1.3"
 selection = "stable"
-payload_digest = "sha256:de88c106c44ef15fd86cb395e91e53670f6ce784c07668b7e2d6a2fe90c4034a"
+payload_digest = "sha256:0aef4418dbb4e382d5992f93c33432aafeb43501e4501c51bd0ccd2a8464d25e"
 effective_config_digest = "sha256:f675a924a3693ca08c4e132725a702344200b5988aee13f9062f10b8e3412238"
 
 [standards.markdown-frontmatter]

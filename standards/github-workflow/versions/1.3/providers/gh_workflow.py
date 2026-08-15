@@ -20,10 +20,13 @@ import hashlib
 from collections.abc import Mapping
 from typing import cast
 
-# Repository-relative homes of every delivered artifact. The skill reads the policy
-# from this exact path and the tool defaults to it (`internal/ghworkflow/cli`
-# DefaultPolicyPath), so the three must move together.
-_SKILL_ROOT = ".agents/skills/github-workflow"
+# The skill tree installs to both harness roots as byte-identical copies: Codex
+# reads `.agents/skills/`, Claude Code reads only `.claude/skills/` (issue #170).
+# `.agents/` stays first so its artifact ids keep their unsuffixed payload names.
+_SKILL_ROOTS = (".agents/skills/github-workflow", ".claude/skills/github-workflow")
+
+# The skill reads the policy from this exact path and the tool defaults to it
+# (`internal/ghworkflow/cli` DefaultPolicyPath), so the three must move together.
 _POLICY_TARGET = ".standards/packages/github-workflow/policy.toml"
 _BLOCK_MARKER = "github-workflow"
 _BLOCK_SCOPE = f"block:{_BLOCK_MARKER}"
@@ -35,20 +38,47 @@ _BLOCK_END = f"<!-- END project-standards:{_BLOCK_MARKER} -->"
 
 _SUPPORTED_HARNESSES = frozenset({"claude-code", "codex"})
 
-# Every whole-file artifact, keyed by its consumer target: (payload artifact id,
-# required mode, harness that must be selected for it to materialize). The mode is
-# asserted only where the payload pins one — an ordinary artifact inherits the
-# consumer umask, so demanding `0644` would report drift on a legitimate `0664` tree.
+# One skill file per row, keyed by its path relative to a skill root: (payload
+# artifact id, required mode, harness that must be selected for it to materialize).
+# The mode is asserted only where the payload pins one — an ordinary artifact
+# inherits the consumer umask, so demanding `0644` would report drift on a
+# legitimate `0664` tree.
+_SKILL_UNITS: tuple[tuple[str, str, str | None, str | None], ...] = (
+    ("SKILL.md", "skill", None, None),
+    ("agents/openai.yaml", "skill-openai", None, "codex"),
+    ("bin/gh-workflow", "tool-binary", "0755", None),
+    ("references/field-vocabulary.md", "reference-field-vocabulary", None, None),
+    ("references/issue-structure.md", "reference-issue-structure", None, None),
+    ("references/org-schema.yaml", "reference-org-schema", None, None),
+    ("references/pr-standard.md", "reference-pr-standard", None, None),
+    ("references/review-checklist.md", "reference-review-checklist", None, None),
+    ("references/summary-format.md", "reference-summary-format", None, None),
+)
+
+
+def _artifact_id(base: str, root: str) -> str:
+    """Return the payload artifact id for one skill unit under one root.
+
+    Mirrors the payload's own naming: the `.agents/` copy keeps the original id and
+    the `.claude/` copy carries a `-claude` suffix. Both copies share a source and a
+    digest, so the ids are the only thing distinguishing them in a finding.
+    """
+    return base if root == _SKILL_ROOTS[0] else f"{base}-claude"
+
+
+# Every whole-file artifact, keyed by its consumer target. Expanded over both roots
+# rather than restated per root: a second literal table is precisely how one tree
+# silently loses drift coverage when a later version adds a skill file, and mode
+# and harness gating must stay identical across a pair or the copies diverge in
+# ways no single-tree check can see.
+#
+# Cross-file contract: `_SKILL_ROOTS` x `_SKILL_UNITS` must equal the skill
+# `[[artifacts]]` set in this version's payload.toml, whose pairing
+# `tests/package_contract/test_github_workflow_1_3.py` pins.
 _ARTIFACTS: dict[str, tuple[str, str | None, str | None]] = {
-    f"{_SKILL_ROOT}/SKILL.md": ("skill", None, None),
-    f"{_SKILL_ROOT}/agents/openai.yaml": ("skill-openai", None, "codex"),
-    f"{_SKILL_ROOT}/bin/gh-workflow": ("tool-binary", "0755", None),
-    f"{_SKILL_ROOT}/references/field-vocabulary.md": ("reference-field-vocabulary", None, None),
-    f"{_SKILL_ROOT}/references/issue-structure.md": ("reference-issue-structure", None, None),
-    f"{_SKILL_ROOT}/references/org-schema.yaml": ("reference-org-schema", None, None),
-    f"{_SKILL_ROOT}/references/pr-standard.md": ("reference-pr-standard", None, None),
-    f"{_SKILL_ROOT}/references/review-checklist.md": ("reference-review-checklist", None, None),
-    f"{_SKILL_ROOT}/references/summary-format.md": ("reference-summary-format", None, None),
+    f"{root}/{relative}": (_artifact_id(identity, root), mode, gate)
+    for root in _SKILL_ROOTS
+    for relative, identity, mode, gate in _SKILL_UNITS
 }
 
 # Harness → (instruction file, payload contribution id). Codex reads AGENTS.md and
