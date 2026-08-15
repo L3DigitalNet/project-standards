@@ -499,6 +499,11 @@ def test_agent_handoff_scaffold_and_upgrade_return_executor_only_typed_plans(
     skill = repo / ".agents/skills/agent-handoff/SKILL.md"
     skill.parent.mkdir(parents=True)
     skill.write_text("old managed skill\n", encoding="utf-8")
+    # The authoring provider rejects any captured mode other than its declared
+    # 0644/0755 set (see providers.py); a permissive umask (e.g. 0002) would
+    # otherwise leave this fixture at 0664 and fail the upgrade invocation
+    # below with an unrelated ValueError.
+    skill.chmod(0o644)
     relative_skill = ".agents/skills/agent-handoff/SKILL.md"
     current = RepositorySnapshot.capture(repo, (SafeRelativePath.parse(relative_skill),)).entries[0]
     upgrade = _invoke(

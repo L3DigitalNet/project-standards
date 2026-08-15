@@ -438,6 +438,12 @@ def test_direct_config_upgrade__applied_edge__plans_redacted_config_first_transf
     control.mkdir(parents=True)
     config_path = control / "config.toml"
     config_path.write_bytes(_CONFIG)
+    # The planner compares the locked mode against the file's actual mode
+    # (see planner.py's CP-MODIFIED-MANAGED check) and the fixture lock below
+    # declares 0644; without this chmod, a permissive umask (e.g. 0002) would
+    # leave the file at 0664 and fail that comparison instead of exercising
+    # the transform behavior under test.
+    config_path.chmod(0o644)
     desired = parse_config(_CONFIG)
     source, target = _payloads(tmp_path)
     lock = _lock(desired, applied=_applied(source, _SOURCE_EFFECTIVE))
@@ -543,7 +549,12 @@ def test_direct_config_upgrade__applied_edge__plans_redacted_config_first_transf
     assert "false" not in json.dumps(public_evidence).casefold()
 
     config_path.write_bytes(transformed)
-    (repo / "generated.txt").write_bytes(plan.proposed_content("generated.txt"))
+    # Same umask-independence concern as the initial write above: the settled
+    # plan below re-checks mode against plan.next_lock's declared 0644.
+    config_path.chmod(0o644)
+    generated = repo / "generated.txt"
+    generated.write_bytes(plan.proposed_content("generated.txt"))
+    generated.chmod(0o644)
     settled = plan_reconciliation(
         PlannerRequest(
             repo=repo,
