@@ -6,8 +6,8 @@ description: 'Records the decision that skills shipped by standard packages inst
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-08-09'
-reviewed: '2026-08-09'
+updated: '2026-08-15'
+reviewed: '2026-08-15'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -74,6 +74,8 @@ MADR status: **accepted**.
 > **Amended by ADR 0023 (2026-07-10).** The project-local `.agents/skills/<skill-id>/` destination and standard ownership remain in force. The unified control plane becomes the installation entry point, and the central lock owns applied provenance, drift, update, shared references, and safe removal instead of package-specific adoption state.
 >
 > **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings O1, O2, O3, and O4).** Three narrowings and no new authority. The validation-exclusion rule loses its open-ended "or other standards" tail and now binds only the paths this record declares. The escalation clause distinguishes an in-population exception from an out-of-scope case. The outcome states explicitly that this record reserves `.agents/skills/` only and does not own the `.agents/` root. This record is also the class rule that generalizes [ADR 0016](adr-0016-package-markdown-frontmatter-skill-with-standard.md); that relationship is now recorded on both records.
+>
+> **Amended 2026-08-15 ([#170](https://github.com/L3DigitalNet/project-standards/issues/170)).** A factual-premise correction and one destination addition; the project-local policy is unchanged. The outcome justified `.agents/skills/<skill-id>/` as "discoverable by the supported agent surfaces that read repo-local shared skills"; verified 2026-08-15, that holds for Codex CLI but not for Claude Code, which discovers project skills only from `.claude/skills/`. Under the rule already stated below — a project-local destination for a newly supported agent is ordinary reviewed work — skill-shipping packages now declare every skill artifact at both `.agents/skills/<skill-id>/` and `.claude/skills/<skill-id>/` as byte-identical, digest-locked managed copies. Copies were chosen over symlinks because Git checks a symlink out as a plain text file on Windows clones without Developer Mode, and the central lock already detects divergence between the copies. `.claude/` remains a harness-specific root outside platform allocation ([ADR 0029](adr-0029-agents-root-allocation.md)): packages claim declared artifact paths beneath it, never the subtree, and the skill-ID collision risk there mirrors the accepted risk of the flat `.agents/skills/` namespace.
 
 ## Context and Problem Statement
 

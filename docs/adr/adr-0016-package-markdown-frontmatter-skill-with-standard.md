@@ -6,8 +6,8 @@ description: 'Records the decision that the Markdown Frontmatter Standard owns a
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-08-09'
-reviewed: '2026-08-09'
+updated: '2026-08-15'
+reviewed: '2026-08-15'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -60,6 +60,8 @@ MADR status: **accepted**.
 > **Amended by ADR 0023 (2026-07-10).** The Markdown Frontmatter package remains the skill's canonical owner and `.agents/skills/markdown-frontmatter/` remains its consumer destination. Selection, installation, payload provenance, drift, update, and removal move from package-specific adoption behavior to the unified control plane and central lock.
 >
 > **Amended 2026-08-09 (ADR 1.4 conformance assessment of 2026-08-05, findings O1, O4, and B4).** The consumer-repository validation-scope sentence in the outcome is narrowed to the population this record can bind — the installed skill's own path — and scope authority for a consumer's managed Markdown corpus is deferred to that consumer's configuration, with [ADR 0021](adr-0021-standard-packaged-skill-installation-methodology.md) stating the class rule. The ownership decision is unchanged.
+>
+> **Amended 2026-08-15 ([#170](https://github.com/L3DigitalNet/project-standards/issues/170)).** Destination-set extension under [ADR 0021](adr-0021-standard-packaged-skill-installation-methodology.md)'s class rule as amended the same day: from Markdown Frontmatter 1.12, reconciliation installs the skill files as byte-identical, digest-locked managed copies at both `.agents/skills/markdown-frontmatter/` and `.claude/skills/markdown-frontmatter/`, and the validation exclusion this record binds covers exactly that installed-path set. The reasoning is unchanged — an installed `SKILL.md` is agent-harness metadata, not a managed project document — and applies identically to both copies. The ownership decision is unchanged.
 
 ## Context and Problem Statement
 
