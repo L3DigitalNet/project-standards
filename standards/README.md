@@ -43,7 +43,7 @@ standards/<standard-id>/
     └── ...                   # Declared resources, providers, templates, and outputs
 ```
 
-Every family ships a landing-page `README.md` and a V2 `standard.toml` index. Each indexed version points to one immutable `versions/<version>/payload.toml`; its aggregate digest covers the complete declared payload inventory. Consumer payloads include an adoption guide, while reference-only and internal payloads do not. Catalog 5 selects the eight default consumer packages shown above and advertises Python Coding and Standard Bundle Authoring only in their non-consumer roles. Standard-package docs under `standards/**` remain excluded from this repository's local markdown-frontmatter corpus by ADR 0015.
+Every family ships a landing-page `README.md` and a V2 `standard.toml` index. Each indexed version points to one immutable `versions/<version>/payload.toml`; its aggregate digest covers the complete declared payload inventory. Consumer payloads include an adoption guide, while reference-only and internal payloads do not. Catalog 5 selects the nine default consumer packages shown above and advertises Python Coding and Standard Bundle Authoring only in their non-consumer roles. Standard-package docs under `standards/**` remain excluded from this repository's local markdown-frontmatter corpus by ADR 0015.
 
 ## Not a governed standard
 
