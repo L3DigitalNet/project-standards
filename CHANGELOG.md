@@ -43,6 +43,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 - **New Catalog 5 consumer family `project-toolbox@1.0`, the ninth consumer package** ([#168](https://github.com/L3DigitalNet/project-standards/issues/168)). The durable home for proven cross-cutting repository workflows that fit no existing standard: two managed whole-file workflow documents install to `.standards/packages/project-toolbox/workflows/` — a periodic repository-housekeeping sweep and a claim-versus-reality drift-detection sweep — plus a routing `project-toolbox` skill installed as byte-identical dual-tree copies (`.agents/skills/` and `.claude/skills/`, including `agents/openai.yaml`) per ADR 0021. Version 1.0 ships a deliberately minimal inventory: no providers, no contributions, and a closed empty option schema, so adoption is all-or-nothing. The package requires no other package; both sweeps read `.standards/config.toml` and fold each installed package's own gates into the work instead of duplicating them. `standards/README.md`, `README.md`, `meta/versioning.md`, and both adoption prompts now list nine consumer packages.
 
+### Fixed
+
+- **`packages check-release` accepts a released payload that declares one source at several targets** ([#176](https://github.com/L3DigitalNet/project-standards/issues/176)). The released-baseline loader still rejected any repeated declared path, so every train baselined on a v5.20.0 or later tag failed with `released payload has duplicate file declarations` the moment a dual-tree skill install appeared in the baseline. The baseline rule now matches the payload inventory rule it must agree with: a repeated path whose declarations pin the same digest is one inventory entry, disagreeing digests for one path still fail, and `payload.toml` self-declaration remains rejected.
+
 ## [5.20.0] — 2026-08-15
 
 ### Added

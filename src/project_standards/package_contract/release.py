@@ -365,12 +365,29 @@ def _parse_toml_model[T: BaseModel](raw: bytes, model: type[T], identity: str) -
 
 
 def _declared_payload_files(manifest: PayloadManifest) -> dict[str, Sha256Digest]:
+    """Map each declared payload-relative path in a released payload to its digest.
+
+    This rule must stay identical to the current-payload inventory rule in
+    `integrity._declared_files`: one source may back several declarations when
+    every one of them pins the same digest (the dual `.agents/skills/` and
+    `.claude/skills/` install, issue #170), disagreeing digests for one path are
+    fatal, and `payload.toml` is never declared because it hashes itself into the
+    inventory separately. The two must agree because both feed the same aggregate
+    inventory digest: a baseline rule stricter than the rule that produced the
+    release rejects payloads that were valid when published, which is exactly how
+    every train baselined on v5.20.0 became unreleasable (issue #176).
+    """
     declared: dict[str, Sha256Digest] = {}
 
     def add(path: SafeRelativePath, digest: Sha256Digest) -> None:
         value = path.normalized.as_posix()
-        if value == "payload.toml" or value in declared:
+        if value == "payload.toml":
             raise PackageContractError("released payload has duplicate file declarations")
+        existing = declared.get(value)
+        if existing is not None:
+            if existing != digest:
+                raise PackageContractError("released payload declares conflicting digests")
+            return
         declared[value] = digest
 
     for resource in manifest.resources:
