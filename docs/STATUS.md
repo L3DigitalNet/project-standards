@@ -2,17 +2,15 @@
 
 ## Current snapshot
 
-- Project Standards 5.19.0 is published from release commit `127bd3dd`; signed `v5.19.0` and moving `v5` tags are live.
-- The release assets are byte-verified: wheel `134d5abc…` and source distribution `c1605cde…`.
-- The final local release battery passed with 5,016 ordinary tests, 141 compatibility cases, five performance tests, and 90% coverage.
-- Hosted verification is green on the release commit. The first run found only cold-runner timing ceilings; `127bd3dd` calibrated the test bounds.
-- Catalog 5 defaults: ADR 1.6, Agent Handoff 1.12, GitHub Workflow 1.2, Markdown Frontmatter 1.11, and Markdown Tooling 1.15.
-- Project Specification 1.9 and Python Tooling 1.14 are also defaults. Every predecessor remains retained and selectable.
-- Project Specification 1.9 ships strict conformance linting and the preservation-first import workflow.
-- All 19 issues cited by the 5.19.0 release are closed as completed.
-- Release issue set: #55, #62, #140, #142, #143, #153, #156–#167, and #169.
-- The open-issue resolution program is complete: 25 reports completed, #84 closed for an external cause, and #124 closed as a duplicate.
-- Its three terminal child plans and final execution scratch were retired after the checkpoint and release evidence was harvested.
-- `@v5` consumers inherit the moving tag. No exact-pin consumer repositories were changed during this release.
-- Only #129 and #168 remain open. The Usage Documentation Site V2 specifications remain queued outside the completed release train.
-- `rexec` v0.2.0 remains the CPU-work path for synchronized-tree workloads. Git-dependent operations remain direct-local because `.git` is not transferred.
+- Project Standards 5.20.0 is published from release commit `a7d2d688`; signed `v5.20.0` and moving `v5` tags are live.
+- The release assets are byte-verified: wheel `5bd89c61…` and source distribution `82815d27…`. Full evidence is in `docs/handoff/deployed.md`.
+- Claude Code skill discovery is repaired: it reads `.claude/skills/` only, never `.agents/skills/` (the Codex convention).
+- agent-handoff 1.13, github-workflow 1.3, and markdown-frontmatter 1.12 install skills as byte-identical copies to both trees.
+- Acceptance proven live: this repository's Claude Code session now lists all three packaged skills.
+- #170, #171, and #172 are closed Done/completed. ADRs 0016 and 0021 were amended for the dual-tree contract.
+- #168 (`project-toolbox`) is retargeted to 5.21.0; ROADMAP renumbered. Its design-discovery is the next major queue item.
+- Open issues: #168 (Initiative, 5.21.0), #129 (deferred), #173 (SBA 2.7 doc cut, Inbox), #174 (SG-ARTIFACT-SKILL-DEST
+  validator, Inbox), #175 (openai.yaml gating consistency, Inbox).
+- `rexec` is now the full gate path: `[sync] git_context = true` is committed, giving read-only Git access on the worker.
+- The 5.20.0 release battery ran fully remote via `rexec` (90 min serial), the first release proven end-to-end remotely.
+- A transport-killed rexec run can poison the sync mirror; `rexec clean` recovers (tracked as remote-execution#9).
