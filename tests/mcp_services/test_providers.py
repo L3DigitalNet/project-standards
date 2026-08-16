@@ -936,6 +936,22 @@ AUTHORITATIVE_INPUT_OWNER: dict[tuple[str, str], str] = {
 PLANNER_OWNED = "planner-owned"
 
 
+# Consumer-role packages that ship NO provider declaring a composite operation, so
+# TC-T14-004's membership assertion can never reach them. Listing an id here is a
+# reviewed declaration that the package intentionally supplies no provider under
+# ADR 0006 (`docs/adr/adr-0006-standard-provider-plugin-model.md`), which requires
+# that absence to be explicit rather than a silent no-op; `project-toolbox` 1.0 is
+# the approved case, recorded in
+# `docs/specs/2026-08-16-project-toolbox-package-design.md` (#168).
+#
+# A package that declares ANY composite-operation provider must NOT be listed: the
+# entry would silently remove real providers from the seam canary. TC-T14-004
+# asserts the inverse too, so an id that later grows a provider fails loudly
+# instead of decaying into a blanket exemption. A newly shipped package absent
+# from this set still fails the membership assertion, which is the tripwire.
+PROVIDER_FREE_CONSUMER_PACKAGES: frozenset[str] = frozenset({"project-toolbox"})
+
+
 # Generated, cached, and vendored trees a composite never reads and every other
 # process on this machine writes to. Everything else — the whole consumer corpus
 # the seam captures, the control plane the in-worker plan reads, and the sources
@@ -3202,11 +3218,15 @@ def test_every_shipping_catalog_provider_is_seam_served() -> None:
     package in Catalog 5. The membership assertion is what makes a newly shipped
     package fail here rather than pass unnoticed.
 
-    One declared exemption: a `planner-owned` provider (see
-    `AUTHORITATIVE_INPUT_OWNER`) has no seam authority to fall back FROM — generic
-    dispatch is what its own authority does everywhere except fresh-adoption
-    planning — so serving it here would create the CLI/service divergence this
-    node exists to prevent rather than close a defect.
+    Two declared exemption classes, each a reviewed census rather than a tolerance.
+    A `planner-owned` provider (see `AUTHORITATIVE_INPUT_OWNER`) has no seam
+    authority to fall back FROM — generic dispatch is what its own authority does
+    everywhere except fresh-adoption planning — so serving it here would create the
+    CLI/service divergence this node exists to prevent rather than close a defect.
+    A package in `PROVIDER_FREE_CONSUMER_PACKAGES` declares no composite-operation
+    provider at all, so it has nothing for the selection rule to reach; it is
+    excused from the membership assertion only, and is checked against `exercised`
+    so the declaration cannot go stale.
     """
     worker = importlib.import_module("project_standards.control_plane.provider_worker")
     seam_input = require_attribute(
@@ -3227,9 +3247,18 @@ def test_every_shipping_catalog_provider_is_seam_served() -> None:
         frozenset({"validate", "verify", "lint", "drift-check"}),
     )
     exercised = {standard_id for standard_id, _version, _provider, _operation in applicable}
-    assert exercised == consumer_packages, (
+    assert not (exercised & PROVIDER_FREE_CONSUMER_PACKAGES), (
+        "these packages are declared provider-free but now reach the composite selection "
+        "rule, so the exemption is stale and is hiding real providers from this canary: "
+        f"{sorted(exercised & PROVIDER_FREE_CONSUMER_PACKAGES)}"
+    )
+    assert exercised == consumer_packages - PROVIDER_FREE_CONSUMER_PACKAGES, (
         "this repository no longer enables every consumer-role package in the shipping "
-        f"catalog, so the canary is blind: missing {sorted(consumer_packages - exercised)}"
+        "catalog, so the canary is blind: missing "
+        f"{sorted(consumer_packages - PROVIDER_FREE_CONSUMER_PACKAGES - exercised)}. A "
+        "package that ships no composite-operation provider by design belongs in "
+        "PROVIDER_FREE_CONSUMER_PACKAGES as a reviewed declaration; anything else must "
+        "be enabled here or ship its providers"
     )
 
     unserved: list[tuple[str, str]] = []
