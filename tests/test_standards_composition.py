@@ -18,7 +18,7 @@ _REPO = Path(__file__).resolve().parent.parent
 # be a hand-maintained drift surface inside a retiring mechanism). The classification is an
 # asserted set rather than a silent filter, so a newly advertised family that has neither a
 # bundle nor an entry here fails this module until it is consciously classified.
-_CATALOG_NATIVE_FAMILIES = {"github-workflow"}
+_CATALOG_NATIVE_FAMILIES = {"github-workflow", "project-toolbox"}
 
 
 def _catalog_default_ids() -> list[str]:

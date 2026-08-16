@@ -1,0 +1,7 @@
+interface:
+  display_name: "Project Toolbox"
+  short_description: "Route to proven cross-cutting repository workflows."
+  default_prompt: "Use $project-toolbox to choose between the repository housekeeping sweep and the drift-detection sweep, then follow the workflow document it routes to."
+
+policy:
+  allow_implicit_invocation: true

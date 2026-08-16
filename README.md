@@ -22,6 +22,7 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
     - [CLI Documentation Standard](#cli-documentation-standard)
     - [Agent Handoff Standard](#agent-handoff-standard)
     - [GitHub Workflow Standard](#github-workflow-standard)
+    - [Project Toolbox Standard](#project-toolbox-standard)
     - [Python Coding Standard (draft)](#python-coding-standard-draft)
     - [Standard Bundle Authoring Standard (internal/reference)](#standard-bundle-authoring-standard-internalreference)
   - [Consuming the standards](#consuming-the-standards)
@@ -48,6 +49,7 @@ project-standards/
 │   ├── cli-documentation/     #   family index + immutable versioned payloads
 │   ├── agent-handoff/         #   family index + immutable versioned payloads
 │   ├── github-workflow/       #   family index + immutable versioned payloads
+│   ├── project-toolbox/      #   family index + immutable versioned payloads
 │   ├── python-coding/         #   reference-only family + immutable versioned payloads
 │   └── standard-bundle-authoring/ # internal family + immutable versioned payloads
 ├── meta/                      # repository policy, including release/versioning
@@ -132,6 +134,15 @@ GitHub work discipline for organization-owned repositories: typed issue contract
 - **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.3/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
 - **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.3/adopt.md)
 
+### Project Toolbox Standard
+
+The durable home for proven cross-cutting repository workflows — assets that fit no existing standard, or that span two or more of them. Version 1.0 installs two managed checklist documents, a periodic repository-housekeeping sweep and a claim-versus-reality drift-detection sweep, plus a routing `project-toolbox` skill that points an agent at the right one. It ships no executable providers: the documents find work, and every fix they prompt is an ordinary reviewed change. The package requires no other standards package, but both sweeps read `.standards/config.toml` and fold each installed package's own gates into the work instead of duplicating them.
+
+- **Standard:** [`standards/project-toolbox/versions/1.0/README.md`](standards/project-toolbox/versions/1.0/README.md)
+- **Skill:** [`skills/project-toolbox/`](standards/project-toolbox/versions/1.0/skills/project-toolbox/) — installed repo-local at `.agents/skills/project-toolbox/` and `.claude/skills/project-toolbox/`.
+- **Workflows:** [`workflows/`](standards/project-toolbox/versions/1.0/workflows/) — installed at `.standards/packages/project-toolbox/workflows/`.
+- **Adopt:** [`adopt.md`](standards/project-toolbox/versions/1.0/adopt.md)
+
 ### Python Coding Standard (draft)
 
 Code-shape and agent-behavior rules for Python — the reference companion to Python Tooling. **In-development package `0.6`:** reference-only and not consumer-selectable.
@@ -187,6 +198,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
 | Agent Handoff | `1.13` | [`standards/agent-handoff/versions/1.13/adopt.md`](standards/agent-handoff/versions/1.13/adopt.md) |
 | GitHub Workflow | `1.3` | [`standards/github-workflow/versions/1.3/adopt.md`](standards/github-workflow/versions/1.3/adopt.md) |
+| Project Toolbox | `1.0` | [`standards/project-toolbox/versions/1.0/adopt.md`](standards/project-toolbox/versions/1.0/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
 
