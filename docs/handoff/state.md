@@ -2,10 +2,10 @@
 
 ## Current focus
 
-- Project Standards 5.20.0 is published from `a7d2d688`; signed tags and byte-verified wheel/sdist assets are live. See `deployed.md`.
-- Claude Code skill discovery is repaired: 1.13/1.3/1.12 install skills to both `.agents/` and `.claude/` trees, byte-identical.
-- #170–#172 are closed Done/completed. #168 (`project-toolbox`) is retargeted to 5.21.0; ROADMAP renumbered.
-- Open issues: #168 (5.21.0), #129 (deferred), #173, #174, #175 (all Inbox). `rexec` is now the full gate path; battery ran fully remote.
+- Project Standards 5.21.0 is published from `a625091c`; signed tags and byte-verified wheel/sdist assets are live. See `deployed.md`.
+- New family `project-toolbox@1.0` (ninth consumer package) shipped; this repo self-hosts it, reconciled clean.
+- #168 and #176 are closed Done/completed. Follow-up filed: `L3DigitalNet/remote-execution#10` (rexec mirror-deletion misreport).
+- Open issues #129 (deferred), #173–#175 (Inbox); `rexec` remains the full gate path; battery ran fully remote (~31 min).
 
 ## Active incidents
 

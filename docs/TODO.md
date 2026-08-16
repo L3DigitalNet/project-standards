@@ -54,9 +54,11 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
-- [x] Scope the 5.21.0 `project-toolbox` release (#168).
+- [ ] Decide whether to add `.claude/worktrees/` to `[sync].exclude` in `.rexec.toml`.
 
-  Scoped, designed, and prepared as v5.21.0: `project-toolbox@1.0` is the train's only feature and this repository adopts it in the same release. #129 (`adr-conformance` foundation) remains open and deferred; both prerequisites are closed.
+  Candidate fix identified 2026-08-16 for a rexec sync wedge caused by a stale worker-mirror path under
+  `.claude/worktrees/ptb-changelog/.ruff_cache/` (excluded content blocked deletion; remediated on the worker this
+  session). Not yet applied; see `L3DigitalNet/remote-execution#10`.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
@@ -84,8 +86,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   Give the new specifications new IDs, dates, and filenames; preserve the original SPEC-U000 through SPEC-U007 bundle and transcript unchanged. Include the compatible CLI Documentation successor needed for a site-contained canonical CLI reference, then review the new set before implementation planning.
 
-- [ ] Specify and release the provider-neutral `project-toolbox` standard, including its proven workflows and routing skill.
-  - [ ] After release, design template-repository autopopulation against `project-toolbox`.
+- [ ] Design template-repository autopopulation against the now-released `project-toolbox` (v5.21.0).
 
 - [ ] Specify and release the `agent-managed-repo` standard after `project-toolbox`.
   - [ ] After release, reconcile this repository's GitHub settings against `agent-managed-repo`.
