@@ -1,8 +1,8 @@
 [project_standards]
 schema_version = "1.0"
 catalog = "5"
-release = "5.20.0"
-digest = "sha256:af1051d45769b53cc902a1919219c95a568118442d516699cae473ba81958789"
+release = "5.21.0"
+digest = "sha256:9b558db55c65e0b7278c495c0954bf59fe0ee4b51696f275a4b97b5294283ed5"
 
 [standards.adr]
 status = "active"
@@ -360,6 +360,17 @@ payload_digest = "sha256:dc7c7f7c91d70717675c0de5bcd5759b498c6431db62f38f51ea060
 channel = "stable"
 availability = "consumer"
 payload_digest = "sha256:980f922a3980de82e1302db6d2d22ec88ca2457b2affd64876ada4dc09ab669e"
+
+[standards.project-toolbox]
+status = "active"
+available = ["1.0"]
+default = "1.0"
+candidates = []
+
+[standards.project-toolbox.versions."1.0"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:48020eacd25a34578b6cc9c2cd7314af14bc6a808bd6d21531df29726c754bf8"
 
 [standards.python-coding]
 status = "draft"

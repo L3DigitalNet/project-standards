@@ -117,6 +117,8 @@ Ordered. [#162](https://github.com/L3DigitalNet/project-standards/issues/162) re
 
 ### 5.21.0
 
+**Shipped as v5.21.0.** Kept for the planning record; [CHANGELOG.md](CHANGELOG.md) is the release truth. The train is a single feature: the ninth consumer family, `project-toolbox@1.0`, adopted by this repository in the same release.
+
 #### Project Toolbox standards
 
 - Develop and release the `project-toolbox` standards, tracked in [#168](https://github.com/L3DigitalNet/project-standards/issues/168). Owner direction 2026-08-09 originally placed this at 5.19.0; moved to 5.20.0 on 2026-08-10 so the triaged backlog consolidates first, then to 5.21.0 on 2026-08-15 when the skill-discovery repair train took 5.20.0.

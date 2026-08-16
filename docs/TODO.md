@@ -54,9 +54,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
-- [ ] Scope the 5.21.0 `project-toolbox` release (#168).
+- [x] Scope the 5.21.0 `project-toolbox` release (#168).
 
-  The 5.19.0 consolidation train is published and the 5.20.0 skill-discovery repair train took the next MINOR on 2026-08-15. #129 (`adr-conformance` foundation) remains open and deferred; both prerequisites are closed.
+  Scoped, designed, and prepared as v5.21.0: `project-toolbox@1.0` is the train's only feature and this repository adopts it in the same release. #129 (`adr-conformance` foundation) remains open and deferred; both prerequisites are closed.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
