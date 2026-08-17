@@ -29,7 +29,7 @@ reports the true pre-bump state of the chain.
 
 Exit codes: 0 success, 1 a step failed, 2 bad invocation.
 
-Stdlib only, matching scripts/check.py and scripts/plan.py: these helpers must run
+Stdlib only, matching scripts/check.py: these helpers must run
 before the project environment is guaranteed to be in any particular state.
 """
 

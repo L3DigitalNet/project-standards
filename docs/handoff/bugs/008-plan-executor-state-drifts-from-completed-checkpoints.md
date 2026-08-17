@@ -51,7 +51,7 @@ The superseded root-level `p*.md`, `logs/`, and `notes.md` were deleted. `valida
 
 `docs/handoff/specs-plans.md` records the three tasks as complete with their checkpoint SHAs and names T24 as ready.
 
-The bridge gap — migration leaving superseded checklists at the work-item root with no removal, marker, or diagnostic — is [agent-configs#23](https://github.com/L3DigitalNet/agent-configs/issues/23). It is still present in bridge 3.5.0.
+The bridge gap — migration leaving superseded checklists at the work-item root with no removal, marker, or diagnostic — is [agent-configs#23](https://github.com/L3DigitalNet/agent-configs/issues/23). It was present through bridge 3.5.0, the last deployed generation; the deployed bridge (this repository's `scripts/plan.py` copy included) was retired on 2026-08-17 by `agent-configs` ADR-0023, and the engine now ships only inside the `plan-authoring`/`execute-plan` skill binaries. The `plan.py` invocations recorded under "Cause" are the historical transcript, not a current interface.
 
 ## Lesson
 
