@@ -18,6 +18,12 @@ Provides a draft for adopting Go alongside an existing Python implementation whi
 
 Provides a draft for a simple `dev`/`main` branch relationship and local Git-hook safeguards intended to prevent ordinary development from being committed directly to `main`.
 
+## Testing and quality
+
+### [Testing and Quality Strategy for CLI Utilities](testing/testing-and-quality-strategy-for-cli-utilities.md)
+
+Provides a draft for testing CLI utilities through their observable command-line contracts, supported by layered deterministic tests and risk-driven assurance practices.
+
 ## Repository organization
 
 ### [Go Command and Internal Package Layout](repository-organization/go-command-and-internal-package-layout.md)
