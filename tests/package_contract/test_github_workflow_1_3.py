@@ -133,7 +133,7 @@ def test_github_workflow_1_3__skill_artifacts__install_both_trees_from_one_sourc
     assert artifacts["tool-binary-claude"]["mode"] == "0755"
 
 
-def test_github_workflow_1_3__identity__is_complete_and_current() -> None:
+def test_github_workflow_1_3__identity__is_complete_and_retained() -> None:
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     integrity = validate_payload_integrity(_SUCCESSOR, manifest)
     family = load_family_manifest(_FAMILY / "standard.toml")
@@ -149,10 +149,9 @@ def test_github_workflow_1_3__identity__is_complete_and_current() -> None:
         if package["id"] == "github-workflow"
     }
     assert roles["1.2"] == "retained"
-    assert roles["1.3"] == "default"
-    assert "| [`github-workflow`](github-workflow/README.md) | active | 1.3 | default |" in (
-        _ROOT / "standards/catalog.md"
-    ).read_text(encoding="utf-8")
+    # Superseded by 1.4 but still advertised: withdrawing an advertised package is a
+    # catalog-major transition (ADR 0024), so the entry stays and only the role moves.
+    assert roles["1.3"] == "retained"
 
 
 def test_github_workflow_1_3__size_guard_guidance__exempts_both_binary_copies() -> None:

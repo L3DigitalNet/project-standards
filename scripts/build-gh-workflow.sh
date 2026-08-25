@@ -25,7 +25,7 @@ BUILD_SCRIPT_NAME="scripts/build-gh-workflow.sh"
 # The committed artifact path is a cross-file contract: payload.toml declares this same
 # path as the `tool-binary` artifact source, and the Makefile reaches the file only
 # through this script. Moving it means editing all three together.
-ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.1/skills/github-workflow/bin/gh-workflow"
+ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.4/skills/github-workflow/bin/gh-workflow"
 ARTIFACT_PACKAGE="./cmd/gh-workflow"
 
 # NFR-005 pins the tool version stamp to the payload version rather than to a VCS
@@ -36,7 +36,7 @@ ARTIFACT_PACKAGE="./cmd/gh-workflow"
 # published payload's bytes are immutable, so this script targets the successor from the
 # moment it is cut and stops being able to reproduce its predecessor. That is intended —
 # the predecessor's bytes are verified by the release baseline comparison, not here.
-ARTIFACT_LDFLAGS="-buildid= -X main.version=1.1"
+ARTIFACT_LDFLAGS="-buildid= -X main.version=1.4"
 
 # shellcheck source=scripts/lib/go-reproducible-build.sh
 source "$REPO_ROOT/scripts/lib/go-reproducible-build.sh"

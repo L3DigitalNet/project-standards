@@ -55,3 +55,66 @@ func TestTableEscapesCellText(t *testing.T) {
 		t.Errorf("unescaped pipe leaked into the row and changed its column count: %q", row)
 	}
 }
+
+// Prettier rewrites `\_` back to `_` between two word characters, so an unconditional
+// underscore escape made every ledger refresh carrying a `snake_case` title fail the
+// consuming repository's own `prettier --check` gate (#177). The cases below pin the
+// boundary of the conditional rule in both directions: an escape Prettier would strip is
+// a gate failure downstream, and a missing escape at a word edge lets `_x_` render as
+// emphasis, which deletes visible characters from an issue title.
+func TestEscapeTextEscapesOnlyUnderscoresPrettierKeeps(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"intraword stays bare", "print_validation", "print_validation"},
+		{"every intraword underscore stays bare", "a_b_c_d", "a_b_c_d"},
+		{"digits are word characters", "9_9", "9_9"},
+		{"leading underscore escapes", "_ab", `\_ab`},
+		{"trailing underscore escapes", "ab_", `ab\_`},
+		{"emphasis pair escapes", "_ab_", `\_ab\_`},
+		{"underscore after punctuation escapes", "a._b", `a.\_b`},
+		{"underscore before punctuation escapes", "a_.b", `a\_.b`},
+		// A doubled run opens strong emphasis, and Prettier keeps its escape because an
+		// underscore is itself punctuation — so `__init__` escapes even intraword.
+		{"doubled run escapes intraword", "a__b", `a\_\_b`},
+		{"dunder escapes", "__init__", `\_\_init\_\_`},
+		{"word edges are whitespace edges", "x a_b _c", `x a_b \_c`},
+		// The URL is code-spanned, where an underscore is literal and Prettier does not
+		// touch escapes at all.
+		{"underscore inside a URL is untouched", "see https://example.test/a_b", "see `https://example.test/a_b`"},
+		{"pipe escaping is unaffected", "a_b | c", `a_b \| c`},
+	} {
+		if got := render.EscapeText(tc.in); got != tc.want {
+			t.Errorf("%s: EscapeText(%q) = %q, want %q", tc.name, tc.in, got, tc.want)
+		}
+	}
+}
+
+// The visible ledger has to be unchanged by the escaping change: the same characters an
+// operator typed into the GitHub title appear in the cell, and the pipe stays escaped so
+// the row keeps its column count (#177).
+func TestTableKeepsPipeEscapedAroundBareUnderscores(t *testing.T) {
+	t.Parallel()
+
+	const title = "plan.py print_validation | non-integer revision"
+	row := strings.Split(render.Table([]string{"Title"}, [][]string{{title}}), "\n")[2]
+
+	if !strings.Contains(row, "print_validation") {
+		t.Errorf("intraword underscore did not survive unescaped into the cell: %q", row)
+	}
+	if !strings.Contains(row, `\|`) {
+		t.Errorf("pipe lost its escape: %q", row)
+	}
+	if strings.Count(row, "|") != strings.Count(row, `\|`)+2 {
+		t.Errorf("unescaped pipe leaked into the row and changed its column count: %q", row)
+	}
+	// Removing the backslashes recovers the operator's title exactly, which is the
+	// visible-character invariant the escaping is allowed to touch nothing outside.
+	if visible := strings.ReplaceAll(strings.TrimSpace(strings.Trim(row, "|")), `\`, ""); visible != title {
+		t.Errorf("rendered cell = %q, want the title's own characters %q", visible, title)
+	}
+}

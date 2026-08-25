@@ -69,6 +69,7 @@ _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
         "standards/github-workflow/versions/1.1/skills/github-workflow/bin/gh-workflow",
         "standards/github-workflow/versions/1.2/skills/github-workflow/bin/gh-workflow",
         "standards/github-workflow/versions/1.3/skills/github-workflow/bin/gh-workflow",
+        "standards/github-workflow/versions/1.4/skills/github-workflow/bin/gh-workflow",
         "standards/markdown-frontmatter/versions/1.10/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/markdown-frontmatter/versions/1.11/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/markdown-frontmatter/versions/1.12/skills/markdown-frontmatter/scripts/new-doc-id",

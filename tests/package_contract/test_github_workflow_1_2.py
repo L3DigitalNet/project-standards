@@ -165,9 +165,10 @@ def test_github_workflow_1_2__projection_and_catalog__stay_complete_and_retained
         ("1.0", "retained"),
         ("1.1", "retained"),
         ("1.2", "retained"),
-        ("1.3", "default"),
+        ("1.3", "retained"),
+        ("1.4", "default"),
     ]
     for document in ("README.md", "adopt.md", "agent-summary.md"):
         family_navigation = (_FAMILY / document).read_text(encoding="utf-8")
-        assert "versions/1.3/" in family_navigation
+        assert "versions/1.4/" in family_navigation
         assert "versions/1.2/" not in family_navigation

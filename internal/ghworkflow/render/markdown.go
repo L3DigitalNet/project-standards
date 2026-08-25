@@ -94,12 +94,15 @@ var (
 	// restyle content markdownlint pins to one style, a tilde pair opens GFM
 	// strikethrough, and an angle bracket opens inline HTML the same linter forbids
 	// outright.
+	//
+	// The underscore is deliberately absent: it is escaped conditionally by
+	// escapeUnderscoreRun, because Prettier strips an escape it considers unnecessary
+	// and the generated file must already be Prettier's own output (#177).
 	markdownEscapes = strings.NewReplacer(
 		`\`, `\\`,
 		"|", `\|`,
 		"`", "\\`",
 		"*", `\*`,
-		"_", `\_`,
 		"~", `\~`,
 		"<", `\<`,
 		">", `\>`,
@@ -107,6 +110,89 @@ var (
 		"]", `\]`,
 	)
 )
+
+// prettierPunctuation is the character class Prettier tests around an underscore run
+// when it decides whether the run needs escaping: ASCII punctuation and symbols plus
+// the Unicode punctuation categories. Reproduced from Prettier's markdown printer
+// rather than approximated, because a mismatch is exactly the divergence #177 fixed.
+var prettierPunctuation = []*unicode.RangeTable{
+	unicode.Pc, unicode.Pd, unicode.Pe, unicode.Pf, unicode.Pi, unicode.Po, unicode.Ps,
+}
+
+// isPrettierPunctuation reports whether r counts as punctuation for that rule.
+func isPrettierPunctuation(r rune) bool {
+	switch {
+	case r >= 0x21 && r <= 0x2F, r >= 0x3A && r <= 0x40,
+		r >= 0x5B && r <= 0x60, r >= 0x7B && r <= 0x7E:
+		return true
+	}
+	return unicode.IsOneOf(prettierPunctuation, r)
+}
+
+// escapeUnderscoreRun reports whether a run of `runLength` underscores, sitting between
+// prev and next, has to be escaped.
+//
+// An underscore only opens or closes emphasis at a word edge or next to punctuation;
+// CommonMark makes an intraword underscore inert, so escaping one is redundant. Prettier
+// enforces exactly that distinction and rewrites `\_` back to `_` between two word
+// characters, which is why the unconditional escape this replaced made every ledger
+// refresh containing a `snake_case` title fail the consumer's `prettier --check` gate
+// until someone ran `prettier --write` by hand (#177).
+//
+// A run of two or more is always escaped: an underscore is itself punctuation, so every
+// run longer than one has punctuation on one side of its inner boundary — and `__` opens
+// strong emphasis, which would swallow visible characters.
+//
+// The zero rune stands for the absence of a neighbor (the start or end of the text),
+// which is a word edge and therefore escapes.
+func escapeUnderscoreRun(prev, next rune, runLength int) bool {
+	if runLength > 1 {
+		return true
+	}
+	atEdge := func(r rune) bool {
+		return r == 0 || unicode.IsSpace(r) || isPrettierPunctuation(r)
+	}
+	return atEdge(prev) || atEdge(next)
+}
+
+// escapeSegment escapes one stretch of plain text: markdownEscapes for the unconditional
+// metacharacters, and the Prettier-compatible rule above for underscore runs.
+//
+// The underscore decision reads the ORIGINAL neighbors, so it has to happen in the same
+// pass rather than as a second replace over already-escaped output — after escaping,
+// every neighbor of an underscore run could be a backslash the source never contained.
+func escapeSegment(segment string) string {
+	var b strings.Builder
+	runes := []rune(segment)
+	for i := 0; i < len(runes); {
+		if runes[i] != '_' {
+			start := i
+			for i < len(runes) && runes[i] != '_' {
+				i++
+			}
+			b.WriteString(markdownEscapes.Replace(string(runes[start:i])))
+			continue
+		}
+
+		run := i
+		for i < len(runes) && runes[i] == '_' {
+			i++
+		}
+		var prev, next rune
+		if run > 0 {
+			prev = runes[run-1]
+		}
+		if i < len(runes) {
+			next = runes[i]
+		}
+		if escapeUnderscoreRun(prev, next, i-run) {
+			b.WriteString(strings.Repeat(`\_`, i-run))
+		} else {
+			b.WriteString(strings.Repeat("_", i-run))
+		}
+	}
+	return b.String()
+}
 
 // EscapeText makes arbitrary GitHub text safe to place inside the generated markdown.
 //
@@ -120,13 +206,13 @@ func EscapeText(text string) string {
 	var b strings.Builder
 	last := 0
 	for _, match := range urlPattern.FindAllStringIndex(text, -1) {
-		b.WriteString(markdownEscapes.Replace(text[last:match[0]]))
+		b.WriteString(escapeSegment(text[last:match[0]]))
 		b.WriteString("`")
 		b.WriteString(text[match[0]:match[1]])
 		b.WriteString("`")
 		last = match[1]
 	}
-	b.WriteString(markdownEscapes.Replace(text[last:]))
+	b.WriteString(escapeSegment(text[last:]))
 	return b.String()
 }
 

@@ -37,7 +37,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`github-workflow`](github-workflow/README.md) | active | 1.0 | retained | consumer | 10 | 5 | 12 |
 | [`github-workflow`](github-workflow/README.md) | active | 1.1 | retained | consumer | 10 | 5 | 12 |
 | [`github-workflow`](github-workflow/README.md) | active | 1.2 | retained | consumer | 10 | 5 | 12 |
-| [`github-workflow`](github-workflow/README.md) | active | 1.3 | default | consumer | 10 | 5 | 21 |
+| [`github-workflow`](github-workflow/README.md) | active | 1.3 | retained | consumer | 10 | 5 | 21 |
+| [`github-workflow`](github-workflow/README.md) | active | 1.4 | default | consumer | 10 | 5 | 21 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | retained | consumer | 29 | 5 | 8 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.3 | retained | consumer | 29 | 5 | 9 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.4 | retained | consumer | 30 | 5 | 9 |
@@ -132,6 +133,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `github-workflow@1.1` | `github-workflow.audit`, `github-workflow.drift-check`, `github-workflow.validate` | `project-standards.reconcile` |
 | `github-workflow@1.2` | `github-workflow.audit`, `github-workflow.drift-check`, `github-workflow.validate` | `project-standards.reconcile` |
 | `github-workflow@1.3` | `github-workflow.audit`, `github-workflow.drift-check`, `github-workflow.validate` | `project-standards.reconcile` |
+| `github-workflow@1.4` | `github-workflow.audit`, `github-workflow.drift-check`, `github-workflow.validate` | `project-standards.reconcile` |
 | `markdown-frontmatter@1.2` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-frontmatter@1.3` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-frontmatter@1.4` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
@@ -206,6 +208,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `github-workflow@1.1` | companion | `agent-handoff` |
 | `github-workflow@1.2` | companion | `agent-handoff` |
 | `github-workflow@1.3` | companion | `agent-handoff` |
+| `github-workflow@1.4` | companion | `agent-handoff` |
 | `markdown-frontmatter@1.2` | companion | `adr` |
 | `markdown-frontmatter@1.2` | companion | `markdown-tooling` |
 | `markdown-frontmatter@1.3` | companion | `adr` |
@@ -868,6 +871,16 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `github-workflow@1.3` | `provider-content` | `provider-resource` | `standards://github-workflow/1.3/resources/provider-content` | `schemas/content.schema.json` |
 | `github-workflow@1.3` | `provider-findings` | `provider-resource` | `standards://github-workflow/1.3/resources/provider-findings` | `schemas/findings.schema.json` |
 | `github-workflow@1.3` | `provider-mutation-plan` | `provider-resource` | `standards://github-workflow/1.3/resources/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
+| `github-workflow@1.4` | `readme` | `canonical-standard` | `standards://github-workflow/1.4/resources/readme` | `README.md` |
+| `github-workflow@1.4` | `agent-summary` | `agent-summary` | `standards://github-workflow/1.4/resources/agent-summary` | `agent-summary.md` |
+| `github-workflow@1.4` | `config-schema` | `config-schema` | `standards://github-workflow/1.4/resources/config-schema` | `config.schema.json` |
+| `github-workflow@1.4` | `adopt` | `adoption-guide` | `standards://github-workflow/1.4/resources/adopt` | `adopt.md` |
+| `github-workflow@1.4` | `policy-template` | `template` | `standards://github-workflow/1.4/resources/policy-template` | `resources/policy.toml` |
+| `github-workflow@1.4` | `provider-code` | `provider-resource` | `standards://github-workflow/1.4/resources/provider-code` | `providers/gh_workflow.py` |
+| `github-workflow@1.4` | `provider-input` | `provider-resource` | `standards://github-workflow/1.4/resources/provider-input` | `schemas/provider-input.schema.json` |
+| `github-workflow@1.4` | `provider-content` | `provider-resource` | `standards://github-workflow/1.4/resources/provider-content` | `schemas/content.schema.json` |
+| `github-workflow@1.4` | `provider-findings` | `provider-resource` | `standards://github-workflow/1.4/resources/provider-findings` | `schemas/findings.schema.json` |
+| `github-workflow@1.4` | `provider-mutation-plan` | `provider-resource` | `standards://github-workflow/1.4/resources/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
 | `markdown-frontmatter@1.2` | `readme` | `canonical-standard` | `standards://markdown-frontmatter/1.2/resources/readme` | `README.md` |
 | `markdown-frontmatter@1.2` | `agent-summary` | `agent-summary` | `standards://markdown-frontmatter/1.2/resources/agent-summary` | `agent-summary.md` |
 | `markdown-frontmatter@1.2` | `config-schema` | `config-schema` | `standards://markdown-frontmatter/1.2/resources/config-schema` | `config.schema.json` |
@@ -2112,6 +2125,11 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `github-workflow@1.3` | `verify` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
 | `github-workflow@1.3` | `drift-check` | `drift-check` | `validate` | `findings` | `payload:provider-code#run_drift_check` |
 | `github-workflow@1.3` | `upgrade` | `upgrade` | `authoring` | `mutation-plan` | `payload:provider-code#run_upgrade` |
+| `github-workflow@1.4` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
+| `github-workflow@1.4` | `validate` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
+| `github-workflow@1.4` | `verify` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
+| `github-workflow@1.4` | `drift-check` | `drift-check` | `validate` | `findings` | `payload:provider-code#run_drift_check` |
+| `github-workflow@1.4` | `upgrade` | `upgrade` | `authoring` | `mutation-plan` | `payload:provider-code#run_upgrade` |
 | `markdown-frontmatter@1.2` | `render-workflow-job` | `render` | `plan` | `content` | `payload:provider-code#run_render_workflow` |
 | `markdown-frontmatter@1.2` | `validate-frontmatter` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
 | `markdown-frontmatter@1.2` | `id-next` | `id-next` | `inspect` | `content` | `payload:provider-code#run_id_next` |
@@ -2720,6 +2738,27 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `github-workflow@1.3` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:github-workflow` |
 | `github-workflow@1.3` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:github-workflow` |
 | `github-workflow@1.3` | contribution | `policy` | `.standards/packages/github-workflow/policy.toml` | `managed` | `whole-file` / `$file` |
+| `github-workflow@1.4` | artifact | `skill` | `.agents/skills/github-workflow/SKILL.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `skill-openai` | `.agents/skills/github-workflow/agents/openai.yaml` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `tool-binary` | `.agents/skills/github-workflow/bin/gh-workflow` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-field-vocabulary` | `.agents/skills/github-workflow/references/field-vocabulary.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-issue-structure` | `.agents/skills/github-workflow/references/issue-structure.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-org-schema` | `.agents/skills/github-workflow/references/org-schema.yaml` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-pr-standard` | `.agents/skills/github-workflow/references/pr-standard.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-review-checklist` | `.agents/skills/github-workflow/references/review-checklist.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-summary-format` | `.agents/skills/github-workflow/references/summary-format.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `skill-claude` | `.claude/skills/github-workflow/SKILL.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `skill-openai-claude` | `.claude/skills/github-workflow/agents/openai.yaml` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `tool-binary-claude` | `.claude/skills/github-workflow/bin/gh-workflow` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-field-vocabulary-claude` | `.claude/skills/github-workflow/references/field-vocabulary.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-issue-structure-claude` | `.claude/skills/github-workflow/references/issue-structure.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-org-schema-claude` | `.claude/skills/github-workflow/references/org-schema.yaml` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-pr-standard-claude` | `.claude/skills/github-workflow/references/pr-standard.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-review-checklist-claude` | `.claude/skills/github-workflow/references/review-checklist.md` | `managed` | whole-file |
+| `github-workflow@1.4` | artifact | `reference-summary-format-claude` | `.claude/skills/github-workflow/references/summary-format.md` | `managed` | whole-file |
+| `github-workflow@1.4` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:github-workflow` |
+| `github-workflow@1.4` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:github-workflow` |
+| `github-workflow@1.4` | contribution | `policy` | `.standards/packages/github-workflow/policy.toml` | `managed` | `whole-file` / `$file` |
 | `markdown-frontmatter@1.2` | artifact | `agent-summary-package` | `.standards/packages/markdown-frontmatter/agent-summary.md` | `managed` | whole-file |
 | `markdown-frontmatter@1.2` | artifact | `skill` | `.agents/skills/markdown-frontmatter/SKILL.md` | `managed` | whole-file |
 | `markdown-frontmatter@1.2` | artifact | `skill-openai` | `.agents/skills/markdown-frontmatter/agents/openai.yaml` | `managed` | whole-file |

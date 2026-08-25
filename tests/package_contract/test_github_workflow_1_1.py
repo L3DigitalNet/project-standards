@@ -139,13 +139,17 @@ def test_github_workflow_1_1__committed_binary__is_rebuilt_and_pinned() -> None:
 
     assert successor_bytes != predecessor_bytes
     assert declared.mode == "0755"
-    # The build script names the payload version it targets; a cut that forgot to move
-    # it would rebuild over the frozen predecessor instead.
+    # The build script targets the version under development, so it moved off 1.1 when
+    # 1.4 was cut (issue #177) and can no longer reproduce these released bytes. What
+    # 1.1 still owns is the negative: a script pointed back here would rebuild over
+    # frozen bytes. The positive pin travels with the current cut, in
+    # test_github_workflow_1_4.
     build_script = (_ROOT / "scripts/build-gh-workflow.sh").read_text(encoding="utf-8")
     assert (
-        f'ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.1/{_BINARY}"' in build_script
+        f'ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.1/{_BINARY}"'
+        not in build_script
     )
-    assert 'ARTIFACT_LDFLAGS="-buildid= -X main.version=1.1"' in build_script
+    assert 'ARTIFACT_LDFLAGS="-buildid= -X main.version=1.1"' not in build_script
 
 
 def test_github_workflow_1_1__guidance_text__carries_no_hardcoded_type_count() -> None:
@@ -211,7 +215,7 @@ def test_github_workflow_1_1__family_root__carries_the_sibling_navigation_docume
         # exactly as the agent-handoff and markdown-tooling roots do. The 5.18.0
         # activation repointed them off the predecessor.
         content = document.read_text(encoding="utf-8")
-        assert "versions/1.3/" in content
+        assert "versions/1.4/" in content
         assert "versions/1.1/" not in content
 
 
@@ -245,5 +249,6 @@ def test_github_workflow_1_1__catalog_role__selects_the_successor_as_default() -
         ("1.0", "retained"),
         ("1.1", "retained"),
         ("1.2", "retained"),
-        ("1.3", "default"),
+        ("1.3", "retained"),
+        ("1.4", "default"),
     ]

@@ -1,6 +1,6 @@
 # Adopt the GitHub Workflow Standard
 
-The current consumer package is [`github-workflow@1.3`](versions/1.3/adopt.md). Use it in a repository owned by a GitHub organization whose work is tracked as issues and pull requests: it delivers the repo-local agent skill, its references, and the `gh-workflow` binary into both `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, plus one managed instruction block per selected harness.
+The current consumer package is [`github-workflow@1.4`](versions/1.4/adopt.md). Use it in a repository owned by a GitHub organization whose work is tracked as issues and pull requests: it delivers the repo-local agent skill, its references, and the `gh-workflow` binary into both `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, plus one managed instruction block per selected harness.
 
 It does not apply to personal-account repositories. Organization-level issue fields do not exist outside an organization, and the package offers no fallback that operates without them.
 
@@ -9,7 +9,7 @@ It does not apply to personal-account repositories. Organization-level issue fie
 Both options are required, so there is no minimal variant that omits either one. Set `organization` to the login of the organization that owns the repository, and list in `harnesses` only the harnesses the repository actually uses.
 
 ```bash
-project-standards standards enable github-workflow --version 1.3
+project-standards standards enable github-workflow --version 1.4
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -25,7 +25,7 @@ project-standards reconcile --check
 
 `audit` is read-only: it compares live organization schema against the packaged baseline and prints the result. Differences are expected on first adoption and are a report for a human — the package never creates, renames, or retires an Issue Type, field, or value.
 
-`gh-workflow ledger` is not read-only. It writes `docs/GH-WORKFLOWS.md` in the repository, so review the resulting diff and decide deliberately whether the file is committed or ignored. From 1.1 the generated body carries no read timestamp — it is a function of work state alone, so regenerating against unchanged GitHub state produces no diff and two sessions that both refresh the file do not conflict over a clock. The read time prints on stdout instead. See the [version-specific guide](versions/1.3/adopt.md) for exact options, first-run expectations, the ledger's ownership rules, and troubleshooting.
+`gh-workflow ledger` is not read-only. It writes `docs/GH-WORKFLOWS.md` in the repository, so review the resulting diff and decide deliberately whether the file is committed or ignored. From 1.1 the generated body carries no read timestamp — it is a function of work state alone, so regenerating against unchanged GitHub state produces no diff and two sessions that both refresh the file do not conflict over a clock. The read time prints on stdout instead. See the [version-specific guide](versions/1.4/adopt.md) for exact options, first-run expectations, the ledger's ownership rules, and troubleshooting.
 
 Agent sessions run the binary on linux/amd64. Elsewhere the skill and references still deliver, but every subcommand is unavailable until a payload version carrying that platform exists; reconcile cannot substitute one.
 

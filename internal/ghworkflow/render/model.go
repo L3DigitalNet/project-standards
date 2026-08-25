@@ -35,7 +35,7 @@ import (
 // main.version from this, and initializing it from Version below instead would let
 // initialization overwrite the linker's write and leave every stamped build silently
 // reporting this default.
-const DefaultVersion = "1.1"
+const DefaultVersion = "1.4"
 
 // Version is the tool version stamped into generated output (spec FR-019). It is a
 // variable so the reproducible build can override it, and it defaults to the package
