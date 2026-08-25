@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // printWidth is the markdown-tooling standard's Prettier print width. Prettier owns
@@ -95,9 +96,9 @@ var (
 	// strikethrough, and an angle bracket opens inline HTML the same linter forbids
 	// outright.
 	//
-	// The underscore is deliberately absent: it is escaped conditionally by
-	// escapeUnderscoreRun, because Prettier strips an escape it considers unnecessary
-	// and the generated file must already be Prettier's own output (#177).
+	// The underscore is deliberately absent: underscoreRunNeedsEscape decides it per
+	// run, because Prettier strips an escape it considers unnecessary and the
+	// generated file must already be Prettier's own output (#177).
 	markdownEscapes = strings.NewReplacer(
 		`\`, `\\`,
 		"|", `\|`,
@@ -129,67 +130,65 @@ func isPrettierPunctuation(r rune) bool {
 	return unicode.IsOneOf(prettierPunctuation, r)
 }
 
-// escapeUnderscoreRun reports whether a run of `runLength` underscores, sitting between
-// prev and next, has to be escaped.
+// underscoreRunNeedsEscape reports whether the maximal run of underscores at
+// segment[start:end] has to be escaped to render literally.
 //
-// An underscore only opens or closes emphasis at a word edge or next to punctuation;
+// An underscore opens or closes emphasis only at a word edge or beside punctuation;
 // CommonMark makes an intraword underscore inert, so escaping one is redundant. Prettier
 // enforces exactly that distinction and rewrites `\_` back to `_` between two word
 // characters, which is why the unconditional escape this replaced made every ledger
 // refresh containing a `snake_case` title fail the consumer's `prettier --check` gate
 // until someone ran `prettier --write` by hand (#177).
 //
-// A run of two or more is always escaped: an underscore is itself punctuation, so every
-// run longer than one has punctuation on one side of its inner boundary — and `__` opens
-// strong emphasis, which would swallow visible characters.
-//
-// The zero rune stands for the absence of a neighbor (the start or end of the text),
-// which is a word edge and therefore escapes.
-func escapeUnderscoreRun(prev, next rune, runLength int) bool {
-	if runLength > 1 {
+// A run of two or more always escapes: an underscore is itself punctuation, so a longer
+// run has punctuation beside its own inner boundary — and `__` opens strong emphasis,
+// which would swallow visible characters.
+func underscoreRunNeedsEscape(segment string, start, end int) bool {
+	if end-start > 1 {
 		return true
 	}
-	atEdge := func(r rune) bool {
-		return r == 0 || unicode.IsSpace(r) || isPrettierPunctuation(r)
-	}
-	return atEdge(prev) || atEdge(next)
+	prev, prevSize := utf8.DecodeLastRuneInString(segment[:start])
+	next, nextSize := utf8.DecodeRuneInString(segment[end:])
+	return isWordEdge(prev, prevSize) || isWordEdge(next, nextSize)
+}
+
+// isWordEdge reports whether a decoded neighbor ends the word an underscore sits in. A
+// zero size means the decode found no rune at all — the start or end of the text, which
+// is a word edge in Prettier's rule just as whitespace is.
+func isWordEdge(r rune, size int) bool {
+	return size == 0 || unicode.IsSpace(r) || isPrettierPunctuation(r)
 }
 
 // escapeSegment escapes one stretch of plain text: markdownEscapes for the unconditional
 // metacharacters, and the Prettier-compatible rule above for underscore runs.
 //
-// The underscore decision reads the ORIGINAL neighbors, so it has to happen in the same
-// pass rather than as a second replace over already-escaped output — after escaping,
-// every neighbor of an underscore run could be a backslash the source never contained.
+// The underscore decision reads the ORIGINAL neighbors, so it happens in the same pass
+// rather than as a second replace over already-escaped output — after escaping, every
+// neighbor of an underscore run could be a backslash the source never contained.
 func escapeSegment(segment string) string {
 	var b strings.Builder
-	runes := []rune(segment)
-	for i := 0; i < len(runes); {
-		if runes[i] != '_' {
-			start := i
-			for i < len(runes) && runes[i] != '_' {
-				i++
-			}
-			b.WriteString(markdownEscapes.Replace(string(runes[start:i])))
-			continue
+	for i := 0; i < len(segment); {
+		offset := strings.IndexByte(segment[i:], '_')
+		if offset < 0 {
+			b.WriteString(markdownEscapes.Replace(segment[i:]))
+			break
 		}
 
-		run := i
-		for i < len(runes) && runes[i] == '_' {
-			i++
+		runStart := i + offset
+		b.WriteString(markdownEscapes.Replace(segment[i:runStart]))
+		runEnd := runStart
+		for runEnd < len(segment) && segment[runEnd] == '_' {
+			runEnd++
 		}
-		var prev, next rune
-		if run > 0 {
-			prev = runes[run-1]
-		}
-		if i < len(runes) {
-			next = runes[i]
-		}
-		if escapeUnderscoreRun(prev, next, i-run) {
-			b.WriteString(strings.Repeat(`\_`, i-run))
+
+		if underscoreRunNeedsEscape(segment, runStart, runEnd) {
+			for range runEnd - runStart {
+				b.WriteString(`\_`)
+			}
 		} else {
-			b.WriteString(strings.Repeat("_", i-run))
+			b.WriteString(segment[runStart:runEnd])
 		}
+		i = runEnd
 	}
 	return b.String()
 }
