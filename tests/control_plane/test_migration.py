@@ -2991,7 +2991,7 @@ def test_legacy_retirement_prunes_only_empty_recognized_directory(
     request = ApplyRequest(plan.planner, plan.reconciliation)
     root_descriptor = os.open(repo, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
     try:
-        _remove_legacy(request, focused, root_descriptor, [])
+        _remove_legacy(request, focused, repo.resolve(strict=True), root_descriptor, [])
     finally:
         os.close(root_descriptor)
 

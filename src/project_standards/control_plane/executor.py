@@ -14,7 +14,6 @@ import hashlib
 import json
 import os
 import secrets
-import stat
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, replace
@@ -26,6 +25,11 @@ from project_standards._filesystem import (
 )
 from project_standards.control_plane.catalog_refresh import CATALOG_REFRESH_BACKUP
 from project_standards.control_plane.codec import parse_lock, render_lock
+from project_standards.control_plane.containment import (
+    ContainmentError,
+    ContainmentFailure,
+    open_contained_directory,
+)
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlAction,
@@ -206,70 +210,49 @@ def _open_repository(repo: Path) -> tuple[Path, int]:
 
 
 def _open_parent(
+    root: Path,
     root_descriptor: int,
     parent: PurePosixPath,
     created: list[PurePosixPath],
 ) -> int:
-    descriptor = os.dup(root_descriptor)
-    traversed = PurePosixPath()
+    """Open (creating as needed) the contained directory that will hold a target.
+
+    Descends through `open_contained_directory`, which follows an ancestor
+    symlink only after proving its destination stays inside the repository
+    (issue #179). Only an escape gets its own wording; every other containment
+    failure keeps the pre-existing "not a safe directory" message that operators
+    and CLI tests already recognize.
+    """
     try:
-        for part in parent.parts:
-            traversed /= part
-            try:
-                child = os.open(
-                    part,
-                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
-                    dir_fd=descriptor,
-                )
-            except FileNotFoundError:
-                try:
-                    os.mkdir(part, mode=0o755, dir_fd=descriptor)
-                    created.append(traversed)
-                    child = os.open(
-                        part,
-                        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
-                        dir_fd=descriptor,
-                    )
-                except OSError as exc:
-                    raise _ApplyFailure(
-                        "CP-APPLY-PATH",
-                        "target parent could not be created safely",
-                    ) from exc
-            except OSError as exc:
-                raise _ApplyFailure(
-                    "CP-APPLY-PATH",
-                    "target parent is not a safe directory",
-                ) from exc
-            os.close(descriptor)
-            descriptor = child
-        return descriptor
-    except BaseException:
-        os.close(descriptor)
-        raise
+        descriptor = open_contained_directory(
+            root_descriptor,
+            root,
+            parent,
+            create=True,
+            created=created,
+        )
+    except ContainmentError as exc:
+        if exc.reason is ContainmentFailure.ESCAPE:
+            raise _ApplyFailure("CP-APPLY-PATH", "target parent escapes the repository") from exc
+        raise _ApplyFailure(
+            "CP-APPLY-PATH",
+            "target parent is not a safe directory",
+        ) from exc
+    if descriptor is None:  # pragma: no cover - create=True never reports absence
+        raise _ApplyFailure("CP-APPLY-PATH", "target parent could not be created safely")
+    return descriptor
 
 
-def _open_existing_parent(root_descriptor: int, parent: PurePosixPath) -> int:
+def _open_existing_parent(root: Path, root_descriptor: int, parent: PurePosixPath) -> int:
     """Open one contained existing parent without creating repository paths."""
-    descriptor = os.dup(root_descriptor)
+    message = "managed restore target parent is not an existing safe directory"
     try:
-        for part in parent.parts:
-            try:
-                child = os.open(
-                    part,
-                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
-                    dir_fd=descriptor,
-                )
-            except OSError as exc:
-                raise _ApplyFailure(
-                    "CP-RESTORE-PATH",
-                    "managed restore target parent is not an existing safe directory",
-                ) from exc
-            os.close(descriptor)
-            descriptor = child
-        return descriptor
-    except BaseException:
-        os.close(descriptor)
-        raise
+        descriptor = open_contained_directory(root_descriptor, root, parent)
+    except ContainmentError as exc:
+        raise _ApplyFailure("CP-RESTORE-PATH", message) from exc
+    if descriptor is None:
+        raise _ApplyFailure("CP-RESTORE-PATH", message)
+    return descriptor
 
 
 def _stage_bytes(
@@ -312,6 +295,7 @@ def _stage_bytes(
 def _stage_targets(
     request: ApplyRequest,
     plan: ReconciliationPlan,
+    root: Path,
     root_descriptor: int,
     created: list[PurePosixPath],
     *,
@@ -326,6 +310,7 @@ def _stage_targets(
             _fault(request, "stage", action.target)
             relative = SafeRelativePath.parse(action.target)
             parent_descriptor = _open_parent(
+                root,
                 root_descriptor,
                 relative.normalized.parent,
                 created,
@@ -469,6 +454,7 @@ def _apply_managed_restore_locked(
         root, root_descriptor = _open_repository(request.planner.repo)
         relative = SafeRelativePath.parse(preview.target)
         parent_descriptor = _open_existing_parent(
+            root,
             root_descriptor,
             relative.normalized.parent,
         )
@@ -596,6 +582,7 @@ def apply_authoring_plan(repo: Path, plan: MutationPlanSchema) -> AuthoringApply
                 continue
             relative = action.target
             parent_descriptor = _open_parent(
+                root,
                 root_descriptor,
                 relative.normalized.parent,
                 created,
@@ -629,6 +616,7 @@ def apply_authoring_plan(repo: Path, plan: MutationPlanSchema) -> AuthoringApply
                 _assert_parent_current(root, relative.normalized.parent, item.parent_descriptor)
             if action.kind is ActionKind.REMOVE:
                 parent_descriptor = _open_parent(
+                    root,
                     root_descriptor,
                     relative.normalized.parent,
                     [],
@@ -694,17 +682,43 @@ def _assert_parent_current(
     parent: PurePosixPath,
     descriptor: int,
 ) -> None:
+    """Fail unless the declared parent path still names the staged directory.
+
+    The comparison re-walks the path with the containment rules rather than
+    stat-ing `repo / parent`: a path stat would either follow an ancestor
+    symlink the walk has not verified, or — with `follow_symlinks=False` —
+    compare the staged directory against a link node and report every
+    symlinked-but-legitimate parent as changed (issue #179).
+    """
+
+    def failure() -> _ApplyFailure:
+        return _ApplyFailure("CP-PRECONDITION", "target parent changed after staging")
+
+    try:
+        root = repo.resolve(strict=True)
+        root_descriptor = os.open(
+            root,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+        )
+    except OSError as exc:
+        raise failure() from exc
+    try:
+        current_descriptor = open_contained_directory(root_descriptor, root, parent)
+    except (ContainmentError, OSError) as exc:
+        raise failure() from exc
+    finally:
+        os.close(root_descriptor)
+    if current_descriptor is None:
+        raise failure()
     try:
         opened = os.fstat(descriptor)
-        current = (repo / parent).stat(follow_symlinks=False)
+        current = os.fstat(current_descriptor)
     except OSError as exc:
-        raise _ApplyFailure("CP-PRECONDITION", "target parent changed after staging") from exc
-    if (
-        not stat.S_ISDIR(current.st_mode)
-        or opened.st_dev != current.st_dev
-        or opened.st_ino != current.st_ino
-    ):
-        raise _ApplyFailure("CP-PRECONDITION", "target parent changed after staging")
+        raise failure() from exc
+    finally:
+        os.close(current_descriptor)
+    if opened.st_dev != current.st_dev or opened.st_ino != current.st_ino:
+        raise failure()
 
 
 def _publish_targets(
@@ -712,6 +726,7 @@ def _publish_targets(
     plan: ReconciliationPlan,
     staged: dict[str, _StagedTarget],
     applied: list[str],
+    root: Path,
     root_descriptor: int,
 ) -> None:
     for action in plan.actions:
@@ -729,6 +744,7 @@ def _publish_targets(
         relative = SafeRelativePath.parse(action.target)
         if action.kind is ActionKind.REMOVE:
             parent = _open_parent(
+                root,
                 root_descriptor,
                 relative.normalized.parent,
                 [],
@@ -1001,13 +1017,14 @@ def _apply_locked(
             staged = _stage_targets(
                 request,
                 plan,
+                root,
                 root_descriptor,
                 created,
                 staging_descriptor=(
                     control.descriptor if refresh is not None and refresh.changed else None
                 ),
             )
-            _publish_targets(request, plan, staged, applied, root_descriptor)
+            _publish_targets(request, plan, staged, applied, root, root_descriptor)
             verification_findings = _verify(request, plan)
             if lock_temporary is not None:
                 _fault(request, "lock", ".standards/lock.toml")
@@ -1282,6 +1299,7 @@ def _publish_control_file(
 def _remove_legacy(
     request: ApplyRequest,
     plan: LegacyMigrationPlan,
+    root: Path,
     root_descriptor: int,
     applied: list[str],
 ) -> None:
@@ -1294,7 +1312,7 @@ def _remove_legacy(
             continue
         if snapshot.content_digest != expected.get(action.target):
             raise _ApplyFailure("CP-PRECONDITION", "legacy state changed during apply")
-        parent = _open_parent(root_descriptor, relative.normalized.parent, [])
+        parent = _open_parent(root, root_descriptor, relative.normalized.parent, [])
         try:
             os.unlink(relative.normalized.name, dir_fd=parent)
             os.fsync(parent)
@@ -1308,7 +1326,7 @@ def _remove_legacy(
         directory = _RECOGNIZED_EMPTY_LEGACY_DIRECTORIES.get(action.target)
         if directory is None:
             continue
-        parent = _open_parent(root_descriptor, directory.parent, [])
+        parent = _open_parent(root, root_descriptor, directory.parent, [])
         descriptor: int | None = None
         try:
             try:
@@ -1430,6 +1448,7 @@ def apply_legacy_migration(
             staged = _stage_targets(
                 request,
                 remaining,
+                root,
                 root_descriptor,
                 created,
             )
@@ -1465,6 +1484,7 @@ def apply_legacy_migration(
                 remaining,
                 staged,
                 applied,
+                root,
                 root_descriptor,
             )
             published = published or bool(applied)
@@ -1498,7 +1518,7 @@ def apply_legacy_migration(
                 applied.append(".standards/lock.toml")
                 _fault(request, "published", ".standards/lock.toml")
 
-            _remove_legacy(request, plan, root_descriptor, applied)
+            _remove_legacy(request, plan, root, root_descriptor, applied)
             return ApplyResult(
                 True,
                 tuple(applied),

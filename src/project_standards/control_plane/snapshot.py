@@ -10,6 +10,11 @@ from enum import StrEnum
 from pathlib import Path, PurePosixPath
 
 from project_standards.control_plane.codec import content_digest
+from project_standards.control_plane.containment import (
+    ContainmentError,
+    ContainmentFailure,
+    open_contained_directory,
+)
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.package_contract.paths import (
     SafeRelativePath,
@@ -71,42 +76,51 @@ def safe_repository_root(repo: Path) -> Path:
         raise ControlPlaneError("repository root could not be resolved") from exc
 
 
-def _preflight_ancestors(root: Path, targets: tuple[SafeRelativePath, ...]) -> None:
+# A tracked symlink whose destination stays inside the checkout is ordinary
+# repository content, not an attack: rejecting it outright made `reconcile`
+# unusable on such repositories (issue #179). Only an escape, a non-directory
+# component, a link cycle, or an uninspectable component still fails.
+_ANCESTOR_MESSAGES = {
+    # The wording keeps the word "symlink": an escape can only arise through a
+    # link, and CLI surfaces that wrap this message are asserted on it.
+    ContainmentFailure.ESCAPE: "snapshot target has a symlink ancestor escaping the repository",
+    ContainmentFailure.NOT_DIRECTORY: "snapshot target has a non-directory ancestor",
+    ContainmentFailure.LOOP: "snapshot target has a cyclic symlink ancestor",
+    ContainmentFailure.UNSAFE: "snapshot target ancestor could not be inspected safely",
+}
+
+
+def _ancestor_error(exc: ContainmentError) -> ControlPlaneError:
+    return ControlPlaneError(_ANCESTOR_MESSAGES[exc.reason])
+
+
+def _preflight_ancestors(
+    root: Path,
+    root_descriptor: int,
+    targets: tuple[SafeRelativePath, ...],
+) -> None:
+    """Prove every declared target's ancestry is contained before reading bytes."""
     for target in targets:
-        current = root
-        for part in target.normalized.parts[:-1]:
-            current /= part
-            try:
-                metadata = current.lstat()
-            except FileNotFoundError:
-                break
-            except OSError as exc:
-                raise ControlPlaneError("snapshot ancestor could not be inspected") from exc
-            if stat.S_ISLNK(metadata.st_mode):
-                raise ControlPlaneError("snapshot target has a symlink ancestor")
-            if not stat.S_ISDIR(metadata.st_mode):
-                raise ControlPlaneError("snapshot target has a non-directory ancestor")
-
-
-def _parent_descriptor(root_descriptor: int, parent: PurePosixPath) -> int | None:
-    descriptor = os.dup(root_descriptor)
-    try:
-        for part in parent.parts:
-            try:
-                child = os.open(
-                    part,
-                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
-                    dir_fd=descriptor,
-                )
-            except FileNotFoundError:
-                os.close(descriptor)
-                return None
+        try:
+            descriptor = open_contained_directory(
+                root_descriptor,
+                root,
+                target.normalized.parent,
+            )
+        except ContainmentError as exc:
+            raise _ancestor_error(exc) from exc
+        if descriptor is not None:
             os.close(descriptor)
-            descriptor = child
-        return descriptor
-    except OSError as exc:
-        os.close(descriptor)
-        raise ControlPlaneError("snapshot target ancestor changed during capture") from exc
+
+
+def _parent_descriptor(root: Path, root_descriptor: int, parent: PurePosixPath) -> int | None:
+    try:
+        return open_contained_directory(root_descriptor, root, parent)
+    except ContainmentError as exc:
+        # The preflight already accepted this ancestry, so reaching here means
+        # the tree changed underneath the capture; report the containment reason
+        # rather than a generic race message so the cause stays legible.
+        raise _ancestor_error(exc) from exc
 
 
 def _mode(metadata: os.stat_result) -> str:
@@ -218,10 +232,11 @@ def _directory_entry(
 
 
 def _read_entry(
+    root: Path,
     root_descriptor: int,
     path: SafeRelativePath,
 ) -> SnapshotEntry:
-    parent_descriptor = _parent_descriptor(root_descriptor, path.normalized.parent)
+    parent_descriptor = _parent_descriptor(root, root_descriptor, path.normalized.parent)
     if parent_descriptor is None:
         return SnapshotEntry(
             path,
@@ -297,16 +312,16 @@ class RepositorySnapshot:
         except ValueError as exc:
             raise ControlPlaneError("snapshot target collection contains a collision") from exc
         ordered = tuple(sorted(normalized, key=lambda item: item.original.encode("utf-8")))
-        # Preflight every ancestor before the first content read: otherwise an
-        # escape discovered late could leave earlier provider inputs observable.
-        _preflight_ancestors(root, ordered)
         flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
         try:
             root_descriptor = os.open(root, flags)
         except OSError as exc:
             raise ControlPlaneError("repository root could not be opened safely") from exc
         try:
-            entries = tuple(_read_entry(root_descriptor, target) for target in ordered)
+            # Preflight every ancestor before the first content read: otherwise an
+            # escape discovered late could leave earlier provider inputs observable.
+            _preflight_ancestors(root, root_descriptor, ordered)
+            entries = tuple(_read_entry(root, root_descriptor, target) for target in ordered)
         finally:
             os.close(root_descriptor)
         return cls(root, ordered, entries)

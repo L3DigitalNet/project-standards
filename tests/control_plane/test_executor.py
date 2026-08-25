@@ -390,11 +390,12 @@ def test_failure_returns_exact_published_prefix_and_preserves_previous_lock(
     parent_descriptors: list[int] = []
 
     def tracked_open_parent(
+        root: Path,
         root_descriptor: int,
         parent: PurePosixPath,
         created: list[PurePosixPath],
     ) -> int:
-        descriptor = original_open_parent(root_descriptor, parent, created)
+        descriptor = original_open_parent(root, root_descriptor, parent, created)
         parent_descriptors.append(descriptor)
         return descriptor
 
