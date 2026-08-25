@@ -17,7 +17,7 @@ Read 2026-08-06T12:00:00Z · 4 open issues · 3 open PRs
 | #12 | Bug | Ledger write leaves a partial file | Blocked | P0 — Immediate | S1 — High | Interactive agent |
 | #14 | Feature | Add ledger TOC anchors | Needs definition | P2 — Planned | M | Unattended agent |
 | #15 | Task | Escape titles with \| pipes, \*stars\*, \<angles\> and `https://example.test/x` | Done | P3 — Opportunistic | S | Human only |
-| #16 | Initiative | Ship the github-workflow package | In progress | P1 — Next | — | — |
+| #16 | Initiative | Support runner_labels for python_tooling check.yml | In progress | P1 — Next | — | — |
 
 ## Pull requests
 

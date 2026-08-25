@@ -71,7 +71,10 @@ const (
 			{"issue_field_name":"Change risk","data_type":"single_select","value":"R1 — Low","single_select_option":{"name":"R1 — Low"}},
 			{"issue_field_name":"Execution mode","data_type":"single_select","value":"Human only","single_select_option":{"name":"Human only"}}]}`
 
-	issue16 = `{"number":16,"title":"Ship the github-workflow package",
+	// Title matches fixture_test.go's issue16 exactly — the wire fixture and the model
+	// fixture must agree on the one title that pins the ledger golden's bare-underscore
+	// row (#177).
+	issue16 = `{"number":16,"title":"Support runner_labels for python_tooling check.yml",
 		"html_url":"https://github.com/L3DigitalNet/example-repo/issues/16",
 		"state":"open","state_reason":null,
 		"body":"## Acceptance criteria\n\n- The package ships.\n",

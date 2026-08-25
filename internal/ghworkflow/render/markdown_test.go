@@ -87,10 +87,24 @@ func TestEscapeTextEscapesOnlyUnderscoresPrettierKeeps(t *testing.T) {
 		// touch escapes at all.
 		{"underscore inside a URL is untouched", "see https://example.test/a_b", "see `https://example.test/a_b`"},
 		{"pipe escaping is unaffected", "a_b | c", `a_b \| c`},
+		// isWordEdge treats any non-ASCII letter as a word character (it is neither
+		// whitespace nor in prettierPunctuation), so an underscore between two
+		// non-ASCII letters is intraword exactly like the ASCII case.
+		{"non-ascii word edges stay bare (latin)", "é_b", "é_b"},
+		{"non-ascii word edges stay bare (cyrillic)", "д_я", "д_я"},
+		{"non-ascii word edges stay bare (greek)", "α_β", "α_β"},
+		// A backslash the operator typed is itself escaped by markdownEscapes, and a
+		// trailing one leaves nothing after it for the underscore rule to see — that is
+		// still a word edge (isWordEdge treats decode-found-nothing as an edge).
+		{"trailing backslash escapes", `a\`, `a\\`},
+		{"escaped underscore beside a literal backslash", `a\_b`, `a\\\_b`},
 	} {
-		if got := render.EscapeText(tc.in); got != tc.want {
-			t.Errorf("%s: EscapeText(%q) = %q, want %q", tc.name, tc.in, got, tc.want)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := render.EscapeText(tc.in); got != tc.want {
+				t.Errorf("EscapeText(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
 	}
 }
 
@@ -117,4 +131,47 @@ func TestTableKeepsPipeEscapedAroundBareUnderscores(t *testing.T) {
 	if visible := strings.ReplaceAll(strings.TrimSpace(strings.Trim(row, "|")), `\`, ""); visible != title {
 		t.Errorf("rendered cell = %q, want the title's own characters %q", visible, title)
 	}
+}
+
+// TestEscapeTextBackslashTitlesRecoverOneStripPerEscape pins the visible-content
+// invariant (#177) on the one input class strings.ReplaceAll(s, `\`, "") cannot check: a
+// title that itself contains an operator-typed backslash. EscapeText escapes that
+// backslash too (markdownEscapes doubles it), so recovering the original needs removing
+// exactly one backslash per inserted escape, not every backslash in the output.
+func TestEscapeTextBackslashTitlesRecoverOneStripPerEscape(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name string
+		in   string
+	}{
+		{"title ending in a backslash", `a\`},
+		{"title containing an escaped underscore beside a backslash", `a\_b`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			escaped := render.EscapeText(tc.in)
+			if recovered := stripOneBackslashPerEscape(escaped); recovered != tc.in {
+				t.Errorf("stripping one backslash per escape from %q = %q, want the input %q", escaped, recovered, tc.in)
+			}
+		})
+	}
+}
+
+// stripOneBackslashPerEscape removes exactly the backslash EscapeText inserts before each
+// escaped character, leaving any backslash the operator typed (which EscapeText doubled
+// to `\\`) reduced back to one. It is a reimplementation deliberately independent of
+// escapeSegment, so the test does not validate EscapeText against its own logic. It only
+// holds for output with no code span (the URL case wraps in backticks instead of
+// escaping, which this helper does not undo).
+func stripOneBackslashPerEscape(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+1 < len(s) {
+			i++
+		}
+		b.WriteByte(s[i])
+	}
+	return b.String()
 }

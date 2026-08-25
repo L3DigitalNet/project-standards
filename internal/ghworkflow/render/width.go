@@ -33,6 +33,7 @@ import (
 // Emoji-sequence joiners and continuation ranges, named because their numeric values
 // appear in several places in the scanner below.
 const (
+	variationSelector1  = 0xFE00 // first of the (non-emoji) text/variation selectors Prettier still skips
 	variationSelector16 = 0xFE0F // emoji presentation selector
 	zeroWidthJoiner     = 0x200D
 	combiningKeycap     = 0x20E3
@@ -57,7 +58,7 @@ func displayWidth(s string) int {
 	// Prettier's own shortcut, reproduced exactly rather than loosened to "no rune above
 	// 0x7F": a control character such as TAB falls outside 0x20-0x7F and so takes the
 	// slow path, where the control-character rule below gives it width 0.
-	if isPrettierAscii(s) {
+	if isPrettierASCII(s) {
 		return len(s)
 	}
 
@@ -74,7 +75,7 @@ func displayWidth(s string) int {
 		switch {
 		case r <= 0x1F, r >= 0x7F && r <= 0x9F: // control characters
 		case r >= 0x300 && r <= 0x36F: // combining marks — this range only
-		case r >= 0xFE00 && r <= 0xFE0F: // variation selectors
+		case r >= variationSelector1 && r <= variationSelector16: // variation selectors
 		case inRanges(eastAsianWideRanges, r):
 			width += 2
 		default:
@@ -84,9 +85,9 @@ func displayWidth(s string) int {
 	return width
 }
 
-// isPrettierAscii reports whether every code point of s lies in 0x20-0x7F, the condition
+// isPrettierASCII reports whether every code point of s lies in 0x20-0x7F, the condition
 // under which Prettier returns the string's length untouched.
-func isPrettierAscii(s string) bool {
+func isPrettierASCII(s string) bool {
 	return !strings.ContainsFunc(s, func(r rune) bool { return r < 0x20 || r > 0x7F })
 }
 

@@ -55,9 +55,12 @@ func TestDisplayWidthMatchesPrettierOnSpecExamples(t *testing.T) {
 		{"combining acute is skipped", "á", 1},
 		{"hebrew point is not skipped", "אַ", 2},
 	} {
-		if got := displayWidth(tc.in); got != tc.want {
-			t.Errorf("%s: displayWidth(%q) = %d, want %d", tc.name, tc.in, got, tc.want)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := displayWidth(tc.in); got != tc.want {
+				t.Errorf("displayWidth(%q) = %d, want %d", tc.in, got, tc.want)
+			}
+		})
 	}
 }
 

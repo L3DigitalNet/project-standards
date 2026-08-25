@@ -71,8 +71,8 @@ func writeRow(b *strings.Builder, cells []string, widths []int) {
 	for i, cell := range cells {
 		b.WriteString(" ")
 		b.WriteString(cell)
-		if i < len(widths) && widths[i] > displayWidth(cell) {
-			b.WriteString(strings.Repeat(" ", widths[i]-displayWidth(cell)))
+		if cellWidth := displayWidth(cell); i < len(widths) && widths[i] > cellWidth {
+			b.WriteString(strings.Repeat(" ", widths[i]-cellWidth))
 		}
 		b.WriteString(" |")
 	}
@@ -162,9 +162,13 @@ func isWordEdge(r rune, size int) bool {
 // escapeSegment escapes one stretch of plain text: markdownEscapes for the unconditional
 // metacharacters, and the Prettier-compatible rule above for underscore runs.
 //
-// The underscore decision reads the ORIGINAL neighbors, so it happens in the same pass
-// rather than as a second replace over already-escaped output — after escaping, every
-// neighbor of an underscore run could be a backslash the source never contained.
+// The underscore decision reads the ORIGINAL neighbors in the same left-to-right pass,
+// rather than as a second replace over already-escaped output: a run's neighbor is
+// classified once, against the operator's actual text, instead of against an
+// intermediate form. A second-pass version would still agree — an inserted backslash is
+// itself punctuation, so isWordEdge classifies it the same way the original character
+// would have been classified — but reading the source directly is the simpler of the two
+// equivalent designs.
 func escapeSegment(segment string) string {
 	var b strings.Builder
 	for i := 0; i < len(segment); {

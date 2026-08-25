@@ -99,7 +99,10 @@ func fixtureSnapshot(t *testing.T) *render.Snapshot {
 		},
 		{
 			Kind: render.KindIssue, Number: 16,
-			Title: "Ship the github-workflow package",
+			// Underscore-bearing on purpose: the ledger golden this fixture drives has to
+			// carry a bare intraword underscore (#177) — a plain title would let a
+			// regression that escapes every underscore pass unnoticed.
+			Title: "Support runner_labels for python_tooling check.yml",
 			URL:   "https://github.com/L3DigitalNet/example-repo/issues/16",
 			Type:  "Initiative", State: "open",
 			HasAcceptanceCriteria: true,
