@@ -116,7 +116,7 @@ def test_agent_handoff_1_13__skill_artifacts__install_both_trees_from_one_source
     assert "skills/agent-handoff/SKILL.md" in inventory
 
 
-def test_agent_handoff_1_13__identity__is_complete_and_current() -> None:
+def test_agent_handoff_1_13__identity__is_complete_and_retained() -> None:
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     integrity = validate_payload_integrity(_SUCCESSOR, manifest)
     family = load_family_manifest(_FAMILY / "standard.toml")
@@ -133,10 +133,9 @@ def test_agent_handoff_1_13__identity__is_complete_and_current() -> None:
         if package["id"] == "agent-handoff"
     }
     assert roles["1.12"] == "retained"
-    assert roles["1.13"] == "default"
-    assert "| [`agent-handoff`](agent-handoff/README.md) | active | 1.13 | default |" in (
-        _ROOT / "standards/catalog.md"
-    ).read_text(encoding="utf-8")
+    # Superseded by 1.14 but still advertised: withdrawing an advertised package is a
+    # catalog-major transition (ADR 0024), so the entry stays and only the role moves.
+    assert roles["1.13"] == "retained"
 
 
 def test_agent_handoff_1_13__payload_projection__matches_successor() -> None:

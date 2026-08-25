@@ -105,7 +105,8 @@ def test_agent_handoff_1_12__identity__is_complete_and_retained() -> None:
     }
     assert roles["1.11"] == "retained"
     assert roles["1.12"] == "retained"
-    assert roles["1.13"] == "default"
+    assert roles["1.13"] == "retained"
+    assert roles["1.14"] == "default"
     assert "| [`agent-handoff`](agent-handoff/README.md) | active | 1.12 | retained |" in (
         _ROOT / "standards/catalog.md"
     ).read_text(encoding="utf-8")
@@ -149,9 +150,9 @@ def test_agent_handoff_1_12__launcher_and_projection__preserve_package_bytes() -
 
 def test_agent_handoff_1_12__mutable_navigation__names_the_new_authority() -> None:
     expected_links = {
-        _FAMILY / "README.md": "versions/1.13/README.md",
-        _FAMILY / "adopt.md": "versions/1.13/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.13/agent-summary.md",
+        _FAMILY / "README.md": "versions/1.14/README.md",
+        _FAMILY / "adopt.md": "versions/1.14/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.14/agent-summary.md",
     }
     for path, expected_link in expected_links.items():
         content = path.read_text(encoding="utf-8")

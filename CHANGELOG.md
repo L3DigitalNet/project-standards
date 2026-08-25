@@ -37,6 +37,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added
+
+- **Agent Handoff 1.14 makes closeout cheap to perform correctly** ([#184](https://github.com/L3DigitalNet/project-standards/issues/184)). The packaged skill now states the numeric per-document caps it previously left implicit — so an agent writes to them instead of discovering them by failing validation — marks them as physical characters and bytes rather than visually wrapped lines, opens closeout with a `delta` survey of the session instead of ad-hoc Git and text reconstruction, runs closeout validation scoped to the session boundary, and makes closeout delegable to a harness-provided subagent by default. The caps table is pinned to the payload's own `resources/policy.toml` by a package-contract test, so prose and policy cannot drift. Payload prose only: no option, policy value, template, hook, provider, contribution, or artifact target changes. This release promotes 1.14 and retains 1.13 for exact selection.
+- **`agent-handoff validate --since <ref>` and `agent-handoff delta --since <ref>`** ([#184](https://github.com/L3DigitalNet/project-standards/issues/184)). _Placeholder — the validator leg finalizes this entry._
+
 ## [5.20.0] — 2026-08-15
 
 ### Added
