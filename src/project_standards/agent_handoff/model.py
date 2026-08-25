@@ -106,6 +106,23 @@ class Finding:
         return result
 
 
+@dataclass(frozen=True)
+class Baseline:
+    """What a `--since` baseline resolved to, and how much it suppressed.
+
+    Present on a report only when the caller asked for baseline scoping, so a
+    report produced without `--since` is byte-identical to one from before the
+    option existed.
+    """
+
+    ref: str
+    resolved: str
+    suppressed: int
+
+    def to_dict(self) -> dict[str, object]:
+        return {"ref": self.ref, "resolved": self.resolved, "suppressed": self.suppressed}
+
+
 class ChangeKind(StrEnum):
     CREATE = "create"
     UPDATE = "update"
@@ -181,8 +198,23 @@ class _ReportSummary(BaseModel):
     warnings: int = Field(ge=0)
 
 
+class _ReportBaseline(BaseModel):
+    """Closed serialized `--since` summary for the current report envelope."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    ref: str
+    resolved: str
+    suppressed: int = Field(ge=0)
+
+
 class OperationReportEnvelope(BaseModel):
-    """Closed Agent Handoff report schema recognized by current consumers."""
+    """Closed Agent Handoff report schema recognized by current consumers.
+
+    `baseline` is optional and omitted entirely (exclude_none on dump) unless
+    the caller passed `--since`, so the 1.1 shape every existing consumer parses
+    is unchanged: no key appears that a 1.1 reader has not already seen.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -192,6 +224,7 @@ class OperationReportEnvelope(BaseModel):
     changes: list[_ReportChange]
     findings: list[_ReportFinding]
     summary: _ReportSummary
+    baseline: _ReportBaseline | None = None
 
 
 @dataclass(frozen=True)
@@ -200,6 +233,7 @@ class OperationReport:
     standard_version: str
     changes: tuple[PlannedChange, ...] = ()
     findings: tuple[Finding, ...] = ()
+    baseline: Baseline | None = None
     schema_version: Literal["1.1"] = field(default="1.1", init=False)
 
     @property
@@ -227,6 +261,7 @@ class OperationReport:
                     "updated": sum(change.kind is ChangeKind.UPDATE for change in changes),
                     "warnings": sum(finding.severity == "warning" for finding in findings),
                 },
+                "baseline": self.baseline.to_dict() if self.baseline is not None else None,
             }
         )
         return envelope.model_dump(mode="json", exclude_none=True)
@@ -256,6 +291,14 @@ def emit_report(report: OperationReport, *, as_json: bool) -> int:
             suffix = f" ({'; '.join(details)})" if details else ""
             print(
                 f"{finding.severity}: {location}: {finding.message}{suffix}",
+                file=sys.stderr,
+            )
+        if report.baseline is not None:
+            # Trails the findings on the diagnostic stream so a caller reading a
+            # short filtered list still sees how much was withheld from it.
+            print(
+                f"baseline {report.baseline.ref}: "
+                f"{report.baseline.suppressed} pre-existing warning(s) suppressed",
                 file=sys.stderr,
             )
     return 1 if report.blocked else 0

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import NoReturn, cast
 
 from project_standards.adopt.errors import AdoptError
+from project_standards.agent_handoff.delta import collect_delta, format_delta
 from project_standards.agent_handoff.integrations.links import (
     _normalized_link_occurrences,  # pyright: ignore[reportPrivateUsage]  # predecessor enrichment
 )
@@ -24,6 +25,7 @@ from project_standards.agent_handoff.launcher import (
 )
 from project_standards.agent_handoff.legacy import legacy_report
 from project_standards.agent_handoff.model import (
+    Baseline,
     ChangeKind,
     Finding,
     OperationReport,
@@ -32,6 +34,7 @@ from project_standards.agent_handoff.model import (
 )
 from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
 from project_standards.agent_handoff.policy import check_document, load_policy
+from project_standards.agent_handoff.since import BaselineError, suppress_pre_existing_warnings
 from project_standards.agent_handoff.validation import (
     _reference_text,  # pyright: ignore[reportPrivateUsage]  # predecessor enrichment
 )
@@ -65,7 +68,9 @@ from project_standards.package_contract.payload import (
 from project_standards.provider_runner import run_packaged_providers
 from project_standards.standard_manifest import ProviderOperation as LegacyProviderOperation
 
-_COMMANDS: dict[str, tuple[LegacyProviderOperation, tuple[str, ...], str]] = {
+# A None operation marks an engine-local command: it answers from repository
+# Git state alone, so it neither selects a package nor dispatches a provider.
+_COMMANDS: dict[str, tuple[LegacyProviderOperation | None, tuple[str, ...], str]] = {
     "validate": (LegacyProviderOperation.VALIDATE, (), "validate full repository conformance"),
     "size-report": (
         LegacyProviderOperation.VALIDATE,
@@ -91,6 +96,11 @@ _COMMANDS: dict[str, tuple[LegacyProviderOperation, tuple[str, ...], str]] = {
         LegacyProviderOperation.UPGRADE,
         (),
         "refresh clean standard-owned artifacts",
+    ),
+    "delta": (
+        None,
+        (),
+        "report commits, paths, and issues since a baseline ref",
     ),
 }
 
@@ -121,6 +131,7 @@ class _V2Args:
     json: bool
     dry_run: bool
     view: str
+    since: str | None = None
 
 
 def _group_argument_parser() -> argparse.ArgumentParser:
@@ -164,6 +175,11 @@ def _v2_argument_parser(
     parser.add_argument("--json", action="store_true")
     if command == "validate":
         parser.add_argument("--view", choices=("full", "size", "shape"), default="full")
+    if operation is V2ProviderOperation.VALIDATE:
+        # Every validate view — including the size-report and shape-check
+        # aliases — accepts the baseline, so one closeout invocation shape works
+        # whichever view the caller reaches for.
+        parser.add_argument("--since", metavar="REF", default=None)
     if operation is V2ProviderOperation.UPGRADE:
         parser.add_argument("--dry-run", action="store_true")
     return parser
@@ -183,19 +199,51 @@ def _parse_v2(
         parsed.json,
         bool(getattr(parsed, "dry_run", False)),
         fixed_view or cast(str, getattr(parsed, "view", "full")),
+        cast("str | None", getattr(parsed, "since", None)),
     )
+
+
+def _delta_argument_parser() -> _Parser:
+    parser = _Parser(prog="project-standards agent-handoff delta")
+    parser.add_argument("--repo", type=Path, default=Path.cwd())
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--since", metavar="REF", required=True)
+    return parser
+
+
+def _run_delta(argv: list[str]) -> int:
+    """Report the session delta from Git alone, without selecting a package.
+
+    Deliberately outside the selected-package route: the delta describes the
+    repository's own history, so it must answer in a repository that has not
+    adopted — or cannot currently resolve — an Agent Handoff package.
+    """
+    try:
+        parsed = _delta_argument_parser().parse_args(argv)
+        repository = RepositoryRoot.from_input(cast(Path, parsed.repo))
+        delta = collect_delta(repository, cast(str, parsed.since))
+    except (_ArgumentError, BaselineError, RepositoryBoundaryError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    except (OSError, RuntimeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 3
+    sys.stdout.write(delta.to_json() if parsed.json else format_delta(delta))
+    return 0
 
 
 def _report(
     selected: SelectedCommandPackage,
     findings: tuple[Finding, ...] = (),
     changes: tuple[PlannedChange, ...] = (),
+    baseline: Baseline | None = None,
 ) -> OperationReport:
     return OperationReport(
         repository=str(selected.repo),
         standard_version=selected.resolved.value,
         findings=findings,
         changes=changes,
+        baseline=baseline,
     )
 
 
@@ -555,7 +603,14 @@ def _run_read_command(
         findings = tuple(item for item in findings if item.code.startswith("AH-SIZE"))
     elif view == "shape":
         findings = tuple(item for item in findings if item.code.startswith("AH-SHAPE"))
-    return emit_report(_report(selected, findings), as_json=args.json)
+    baseline: Baseline | None = None
+    if args.since is not None:
+        # Applied after the view filter so the reported suppression count
+        # describes this report rather than the unfiltered superset.
+        findings, baseline = suppress_pre_existing_warnings(
+            RepositoryRoot.from_input(selected.repo), args.since, findings
+        )
+    return emit_report(_report(selected, findings, baseline=baseline), as_json=args.json)
 
 
 def _upgrade_plan(
@@ -696,6 +751,8 @@ def run(
         return 2
     operation, prefix, _help_text = mapped
     command_args = args[1:]
+    if operation is None:
+        return _run_delta(command_args)
     fixed_view = _FIXED_VIEWS.get(command)
     v2_operation = V2ProviderOperation(operation.value)
     if "--help" in command_args or "-h" in command_args:
@@ -733,6 +790,19 @@ def run(
             unselected_inventory=operation is LegacyProviderOperation.EXTRACT,
         ) as selected:
             if selected is None:
+                if any(
+                    argument == "--since" or argument.startswith("--since=")
+                    for argument in command_args
+                ):
+                    # Fail closed rather than forwarding: the V1 fallback provider
+                    # knows nothing of baselines, so the report would silently
+                    # cover the whole history the caller asked to exclude.
+                    print(
+                        "error: --since requires a selected Agent Handoff package; "
+                        "this repository is using the V1 provider fallback",
+                        file=sys.stderr,
+                    )
+                    return 2
                 return _run_provider(operation, provider_args)
             return _run_selected(
                 selected,
@@ -741,7 +811,12 @@ def run(
                 command_args,
                 fixed_view=fixed_view,
             )
-    except (_ArgumentError, CommandConfigurationError, RepositoryBoundaryError) as exc:
+    except (
+        _ArgumentError,
+        BaselineError,
+        CommandConfigurationError,
+        RepositoryBoundaryError,
+    ) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     except (CommandResolutionError, OSError, RuntimeError) as exc:
