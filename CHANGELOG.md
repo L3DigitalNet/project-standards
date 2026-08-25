@@ -43,6 +43,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - `project-standards agent-handoff validate --since <ref>` scopes advisory output to the current session: a warning is kept only when its line lies inside a hunk added relative to `<ref>`. The `size` and `shape` views honour it too. Errors and document-level findings (hard byte cap, missing section) are never suppressed, and an unresolvable ref or Git failure exits `2` rather than silently reporting everything. Human output gains a `baseline <ref>: N pre-existing warning(s) suppressed` line; JSON gains an optional `baseline` object that is absent without the flag, leaving the 1.1 report shape unchanged ([#184](https://github.com/L3DigitalNet/project-standards/issues/184)).
 - `project-standards agent-handoff delta --since <ref> [--repo <dir>] [--json]` reports the session delta for closeout — commits in `<ref>..HEAD`, changed paths grouped as handoff documents, other docs, and code/other, deduplicated `#NNN` and `owner/repo#NNN` references from commit messages, and the uncommitted working-tree remainder. An empty delta exits `0`; a bad ref exits `2` ([#184](https://github.com/L3DigitalNet/project-standards/issues/184)).
 
+### Fixed
+
+- **Standard Bundle Authoring 2.7 documents the same-path-same-digest declaration allowance** ([#173](https://github.com/L3DigitalNet/project-standards/issues/173)). Released 2.6's README stated the older, stricter rule ("duplicate canonical paths are invalid") that #170 and #176 (v5.20.0/v5.21.0) already relaxed in the engine: a payload path may be declared at more than one target only when every declaration pins the same digest, disagreeing digests for one path still fail, and `payload.toml` self-declaration remains rejected. 2.7 is a byte copy of 2.6 with only the declaration-rule prose in `README.md` and `agent-summary.md` corrected to match; the released 2.6 payload is untouched, 2.6 stays advertised as history, and 2.7 becomes the family's active internal authority.
+
 ## [5.21.0] — 2026-08-16
 
 ### Added

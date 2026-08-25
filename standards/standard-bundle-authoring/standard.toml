@@ -40,3 +40,8 @@ digest = "sha256:3eb5d86979755372bbe851b06b82235410378cba71c6f1b9dbc7c49557623c4
 version = "2.6"
 payload = "versions/2.6/payload.toml"
 digest = "sha256:28756752d9a4a7c50240f178fdbc72be7f3f04faa8f8af9eabe5b0ba7b94f9d5"
+
+[[versions]]
+version = "2.7"
+payload = "versions/2.7/payload.toml"
+digest = "sha256:68c01e7af871f1b15c7cc94227e05961511305f3a75d1456cdc066e009dc17eb"

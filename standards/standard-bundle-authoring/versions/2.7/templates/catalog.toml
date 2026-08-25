@@ -1,0 +1,9 @@
+# Add the entry to catalogs/<catalog-major>.toml after payload conformance passes.
+schema_version = "1.0"
+catalog_major = 5
+
+[[packages]]
+id = "example-standard"
+version = "1.0"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+role = "default" # default | retained | candidate | reference-only | internal

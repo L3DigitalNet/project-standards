@@ -1,0 +1,21 @@
+# Static contribution: declare and digest the source file in this payload.
+[[contributions]]
+id = "tool-table"
+target = "pyproject.toml"
+adapter = "toml"
+scope = "table:/tool/example"
+policy = "managed"
+# Closed list of options whose values feed this unit; [] means no option governs it.
+governing_options = []
+source = "resources/tool-example.toml"
+source_digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+# Provider-rendered contribution: provider output remains bounded to this scope.
+[[contributions]]
+id = "generated-setting"
+target = ".standards/generated.toml"
+adapter = "toml"
+scope = "key:/example/enabled"
+policy = "managed"
+governing_options = ["/example/enabled_option", "example_mode"]
+provider = "render-example"
