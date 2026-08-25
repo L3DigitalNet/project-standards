@@ -41,6 +41,17 @@ func TestDisplayWidthMatchesPrettierOnSpecExamples(t *testing.T) {
 		{"keycap without VS16", "1⃣", 2},
 		{"regional indicator flag", "\U0001F1FA\U0001F1F8", 2},
 		{"skin tone modifier", "\U0001F44D\U0001F3FD", 2},
+		// A skin tone attaches only to an Emoji_Modifier_Base, which "©" is not, so
+		// Prettier scores this as two independent emoji matches — the narrow copyright
+		// sign at 1 and the lone modifier at 2 — never as one modified emoji. The 3 is
+		// the Node oracle's answer from Prettier 3.9.6's own getStringWidth, confirmed
+		// against the padding the real formatter emits.
+		//
+		// A padding-based probe that reports 2 here has measured the cell in UTF-16
+		// units and the probe in code points (or graphemes), which loses one unit per
+		// surrogate pair and so misreads every astral code point. Count both sides in
+		// the same unit before concluding this row is wrong.
+		{"narrow base followed by a skin tone", "©\U0001F3FB", 3},
 		{"subdivision flag", "\U0001F3F4\U000E0067\U000E0062\U000E0073\U000E0063\U000E0074\U000E007F", 2},
 		// A digit is only an emoji as a keycap base, and a lone regional indicator is
 		// not an emoji match at all — both fall through to the per-code-point rule.

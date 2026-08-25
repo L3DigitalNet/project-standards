@@ -37,6 +37,7 @@
 2	1F3F4 E0067 E0062 E0073 E0063 E0074 E007F	subdivision flag tag sequence
 3	1F3F4 E0067	unterminated tag sequence
 2	1F44D 1F3FD	skin tone modifier
+3	00A9 1F3FB	narrow-list base followed by a skin tone (two separate emoji matches)
 2	1F9D1 200D 1F91D 200D 1F9D1	people holding hands ZWJ
 3	0061 007F 0062	delete character
 2	0061 0085 0062	C1 control
