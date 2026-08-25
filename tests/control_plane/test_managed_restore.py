@@ -552,3 +552,25 @@ def test_tc_t7_003_restore_evidence_redacts_consumer_content(tmp_path: Path) -> 
     assert digest(_CURRENT_SECRET) in evidence
     assert digest(_DESIRED_SECRET) in evidence
     assert all(secret not in evidence for secret in _FORBIDDEN_TEXT)
+
+
+def test_tc_t7_002_restore_applies_through_a_symlinked_ancestor(tmp_path: Path) -> None:
+    """Managed restore opens an existing parent, so it must tolerate a link too.
+
+    `_open_existing_parent` creates nothing, which is the whole point here: the
+    restore writes into the directory the consumer's link designates and leaves
+    the link itself alone (issues #179, #187).
+    """
+    fixture = _managed_fixture(tmp_path, current=None, target_name="link/sub/tool.txt")
+    (fixture.repo / "real/sub").mkdir(parents=True)
+    (fixture.repo / "link").symlink_to(Path("real"), target_is_directory=True)
+    (fixture.repo / "real/sub/tool.txt").write_bytes(_CURRENT_SECRET)
+
+    plan = _plan(fixture, target="link/sub/tool.txt")
+    result = apply_managed_restore(
+        ManagedRestoreApplyRequest(planner=fixture.planner, expected_plan=plan)
+    )
+
+    assert result.success
+    assert (fixture.repo / "real/sub/tool.txt").read_bytes() == _DESIRED_SECRET
+    assert (fixture.repo / "link").is_symlink()

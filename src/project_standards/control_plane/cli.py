@@ -269,6 +269,11 @@ def _emit_error(
     exit_code: int,
 ) -> int:
     message = str(error)
+    if isinstance(error, ControlPlaneError) and error.code is not None:
+        # A raiser that knows its own code outranks the command-level generic
+        # one: a containment-destination refusal must not be reported as plain
+        # CP-CONTROL-STATE just because it surfaced through a state read.
+        code = error.code
     if json_mode:
         payload: dict[str, object] = {"ok": False, "code": code, "error": message}
         if isinstance(error, ControlPlaneError):

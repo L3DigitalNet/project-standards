@@ -172,3 +172,22 @@ def test_authoring_executor_rejects_stale_plan_before_any_write(tmp_path: Path) 
     assert result.applied_targets == ()
     assert first.read_bytes() == b"first\n"
     assert stale.read_bytes() == b"concurrent edit\n"
+
+
+def test_authoring_apply_publishes_through_a_symlinked_ancestor(tmp_path: Path) -> None:
+    """Authoring shares the executor's contained walk, so #179's tolerance applies.
+
+    The replacement lands in the link's destination and the tracked link itself
+    is never touched — publishing must not turn a consumer's link into a file.
+    """
+    repo = tmp_path / "repo"
+    (repo / "real").mkdir(parents=True)
+    (repo / "real/doc.md").write_bytes(b"old\n")
+    (repo / "link").symlink_to(Path("real"), target_is_directory=True)
+    plan = _plan([_action(repo, "link/doc.md", b"new\n", kind="update")])
+
+    result = apply_authoring_plan(repo, plan)
+
+    assert result.success is True
+    assert (repo / "real/doc.md").read_bytes() == b"new\n"
+    assert (repo / "link").is_symlink()

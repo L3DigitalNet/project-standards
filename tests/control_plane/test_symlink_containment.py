@@ -8,16 +8,28 @@ both the read (snapshot) and the write (apply) path.
 
 from __future__ import annotations
 
-from pathlib import Path
+import os
+from dataclasses import replace
+from pathlib import Path, PurePosixPath
 
 import pytest
 
+import project_standards.control_plane.executor as executor
 from project_standards.control_plane.codec import render_lock
+from project_standards.control_plane.containment import CONTAINMENT_DESTINATION_CODE
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
-from project_standards.control_plane.planner import PlannerRequest, plan_reconciliation
-from project_standards.control_plane.snapshot import EntryKind, RepositorySnapshot
+from project_standards.control_plane.planner import (
+    PlannerRequest,
+    ReconciliationPlan,
+    plan_reconciliation,
+)
+from project_standards.control_plane.snapshot import (
+    EntryKind,
+    RepositorySnapshot,
+    resolved_target_paths,
+)
 from project_standards.package_contract.paths import SafeRelativePath
 from tests.control_plane.planner_helpers import resolution_request, write_payload
 
@@ -59,6 +71,31 @@ def _seed_control(repo: Path, request: PlannerRequest) -> None:
     control = repo / ".standards"
     control.mkdir(parents=True, exist_ok=True)
     (control / "lock.toml").write_bytes(render_lock(request.resolution.previous_lock))
+
+
+def _removal_fixture(tmp_path: Path) -> tuple[Path, PlannerRequest, ReconciliationPlan]:
+    """Reconcile the symlinked skill, then plan its removal by disabling the package."""
+    repo = _skill_repo(tmp_path)
+    payload = _skill_payload(tmp_path)
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    _seed_control(repo, request)
+    plan = plan_reconciliation(request)
+    assert apply_reconciliation(ApplyRequest(request, plan)).success
+
+    resolution = resolution_request((payload,), previous_lock=plan.next_lock)
+    disabled = resolution.desired.model_copy(
+        update={
+            "standards": {
+                "symlinked-skill": resolution.desired.standards["symlinked-skill"].model_copy(
+                    update={"enabled": False}
+                )
+            }
+        }
+    )
+    removal_request = PlannerRequest(repo, replace(resolution, desired=disabled), (payload,))
+    removal_plan = plan_reconciliation(removal_request)
+    assert removal_plan.applicable, removal_plan.findings
+    return repo, removal_request, removal_plan
 
 
 def test_snapshot_reads_a_target_beneath_an_inside_repository_symlink(tmp_path: Path) -> None:
@@ -339,3 +376,356 @@ def test_alias_detection_leaves_an_unaliased_repository_plan_unchanged(tmp_path:
     assert (repo / ".agents/skills/demo/SKILL.md").read_bytes() == b"# Skill\n"
     assert (repo / ".claude/skills/demo/SKILL.md").read_bytes() == b"# Skill\n"
     assert not (repo / ".claude/skills/demo").is_symlink()
+
+
+def _protected_repo(tmp_path: Path, destination: str) -> Path:
+    """Point the declared skill directory at a protected root inside the checkout."""
+    repo = tmp_path / "repo"
+    (repo / destination).mkdir(parents=True)
+    (repo / ".claude/skills").mkdir(parents=True)
+    (repo / ".claude/skills/demo").symlink_to(
+        Path("../..") / destination,
+        target_is_directory=True,
+    )
+    return repo
+
+
+@pytest.mark.parametrize("destination", [".git/hooks", ".standards/packages"])
+def test_snapshot_refuses_a_link_that_redirects_into_a_protected_root(
+    tmp_path: Path,
+    destination: str,
+) -> None:
+    """The read half of #187: containment inside the checkout is not enough.
+
+    A committed link on a declared target's parent path would otherwise make the
+    control plane read — and then plan a write — against Git's own state or the
+    control plane's authority under the declared spelling.
+    """
+    repo = _protected_repo(tmp_path, destination)
+
+    with pytest.raises(ControlPlaneError) as failure:
+        RepositorySnapshot.capture(repo, (_path(".claude/skills/demo/SKILL.md"),))
+
+    assert failure.value.code == CONTAINMENT_DESTINATION_CODE
+    # Both spellings are named, so the operator can find the offending link.
+    assert ".claude/skills/demo" in str(failure.value)
+    assert destination in str(failure.value)
+
+
+@pytest.mark.parametrize("destination", [".git/hooks", ".standards/packages"])
+def test_snapshot_resolution_refuses_a_protected_destination(
+    tmp_path: Path,
+    destination: str,
+) -> None:
+    """Alias resolution shares the walk, so it must refuse the same destination."""
+    repo = _protected_repo(tmp_path, destination)
+
+    with pytest.raises(ControlPlaneError) as failure:
+        resolved_target_paths(repo, (_path(".claude/skills/demo/SKILL.md"),))
+
+    assert failure.value.code == CONTAINMENT_DESTINATION_CODE
+
+
+@pytest.mark.parametrize("destination", [".git/hooks", ".standards/packages"])
+def test_apply_refuses_a_link_flipped_into_a_protected_root_before_staging(
+    tmp_path: Path,
+    destination: str,
+) -> None:
+    """The write half of #187, flipped inside the apply's own staging window.
+
+    Planning happens before the flip and re-planning happens under the lock, so
+    this is the narrowest path that reaches the executor's own destination
+    refusal rather than the read path's.
+    """
+    repo = _skill_repo(tmp_path)
+    (repo / destination).mkdir(parents=True)
+    payload = _skill_payload(tmp_path)
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    _seed_control(repo, request)
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+
+    def redirect(phase: str, identity: str) -> None:
+        if (phase, identity) != ("stage", ".claude/skills/demo/SKILL.md"):
+            return
+        (repo / ".claude/skills/demo").unlink()
+        (repo / ".claude/skills/demo").symlink_to(
+            Path("../..") / destination,
+            target_is_directory=True,
+        )
+
+    result = apply_reconciliation(ApplyRequest(request, plan, fault_hook=redirect))
+
+    assert not result.success
+    assert result.error_code == CONTAINMENT_DESTINATION_CODE
+    assert list((repo / destination).iterdir()) == []
+
+
+def test_apply_refuses_a_plan_replanned_onto_a_protected_destination(tmp_path: Path) -> None:
+    """A flip that lands before apply re-plans keeps the destination code too."""
+    repo = _skill_repo(tmp_path)
+    (repo / ".git/hooks").mkdir(parents=True)
+    payload = _skill_payload(tmp_path)
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    _seed_control(repo, request)
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+
+    (repo / ".claude/skills/demo").unlink()
+    (repo / ".claude/skills/demo").symlink_to(Path("../../.git/hooks"), target_is_directory=True)
+    result = apply_reconciliation(ApplyRequest(request, plan))
+
+    assert not result.success
+    assert result.error_code == CONTAINMENT_DESTINATION_CODE
+    assert list((repo / ".git/hooks").iterdir()) == []
+
+
+def test_a_declared_control_plane_target_is_not_treated_as_a_redirect(tmp_path: Path) -> None:
+    """The deny-list must not refuse a path the package itself declares.
+
+    `.standards/` is where the control plane's own package state lives, so a
+    destination that no link moved — physical equals declared — stays writable.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = write_payload(
+        tmp_path / "payload",
+        "control-state",
+        artifacts=[
+            {
+                "id": "state",
+                "target": ".standards/packages/control-state/state.txt",
+                "content": b"ok\n",
+            }
+        ],
+    )
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    _seed_control(repo, request)
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+
+    assert apply_reconciliation(ApplyRequest(request, plan)).success
+    assert (repo / ".standards/packages/control-state/state.txt").read_bytes() == b"ok\n"
+
+
+def test_apply_refuses_an_in_root_link_flip_between_staging_and_publish(tmp_path: Path) -> None:
+    """A parent that stops naming the staged directory aborts before publication.
+
+    The flip stays inside the repository, so containment alone accepts it; only
+    the staged parent's dev/ino pin can tell that the bytes would land somewhere
+    the plan never authorized.
+    """
+    repo = _skill_repo(tmp_path)
+    (repo / "elsewhere").mkdir()
+    payload = _skill_payload(tmp_path)
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    _seed_control(repo, request)
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+
+    def flip(phase: str, identity: str) -> None:
+        if (phase, identity) != ("precondition", ".claude/skills/demo/SKILL.md"):
+            return
+        (repo / ".claude/skills/demo").unlink()
+        (repo / ".claude/skills/demo").symlink_to(Path("../../elsewhere"), target_is_directory=True)
+
+    result = apply_reconciliation(ApplyRequest(request, plan, fault_hook=flip))
+
+    assert not result.success
+    assert result.error_code == "CP-PRECONDITION"
+    assert list((repo / "elsewhere").iterdir()) == []
+    assert not (repo / ".agents/skills/demo/SKILL.md").exists()
+
+
+def test_snapshot_follows_a_finite_chain_of_links_to_a_real_directory(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "real").mkdir(parents=True)
+    (repo / "real/tool.py").write_bytes(b"pass\n")
+    (repo / "b").symlink_to(Path("real"), target_is_directory=True)
+    (repo / "a").symlink_to(Path("b"), target_is_directory=True)
+
+    entry = RepositorySnapshot.capture(repo, (_path("a/tool.py"),)).entry(_path("a/tool.py"))
+
+    assert entry.content == b"pass\n"
+
+
+def _link_chain(repo: Path, length: int) -> None:
+    """Build `link0 -> link1 -> … -> real`, one followed link per hop."""
+    (repo / "real").mkdir(parents=True)
+    (repo / "real/tool.py").write_bytes(b"pass\n")
+    for index in range(length):
+        successor = f"link{index + 1}" if index + 1 < length else "real"
+        (repo / f"link{index}").symlink_to(Path(successor), target_is_directory=True)
+
+
+def test_snapshot_accepts_exactly_the_link_follow_limit(tmp_path: Path) -> None:
+    """40 hops is the accepted boundary; 41 is the rejected one below.
+
+    The pair pins the cap as a boundary rather than an approximation, so a
+    later edit cannot quietly turn `>` into `>=` or change the constant.
+    """
+    repo = tmp_path / "repo"
+    _link_chain(repo, 40)
+
+    entry = RepositorySnapshot.capture(repo, (_path("link0/tool.py"),)).entry(
+        _path("link0/tool.py")
+    )
+
+    assert entry.content == b"pass\n"
+
+
+def test_snapshot_refuses_one_link_past_the_follow_limit(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _link_chain(repo, 41)
+
+    with pytest.raises(ControlPlaneError, match="cyclic"):
+        RepositorySnapshot.capture(repo, (_path("link0/tool.py"),))
+
+
+def test_snapshot_refuses_a_link_to_a_regular_file_used_as_an_ancestor(tmp_path: Path) -> None:
+    """A link resolving to a file is a non-directory, not an escape or a cycle.
+
+    The kernel reports ENOTDIR for both a file and an O_NOFOLLOW'd link, so this
+    case is only distinguishable by the lstat inside `_link_text`.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "file").write_bytes(b"not a directory\n")
+    (repo / "link").symlink_to(Path("file"))
+
+    with pytest.raises(ControlPlaneError, match="non-directory ancestor"):
+        RepositorySnapshot.capture(repo, (_path("link/tool.py"),))
+
+
+def test_snapshot_accepts_an_absolute_link_to_the_repository_root_itself(tmp_path: Path) -> None:
+    """The root is the one destination whose root-relative path has no parts."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "tool.py").write_bytes(b"pass\n")
+    (repo / "self").symlink_to(repo.resolve(), target_is_directory=True)
+
+    entry = RepositorySnapshot.capture(repo, (_path("self/tool.py"),)).entry(_path("self/tool.py"))
+
+    assert entry.content == b"pass\n"
+
+
+def _dangling_link_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo"
+    (repo / ".claude/skills").mkdir(parents=True)
+    (repo / ".claude/skills/demo").symlink_to(
+        Path("../../.agents/skills/demo"),
+        target_is_directory=True,
+    )
+    return repo
+
+
+def test_apply_creates_the_physical_destination_behind_a_dangling_link(tmp_path: Path) -> None:
+    repo = _dangling_link_repo(tmp_path)
+    payload = _skill_payload(tmp_path)
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    _seed_control(repo, request)
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+
+    assert apply_reconciliation(ApplyRequest(request, plan)).success
+
+    # The missing ancestry is created where the link points, never as a
+    # directory that would shadow the link itself.
+    assert (repo / ".agents/skills/demo/SKILL.md").read_bytes() == b"# Skill\n"
+    assert (repo / ".claude/skills/demo").is_symlink()
+
+
+def test_failed_apply_rolls_back_directories_created_behind_a_dangling_link(
+    tmp_path: Path,
+) -> None:
+    """Rollback must remove the PHYSICAL directories, not the declared spelling.
+
+    `Path.rmdir()` on `.claude/skills/demo` would have re-resolved through the
+    link and tried to remove the destination under a name the walk never
+    verified; the descriptor-relative rollback removes exactly what was made.
+    """
+    repo = _dangling_link_repo(tmp_path)
+    payload = write_payload(
+        tmp_path / "payload",
+        "symlinked-skill",
+        artifacts=[
+            {"id": "claude", "target": ".claude/skills/demo/SKILL.md", "content": b"# Skill\n"},
+            {"id": "zeta", "target": "zeta.txt", "content": b"zeta\n"},
+        ],
+    )
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    _seed_control(repo, request)
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+
+    def interrupt(phase: str, identity: str) -> None:
+        # `zeta.txt` stages after the skill, so the ancestry behind the dangling
+        # link already exists — and must not survive the aborted apply.
+        if (phase, identity) == ("stage", "zeta.txt"):
+            raise KeyboardInterrupt
+
+    result = apply_reconciliation(ApplyRequest(request, plan, fault_hook=interrupt))
+
+    assert not result.success
+    assert not (repo / ".agents").exists()
+    assert (repo / ".claude/skills/demo").is_symlink()
+    assert list(repo.rglob(".project-standards-*.tmp")) == []
+
+
+def test_apply_removes_a_target_through_a_symlinked_parent(tmp_path: Path) -> None:
+    repo, request, plan = _removal_fixture(tmp_path)
+
+    result = apply_reconciliation(ApplyRequest(request, plan))
+
+    assert result.success
+    assert not (repo / ".agents/skills/demo/SKILL.md").exists()
+    assert (repo / ".claude/skills/demo").is_symlink()
+
+
+def test_removal_refuses_an_in_root_link_flip_after_the_precondition(tmp_path: Path) -> None:
+    """A removal is pinned to the parent it was authorized against.
+
+    The decoy holds byte-identical content, so the precondition read alone
+    cannot tell the flip happened: only the dev/ino pin taken before the read
+    stops the unlink from deleting a file in a directory the plan never named.
+    """
+    repo, request, plan = _removal_fixture(tmp_path)
+    decoy = repo / "elsewhere/SKILL.md"
+    decoy.parent.mkdir()
+    decoy.write_bytes(b"# Skill\n")
+
+    def flip(phase: str, identity: str) -> None:
+        if (phase, identity) != ("precondition", ".claude/skills/demo/SKILL.md"):
+            return
+        (repo / ".claude/skills/demo").unlink()
+        (repo / ".claude/skills/demo").symlink_to(Path("../../elsewhere"), target_is_directory=True)
+
+    result = apply_reconciliation(ApplyRequest(request, plan, fault_hook=flip))
+
+    assert not result.success
+    assert result.error_code == "CP-PRECONDITION"
+    assert decoy.read_bytes() == b"# Skill\n"
+    assert (repo / ".agents/skills/demo/SKILL.md").read_bytes() == b"# Skill\n"
+
+
+def test_open_existing_parent_refuses_a_protected_destination(tmp_path: Path) -> None:
+    """Managed restore's non-creating opener enforces the same destination policy.
+
+    Reached directly because `plan_managed_restore` refuses a symlinked
+    immediate parent lexically before the executor is asked, so the public
+    restore route cannot express this case.
+    """
+    repo = _protected_repo(tmp_path, ".git/hooks")
+    root = repo.resolve()
+    root_descriptor = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        with pytest.raises(executor._ApplyFailure) as failure:  # pyright: ignore[reportPrivateUsage]
+            executor._open_existing_parent(  # pyright: ignore[reportPrivateUsage]
+                root,
+                root_descriptor,
+                PurePosixPath(".claude/skills/demo"),
+            )
+    finally:
+        os.close(root_descriptor)
+
+    assert failure.value.code == CONTAINMENT_DESTINATION_CODE

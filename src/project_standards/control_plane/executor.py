@@ -26,6 +26,7 @@ from project_standards._filesystem import (
 from project_standards.control_plane.catalog_refresh import CATALOG_REFRESH_BACKUP
 from project_standards.control_plane.codec import parse_lock, render_lock
 from project_standards.control_plane.containment import (
+    CONTAINMENT_DESTINATION_CODE,
     ContainmentError,
     ContainmentFailure,
     open_contained_directory,
@@ -209,6 +210,23 @@ def _open_repository(repo: Path) -> tuple[Path, int]:
     return root, descriptor
 
 
+def _destination_failure(exc: ContainmentError, subject: str) -> _ApplyFailure:
+    """Report an in-root destination a consumer link moved into a protected root.
+
+    This failure has its own code rather than reusing CP-APPLY-PATH because the
+    remedy is different in kind: nothing about the declared path or the tool is
+    wrong, and the operator has to find and repair a link in the checkout. Both
+    spellings are named — the declared path to look for, the physical path that
+    was actually selected. Repository-relative paths are structure, never file
+    content.
+    """
+    return _ApplyFailure(
+        CONTAINMENT_DESTINATION_CODE,
+        f"{subject} resolves into a protected repository directory: "
+        f"declared '{exc.declared}' resolves to '{exc.physical}'",
+    )
+
+
 def _open_parent(
     root: Path,
     root_descriptor: int,
@@ -219,9 +237,10 @@ def _open_parent(
 
     Descends through `open_contained_directory`, which follows an ancestor
     symlink only after proving its destination stays inside the repository
-    (issue #179). Only an escape gets its own wording; every other containment
-    failure keeps the pre-existing "not a safe directory" message that operators
-    and CLI tests already recognize.
+    (issue #179) and lands outside `.git/` and `.standards/` (issue #187). The
+    escape and protected-destination refusals get their own wording; every other
+    containment failure keeps the pre-existing "not a safe directory" message
+    that operators and CLI tests already recognize.
     """
     try:
         descriptor = open_contained_directory(
@@ -232,6 +251,8 @@ def _open_parent(
             created=created,
         )
     except ContainmentError as exc:
+        if exc.reason is ContainmentFailure.DESTINATION:
+            raise _destination_failure(exc, "target parent") from exc
         if exc.reason is ContainmentFailure.ESCAPE:
             raise _ApplyFailure("CP-APPLY-PATH", "target parent escapes the repository") from exc
         raise _ApplyFailure(
@@ -243,12 +264,38 @@ def _open_parent(
     return descriptor
 
 
+def _open_removal_parent(root: Path, root_descriptor: int, parent: PurePosixPath) -> int:
+    """Open the contained directory a removal unlinks from, creating nothing.
+
+    A removal has no reason to materialize a path: the target it deletes must
+    already exist. Routing REMOVE through the creating `_open_parent` with a
+    discarded `created` list made the executor mkdir a whole ancestry behind a
+    dangling link and then leave it behind, since nothing collected those paths
+    for rollback (issue #187).
+    """
+    try:
+        descriptor = open_contained_directory(root_descriptor, root, parent)
+    except ContainmentError as exc:
+        if exc.reason is ContainmentFailure.DESTINATION:
+            raise _destination_failure(exc, "removal target parent") from exc
+        raise _ApplyFailure("CP-APPLY-PATH", "target parent is not a safe directory") from exc
+    if descriptor is None:
+        # An absent parent means the file this action was planned to delete is
+        # already gone, which is a plan-versus-repository disagreement rather
+        # than an unsafe path — the same code the precondition read would have
+        # produced before the parent was opened this early.
+        raise _ApplyFailure("CP-PRECONDITION", "removal target parent no longer exists")
+    return descriptor
+
+
 def _open_existing_parent(root: Path, root_descriptor: int, parent: PurePosixPath) -> int:
     """Open one contained existing parent without creating repository paths."""
     message = "managed restore target parent is not an existing safe directory"
     try:
         descriptor = open_contained_directory(root_descriptor, root, parent)
     except ContainmentError as exc:
+        if exc.reason is ContainmentFailure.DESTINATION:
+            raise _destination_failure(exc, "managed restore target parent") from exc
         raise _ApplyFailure("CP-RESTORE-PATH", message) from exc
     if descriptor is None:
         raise _ApplyFailure("CP-RESTORE-PATH", message)
@@ -367,9 +414,41 @@ def _cleanup_staged(
             os.unlink(item.temporary, dir_fd=item.source_descriptor)
         with suppress(OSError):
             os.close(item.parent_descriptor)
-    for relative in sorted(created, key=lambda item: len(item.parts), reverse=True):
-        with suppress(OSError):
-            (root / relative).rmdir()
+    if not created:
+        return
+    # Roll the mkdirs back through the same descriptor discipline that made
+    # them. `Path.rmdir()` on `root / relative` re-resolves the whole path in
+    # the kernel: between staging and this rollback a component could become a
+    # link, and the rmdir would then delete an unrelated empty directory outside
+    # the repository. Re-walking from the root descriptor and unlinking by name
+    # with `dir_fd` cannot name anything the walk has not just proven contained.
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        root_descriptor = os.open(root, flags)
+    except OSError:
+        return
+    try:
+        # Deepest first, so a parent is only removed after its child is gone.
+        for relative in sorted(created, key=lambda item: len(item.parts), reverse=True):
+            if not relative.parts:  # pragma: no cover - the root is never created
+                continue
+            try:
+                parent_descriptor = open_contained_directory(
+                    root_descriptor,
+                    root,
+                    relative.parent,
+                )
+            except ContainmentError, OSError:
+                continue
+            if parent_descriptor is None:
+                continue
+            try:
+                with suppress(OSError):
+                    os.rmdir(relative.name, dir_fd=parent_descriptor)
+            finally:
+                os.close(parent_descriptor)
+    finally:
+        os.close(root_descriptor)
 
 
 def _restore_failure(
@@ -749,42 +828,57 @@ def _publish_targets(
             applied.append(action.target)
             _fault(request, "published", action.target)
             continue
-        _fault(request, "precondition", action.target)
-        _assert_precondition(request.planner.repo, plan, action.target)
-        if action.target in staged:
-            _assert_parent_current(
-                request.planner.repo,
-                SafeRelativePath.parse(action.target).normalized.parent,
-                staged[action.target].parent_descriptor,
-            )
-        _fault(request, "publish", action.target)
         relative = SafeRelativePath.parse(action.target)
+        removal_parent: int | None = None
         if action.kind is ActionKind.REMOVE:
-            parent = _open_parent(
+            # Pin the physical parent BEFORE the precondition is read. A write
+            # holds that pin from staging; a removal staged nothing, so without
+            # this the unlink would re-walk the path afresh and could delete a
+            # file in whatever directory a link flipped to in the meantime
+            # (issue #187). `_assert_parent_current` below turns the pin into a
+            # dev/ino comparison against a fresh contained walk.
+            removal_parent = _open_removal_parent(
                 root,
                 root_descriptor,
                 relative.normalized.parent,
-                [],
             )
-            try:
-                os.unlink(relative.normalized.name, dir_fd=parent)
-                os.fsync(parent)
-            except OSError as exc:
-                raise _ApplyFailure("CP-APPLY-PUBLISH", "target removal failed") from exc
-            finally:
-                os.close(parent)
-        else:
-            item = staged[action.target]
-            try:
-                os.replace(
-                    item.temporary,
-                    item.destination,
-                    src_dir_fd=item.source_descriptor,
-                    dst_dir_fd=item.parent_descriptor,
+        try:
+            _fault(request, "precondition", action.target)
+            _assert_precondition(request.planner.repo, plan, action.target)
+            if action.target in staged:
+                _assert_parent_current(
+                    request.planner.repo,
+                    relative.normalized.parent,
+                    staged[action.target].parent_descriptor,
                 )
-                os.fsync(item.parent_descriptor)
-            except OSError as exc:
-                raise _ApplyFailure("CP-APPLY-PUBLISH", "target replacement failed") from exc
+            elif removal_parent is not None:
+                _assert_parent_current(
+                    request.planner.repo,
+                    relative.normalized.parent,
+                    removal_parent,
+                )
+            _fault(request, "publish", action.target)
+            if removal_parent is not None:
+                try:
+                    os.unlink(relative.normalized.name, dir_fd=removal_parent)
+                    os.fsync(removal_parent)
+                except OSError as exc:
+                    raise _ApplyFailure("CP-APPLY-PUBLISH", "target removal failed") from exc
+            else:
+                item = staged[action.target]
+                try:
+                    os.replace(
+                        item.temporary,
+                        item.destination,
+                        src_dir_fd=item.source_descriptor,
+                        dst_dir_fd=item.parent_descriptor,
+                    )
+                    os.fsync(item.parent_descriptor)
+                except OSError as exc:
+                    raise _ApplyFailure("CP-APPLY-PUBLISH", "target replacement failed") from exc
+        finally:
+            if removal_parent is not None:
+                os.close(removal_parent)
         applied.append(action.target)
         _fault(request, "published", action.target)
     for namespace in plan.namespace_prunes:
@@ -1133,9 +1227,17 @@ def apply_reconciliation(request: ApplyRequest) -> ApplyResult:
             return _apply_locked(request, control)
     except ControlPlaneBusyError:
         return ApplyResult(False, (), False, "CP-BUSY")
-    except (_ApplyFailure, ControlPlaneError, ValueError, OSError) as exc:
-        code = exc.code if isinstance(exc, _ApplyFailure) else "CP-APPLY-FAILED"
-        return ApplyResult(False, (), False, code)
+    except _ApplyFailure as exc:
+        return ApplyResult(False, (), False, exc.code)
+    except ControlPlaneError as exc:
+        # Apply re-plans under the lock, so a read-path refusal surfaces here.
+        # One that names its own code — a containment destination — keeps it
+        # instead of collapsing into the generic failure; everything else still
+        # reports CP-APPLY-FAILED. ControlPlaneError precedes ValueError below
+        # because it is one.
+        return ApplyResult(False, (), False, exc.code or "CP-APPLY-FAILED")
+    except ValueError, OSError:
+        return ApplyResult(False, (), False, "CP-APPLY-FAILED")
 
 
 def _migration_plan_current(plan: LegacyMigrationPlan) -> bool:

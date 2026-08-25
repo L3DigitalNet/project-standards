@@ -11,6 +11,7 @@ from pathlib import Path, PurePosixPath
 
 from project_standards.control_plane.codec import content_digest
 from project_standards.control_plane.containment import (
+    CONTAINMENT_DESTINATION_CODE,
     ContainmentError,
     ContainmentFailure,
     open_contained_directory,
@@ -92,6 +93,19 @@ _ANCESTOR_MESSAGES = {
 
 
 def _ancestor_error(exc: ContainmentError) -> ControlPlaneError:
+    """Translate one containment refusal into the read path's public error."""
+    if exc.reason is ContainmentFailure.DESTINATION:
+        # Both spellings are named because neither alone identifies the problem:
+        # the declared path is where the operator looks, the physical path is
+        # what the consumer's link actually selected. Repository-relative paths
+        # are structure, never file content, so the confidentiality contract
+        # holds.
+        return ControlPlaneError(
+            f"snapshot target ancestor resolves into a protected repository "
+            f"directory: declared '{exc.declared}' resolves to '{exc.physical}'",
+            code=CONTAINMENT_DESTINATION_CODE,
+            path=str(exc.declared),
+        )
     return ControlPlaneError(_ANCESTOR_MESSAGES[exc.reason])
 
 

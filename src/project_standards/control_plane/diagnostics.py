@@ -15,12 +15,21 @@ from project_standards.package_contract.payload import JsonValue
 
 
 class ControlPlaneError(ValueError):
-    """Report an invalid control-plane boundary without leaking input content."""
+    """Report an invalid control-plane boundary without leaking input content.
+
+    `code` is the escape hatch for a failure whose diagnostic code is more
+    specific than the one its reporting site knows. Most raisers leave it None
+    and the CLI applies the generic code for that command; a raiser that sets it
+    overrides that generic code (see `cli._emit_error`). It is deliberately not
+    part of `to_jsonable`, because the emitted payload already carries the
+    resolved code as its own top-level field.
+    """
 
     def __init__(
         self,
         message: str,
         *,
+        code: str | None = None,
         path: str | None = None,
         line: int | None = None,
         column: int | None = None,
@@ -29,6 +38,7 @@ class ControlPlaneError(ValueError):
         limit: int | None = None,
     ) -> None:
         super().__init__(message)
+        self.code = code
         self.path = path
         self.line = line
         self.column = column
