@@ -67,6 +67,7 @@ _AGENT_HANDOFF_VERBS = (
     "shape-check",
     "legacy-report",
     "upgrade",
+    "delta",
 )
 _HELP_INVOCATIONS = {
     **{

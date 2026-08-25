@@ -53,11 +53,11 @@ project-standards {--help | --version}
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes 33 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), the `mcp` server, eleven `standards` operations, one repository-only `packages` release check, seven `spec` verbs, and six `agent-handoff` verbs.
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes 34 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), the `mcp` server, eleven `standards` operations, one repository-only `packages` release check, seven `spec` verbs, and seven `agent-handoff` verbs.
 
 Under unified authority, `validate` and `fix` invoke the provider selected by the applied Markdown Frontmatter package. Read-only validation consumes one immutable file snapshot; `fix` applies only the provider's typed plan through the platform executor and then revalidates. After `project-standards fix`, run `project-standards reconcile --check`, review the digest-only plan, and run `project-standards reconcile --apply` before the final `project-standards validate`. The standalone schema, ID, reference, ID-fix, and format-write surfaces use the same selected payload while retaining their narrower output contracts. In v5 legacy-only repositories, these commands warn and retain the local validator sequence as a bounded compatibility path. The six standalone console-script names documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
-Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 33 leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
+Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 34 leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
 Except for `mcp`, output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. The MCP server reserves standard output for JSON-RPC protocol frames and writes diagnostics to standard error. There is no interactive prompt; commands are non-interactive, while `mcp` serves client protocol requests on standard input after its launch arguments are parsed.
 
@@ -262,10 +262,10 @@ Exit status: `0` success · `2` registry/bundle drift · `3` a bundle manifest i
 Command group for validating and maintaining an Agent Handoff repository. Unified authority routes whichever Agent Handoff package `.standards/config.toml` selects; when unified state is absent, the command emits the V5 migration warning and uses the packaged V1 provider fallback. Running the group with no verb or with `--help` prints the group help and exits 0; an unknown verb exits 2.
 
 ```text
-project-standards agent-handoff {validate | drift-check | size-report | shape-check | legacy-report | upgrade} [--repo <dir>] [--json]
+project-standards agent-handoff {validate | drift-check | size-report | shape-check | legacy-report | upgrade | delta} [--repo <dir>] [--json]
 ```
 
-All verbs accept **`--repo <dir>`** (default: current directory). Read-only reports accept **`--json`**. `validate` additionally accepts **`--view {full,size,shape}`** (default: `full`); `size-report` and `shape-check` are convenience entry points for its `size` and `shape` views. `upgrade` additionally accepts **`--dry-run`**.
+All verbs accept **`--repo <dir>`** (default: current directory). Read-only reports accept **`--json`**. `validate`, `size-report`, and `shape-check` additionally accept **`--since <ref>`**, which keeps a `warning`-severity, line-anchored finding only when its line was added relative to `<ref>`; `error` findings and document-level findings (no line number) are never suppressed by a baseline, and an unresolvable `<ref>` exits `2`. JSON output gains an optional `baseline` object describing the ref, its resolved commit, and the count suppressed. `validate` also accepts **`--view {full,size,shape}`** (default: `full`); `size-report` and `shape-check` are convenience entry points for its `size` and `shape` views. `upgrade` additionally accepts **`--dry-run`**. `delta` additionally requires **`--since <ref>`**.
 
 | Verb | Purpose |
 | --- | --- |
@@ -275,6 +275,7 @@ All verbs accept **`--repo <dir>`** (default: current directory). Read-only repo
 | `shape-check` | Project fatal eager-document and advisory lazy-document shape rules |
 | `legacy-report` | Detect recognized and unclassified repo-local historical evidence without mutation |
 | `upgrade` | Preview or apply a provenance-guarded refresh of standard-owned artifacts |
+| `delta` | Report the session's Git delta since `<ref>`: commits, changed paths, issue references, and uncommitted changes |
 
 Exit status: `0` clean/success · `1` findings or recoverable apply failure · `2` usage/config error · `3` package/provider prerequisite or internal failure.
 
@@ -289,8 +290,10 @@ Exit status: `0` clean/success · `1` findings or recoverable apply failure · `
 Under unified authority, validate the complete selected Agent Handoff repository contract without writing files. Legacy-only repositories use the warned V1 provider fallback.
 
 ```text
-project-standards agent-handoff validate [--repo <dir>] [--json] [--view {full,size,shape}]
+project-standards agent-handoff validate [--repo <dir>] [--json] [--view {full,size,shape}] [--since <ref>]
 ```
+
+With `--since <ref>`, a `warning`-severity finding is kept only when its line was added relative to `<ref>`; errors and document-level findings are never suppressed, and an unresolvable `<ref>` exits `2`. `--json` output gains an optional `baseline` object when `--since` is given.
 
 ### `agent-handoff drift-check`
 
@@ -305,16 +308,20 @@ project-standards agent-handoff drift-check [--repo <dir>] [--json]
 Report configured UTF-8 byte targets and hard caps through the common finding schema.
 
 ```text
-project-standards agent-handoff size-report [--repo <dir>] [--json]
+project-standards agent-handoff size-report [--repo <dir>] [--json] [--since <ref>]
 ```
+
+With `--since <ref>`, a `warning`-severity finding is kept only when its line was added relative to `<ref>`; errors and document-level findings are never suppressed, and an unresolvable `<ref>` exits `2`. `--json` output gains an optional `baseline` object when `--since` is given.
 
 ### `agent-handoff shape-check`
 
 Report eager and lazy document-shape findings without other conformance checks.
 
 ```text
-project-standards agent-handoff shape-check [--repo <dir>] [--json]
+project-standards agent-handoff shape-check [--repo <dir>] [--json] [--since <ref>]
 ```
+
+With `--since <ref>`, a `warning`-severity finding is kept only when its line was added relative to `<ref>`; errors and document-level findings are never suppressed, and an unresolvable `<ref>` exits `2`. `--json` output gains an optional `baseline` object when `--since` is given.
 
 ### `agent-handoff legacy-report`
 
@@ -330,6 +337,14 @@ Preview or apply a provenance-guarded refresh of standard-owned artifacts. Exist
 
 ```text
 project-standards agent-handoff upgrade [--repo <dir>] [--dry-run] [--json]
+```
+
+### `agent-handoff delta`
+
+Report the session's Git delta since `<ref>`, for handoff closeout: commits in `<ref>..HEAD`, changed paths grouped as handoff documents, other docs, and code/other, deduplicated `#NNN` and `owner/repo#NNN` issue references collected from commit subjects and bodies, and the uncommitted working-tree remainder. An empty delta (no commits, no uncommitted changes) exits `0`; an unresolvable `<ref>` exits `2`.
+
+```text
+project-standards agent-handoff delta [--repo <dir>] --since <ref> [--json]
 ```
 
 ### `standards`
