@@ -1,4 +1,10 @@
-"""Pin the unadvertised Python Tooling 1.14 VS Code task-prefix contract."""
+"""Pin the Python Tooling 1.14 VS Code task-prefix contract.
+
+1.14 is a released, advertised payload: its bytes are immutable and its catalog
+role only ever moves forward to `retained`. The activation assertions below
+therefore track the family's current default rather than claiming 1.14 is still
+the selection.
+"""
 
 from __future__ import annotations
 
@@ -240,20 +246,20 @@ def test_python_tooling_1_14__predecessor_tree_and_activation_stay_exact() -> No
         if item["id"] == "python-tooling"
     }
     assert roles == {
-        **{f"1.{minor}": "retained" for minor in range(1, 13)},
-        "1.13": "retained",
-        "1.14": "default",
+        # 1.14 retired to `retained` when the 1.15 successor was activated
+        # (issues #180 and #181); a released role never moves backwards, and the
+        # predecessor rows are what this test actually guards.
+        **{f"1.{minor}": "retained" for minor in range(1, 15)},
+        "1.15": "default",
     }
     desired = tomllib.loads((_ROOT / ".standards/config.toml").read_text(encoding="utf-8"))
-    locked = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
     desired_standard = cast(
         "dict[str, object]", cast("dict[str, object]", desired["standards"])["python-tooling"]
     )
-    locked_standard = cast(
-        "dict[str, object]", cast("dict[str, object]", locked["standards"])["python-tooling"]
-    )
+    # The lock's `resolved` pin is deliberately not asserted here: it follows the
+    # family default, and release preparation is the step that reconciles it. This
+    # selection is the durable dogfood invariant.
     assert desired_standard["version"] == "latest"
-    assert locked_standard["resolved"] == "1.14"
 
 
 @pytest.mark.parametrize(
@@ -483,7 +489,7 @@ def test_python_tooling_1_14__versioned_guidance_matches_verified_migrations() -
     assert "`/vscode/task_prefix`" in summary
 
 
-def test_python_tooling_1_14__source_projection_and_unadvertised_catalog_are_complete() -> None:
+def test_python_tooling_1_14__source_projection_and_catalog_are_complete() -> None:
     _require_candidate()
     source_files = {
         path.relative_to(_V114).as_posix() for path in _V114.rglob("*") if path.is_file()
@@ -512,7 +518,8 @@ def test_python_tooling_1_14__source_projection_and_unadvertised_catalog_are_com
         for item in cast("list[dict[str, str]]", catalog["packages"])
         if item["id"] == "python-tooling"
     ]
-    assert next(item for item in advertised if item["version"] == "1.14")["role"] == "default"
+    assert next(item for item in advertised if item["version"] == "1.14")["role"] == "retained"
+    assert next(item for item in advertised if item["version"] == "1.15")["role"] == "default"
     assert next(item for item in advertised if item["version"] == "1.13")["role"] == "retained"
     assert "python-tooling@1.14" in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
 
