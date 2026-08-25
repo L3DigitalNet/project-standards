@@ -124,6 +124,48 @@ def open_contained_directory(
 
     The returned descriptor is the caller's to close.
     """
+    descriptor, _physical = _walk(root_descriptor, root, relative, create=create, created=created)
+    return descriptor
+
+
+def resolve_contained_directory(
+    root_descriptor: int,
+    root: Path,
+    relative: PurePosixPath,
+) -> PurePosixPath:
+    """Return the physical root-relative path that `relative` names.
+
+    "Physical" means every ancestor symlink has been rewritten into the path it
+    designates, so two declared paths that the consumer has collapsed onto one
+    directory — `.claude/skills/<name>` symlinked to `.agents/skills/<name>` —
+    resolve to the same value. Callers use that equality to recognize aliased
+    targets before planning a write; see `snapshot.resolved_target_paths`.
+
+    Resolution creates nothing and needs no existing path: components below the
+    first absent one cannot be links, so they are already physical and are
+    appended verbatim. Containment is enforced exactly as it is for an opened
+    walk — an escape, a cycle, or a non-directory component raises.
+    """
+    descriptor, physical = _walk(root_descriptor, root, relative)
+    if descriptor is not None:
+        os.close(descriptor)
+    return physical
+
+
+def _walk(
+    root_descriptor: int,
+    root: Path,
+    relative: PurePosixPath,
+    *,
+    create: bool = False,
+    created: list[PurePosixPath] | None = None,
+) -> tuple[int | None, PurePosixPath]:
+    """Descend one path component at a time, returning the descriptor and physical path.
+
+    This is the single implementation of the containment rules; both public
+    entry points delegate here so the opening and resolving callers can never
+    disagree about what "inside the repository" means.
+    """
     descriptor = os.dup(root_descriptor)
     physical = PurePosixPath()
     pending = deque(relative.parts)
@@ -136,7 +178,10 @@ def open_contained_directory(
             except FileNotFoundError:
                 if not create:
                     os.close(descriptor)
-                    return None
+                    # Nothing below an absent component exists, so no remaining
+                    # component can be a link: the lexical join is already the
+                    # physical path a later creation would materialize.
+                    return None, physical.joinpath(part, *pending)
                 child = _create_child(descriptor, part, physical, created)
             except OSError as exc:
                 # Linux reports ENOTDIR — not ELOOP — when O_DIRECTORY and
@@ -158,7 +203,7 @@ def open_contained_directory(
             os.close(descriptor)
             descriptor = child
             physical = physical / part
-        return descriptor
+        return descriptor, physical
     except BaseException:
         os.close(descriptor)
         raise

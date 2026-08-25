@@ -14,6 +14,7 @@ from project_standards.control_plane.containment import (
     ContainmentError,
     ContainmentFailure,
     open_contained_directory,
+    resolve_contained_directory,
 )
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.package_contract.paths import (
@@ -111,6 +112,50 @@ def _preflight_ancestors(
             raise _ancestor_error(exc) from exc
         if descriptor is not None:
             os.close(descriptor)
+
+
+def resolved_target_paths(
+    repo: Path,
+    targets: tuple[SafeRelativePath, ...],
+) -> dict[str, PurePosixPath]:
+    """Map each declared target to the physical file it names inside the repository.
+
+    Two declared targets that map to the same value are one file under two
+    names, because the consumer collapsed their directories with a symlink —
+    Agent Handoff and GitHub Workflow declare byte-identical twins under
+    `.agents/skills/<name>` and `.claude/skills/<name>`, and a consumer that
+    links one at the other leaves the control plane planning two writes against
+    a single inode (issue #179 follow-up).
+
+    Only the parent is resolved: a target whose LEAF is a symlink is not an
+    alias, because publication replaces that leaf (`os.replace` on the link
+    itself) rather than writing through it, so the link's destination keeps its
+    own bytes and preconditions.
+
+    Raises ControlPlaneError with the same wording as capture for any ancestry
+    that cannot be proven contained.
+    """
+    root = safe_repository_root(repo)
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        root_descriptor = os.open(root, flags)
+    except OSError as exc:
+        raise ControlPlaneError("repository root could not be opened safely") from exc
+    try:
+        resolved: dict[str, PurePosixPath] = {}
+        for target in targets:
+            try:
+                parent = resolve_contained_directory(
+                    root_descriptor,
+                    root,
+                    target.normalized.parent,
+                )
+            except ContainmentError as exc:
+                raise _ancestor_error(exc) from exc
+            resolved[target.original] = parent / target.normalized.name
+        return resolved
+    finally:
+        os.close(root_descriptor)
 
 
 def _parent_descriptor(root: Path, root_descriptor: int, parent: PurePosixPath) -> int | None:

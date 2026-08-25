@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from project_standards.control_plane.codec import render_lock
-from project_standards.control_plane.diagnostics import ControlPlaneError
+from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.planner import PlannerRequest, plan_reconciliation
@@ -245,33 +245,97 @@ def test_apply_refuses_an_escaping_ancestor_introduced_after_planning(tmp_path: 
     assert list(outside.iterdir()) == []
 
 
-def test_two_targets_aliased_by_a_symlink_converge_on_the_next_reconcile(
-    tmp_path: Path,
-) -> None:
-    """Characterize the residual limit of following an ancestor link.
+def test_two_targets_aliased_by_a_symlink_converge_in_one_apply(tmp_path: Path) -> None:
+    """One apply must converge when a consumer symlink collapses declared twins.
 
-    When a payload declares both harness copies of one file and the consumer has
-    collapsed them onto a single inode, publishing the first target invalidates
-    the second's plan-time precondition, so the first apply stops partway by
-    design rather than writing against a stale precondition. The important
-    property is that the state is repairable: a fresh plan sees the alias
-    already carrying the desired bytes and converges without further writes.
+    Agent Handoff and GitHub Workflow declare byte-identical `.agents` and
+    `.claude` copies of a skill; linking one at the other makes them a single
+    inode. Publishing the first once invalidated the second's precondition and
+    stopped the apply, so convergence needed a second run (issue #179 follow-up).
     """
     repo = _skill_repo(tmp_path)
     payload = _skill_payload(tmp_path, aliased=True)
     request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
     _seed_control(repo, request)
     plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
 
-    first = apply_reconciliation(ApplyRequest(request, plan))
+    result = apply_reconciliation(ApplyRequest(request, plan))
 
-    assert not first.success
-    assert first.error_code == "CP-PRECONDITION"
+    assert result.success
+    assert result.error_code is None
+    # Both declared names are reported applied and locked, from the one publish.
+    assert set(result.applied_action_ids) == {
+        ".agents/skills/demo/SKILL.md",
+        ".claude/skills/demo/SKILL.md",
+    }
+    assert {artifact.path.original for artifact in plan.next_lock.artifacts} == {
+        ".agents/skills/demo/SKILL.md",
+        ".claude/skills/demo/SKILL.md",
+    }
+    assert (repo / ".agents/skills/demo/SKILL.md").read_bytes() == b"# Skill\n"
+    assert (repo / ".claude/skills/demo").is_symlink()
 
-    repaired_request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
-    repaired = plan_reconciliation(repaired_request)
-    result = apply_reconciliation(ApplyRequest(repaired_request, repaired))
+    # `--check` after the single apply: nothing left to reconcile.
+    checked_request = PlannerRequest(
+        repo,
+        resolution_request((payload,), previous_lock=plan.next_lock),
+        (payload,),
+    )
+    checked = plan_reconciliation(checked_request)
 
-    assert repaired.applicable, repaired.findings
+    assert checked.applicable, checked.findings
+    assert not [action for action in checked.actions if action.kind is not ActionKind.NOOP]
+    assert apply_reconciliation(ApplyRequest(checked_request, checked)).applied_action_ids == ()
+
+
+def test_aliased_targets_declaring_different_bytes_fail_closed(tmp_path: Path) -> None:
+    """One file cannot hold two contents, so the plan refuses instead of racing.
+
+    Nothing in the payload contract stops two declarations that a consumer's
+    symlink has collapsed from disagreeing. Last-writer-wins would publish a
+    lock the repository contradicts, so the conflict is surfaced at plan time.
+    """
+    repo = _skill_repo(tmp_path)
+    payload = write_payload(
+        tmp_path / "payload",
+        "divergent-skill",
+        artifacts=[
+            {"id": "skill", "target": ".agents/skills/demo/SKILL.md", "content": b"# Agents\n"},
+            {"id": "claude", "target": ".claude/skills/demo/SKILL.md", "content": b"# Claude\n"},
+        ],
+    )
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    _seed_control(repo, request)
+
+    plan = plan_reconciliation(request)
+
+    assert not plan.applicable
+    conflicts = [finding for finding in plan.findings if finding.code == "CP-ALIAS-CONFLICT"]
+    assert len(conflicts) == 1
+    assert ".agents/skills/demo/SKILL.md" in conflicts[0].message
+    assert ".claude/skills/demo/SKILL.md" in conflicts[0].message
+    assert (repo / ".agents/skills/demo/SKILL.md").exists() is False
+
+
+def test_alias_detection_leaves_an_unaliased_repository_plan_unchanged(tmp_path: Path) -> None:
+    """Pin the no-regression half: without a collapsing link nothing changes.
+
+    The two harness copies are ordinary distinct files here, so both are staged,
+    published, and precondition-checked exactly as before alias handling existed.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _skill_payload(tmp_path, aliased=True)
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    _seed_control(repo, request)
+
+    plan = plan_reconciliation(request)
+
+    assert plan.applicable, plan.findings
+    assert plan.alias_followers == ()
+    result = apply_reconciliation(ApplyRequest(request, plan))
     assert result.success
     assert (repo / ".agents/skills/demo/SKILL.md").read_bytes() == b"# Skill\n"
+    assert (repo / ".claude/skills/demo/SKILL.md").read_bytes() == b"# Skill\n"
+    assert not (repo / ".claude/skills/demo").is_symlink()

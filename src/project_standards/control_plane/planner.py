@@ -16,7 +16,7 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import asdict, dataclass, field, replace
 from itertools import zip_longest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Literal, cast
 
 from project_standards.control_plane.adapters import (
@@ -95,6 +95,7 @@ from project_standards.control_plane.snapshot import (
     EntryKind,
     RepositorySnapshot,
     SnapshotEntry,
+    resolved_target_paths,
 )
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.paths import (
@@ -301,6 +302,15 @@ class ReconciliationPlan:
     # Restore candidates remain executor-private because provider-rendered bytes
     # must never enter ordinary text or JSON reconciliation evidence.
     restore_targets: tuple[_ManagedWholeFileTarget, ...] = ()
+    # Targets whose mutating action names a file an EARLIER action in this same
+    # `actions` order already publishes, because a consumer symlink collapsed
+    # two declared paths onto one inode. The executor publishes the first and
+    # treats these as satisfied by it; every logical target still gets its own
+    # action, planned target, and lock artifact. Deliberately absent from
+    # `to_jsonable`: alias handling is an executor instruction derived from live
+    # filesystem shape, not a public plan fact, so plan output and the plan
+    # fingerprint stay byte-identical for repositories that track no such link.
+    alias_followers: tuple[str, ...] = ()
 
     def proposed_content(self, target: str) -> bytes:
         """Return the complete proposed bytes for one declared target."""
@@ -2716,6 +2726,106 @@ def _validate_consumer_state(
     return tuple(findings)
 
 
+# One declared target's asserted state after apply: absent, or exact bytes and
+# mode. `None` marks a target the plan asserts nothing about, which therefore
+# neither conflicts with an alias nor may be skipped as one.
+type _EndState = tuple[bytes, str | None] | Literal["absent"] | None
+
+_ALIAS_MUTATIONS = frozenset({ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE})
+
+
+def _end_state(
+    target: str, removed: frozenset[str], planned: Mapping[str, PlannedTarget]
+) -> _EndState:
+    if target in removed:
+        return "absent"
+    item = planned.get(target)
+    return None if item is None else (item.content, item.mode)
+
+
+def _alias_analysis(
+    repo: Path,
+    targets: tuple[SafeRelativePath, ...],
+    actions: tuple[ControlAction, ...],
+    planned_targets: tuple[PlannedTarget, ...],
+) -> tuple[tuple[ControlFinding, ...], tuple[str, ...]]:
+    """Reconcile declared targets that a consumer symlink collapsed onto one file.
+
+    Agent Handoff and GitHub Workflow each declare byte-identical twins under
+    `.agents/skills/<name>` and `.claude/skills/<name>`. A consumer that links
+    one directory at the other leaves two declared targets naming a single
+    inode, so publishing the first invalidates the second's plan-time
+    precondition and `--apply` stopped with CP-PRECONDITION until a second run
+    converged (issue #179 follow-up). The fix belongs at plan time, where the
+    resolved shape of the repository is already being read: one publish
+    satisfies the whole alias group, and every logical target keeps its own
+    action, planned bytes, and lock artifact so the lock still describes both
+    declared paths.
+
+    Aliased targets that assert DIFFERENT end states fail closed with an error
+    finding instead of racing to a last-writer-wins result: one file cannot hold
+    two contents, so applying either would publish a lock the repository
+    contradicts. Rejected alternative — writing the group in action order and
+    letting the last action win — hides a genuine payload or consumer conflict
+    behind a plan that silently discards bytes.
+
+    Returns the conflict findings and the follower targets, in that order.
+    """
+    resolved = resolved_target_paths(repo, targets)
+    groups: dict[PurePosixPath, list[str]] = {}
+    for original, physical in resolved.items():
+        groups.setdefault(physical, []).append(original)
+    aliased = {physical for physical, members in groups.items() if len(members) > 1}
+    if not aliased:
+        return ((), ())
+    removed = frozenset(action.target for action in actions if action.kind is ActionKind.REMOVE)
+    planned = {item.target: item for item in planned_targets}
+    findings: list[ControlFinding] = []
+    for physical in sorted(aliased, key=str):
+        declared = [
+            (member, state)
+            for member in sorted(groups[physical])
+            if (state := _end_state(member, removed, planned)) is not None
+        ]
+        # Naming the first PAIR that actually differs keeps the message useful
+        # when three or more names share one file and only one disagrees.
+        first, expected = declared[0] if declared else ("", None)
+        divergent = next((member for member, state in declared[1:] if state != expected), None)
+        if divergent is not None:
+            findings.append(
+                _finding(
+                    "CP-ALIAS-CONFLICT",
+                    target=first,
+                    identity="$file",
+                    standard_id="project-standards",
+                    version="",
+                    message=(
+                        f"declared targets {first} and {divergent} name one repository file "
+                        "through a symlink but require different content"
+                    ),
+                    hint=(
+                        "replace the symlink with a real directory, or reconcile the "
+                        "declared content of the aliased targets, before applying"
+                    ),
+                )
+            )
+    followers: list[str] = []
+    published: set[PurePosixPath] = set()
+    seen: set[str] = set()
+    for action in actions:
+        if action.kind not in _ALIAS_MUTATIONS or action.target in seen:
+            continue
+        seen.add(action.target)
+        physical = resolved.get(action.target)
+        if physical is None or physical not in aliased:
+            continue
+        if physical in published:
+            followers.append(action.target)
+        else:
+            published.add(physical)
+    return (tuple(findings), tuple(followers))
+
+
 def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
     """Build one deterministic, complete, and read-only reconciliation plan."""
     original_request = request
@@ -2895,6 +3005,17 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
                 sorted((*targets, catalog_target), key=lambda item: item.target.encode("utf-8"))
             )
     findings.extend(_validate_consumer_state(request, resolution, payloads))
+    # The configuration action is prepended only at the end, so the analysis is
+    # handed the same sequence the executor will publish in — a follower is
+    # defined by publication order, and that order must not depend on where a
+    # tuple happens to be assembled.
+    alias_findings, alias_followers = _alias_analysis(
+        request.repo,
+        snapshot.targets,
+        ((config_action, *actions) if config_action is not None else actions),
+        ((config_target, *targets) if config_target is not None else targets),
+    )
+    findings.extend(alias_findings)
     ordered_findings = tuple(sort_findings(findings))
     applicable = not any(finding.severity == "error" for finding in ordered_findings)
     namespace_prunes = _namespace_prunes(
@@ -2949,6 +3070,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
             (prepared_transform.evidence,) if prepared_transform is not None else ()
         ),
         restore_targets=restore_targets,
+        alias_followers=alias_followers,
     )
 
 

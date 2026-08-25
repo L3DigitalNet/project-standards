@@ -307,6 +307,11 @@ def _stage_targets(
         for action in plan.actions:
             if action.kind not in {ActionKind.CREATE, ActionKind.UPDATE}:
                 continue
+            if action.target in plan.alias_followers:
+                # An earlier action publishes this exact file under its other
+                # declared name, so staging a second copy would only add a
+                # temporary file whose publication is skipped anyway.
+                continue
             _fault(request, "stage", action.target)
             relative = SafeRelativePath.parse(action.target)
             parent_descriptor = _open_parent(
@@ -731,6 +736,18 @@ def _publish_targets(
 ) -> None:
     for action in plan.actions:
         if action.kind not in _MUTATING_ACTIONS:
+            continue
+        if action.target in plan.alias_followers:
+            # A consumer symlink collapsed this target onto a file an earlier
+            # action already published, so its plan-time precondition is
+            # legitimately stale and re-asserting it would abort a converging
+            # apply (the CP-PRECONDITION half of issue #179). The action is
+            # nonetheless realized — the bytes are on disk under both names —
+            # so it is reported as applied. Nothing here is taken on trust:
+            # `_verify_published_targets` still reads every planned target back
+            # and fails closed if the alias stopped holding mid-apply.
+            applied.append(action.target)
+            _fault(request, "published", action.target)
             continue
         _fault(request, "precondition", action.target)
         _assert_precondition(request.planner.repo, plan, action.target)
