@@ -28,14 +28,21 @@ BUILD_SCRIPT_NAME="scripts/build-agent-handoff-session-start.sh"
 # `.agents/hooks/agent-handoff/session-start` fixes the installed depth that
 # sessionstart.repositoryRoot walks up, and the Makefile reaches the file only through
 # this script. Moving it means editing all of them together.
-ARTIFACT_OUTPUT_PATH="standards/agent-handoff/versions/1.10/hooks/session-start/session-start"
+ARTIFACT_OUTPUT_PATH="standards/agent-handoff/versions/1.14/hooks/session-start/session-start"
 ARTIFACT_PACKAGE="./cmd/agent-handoff-session-start"
 
 # The version stamp is pinned to the payload version rather than a VCS describe string; a
 # build-time stamp that varied per commit would make the committed bytes change on every
 # unrelated commit and destroy the reproducibility guarantee. Consumers read it back with
 # `session-start --version` to detect a stale installed launcher.
-ARTIFACT_LDFLAGS="-buildid= -X main.version=1.10"
+#
+# Both values name the payload version under development, never a released one: a
+# published payload's bytes are immutable, so this script advances to the newest
+# unpublished cut and stops being able to reproduce its predecessors. That is intended —
+# released copies are verified by the release baseline comparison, not here. Pointing it
+# back at a published version would make `--build` overwrite frozen bytes, which
+# `packages check-release` classifies as a forbidden mutation.
+ARTIFACT_LDFLAGS="-buildid= -X main.version=1.14"
 
 # shellcheck source=scripts/lib/go-reproducible-build.sh
 source "$REPO_ROOT/scripts/lib/go-reproducible-build.sh"

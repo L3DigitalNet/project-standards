@@ -29,7 +29,7 @@ git_context = true
 # no version. The exact version is derived from this repository's own source of
 # truth, the go.mod toolchain directive, and is declared unqualified because go
 # is one of the pinned mise release's core names.
-go = "1.26.5"
+go = "1.26.6"
 
 [provision.debian]
 

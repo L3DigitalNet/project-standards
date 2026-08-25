@@ -2,7 +2,7 @@ module github.com/L3DigitalNet/project-standards
 
 go 1.26.0
 
-toolchain go1.26.5
+toolchain go1.26.6
 
 tool golang.org/x/vuln/cmd/govulncheck
 

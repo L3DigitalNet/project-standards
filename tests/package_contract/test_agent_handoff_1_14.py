@@ -47,6 +47,13 @@ _SUCCESSOR_CHANGES = frozenset(
         # Documentation of the same change for readers who never open the skill.
         "README.md",
         "adopt.md",
+        # Not a 1.14 behavior change: the launcher is byte-identical Go source rebuilt
+        # under the go1.26.6 toolchain pin, which 1.13 predates. 1.14 is the newest
+        # unpublished cut, so it is the only version whose copy may be rebuilt — every
+        # released copy from 1.10 through 1.13 keeps its frozen bytes and its own
+        # payload digest (issue #177's toolchain bump; see
+        # scripts/build-agent-handoff-session-start.sh, which targets this version).
+        "hooks/session-start/session-start",
     }
 )
 

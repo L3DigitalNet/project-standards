@@ -294,7 +294,7 @@ policy = "create-only"
 id = "hook"
 target = ".agents/hooks/agent-handoff/session-start"
 source = "hooks/session-start/session-start"
-digest = "sha256:a5391567cf81d92580679ba30bf6af641e4e265044ba0753b834220cdb2b215e"
+digest = "sha256:8b906e3e4a8e426e5233e05c4208b38e13ae374ce8c0d55cf5363444cc346e02"
 policy = "managed"
 mode = "0755"
 when_any = [{ option = "startup", equals = "automatic" }]

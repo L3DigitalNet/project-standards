@@ -106,7 +106,7 @@ when_any = [{ option = "harnesses", contains = "codex" }]
 id = "tool-binary"
 target = ".agents/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:4e2600638d50ec4f6d99641795a43317b21cbd590ddb81ae617b0ed3e5fb9026"
+digest = "sha256:b62ac073285f68ac9d486061f8723975feab82c9f87f4b03d657b0a03b56f346"
 policy = "managed"
 mode = "0755"
 
@@ -179,7 +179,7 @@ when_any = [{ option = "harnesses", contains = "codex" }]
 id = "tool-binary-claude"
 target = ".claude/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:4e2600638d50ec4f6d99641795a43317b21cbd590ddb81ae617b0ed3e5fb9026"
+digest = "sha256:b62ac073285f68ac9d486061f8723975feab82c9f87f4b03d657b0a03b56f346"
 policy = "managed"
 mode = "0755"
 

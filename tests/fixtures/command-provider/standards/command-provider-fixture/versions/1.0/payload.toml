@@ -45,7 +45,7 @@ id = "provider-binary"
 role = "provider"
 path = "bin/command-provider-fixture"
 media_type = "application/octet-stream"
-digest = "sha256:83292a67bab10fb619d5d3be17210b8e056734efb15140562ee5b8741b63496a"
+digest = "sha256:e9c998e0ad4efa5fec2773403971263ebccf04a8eb20c2c8f068abf7ac27fd41"
 
 [[resources]]
 id = "provider-input"

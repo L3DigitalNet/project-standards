@@ -30,7 +30,7 @@
 # which would make this repository's own gate fail on GitHub-hosted CI.
 #
 # `dwarf5` is the upstream baseline, so pinning it changes no code generation — a binary
-# built this way reports a plain `go1.26.5` toolchain version, not the `-X:nodwarf5`
+# built this way reports a plain `go1.26.6` toolchain version, not the `-X:nodwarf5`
 # variant. Verified: the upstream and Fedora toolchains produce byte-identical output
 # under this pin. Setting the variable to the empty string does NOT work, because the go
 # command falls back to go.env whenever the environment value is empty.
