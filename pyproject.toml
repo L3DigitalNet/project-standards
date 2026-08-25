@@ -1,6 +1,6 @@
 [project]
 name = "project-standards"
-version = "5.20.0"
+version = "5.21.0"
 description = "Reusable project standards, templates, schemas, and validation tools."
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -48,13 +48,12 @@ target-version = "py314"
 line-length = 100
 src = ["src", "tests"]
 # Vendored harness/agent-state Python must not be reformatted (byte-identical contract).
-# Exclude only bytes this repository does not own. scripts/plan.py is the byte-identical
-# plan-authoring bridge from agent-configs: a finding on it is unfixable here and proves
-# nothing about whether these standards cohere. Everything governed by a standard this
+# Exclude only bytes this repository does not own: a finding on them is unfixable here and
+# proves nothing about whether these standards cohere. Everything governed by a standard this
 # repository owns — including standards/** payloads and the deployed scripts/check.py —
 # stays in scope, because a python-tooling rule change breaking another standard's bytes
 # is exactly the cross-standard failure the dogfood exists to surface.
-extend-exclude = [".claude/hooks", ".codex/hooks", "docs/handoff", "scripts/plan.py"]
+extend-exclude = [".claude/hooks", ".codex/hooks", "docs/handoff"]
 extend-include = []
 
 [tool.ruff.lint]

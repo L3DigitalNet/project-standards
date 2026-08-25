@@ -298,10 +298,11 @@ Do not infer permission for Python migration, freeze, retirement, or language pr
 
 **Rule:** ask who owns the standard governing the bytes, not whether the bytes are frozen.
 
-- Foreign vendored bytes are excluded in the commit that lands them. `scripts/plan.py` is the byte-identical `plan-authoring` bridge from `agent-configs`.
-- A finding on it is unfixable here and proves nothing about these standards; it is the only `scripts/` entry in `[tool.ruff] extend-exclude`.
+- Foreign vendored bytes are excluded in the commit that lands them, and the exclusion is dropped in the commit that removes them.
+- A finding on foreign bytes is unfixable here and proves nothing about these standards; no `scripts/` entry remains in `[tool.ruff] extend-exclude`.
 - Bytes governed by a standard this repository owns stay in scope even when immutable: `standards/**` payloads and the deployed `scripts/check.py`.
 - Verify identity with `cmp -s` against the source after any tooling change.
+- Worked example (retired 2026-08-17): `scripts/plan.py` was the byte-identical `plan-authoring` bridge vendored from `agent-configs`, excluded for exactly this reason. `agent-configs` ADR-0023 retired the deployed-bridge model, so both the file and its exclusion are gone; the rule outlives the example.
 
 **Why:** the dogfood exists so a change to one standard cannot silently break another. Suppressing a finding on a released payload's provider blinds the repository to its own cross-standard breakage.
 
@@ -326,7 +327,7 @@ Do not infer permission for Python migration, freeze, retirement, or language pr
 
 **Gotcha:** `blocked` returns only to `in-progress` or `skipped`, never `not-started`. A task blocked on a decision resolved while its dependencies are still incomplete keeps stale blocker text.
 
-**Sources:** 2026-08-04 session; `scripts/plan.py` `_TRANSITIONS`; plan revision 4.
+**Sources:** 2026-08-04 session; the plan engine's `_TRANSITIONS` table (then the vendored `scripts/plan.py` bridge, now the `plan-authoring` skill binary in `agent-configs`); plan revision 4.
 
 **Related:** 13, 16.
 

@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-08-11'
+updated: '2026-08-16'
 reviewed: '2026-07-27'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -42,6 +42,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - **Agent Handoff 1.14 makes closeout cheap to perform correctly** ([#184](https://github.com/L3DigitalNet/project-standards/issues/184)). The packaged skill now states the numeric per-document caps it previously left implicit — so an agent writes to them instead of discovering them by failing validation — marks them as physical characters and bytes rather than visually wrapped lines, opens closeout with a `delta` survey of the session instead of ad-hoc Git and text reconstruction, runs closeout validation scoped to the session boundary, and makes closeout delegable to a harness-provided subagent by default. The caps table is pinned to the payload's own `resources/policy.toml` by a package-contract test, so prose and policy cannot drift. Payload prose only: no option, policy value, template, hook, provider, contribution, or artifact target changes. This release promotes 1.14 and retains 1.13 for exact selection.
 - `project-standards agent-handoff validate --since <ref>` scopes advisory output to the current session: a warning is kept only when its line lies inside a hunk added relative to `<ref>`. The `size` and `shape` views honour it too. Errors and document-level findings (hard byte cap, missing section) are never suppressed, and an unresolvable ref or Git failure exits `2` rather than silently reporting everything. Human output gains a `baseline <ref>: N pre-existing warning(s) suppressed` line; JSON gains an optional `baseline` object that is absent without the flag, leaving the 1.1 report shape unchanged ([#184](https://github.com/L3DigitalNet/project-standards/issues/184)).
 - `project-standards agent-handoff delta --since <ref> [--repo <dir>] [--json]` reports the session delta for closeout — commits in `<ref>..HEAD`, changed paths grouped as handoff documents, other docs, and code/other, deduplicated `#NNN` and `owner/repo#NNN` references from commit messages, and the uncommitted working-tree remainder. An empty delta exits `0`; a bad ref exits `2` ([#184](https://github.com/L3DigitalNet/project-standards/issues/184)).
+
+## [5.21.0] — 2026-08-16
+
+### Added
+
+- **New Catalog 5 consumer family `project-toolbox@1.0`, the ninth consumer package** ([#168](https://github.com/L3DigitalNet/project-standards/issues/168)). The durable home for proven cross-cutting repository workflows that fit no existing standard: two managed whole-file workflow documents install to `.standards/packages/project-toolbox/workflows/` — a periodic repository-housekeeping sweep and a claim-versus-reality drift-detection sweep — plus a routing `project-toolbox` skill installed as byte-identical dual-tree copies (`.agents/skills/` and `.claude/skills/`, including `agents/openai.yaml`) per ADR 0021. Version 1.0 ships a deliberately minimal inventory: no providers, no contributions, and a closed empty option schema, so adoption is all-or-nothing. The package requires no other package; both sweeps read `.standards/config.toml` and fold each installed package's own gates into the work instead of duplicating them. `standards/README.md`, `README.md`, `meta/versioning.md`, and both adoption prompts now list nine consumer packages.
+
+### Fixed
+
+- **`packages check-release` accepts a released payload that declares one source at several targets** ([#176](https://github.com/L3DigitalNet/project-standards/issues/176)). The released-baseline loader still rejected any repeated declared path, so every train baselined on a v5.20.0 or later tag failed with `released payload has duplicate file declarations` the moment a dual-tree skill install appeared in the baseline. The baseline rule now matches the payload inventory rule it must agree with: a repeated path whose declarations pin the same digest is one inventory entry, disagreeing digests for one path still fail, and `payload.toml` self-declaration remains rejected.
 
 ## [5.20.0] — 2026-08-15
 

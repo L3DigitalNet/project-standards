@@ -386,6 +386,12 @@ digest = "sha256:980f922a3980de82e1302db6d2d22ec88ca2457b2affd64876ada4dc09ab669
 role = "default"
 
 [[packages]]
+id = "project-toolbox"
+version = "1.0"
+digest = "sha256:48020eacd25a34578b6cc9c2cd7314af14bc6a808bd6d21531df29726c754bf8"
+role = "default"
+
+[[packages]]
 id = "python-coding"
 version = "0.5"
 digest = "sha256:c027af45f85e84717e7ce9909adcd71363745e688538bd88a303dd813a351d80"

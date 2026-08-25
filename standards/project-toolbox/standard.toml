@@ -1,0 +1,12 @@
+schema_version = "2.0"
+
+[standard]
+id = "project-toolbox"
+name = "Project Toolbox Standard"
+summary = "Proven cross-cutting repository workflows delivered as managed checklists with a routing agent skill."
+status = "active"
+
+[[versions]]
+version = "1.0"
+payload = "versions/1.0/payload.toml"
+digest = "sha256:48020eacd25a34578b6cc9c2cd7314af14bc6a808bd6d21531df29726c754bf8"

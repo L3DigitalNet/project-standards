@@ -48,8 +48,8 @@ _ROOT = Path(__file__).resolve().parents[2]
 # `uv.lock`, both `.standards/` release fields, and the dated CHANGELOG heading. It
 # moves only in the release commit that bumps those files; `scripts/release_prep.py`
 # reports this file in its version-reference sweep for exactly that reason.
-_BASELINE_REF = "v5.20.0"
-_RELEASE_VERSION = "5.20.0"
+_BASELINE_REF = "v5.21.0"
+_RELEASE_VERSION = "5.21.0"
 
 
 def _repository() -> PackageRepository:

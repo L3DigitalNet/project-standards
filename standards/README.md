@@ -16,6 +16,7 @@ Consumer packages are enabled through `.standards/config.toml` and reconciled as
 | CLI Documentation | Language-neutral CLI usage docs: help text, usage references, man pages, shell completion, CI drift checks | 1.6 | default | [cli-documentation/](cli-documentation/) | [adopt](cli-documentation/adopt.md) |
 | Agent Handoff | Repository-local project knowledge, bounded session continuity, repo-local skill and hooks, and conformance tooling | 1.13 | default | [agent-handoff/](agent-handoff/) | [adopt](agent-handoff/adopt.md) |
 | GitHub Workflow | GitHub work discipline for organization-owned repositories: typed issue contracts, PR evidence, an agent skill, and the `gh-workflow` tool | 1.3 | default | [github-workflow/](github-workflow/) | [adopt](github-workflow/adopt.md) |
+| Project Toolbox | Proven cross-cutting repository workflows — housekeeping and drift-detection sweeps — with a routing agent skill | 1.0 | default | [project-toolbox/](project-toolbox/) | [adopt](project-toolbox/adopt.md) |
 | Python Coding | Code-shape and agent-behavior rules for Python (companion to Python Tooling SSOT) | 0.6 | reference-only | [python-coding/](python-coding/) | — (**in-development draft**; not released for adoption) |
 | Standard Bundle Authoring | The V2 family, payload, catalog, provider, relationship, and ownership contract | 2.6 | internal | [standard-bundle-authoring/](standard-bundle-authoring/) | — (**internal/reference**; governs this repository's packages) |
 
@@ -42,7 +43,7 @@ standards/<standard-id>/
     └── ...                   # Declared resources, providers, templates, and outputs
 ```
 
-Every family ships a landing-page `README.md` and a V2 `standard.toml` index. Each indexed version points to one immutable `versions/<version>/payload.toml`; its aggregate digest covers the complete declared payload inventory. Consumer payloads include an adoption guide, while reference-only and internal payloads do not. Catalog 5 selects the eight default consumer packages shown above and advertises Python Coding and Standard Bundle Authoring only in their non-consumer roles. Standard-package docs under `standards/**` remain excluded from this repository's local markdown-frontmatter corpus by ADR 0015.
+Every family ships a landing-page `README.md` and a V2 `standard.toml` index. Each indexed version points to one immutable `versions/<version>/payload.toml`; its aggregate digest covers the complete declared payload inventory. Consumer payloads include an adoption guide, while reference-only and internal payloads do not. Catalog 5 selects the nine default consumer packages shown above and advertises Python Coding and Standard Bundle Authoring only in their non-consumer roles. Standard-package docs under `standards/**` remain excluded from this repository's local markdown-frontmatter corpus by ADR 0015.
 
 ## Not a governed standard
 

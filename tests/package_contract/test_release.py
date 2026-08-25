@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import subprocess
@@ -467,3 +468,130 @@ def test_git_baseline_loader_rejects_option_like_or_missing_refs(tmp_path: Path)
         load_git_release_snapshot(tmp_path, "--upload-pack=evil", 5)
     with pytest.raises(PackageContractError, match="ref"):
         load_git_release_snapshot(tmp_path, "missing", 5)
+
+
+def _commit_and_tag(repository: Path, tag: str) -> None:
+    git_environment = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+    }
+    subprocess.run(["git", "init", "-q", repository], check=True, env=git_environment)
+    subprocess.run(["git", "-C", repository, "add", "."], check=True, env=git_environment)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            repository,
+            "-c",
+            "core.hooksPath=/dev/null",
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=168346341+chrisdpurcell@users.noreply.github.com",
+            "commit",
+            "-qm",
+            "baseline",
+        ],
+        check=True,
+        env=git_environment,
+    )
+    subprocess.run(
+        ["git", "-C", repository, "-c", "tag.gpgSign=false", "tag", tag],
+        check=True,
+        env=git_environment,
+    )
+
+
+def _sha256(raw: bytes) -> str:
+    return f"sha256:{hashlib.sha256(raw).hexdigest()}"
+
+
+def _rewrite_declared_digests(repository: Path, payload_dir: Path) -> None:
+    """Repoint the catalog and family index at the payload's recomputed aggregate.
+
+    Appending any declaration rewrites `payload.toml`, which hashes itself into
+    the inventory, so the published aggregate moves even when the set of files
+    does not. The aggregate is recomputed here from the payload directory rather
+    than through the engine, so the test still fails if the loader's inventory
+    gains or loses an entry.
+    """
+    entries = sorted(
+        (path.relative_to(payload_dir).as_posix(), _sha256(path.read_bytes()))
+        for path in payload_dir.rglob("*")
+        if path.is_file()
+    )
+    canonical = b"".join(
+        path.encode("utf-8") + b"\0" + digest.encode("ascii") + b"\n" for path, digest in entries
+    )
+    aggregate = _sha256(canonical)
+    for relative in ("catalogs/5.toml", "standards/demo/standard.toml"):
+        target = repository / relative
+        target.write_text(
+            target.read_text(encoding="utf-8").replace(_DIGEST_A.value, aggregate),
+            encoding="utf-8",
+        )
+
+
+def test_git_baseline_loader_accepts_one_source_backing_several_targets(tmp_path: Path) -> None:
+    """Pins issue #176: a v5.20.0-era dual-target install must stay releasable.
+
+    The baseline loader shares the current-payload inventory rule, so the second
+    declaration of `README.md` contributes no second inventory entry and the
+    published aggregate still verifies.
+    """
+    repository = tmp_path / "repository"
+    shutil.copytree(_FIXTURE, repository)
+    payload_dir = repository / "standards/demo/versions/1.2"
+    manifest = payload_dir / "payload.toml"
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8")
+        + f'''
+[[artifacts]]
+id = "readme-second-target"
+target = "copy.md"
+source = "README.md"
+digest = "{_sha256((payload_dir / "README.md").read_bytes())}"
+policy = "managed"
+''',
+        encoding="utf-8",
+    )
+    _rewrite_declared_digests(repository, payload_dir)
+    _commit_and_tag(repository, "v5.0.0")
+
+    snapshot = load_git_release_snapshot(repository, "v5.0.0", 5)
+
+    paths = [entry.path.normalized.as_posix() for entry in snapshot.payloads[0].files]
+    assert paths.count("README.md") == 1
+    assert sorted(paths) == [
+        "README.md",
+        "adopt.md",
+        "agent-summary.md",
+        "config.schema.json",
+        "payload.toml",
+    ]
+
+
+def test_git_baseline_loader_rejects_conflicting_digests_for_one_path(tmp_path: Path) -> None:
+    """A released path has one byte sequence, so two declarations cannot disagree."""
+    repository = tmp_path / "repository"
+    shutil.copytree(_FIXTURE, repository)
+    payload_dir = repository / "standards/demo/versions/1.2"
+    manifest = payload_dir / "payload.toml"
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8")
+        + f'''
+[[artifacts]]
+id = "readme-second-target"
+target = "copy.md"
+source = "README.md"
+digest = "{_DIGEST_B.value}"
+policy = "managed"
+''',
+        encoding="utf-8",
+    )
+    _rewrite_declared_digests(repository, payload_dir)
+    _commit_and_tag(repository, "v5.0.0")
+
+    with pytest.raises(PackageContractError, match="conflicting digests"):
+        load_git_release_snapshot(repository, "v5.0.0", 5)

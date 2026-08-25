@@ -19,6 +19,7 @@ The agent resolves the package versions from the immutable release selected belo
 - [ ] `cli-documentation` — provides CLI usage-reference/man-page scaffolding and checks for drift from the executable interface.
 - [ ] `agent-handoff` — establishes repository-local status, task, and handoff knowledge; it can also install a shared SessionStart hook for supported agent harnesses.
 - [ ] `github-workflow` — installs the GitHub work-discipline skill and the static `linux/amd64` `gh-workflow` binary for a repository owned by a GitHub organization whose Issue Fields schema it audits against.
+- [ ] `project-toolbox` — installs two managed workflow checklists (a repository-housekeeping sweep and a drift-detection sweep) plus a routing skill; it has no options, ships no executable code, and requires no other package.
 
 ### Existing V5 repositories (select only when changing its package set)
 

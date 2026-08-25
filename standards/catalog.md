@@ -72,6 +72,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`project-spec`](project-spec/README.md) | active | 1.7 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.8 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.9 | default | consumer | 24 | 11 | 1 |
+| [`project-toolbox`](project-toolbox/README.md) | active | 1.0 | default | consumer | 4 | 0 | 6 |
 | [`python-coding`](python-coding/README.md) | draft | 0.5 | reference-only | reference-only | 3 | 1 | 0 |
 | [`python-coding`](python-coding/README.md) | draft | 0.6 | reference-only | reference-only | 3 | 1 | 0 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.1 | retained | consumer | 13 | 3 | 52 |
@@ -164,6 +165,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `project-spec@1.7` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `project-spec@1.8` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `project-spec@1.9` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
+| `project-toolbox@1.0` | `project-toolbox.workflows` | `project-standards.reconcile` |
 | `python-coding@0.5` | `python.agent-guidance`, `python.coding.guidance`, `python.testing.guidance` | — |
 | `python-coding@0.6` | `python.agent-guidance`, `python.coding.guidance`, `python.testing.guidance` | — |
 | `python-tooling@1.1` | `python.audit`, `python.format`, `python.lint`, `python.test`, `python.tooling`, `python.typecheck` | `project-standards.reconcile` |
@@ -1638,6 +1640,10 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `project-spec@1.9` | `schema-light` | `document-schema` | `standards://project-spec/1.9/resources/schema-light` | `schemas/spec-light.schema.json` |
 | `project-spec@1.9` | `schema-standard` | `document-schema` | `standards://project-spec/1.9/resources/schema-standard` | `schemas/spec-standard.schema.json` |
 | `project-spec@1.9` | `schema-full` | `document-schema` | `standards://project-spec/1.9/resources/schema-full` | `schemas/spec-full.schema.json` |
+| `project-toolbox@1.0` | `readme` | `canonical-standard` | `standards://project-toolbox/1.0/resources/readme` | `README.md` |
+| `project-toolbox@1.0` | `agent-summary` | `agent-summary` | `standards://project-toolbox/1.0/resources/agent-summary` | `agent-summary.md` |
+| `project-toolbox@1.0` | `config-schema` | `config-schema` | `standards://project-toolbox/1.0/resources/config-schema` | `config.schema.json` |
+| `project-toolbox@1.0` | `adopt` | `adoption-guide` | `standards://project-toolbox/1.0/resources/adopt` | `adopt.md` |
 | `python-coding@0.5` | `readme` | `canonical-standard` | `standards://python-coding/0.5/resources/readme` | `README.md` |
 | `python-coding@0.5` | `agent-summary` | `agent-summary` | `standards://python-coding/0.5/resources/agent-summary` | `agent-summary.md` |
 | `python-coding@0.5` | `config-schema` | `config-schema` | `standards://python-coding/0.5/resources/config-schema` | `config.schema.json` |
@@ -3160,6 +3166,12 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `project-spec@1.7` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
 | `project-spec@1.8` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
 | `project-spec@1.9` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
+| `project-toolbox@1.0` | artifact | `workflow-repo-housekeeping` | `.standards/packages/project-toolbox/workflows/repo-housekeeping.md` | `managed` | whole-file |
+| `project-toolbox@1.0` | artifact | `workflow-drift-detection` | `.standards/packages/project-toolbox/workflows/drift-detection.md` | `managed` | whole-file |
+| `project-toolbox@1.0` | artifact | `skill` | `.agents/skills/project-toolbox/SKILL.md` | `managed` | whole-file |
+| `project-toolbox@1.0` | artifact | `skill-openai` | `.agents/skills/project-toolbox/agents/openai.yaml` | `managed` | whole-file |
+| `project-toolbox@1.0` | artifact | `skill-claude` | `.claude/skills/project-toolbox/SKILL.md` | `managed` | whole-file |
+| `project-toolbox@1.0` | artifact | `skill-openai-claude` | `.claude/skills/project-toolbox/agents/openai.yaml` | `managed` | whole-file |
 | `python-tooling@1.1` | contribution | `python-version` | `.python-version` | `managed` | `whole-file` / `$file` |
 | `python-tooling@1.1` | contribution | `check-workflow` | `.github/workflows/check.yml` | `managed` | `whole-file` / `$file` |
 | `python-tooling@1.1` | contribution | `check-script` | `scripts/check.py` | `managed` | `whole-file` / `$file` |

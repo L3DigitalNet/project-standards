@@ -38,7 +38,11 @@ enabled = true
 version = "latest"
 config = { contract_version = "1.1", include_patterns = ["standards/project-spec/examples/**/*.md", "docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md", "docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md", "docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md", "docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md", "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md", "docs/specs/2026-07-09-agent-handoff-standard-package.md", "docs/specs/2026-07-10-consumer-standards-control-plane-spec.md", "docs/specs/2026-07-26-v5-adoption-integrity-correction-train-spec.md", "docs/specs/2026-07-27-v5-validation-fidelity-correction-train-spec.md", "docs/specs/future/usage-documentation-site/**/*.md"], workflow_mode = "self-hosted" }
 
+[standards.project-toolbox]
+enabled = true
+version = "latest"
+
 [standards.python-tooling]
 enabled = true
 version = "latest"
-config = { additional_dev_dependencies = ["types-PyYAML", "pytest-xdist>=3.8", "pyright==1.1.411"], ci = { performance = true }, contract_version = "1.0", pytest = { coverage_exclude_also = ["if __name__ == .__main__.:"], fail_under = 85, markers = ["compatibility: catalog-derived source and wheel lifecycle rows run in the parallel phase", "performance: deterministic scale gates run explicitly in CI"] }, ruff = { extend_exclude = [".claude/hooks", ".codex/hooks", "docs/handoff", "scripts/plan.py"], line_length = 100 }, workflow_ownership = "consumer-owned" }
+config = { additional_dev_dependencies = ["types-PyYAML", "pytest-xdist>=3.8", "pyright==1.1.411"], ci = { performance = true }, contract_version = "1.0", pytest = { coverage_exclude_also = ["if __name__ == .__main__.:"], fail_under = 85, markers = ["compatibility: catalog-derived source and wheel lifecycle rows run in the parallel phase", "performance: deterministic scale gates run explicitly in CI"] }, ruff = { extend_exclude = [".claude/hooks", ".codex/hooks", "docs/handoff"], line_length = 100 }, workflow_ownership = "consumer-owned" }
