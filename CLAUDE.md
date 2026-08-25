@@ -25,6 +25,7 @@ Run CPU-heavy commands through `rexec -- <command>`: `make go-check` and the ful
 ## Non-Negotiables
 
 - Dogfood the standards through the extracted candidate-wheel runtime described in [README.md](README.md#developing-this-repository): `uv run project-standards validate` must pass with that runtime first on `PYTHONPATH`.
+- Run the closeout handoff validators via `make handoff-validate` / `make handoff-drift-check` in this repo (they wrap the same wheel-runtime `PYTHONPATH`); the bare skill commands fail here by design.
 - Never add frontmatter to `CLAUDE.md`, `AGENTS.md`, or `.claude/**`.
 - Keep the `AGENTS.md` toolchain gate green; coherence tests require `npm ci`.
 - The schema is a versioned contract — see `docs/handoff/conventions.md`.

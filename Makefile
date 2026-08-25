@@ -3,7 +3,7 @@ GO_PACKAGES := $(shell go list ./... 2>/dev/null)
 GOLANGCI_LINT := .tools/bin/golangci-lint
 GOLANGCI_LINT_VERSION := v2.12.2
 
-.PHONY: go-tools go-format go-format-check go-vet go-lint go-test go-build go-audit go-mod-check go-binary go-verify-binary go-check
+.PHONY: go-tools go-format go-format-check go-vet go-lint go-test go-build go-audit go-mod-check go-binary go-verify-binary go-check handoff-validate handoff-drift-check
 
 go-tools:
 	mkdir -p .tools/bin
@@ -60,3 +60,16 @@ go-verify-binary:
 	scripts/build-command-provider-fixture.sh --verify
 
 go-check: go-format-check go-mod-check go-vet go-lint go-test go-build go-audit go-verify-binary
+
+# The installed skill's agent-handoff CLI commands cannot resolve the catalog
+# projection from the source checkout (exits 3, "installed catalog projection
+# is unavailable") without the extracted candidate wheel on PYTHONPATH — see
+# README "Developing this repository". These targets wrap that requirement so
+# a fresh session doesn't have to rediscover it.
+handoff-validate:
+	@test -d build/wheel-runtime || { echo "build/wheel-runtime missing: see README 'Developing this repository'"; exit 1; }
+	PYTHONPATH=$(CURDIR)/build/wheel-runtime uv run project-standards agent-handoff validate --repo . $(if $(SINCE),--since $(SINCE),)
+
+handoff-drift-check:
+	@test -d build/wheel-runtime || { echo "build/wheel-runtime missing: see README 'Developing this repository'"; exit 1; }
+	PYTHONPATH=$(CURDIR)/build/wheel-runtime uv run project-standards agent-handoff drift-check --repo .
