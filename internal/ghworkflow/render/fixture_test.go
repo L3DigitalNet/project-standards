@@ -15,12 +15,32 @@ import (
 // happen to agree today. It deliberately covers every category the layout has a rule
 // for: each of the four needs-attention classes, a Bug (Severity in the shared
 // Size / Severity column), an Initiative (neither pinned), a title carrying markdown
-// metacharacters and a bare URL, an aligned PR table next to an unalignable issue
-// table, and a PR with no governing issue.
+// metacharacters and a bare URL, a title whose cell width depends on every branch of
+// Prettier's emoji and East Asian width rule, an aligned PR table next to an unalignable
+// issue table, and a PR with no governing issue.
 const (
 	fixtureTarget = "L3DigitalNet/example-repo"
 	fixtureRead   = "2026-08-06T12:00:00Z"
 )
+
+// emojiWidthTitle is the widest cell in the one table this fixture renders in aligned
+// form, so its padding — and therefore every branch of Prettier's width rule — is what
+// `prettier --check` over testdata/*.md actually verifies (#185). Each token is a
+// distinct case in getStringWidth: a bare narrow-list emoji, the same class of character
+// forced to emoji presentation by U+FE0F, U+FE0E text presentation, a ZWJ sequence, a
+// keycap, a regional-indicator flag, East Asian wide characters, and a Hebrew combining
+// point that is NOT in the U+0300-U+036F range Prettier skips.
+//
+// Every token is scored identically by Prettier 3.8.3 and 3.9.6. Those two ship
+// different narrow-emoji lists — 100 code points differ, U+270C and U+24C2 among them —
+// so a token drawn from that difference would leave this golden un-checkable under one
+// of the two versions.
+//
+// command_test.go's pull23 wire payload carries this same title; the two must stay
+// identical or the fetch layer and the layout engine stop agreeing on one golden.
+const emojiWidthTitle = "\u2714 \u26A0\uFE0F \u00A9\uFE0E \u00A9\uFE0F " +
+	"\U0001F468\u200D\U0001F469\u200D\U0001F467\u200D\U0001F466 " +
+	"1\uFE0F\u20E3 \U0001F1FA\U0001F1F8 \u6F22\u5B57 \u05D0\u05B7"
 
 func fixtureReadAt(t *testing.T) time.Time {
 	t.Helper()
@@ -105,6 +125,12 @@ func fixtureSnapshot(t *testing.T) *render.Snapshot {
 			Title: "Tidy the fixture corpus",
 			URL:   "https://github.com/L3DigitalNet/example-repo/pull/22",
 			State: "open", Draft: true, CI: "failing",
+		},
+		{
+			Kind: render.KindPullRequest, Number: 23,
+			Title: emojiWidthTitle,
+			URL:   "https://github.com/L3DigitalNet/example-repo/pull/23",
+			State: "open", CI: "passing", GoverningIssue: 14,
 		},
 	}
 

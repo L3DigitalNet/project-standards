@@ -1,6 +1,6 @@
 # L3DigitalNet/example-repo — work state
 
-Read 2026-08-06T12:00:00Z · 4 open issues · 2 open PRs
+Read 2026-08-06T12:00:00Z · 4 open issues · 3 open PRs
 
 ## Needs attention
 
@@ -21,10 +21,11 @@ Read 2026-08-06T12:00:00Z · 4 open issues · 2 open PRs
 
 ## Pull requests
 
-| PR  | Title                   | Governing issue | State | CI      | Risk notes |
-| --- | ----------------------- | --------------- | ----- | ------- | ---------- |
-| #21 | Add the render engine   | #12             | Open  | passing | R3 — High  |
-| #22 | Tidy the fixture corpus | —               | Draft | failing | —          |
+| PR  | Title                      | Governing issue | State | CI      | Risk notes |
+| --- | -------------------------- | --------------- | ----- | ------- | ---------- |
+| #21 | Add the render engine      | #12             | Open  | passing | R3 — High  |
+| #22 | Tidy the fixture corpus    | —               | Draft | failing | —          |
+| #23 | ✔ ⚠️ ©︎ ©️ 👨‍👩‍👧‍👦 1️⃣ 🇺🇸 漢字 אַ | #14             | Open  | passing | —          |
 
 ## Discovered follow-ups
 

@@ -96,6 +96,14 @@ const (
 		"state":"open","draft":true,"body":"Housekeeping only.","head":{"sha":"bbb222"}}`
 )
 
+// pull23 is the emoji-width row (#185). Its title is spliced from emojiWidthTitle rather
+// than written out here, so the wire fixture and the model fixture cannot drift into
+// disagreeing about the one cell whose padding the golden exists to pin. Every character
+// in it is JSON-safe, so no escaping step stands between the constant and the payload.
+const pull23 = `{"number":23,"title":"` + emojiWidthTitle + `",
+		"html_url":"https://github.com/L3DigitalNet/example-repo/pull/23",
+		"state":"open","draft":false,"body":"Closes #14","head":{"sha":"ccc333"}}`
+
 type harness struct {
 	env       *cli.Env
 	stdout    *bytes.Buffer
@@ -132,7 +140,7 @@ func newHarness(t *testing.T) *harness {
 	transport := &ghtest.Transport{Routes: map[string]ghtest.Response{
 		repo + "/issues": {Status: http.StatusOK, Body: "[" + strings.Join(
 			[]string{issue12, issue14, issue15, issue16, issueShapedPull}, ",") + "]"},
-		repo + "/pulls": {Status: http.StatusOK, Body: "[" + pull21 + "," + pull22 + "]"},
+		repo + "/pulls": {Status: http.StatusOK, Body: "[" + pull21 + "," + pull22 + "," + pull23 + "]"},
 		// CI arrives on two independent surfaces and a repository may use either, so one
 		// fixture pull request reports check runs and the other falls back to commit
 		// statuses. Both paths are exercised by the same run.
@@ -140,10 +148,13 @@ func newHarness(t *testing.T) *harness {
 			"check_runs":[{"name":"go-check","status":"completed","conclusion":"success"}]}`},
 		repo + "/commits/bbb222/check-runs": {Status: http.StatusOK, Body: `{"total_count":0,"check_runs":[]}`},
 		repo + "/commits/bbb222/status":     {Status: http.StatusOK, Body: `{"state":"failure","total_count":1}`},
-		repo + "/issues/12":                 {Status: http.StatusOK, Body: issue12},
-		repo + "/issues/14":                 {Status: http.StatusOK, Body: issue14},
-		repo + "/pulls/21":                  {Status: http.StatusOK, Body: pull21},
-		repo + "/pulls/22":                  {Status: http.StatusOK, Body: pull22},
+		repo + "/commits/ccc333/check-runs": {Status: http.StatusOK, Body: `{"total_count":1,
+			"check_runs":[{"name":"go-check","status":"completed","conclusion":"success"}]}`},
+		repo + "/issues/12": {Status: http.StatusOK, Body: issue12},
+		repo + "/issues/14": {Status: http.StatusOK, Body: issue14},
+		repo + "/pulls/21":  {Status: http.StatusOK, Body: pull21},
+		repo + "/pulls/22":  {Status: http.StatusOK, Body: pull22},
+		repo + "/pulls/23":  {Status: http.StatusOK, Body: pull23},
 	}}
 	// Routes are keyed by "METHOD /path"; building them from the path alone above keeps
 	// the table readable, so they are re-keyed here.
@@ -239,7 +250,7 @@ func TestLedgerZeroArgumentRunWritesTheGoldenFile(t *testing.T) {
 	}
 
 	out := h.stdout.String()
-	for _, want := range []string{ledgerRelPath, "4 open issues", "2 open PRs"} {
+	for _, want := range []string{ledgerRelPath, "4 open issues", "3 open PRs"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("confirmation line %q missing %q", out, want)
 		}
@@ -363,8 +374,8 @@ func TestSummaryJSONOutput(t *testing.T) {
 	if decoded.Target != fixtureTarget {
 		t.Errorf("target = %q, want %q", decoded.Target, fixtureTarget)
 	}
-	if decoded.Counts.OpenIssues != 4 || decoded.Counts.OpenPullRequests != 2 {
-		t.Errorf("counts = %+v, want 4 issues and 2 pull requests", decoded.Counts)
+	if decoded.Counts.OpenIssues != 4 || decoded.Counts.OpenPullRequests != 3 {
+		t.Errorf("counts = %+v, want 4 issues and 3 pull requests", decoded.Counts)
 	}
 	if decoded.Counts.NeedsAttention != len(decoded.NeedsAttention) || len(decoded.NeedsAttention) != 5 {
 		t.Errorf("needs_attention = %d entries, count field %d, want 5",
@@ -373,7 +384,7 @@ func TestSummaryJSONOutput(t *testing.T) {
 	if len(decoded.Issues) != 4 || decoded.Issues[0].Fields["Workflow"] != "Blocked" {
 		t.Errorf("issues = %+v", decoded.Issues)
 	}
-	if len(decoded.PullRequests) != 2 || decoded.PullRequests[0].GoverningIssue != 12 ||
+	if len(decoded.PullRequests) != 3 || decoded.PullRequests[0].GoverningIssue != 12 ||
 		decoded.PullRequests[0].CI != "passing" {
 		t.Errorf("pull_requests = %+v", decoded.PullRequests)
 	}
