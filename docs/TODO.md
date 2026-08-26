@@ -54,17 +54,20 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
-- [ ] Propose `github-workflow` changes from the 2026-08-26 session-corpus review.
+- [x] Propose `github-workflow` changes from the 2026-08-26 session-corpus review.
 
-  The review at `docs/reviews/github-workflow/2026-08-26-0847-github-workflow-session-corpus-efficiency-review.md` is
-  descriptive by request and proposes nothing. Its three live problem classes are guidance granularity (F3/F4/F7),
-  routing coverage gaps (F5/F6), and the delegation bypass (F10).
+  Landed as github-workflow 1.5 in v5.23.0 (ledger subcommand + `docs/GH-WORKFLOWS.md` removed, leaner guidance,
+  agent self-defined acceptance criteria/Ready/Execution mode except `Unattended agent`).
 
-- [ ] Decide whether to add `.claude/worktrees/` to `[sync].exclude` in `.rexec.toml`.
+- [ ] Re-measure the github-workflow session corpus after 1.5 deploys (#191); wait for the measurement window.
 
-  Candidate fix identified 2026-08-16 for a rexec sync wedge caused by a stale worker-mirror path under
-  `.claude/worktrees/ptb-changelog/.ruff_cache/` (excluded content blocked deletion; remediated on the worker this
-  session). Not yet applied; see `L3DigitalNet/remote-execution#10`.
+- [ ] Decide the plan disposition for #178 (owner decision, still open).
+
+- [ ] Triage #194 (Ready: generic provider-registry==payload contract check) and #195 (Ready: `CP-VERIFY` should
+  name its target).
+
+- [ ] Migrate `agent-ventures` and `llm-wiki` off `.agents`-only skill trees onto the dual-tree layout, per the
+  2026-08-26 session-corpus review's F2 finding.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
