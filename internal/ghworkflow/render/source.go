@@ -114,7 +114,7 @@ var closingKeyword = regexp.MustCompile(`(?i)\b(?:close[sd]?|fix(?:e[sd])?|resol
 // GoverningIssue returns the issue a pull request body declares it closes, or zero.
 //
 // The pattern bounds nothing, and the body is arbitrary authored text: a reference wider
-// than an int is an unusable number, not a large one, and it lands in a committed ledger.
+// than an int is an unusable number, not a large one, and it lands in a committed summary.
 // An unparsable reference therefore reads as "no governing issue" rather than as whatever
 // value the digits happened to produce.
 func GoverningIssue(body string) int {

@@ -4,7 +4,7 @@ package render
 //
 // Table pads every cell to its column width. The consumer's own `prettier --check` gate
 // recomputes that padding with Prettier's `getStringWidth`, so any code point where this
-// file disagrees with Prettier produces a byte diff on an otherwise correct ledger and
+// file disagrees with Prettier produces a byte diff on an otherwise correct summary and
 // fails the consumer's format gate on the first refresh (#185, same failure class as
 // #177). Width is therefore a reproduction of Prettier's rule, not a terminal-display
 // approximation: matching a terminal is explicitly not the goal, and where the two

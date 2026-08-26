@@ -50,8 +50,8 @@ func TestSummaryWithNoOpenWorkStillRendersEverySection(t *testing.T) {
 }
 
 // The summary is printed, never committed, so it carries the read timestamp that the
-// removed ledger deliberately gave up (issue #154). Nothing else in the document may
-// move between two reads of unchanged work state.
+// removed generated-document subcommand deliberately gave up (issue #154). Nothing else in
+// the document may move between two reads of unchanged work state.
 func TestSummaryCarriesTheReadTimestampAndNothingElseThatMoves(t *testing.T) {
 	t.Parallel()
 

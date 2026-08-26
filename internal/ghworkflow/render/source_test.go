@@ -8,7 +8,7 @@ import (
 
 // A pull-request body is arbitrary operator- or bot-authored text, and the closing-keyword
 // pattern puts no bound on the digits it captures. The parsed number is rendered into a
-// committed ledger and used to cross-reference issues, so a reference no int can hold must
+// committed summary and used to cross-reference issues, so a reference no int can hold must
 // read as "no governing issue" rather than as whatever an unchecked accumulation produced.
 func TestGoverningIssue(t *testing.T) {
 	t.Parallel()

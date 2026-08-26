@@ -14,9 +14,9 @@ import (
 // markdownlint can be run over them (spec FR-019). It is a no-op in an ordinary test
 // run: the gate is an external command, not something a Go test can assert.
 //
-// The summary is printed rather than written since payload 1.5 removed `ledger`, but the
-// operator pastes it into Markdown, so the fidelity constraint it is checked against is
-// unchanged.
+// The summary is printed rather than written since payload 1.5 removed the
+// generated-document subcommand, but the operator pastes it into Markdown, so the
+// fidelity constraint it is checked against is unchanged.
 func TestWriteGeneratedOutputForGateRun(t *testing.T) {
 	dir := os.Getenv("GH_WORKFLOW_GATE_DIR")
 	if dir == "" {

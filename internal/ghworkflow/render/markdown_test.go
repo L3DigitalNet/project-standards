@@ -57,7 +57,7 @@ func TestTableEscapesCellText(t *testing.T) {
 }
 
 // Prettier rewrites `\_` back to `_` between two word characters, so an unconditional
-// underscore escape made every ledger refresh carrying a `snake_case` title fail the
+// underscore escape made every summary refresh carrying a `snake_case` title fail the
 // consuming repository's own `prettier --check` gate (#177). The cases below pin the
 // boundary of the conditional rule in both directions: an escape Prettier would strip is
 // a gate failure downstream, and a missing escape at a word edge lets `_x_` render as
@@ -108,7 +108,7 @@ func TestEscapeTextEscapesOnlyUnderscoresPrettierKeeps(t *testing.T) {
 	}
 }
 
-// The visible ledger has to be unchanged by the escaping change: the same characters an
+// The visible summary has to be unchanged by the escaping change: the same characters an
 // operator typed into the GitHub title appear in the cell, and the pipe stays escaped so
 // the row keeps its column count (#177).
 func TestTableKeepsPipeEscapedAroundBareUnderscores(t *testing.T) {

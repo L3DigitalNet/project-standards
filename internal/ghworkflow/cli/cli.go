@@ -47,7 +47,7 @@ const DefaultVersion = "1.5"
 // Version is the tool version `help` prints, and the only surface that reports it. It is
 // a variable so the reproducible build can stamp it (spec NFR-005); cmd/gh-workflow owns
 // the stamping. Payload 1.5 moved it here from internal/ghworkflow/render, whose removed
-// `ledger` surface used to be the thing that printed it.
+// generated-document subcommand used to be the thing that printed it.
 var Version = DefaultVersion
 
 // Delivered locations of the package artifacts the tool reads. IR-004 requires the tool

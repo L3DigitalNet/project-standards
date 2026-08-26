@@ -197,13 +197,13 @@ func decodeCodePoints(t *testing.T, field string) string {
 }
 
 // A cell's padding is computed from its display width, so an emoji-bearing title used to
-// be padded to a column Prettier measures differently — the ledger then failed the
-// consuming repository's own `prettier --check` on a row that was otherwise correct
+// be padded to a column Prettier measures differently — the generated table then failed
+// the consuming repository's own `prettier --check` on a row that was otherwise correct
 // (#185).
 //
 // The expected bytes below are not this renderer's output written down: the same table
 // was checked with prettier 3.9.6 and 3.8.3, both of which accept it as already
-// formatted. testdata/ledger.md carries the same proof end to end.
+// formatted. testdata/summary.md carries the same proof end to end.
 func TestTableAlignsEmojiCellsAtPrettierWidth(t *testing.T) {
 	t.Parallel()
 
