@@ -26,6 +26,8 @@ Cut one complete, unadvertised `agent-handoff@1.12` documentation successor that
 
 ## 2. Authority and Source Map
 
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 | Source | Source Role | Authority / Use | Version / Date | Affected Plan Surface |
 | --- | --- | --- | --- | --- |
 | `request` | normative | Binding paired scope, unadvertised 1.12 boundary, explicit exclusions, #156 entry gate, predecessor preservation, verification, and no-implementation handoff. | 2026-08-10 | §§1–13; T1 |

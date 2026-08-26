@@ -946,6 +946,8 @@ No regulated or personal data is introduced. Every payload resource and provider
 
 ### 17.3 Requirement-to-Test Traceability
 
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 | Requirement ID | Test / Verification Method | Status |
 | --- | --- | --- |
 | FR-001 | Family layout valid/invalid fixtures | Passing |
@@ -1096,6 +1098,9 @@ Exit criterion: synthetic packages prove the full contract without package-ID sh
 1. Reconstruct every current package into one or more V2 payloads.
 2. Assign exact config schemas, semantic scopes, shared identities, resources, providers, and migration signatures.
 3. Retire active V2 reads of legacy manifests/registry/locks outside migration adapters.
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 4. Dogfood the current Standard Bundle Authoring `2.6` package and maintain its internal Catalog 5 declaration.
 
 Exit criterion: every package passes fresh and migrated individual acceptance.
@@ -1156,6 +1161,9 @@ No implementation deviations are recorded. The initial design is represented dir
 ### Standards
 
 - [Standard Bundle Authoring V1 (SPEC-BA01)](archive/2026-07-07-standard-bundle-authoring-standard.md) — superseded historical design and migration evidence.
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - [Standard Bundle Authoring 2.6](../../standards/standard-bundle-authoring/versions/2.6/README.md) — current candidate authoring contract.
 - [Project Specification Standard 1.1](../../standards/project-spec/versions/1.1/README.md) — specification structure and validation.
 - [Repository Versioning Standard](../../meta/versioning.md) — tool/catalog/package version rules.

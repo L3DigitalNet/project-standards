@@ -26,6 +26,8 @@ Produce an unadvertised Python Tooling 1.14 candidate that lets a consumer selec
 
 ## 2. Authority and Source Map
 
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 | Source | Source Role | Authority / Use | Version / Date | Affected Plan Surface |
 | --- | --- | --- | --- | --- |
 | `request` | normative | Requires one format-3 plan, an unadvertised successor, no lock-version or scope-key redesign, an explicit #156 gate, adversarial proof, exact validators, and a local release boundary. | 2026-08-10 | §§1, 3, 5–13; T1–T2 |
@@ -351,6 +353,8 @@ None.
 - **Scratch teardown:** only the orchestrator may remove execution state after checkpoint identities and concise evidence pointers are committed and the parent handoff is consumable.
 
 ## Appendix A. Interface and State Contracts
+
+<!-- release-consistency: historical standard-bundle-authoring -->
 
 | Contract | Owner / Producer Task | Consumer(s) | Current | Planned / States | Errors / Limits | Compatibility / Invariant | Source |
 | --- | --- | --- | --- | --- | --- | --- | --- |

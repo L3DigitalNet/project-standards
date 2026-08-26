@@ -888,6 +888,70 @@ def test_release_consistency__unclassified_live_spec_body__fails_closed(
     assert "PC-RELEASE-PATH-UNCLASSIFIED" in {finding.code for finding in findings}
 
 
+def test_release_consistency__historical_marker_above_table__excuses_table_row(
+    release_fixture: ReleaseConsistencyFixture,
+) -> None:
+    specification = release_fixture.root / "docs/specs/current-release.md"
+    specification.write_text(
+        specification.read_text(encoding="utf-8")
+        + "\n## Table history\n\n"
+        + "<!-- release-consistency: historical standard-bundle-authoring -->\n\n"
+        + "| Row | Note |\n"
+        + "| --- | --- |\n"
+        + "| 1 | unrelated |\n"
+        + "| 2 | unrelated |\n"
+        + "| 3 | Standard Bundle Authoring 2.4 |\n",
+        encoding="utf-8",
+    )
+    release_fixture.commit()
+
+    assert release_fixture.validate() == ()
+
+
+def test_release_consistency__table_without_marker__still_reports_row(
+    release_fixture: ReleaseConsistencyFixture,
+) -> None:
+    specification = release_fixture.root / "docs/specs/current-release.md"
+    specification.write_text(
+        specification.read_text(encoding="utf-8")
+        + "\n## Table history\n\n"
+        + "| Row | Note |\n"
+        + "| --- | --- |\n"
+        + "| 1 | unrelated |\n"
+        + "| 2 | unrelated |\n"
+        + "| 3 | Standard Bundle Authoring 2.4 |\n",
+        encoding="utf-8",
+    )
+    release_fixture.commit()
+
+    findings = release_fixture.validate()
+
+    assert "docs/specs/current-release.md" in {finding.path for finding in findings}
+    assert "PC-RELEASE-PATH-UNCLASSIFIED" in {finding.code for finding in findings}
+
+
+def test_release_consistency__marker_above_table__does_not_excuse_prose_after_table(
+    release_fixture: ReleaseConsistencyFixture,
+) -> None:
+    specification = release_fixture.root / "docs/specs/current-release.md"
+    specification.write_text(
+        specification.read_text(encoding="utf-8")
+        + "\n## Table history\n\n"
+        + "<!-- release-consistency: historical standard-bundle-authoring -->\n\n"
+        + "| Row | Note |\n"
+        + "| --- | --- |\n"
+        + "| 1 | unrelated |\n"
+        + "\nStandard Bundle Authoring 2.4 is current.\n",
+        encoding="utf-8",
+    )
+    release_fixture.commit()
+
+    findings = release_fixture.validate()
+
+    assert "docs/specs/current-release.md" in {finding.path for finding in findings}
+    assert "PC-RELEASE-PATH-UNCLASSIFIED" in {finding.code for finding in findings}
+
+
 @pytest.mark.parametrize(
     ("path", "prefix", "reference"),
     [
@@ -935,13 +999,21 @@ def test_release_consistency__characterized_document_digest__uses_raw_bytes(
     # deleted once complete (AGENTS.md § Structure), so a plan path silently becomes
     # a FileNotFoundError the next time a train closes — which is exactly what the
     # original anchor did when the 5.9 close removed it.
+    #
+    # The anchor document's own stale references are now all release-consistency
+    # markered (every pre-2.7 mention was classified historical), so the rewrite
+    # appends one deliberately unmarked stale reference: the assertion needs the
+    # ordinary fail-closed scan to fire, not a coincidence of the anchor's current
+    # prose still containing an unclassified line.
     path = "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md"
     content = (_ROOT / path).read_bytes()
     target = release_fixture.root / path
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(content)
     release_fixture.commit()
-    target.write_bytes(content.replace(b"\n", b"\r\n"))
+    target.write_bytes(
+        content.replace(b"\n", b"\r\n") + b"\r\nStandard Bundle Authoring 2.4 is current.\r\n"
+    )
 
     findings = release_fixture.validate()
 

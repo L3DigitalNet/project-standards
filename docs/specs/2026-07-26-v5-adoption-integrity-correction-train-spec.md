@@ -148,6 +148,8 @@ One candidate wheel passes all required gates. Independent Opus review has no un
 
 ### 3.3 Assumptions
 
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 | ID | Assumption | Impact if False |
 | --- | --- | --- |
 | A-001 | The issue bodies and comments continue to define the requested behavior until implementation begins. | New material issue evidence requires specification and plan disposition before the affected GREEN step. |
@@ -234,6 +236,8 @@ One candidate wheel passes all required gates. Independent Opus review has no un
 | FR-021 | The system shall satisfy the following requirement: The control plane shall execute a package-configuration transform only when the selected target payload explicitly opts in its provider and changed-pointer allowlist on the direct automatic transition from the lock's exact applied package version. | Package transition metadata alone cannot preserve sparse desired configuration when successor defaults change, while implicitly activating historical providers or materializing complete target defaults would change unrelated migrations and future default behavior. | Package validation first rejects a transform declaration unless every declared pointer walks nodes whose schemas directly declare `type = object` and the next token under `properties`, with identical requiredness for that traversed token, to a shared directly declared scalar leaf. Aggregate ancestor defaults, annotations, sibling properties, and other ancestor constraints are excluded from declaration eligibility: defaults participate in source/target resolution, while complete runtime validation enforces constraints on actual config and provider output. At the changed leaf, references and combinators are prohibited; validation keywords other than `default`, annotations, and `enum` must match; and a target direct scalar `enum` may only be a superset. Target-added and other unrelated schema evolution neither invalidates the edge nor grants transform authority. Before provider invocation, the engine resolves and validates unchanged raw config against the target schema, then builds a bounded source projection: recurse only when both schemas directly declare object `properties`; omit target-only keys; preserve each shared non-object value atomically when that complete value validates against its source child schema; otherwise omit that entire key so source defaults resolve. Collections are never filtered per element, raw target config remains unchanged, and complete source resolution/validation must still pass after omission. The engine invokes exactly one identity-bound target provider with unchanged raw config and that source-effective config. Every explicitly present raw value at a declared pointer is consumer authority and must remain byte-equivalent in provider output, including when it is target-valid but source-invalid; the transform may add only an absent declared leaf. It accepts only invocation-bound same-package/source/target output with no legacy claims whose semantic diff from raw config is a subset of the declaration's nonempty JSON-pointer allowlist, whose unchanged fields remain byte-equivalent after lexical materialization, whose changed leaves are admitted by both source and target schemas, whose complete output validates against the target schema, whose bounded source projection validates against the source schema, and which is idempotent when invoked again on its own output. A declared leaf diff may create only the missing direct-object containers on its pointer path; those containers are not separate changed pointers and may contain no other introduced key. The transform shall introduce no source-schema invalidity and only the minimum explicit leaves required to preserve current source-effective behavior; it shall preserve every explicit declared-pointer value plus unrelated target-only and source-invalid atomic values byte-equivalently in raw/output config and shall not materialize unrelated target defaults. An applicable transform with an empty semantic diff succeeds, records value-redacted transform evidence with empty changed pointers and equal pre/post digests, plans no config action, contributes no config drift to `--check`, and leaves the lock's desired-config digest unchanged. Fresh adoption, same-version selection, non-opted edges, manual edges, and indirect/multi-hop paths do not invoke the transform. Existing package evidence with no exact authoritative applied version, including inferred-only evidence, fails closed through the existing recovery authority rather than being treated as fresh. More than one applicable transform in a plan, or any malformed, conflicting, failing, non-idempotent, introduced-source-invalid, target-invalid, or inapplicable transform, fails before writes. The default-absent `configuration_transform` field is an additive backward-compatible extension of payload manifest schema 1.0 and the generated schema. SPEC-VAIC normatively extends SPEC-CP01's desired-state apply contract for this exact digest-preconditioned action; ADRs 0023-0024 already authorize explicit reconcile apply, executor-only writes, and declared migration paths and require no amendment. SPEC-BA02 FR-018 is the durable normative changed-pointer eligibility definition, and immutable Standard Bundle Authoring 2.6 documents the optional field without broadening any other authoring surface. | Must |
 
 ### 7.2 Non-Functional Requirements
+
+<!-- release-consistency: historical standard-bundle-authoring -->
 
 | ID | Category | Requirement | Measurement / Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
@@ -535,6 +539,8 @@ Consumer repository values, source lines, hook commands, paths outside the repos
 
 ### 17.3 Requirement-to-Test Traceability
 
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 | Requirement | Planned Verification | Status |
 | --- | --- | --- |
 | FR-001, IR-001 | Enumerated shared-helper callers for directory/missing/named/bare frontmatter behavior including #29 preservation | Planned |
@@ -641,6 +647,9 @@ The train's operational evidence is deterministic command output and durable rep
 ### MS-2 — Immutable Successor Packages
 
 - **Requirements:** FR-006, FR-008-FR-012, FR-014-FR-017, FR-019, FR-021, IR-003, IR-005, NFR-004, NFR-008.
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - **Deliverables:** Python Tooling 1.9, Markdown Tooling 1.9, Agent Handoff 1.5, CLI Documentation 1.4, the contract-only Standard Bundle Authoring 2.6 successor, its SPEC-BA02 revision and unadvertised internal catalog projection, schemas, providers, migrations, the generic direct-edge package-config transform path, docs, tests, and the FR-012 split-ownership declaration update with the #27 literal fixture unchanged.
 - **Exit criteria:** package-local tests pass; the generic transform lifecycle and source/wheel parity pass; predecessor bytes are unchanged; successors are not yet activated until integration proof.
 
@@ -690,6 +699,9 @@ The train's operational evidence is deterministic command output and durable rep
 ### Standards
 
 - [Project Specification Standard 1.4](../../standards/project-spec/versions/1.4/README.md)
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - [Standard Bundle Authoring 2.6](../../standards/standard-bundle-authoring/versions/2.6/README.md)
 - [Versioning and Release Contract](../../meta/versioning.md)
 

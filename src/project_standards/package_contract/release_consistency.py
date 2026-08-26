@@ -341,7 +341,23 @@ def _shallow_family(path: str, facts: dict[str, FamilyReleaseFacts]) -> str | No
 
 
 def _marker_before(lines: list[str], index: int) -> re.Match[str] | None:
-    previous = index - 1
+    """Return the release-consistency marker governing the line at ``index``.
+
+    A GFM table row cannot host an HTML comment between rows without
+    terminating the table for table-aware renderers and markdownlint, so a
+    reference inside a table cannot carry its own immediately-preceding
+    marker line without breaking the table. Instead, a table is marked as a
+    single unit: when the reference line itself is a table row (starts with
+    ``|``), this walks upward through contiguous table rows -- including the
+    ``|---|`` header separator -- to the line above the table's header row,
+    then applies the ordinary nearest-non-blank-line marker test from there.
+    Non-table reference lines are unaffected.
+    """
+    start = index
+    if lines[index].strip().startswith("|"):
+        while start > 0 and lines[start - 1].strip().startswith("|"):
+            start -= 1
+    previous = start - 1
     while previous >= 0 and not lines[previous].strip():
         previous -= 1
     if previous < 0:
