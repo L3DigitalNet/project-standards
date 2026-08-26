@@ -96,6 +96,7 @@ from project_standards.control_plane.snapshot import (
     RepositorySnapshot,
     SnapshotEntry,
     resolved_target_paths,
+    safe_repository_root,
 )
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.paths import (
@@ -3174,7 +3175,26 @@ def plan_managed_restore(request: PlannerRequest, target: str) -> ManagedRestore
         return authority
     _authority_snapshot, authority_preconditions = authority
 
-    parent = request.repo / relative.normalized.parent
+    # Judge the parent through the containment walk, never lexically (issue
+    # #190). An `lstat` on the declared parent refuses every symlink, which
+    # contradicts the walk that already accepts an in-root link on any HIGHER
+    # ancestor and made restore's verdict depend on the link's depth. Resolution
+    # keeps the deny half intact: an escape, a cycle, a non-directory component,
+    # or a destination inside `.git/` or `.standards/` raises here and is
+    # refused below with the same coded error the lexical check used.
+    try:
+        physical = resolved_target_paths(request.repo, (relative,))[relative.original]
+    except ControlPlaneError:
+        return _restore_refusal(
+            "CP-RESTORE-PATH",
+            target=relative.original,
+            message="managed restore target parent is not an existing safe directory",
+            hint="replace the unsafe parent through its owning workflow before retrying",
+        )
+    # Every component of the physical path was opened with `O_NOFOLLOW` during
+    # the walk, so it names real directories and this `lstat` cannot be
+    # redirected by a link the walk did not already adjudicate.
+    parent = safe_repository_root(request.repo) / physical.parent
     try:
         parent_metadata = parent.lstat()
     except OSError:

@@ -574,3 +574,49 @@ def test_tc_t7_002_restore_applies_through_a_symlinked_ancestor(tmp_path: Path) 
     assert result.success
     assert (fixture.repo / "real/sub/tool.txt").read_bytes() == _DESIRED_SECRET
     assert (fixture.repo / "link").is_symlink()
+
+
+def test_tc_t7_002_restore_applies_through_a_symlinked_immediate_parent(
+    tmp_path: Path,
+) -> None:
+    """Depth must not change the verdict on an in-root link (issue #190).
+
+    This is the neighbor of the symlinked-ancestor case one level shallower: the
+    link is the target's own parent. Restore judges every ancestor through the
+    containment walk, so the write lands in the directory the link designates
+    and the link itself survives untouched.
+    """
+    fixture = _managed_fixture(tmp_path, current=None, target_name="link/tool.txt")
+    (fixture.repo / "real").mkdir(parents=True)
+    (fixture.repo / "link").symlink_to(Path("real"), target_is_directory=True)
+    (fixture.repo / "real/tool.txt").write_bytes(_CURRENT_SECRET)
+
+    plan = _plan(fixture, target="link/tool.txt")
+    result = apply_managed_restore(
+        ManagedRestoreApplyRequest(planner=fixture.planner, expected_plan=plan)
+    )
+
+    assert result.success
+    assert (fixture.repo / "real/tool.txt").read_bytes() == _DESIRED_SECRET
+    assert (fixture.repo / "link").is_symlink()
+
+
+def test_tc_t7_002_restore_refuses_an_immediate_parent_linked_into_a_protected_root(
+    tmp_path: Path,
+) -> None:
+    """Accepting in-root links must not weaken the #187 destination deny-list.
+
+    A link whose destination is `.git/` redirects publisher-controlled bytes onto
+    Git's own state while the lock still records the declared spelling, so the
+    walk refuses it and restore reports its own path refusal.
+    """
+    fixture = _managed_fixture(tmp_path, current=None, target_name="link/tool.txt")
+    (fixture.repo / ".git/objects").mkdir(parents=True)
+    (fixture.repo / "link").symlink_to(Path(".git/objects"), target_is_directory=True)
+
+    plan = plan_managed_restore(fixture.planner, "link/tool.txt")
+
+    assert not plan.applicable
+    assert plan.preview is None
+    assert plan.findings[0].code == "CP-RESTORE-PATH"
+    assert not (fixture.repo / ".git/objects/tool.txt").exists()
