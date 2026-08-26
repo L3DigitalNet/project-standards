@@ -54,6 +54,12 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
+- [ ] Propose `github-workflow` changes from the 2026-08-26 session-corpus review.
+
+  The review at `docs/reviews/github-workflow/2026-08-26-0847-github-workflow-session-corpus-efficiency-review.md` is
+  descriptive by request and proposes nothing. Its three live problem classes are guidance granularity (F3/F4/F7),
+  routing coverage gaps (F5/F6), and the delegation bypass (F10).
+
 - [ ] Decide whether to add `.claude/worktrees/` to `[sync].exclude` in `.rexec.toml`.
 
   Candidate fix identified 2026-08-16 for a rexec sync wedge caused by a stale worker-mirror path under

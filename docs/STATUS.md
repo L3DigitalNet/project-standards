@@ -18,3 +18,5 @@
 - `rexec` is the full gate path; the 5.21.0 release battery ran fully remote in ~31 minutes, coverage 90%.
 - A pending owner decision: add `.claude/worktrees/` to `[sync].exclude` in `.rexec.toml` to prevent recurrence of
   the mirror wedge seen in remote-execution#10; not yet applied.
+- A session-corpus review of `github-workflow` (186 sessions, both harnesses) is on `testing`; v5.20.0's skill-discovery repair took
+  load compliance from 35% to 100%, leaving guidance context-cost and routing coverage gaps as the live problems.
