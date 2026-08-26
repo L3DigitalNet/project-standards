@@ -1,0 +1,21 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": [
+		"schema_version",
+		"standard_id",
+		"version",
+		"config",
+		"resources",
+		"snapshots"
+	],
+	"properties": {
+		"schema_version": { "const": "1.0" },
+		"standard_id": { "const": "github-workflow" },
+		"version": { "const": "1.5" },
+		"operation": { "type": "string" },
+		"config": { "type": "object" },
+		"resources": { "type": "object" },
+		"snapshots": { "type": "object" }
+	}
+}
