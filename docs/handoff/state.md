@@ -2,10 +2,10 @@
 
 ## Current focus
 
-- Project Standards 5.21.0 is published from `a625091c`; signed tags and byte-verified wheel/sdist assets are live. See `deployed.md`.
-- New family `project-toolbox@1.0` (ninth consumer package) shipped; this repo self-hosts it, reconciled clean.
-- #168 and #176 are closed Done/completed. Follow-up filed: `L3DigitalNet/remote-execution#10` (rexec mirror-deletion misreport).
-- Open issues #129 (deferred), #173–#175 (Inbox); `rexec` remains the full gate path; battery ran fully remote (~31 min).
+- Project Standards 5.22.0 is published from `ef6a7b0e`; signed tags and byte-verified wheel/sdist assets are live.
+- `@v5` consumers pick up 5.22.0 automatically on next reconcile; no exact-pin consumer bumps were done this session.
+- Next: triage Inbox issues #174 #175 #178 #182 #183 #188 #189 #190; #178 needs a human plan-disposition decision.
+- #189 (docs) also queued for the next session; #129 stays owner-deferred; see `deployed.md` for full release evidence.
 
 ## Active incidents
 
