@@ -23,6 +23,11 @@ host = "rexec"
 # this machine, and `--pull` refuses `.git` regardless of this setting.
 git_context = true
 
+# Leg worktrees and orchestration state are workstation-only: mirroring them
+# made rexec abort with "local source tree changed continuously" whenever a
+# dispatched worker was editing in .claude/worktrees/ (2026-08-26).
+exclude = [".claude/worktrees", ".workflow"]
+
 [tools]
 
 # Migrates the v0.1.3 [provision.tools.go] probe ("go version"), which declared
