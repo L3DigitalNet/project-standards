@@ -15,6 +15,7 @@ import (
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghtest"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/orgschema"
 
 	// The subcommands register themselves; importing the package under test is what
 	// wires them into the registry, exactly as cmd/gh-workflow does.
@@ -553,6 +554,64 @@ func TestSetRefusesAnInvalidTargetDate(t *testing.T) {
 	}
 	wants(t, h.stderr.String(), "Target date", "YYYY-MM-DD")
 	h.assertNoRequests(t)
+}
+
+// TestSetRefusesEachSingleSelectFieldAndListsItsFullVocabulary proves FR-005's runtime
+// vocabulary surface for every field 1.5 stopped restating in field-vocabulary.md
+// (Priority, Size, Change risk, Execution mode, Severity): the refusal for an invalid
+// value must still name the whole valid set, because that set is no longer written down
+// anywhere else an agent reads. Expected values come from parsing fixtureSchema itself,
+// not a second hardcoded copy, so the test tracks the schema instead of racing it.
+func TestSetRefusesEachSingleSelectFieldAndListsItsFullVocabulary(t *testing.T) {
+	t.Parallel()
+
+	schema, err := orgschema.Parse([]byte(fixtureSchema))
+	if err != nil {
+		t.Fatalf("parsing fixtureSchema: %v", err)
+	}
+
+	for _, name := range []string{"Priority", "Size", "Change risk", "Execution mode", "Severity"} {
+		name := name
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			field, ok := schema.Field(name)
+			if !ok || field.Type != orgschema.TypeSingleSelect {
+				t.Fatalf("fixtureSchema has no single_select field named %q", name)
+			}
+
+			h := newHarness(t)
+			if code := h.run("set", "--issue", "12", "--field", name+"=Not A Real Value"); code != cli.ExitUsage {
+				t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitUsage, h.stderr)
+			}
+			wants(t, h.stderr.String(), field.Values...)
+			h.assertNoRequests(t)
+			h.assertNoMutations(t)
+		})
+	}
+}
+
+// TestSetRefusesAnInvalidTargetDateFormat proves the Target date field's refusal states
+// its format — the one thing field-vocabulary.md no longer carries for this field, since
+// a date has no enumerable value set for a refusal to recite.
+func TestSetRefusesAnInvalidTargetDateFormat(t *testing.T) {
+	t.Parallel()
+
+	schema, err := orgschema.Parse([]byte(fixtureSchema))
+	if err != nil {
+		t.Fatalf("parsing fixtureSchema: %v", err)
+	}
+	if field, ok := schema.Field("Target date"); !ok || field.Type != orgschema.TypeDate {
+		t.Fatalf("fixtureSchema's Target date field is not type date: %+v (ok=%v)", field, ok)
+	}
+
+	h := newHarness(t)
+	if code := h.run("set", "--issue", "12", "--field", "Target date=not-a-date"); code != cli.ExitUsage {
+		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitUsage, h.stderr)
+	}
+	wants(t, h.stderr.String(), "Target date", "YYYY-MM-DD")
+	h.assertNoRequests(t)
+	h.assertNoMutations(t)
 }
 
 // A terminal Workflow value applied through `set` would create exactly the native/field

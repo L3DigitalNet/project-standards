@@ -48,6 +48,13 @@ _SUBCOMMANDS = ("audit", "check", "close", "new", "receipt", "reopen", "set", "s
 # accretion, one paragraph at a time, which is why they are asserted as ceilings.
 _SKILL_MAX_LINES = 70
 _VOCABULARY_MAX_LINES = 30
+# NFR-006 1.11 (D10, owner decision 2026-08-26): the byte ceilings were raised from
+# 6,500/2,000 B. The original figures assumed ~93 B/line; the content FR-024 and
+# FR-005 mandate for these files runs ~160 B/line, so 1.5's measured output
+# (11,176 B / 2,918 B) exceeded the original ceilings despite meeting the line
+# ceilings. Line ceilings are unchanged.
+_SKILL_MAX_BYTES = 12000
+_VOCABULARY_MAX_BYTES = 3200
 
 # The managed block's length varies with the organization login, so the assertion is
 # a ceiling. The rendered body measures 2,183 B for `L3DigitalNet`.
@@ -195,6 +202,7 @@ def test_github_workflow_1_5__skill__is_one_read_carrying_the_whole_flag_surface
     lines = skill.splitlines()
 
     assert len(lines) <= _SKILL_MAX_LINES
+    assert len(skill.encode("utf-8")) <= _SKILL_MAX_BYTES
     assert "  version: '1.5'" in skill
     # A hand-maintained count goes stale silently; assert it against the file itself.
     declared = re.search(r"^  lines: (\d+)$", skill, re.MULTILINE)
@@ -224,6 +232,7 @@ def test_github_workflow_1_5__field_vocabulary__keeps_only_what_a_refusal_cannot
     vocabulary = _text(_VOCABULARY_SOURCE)
 
     assert len(vocabulary.splitlines()) <= _VOCABULARY_MAX_LINES
+    assert len(vocabulary.encode("utf-8")) <= _VOCABULARY_MAX_BYTES
     assert "## Workflow" in vocabulary
     assert "## Field pinning" in vocabulary
     for value in ("Inbox", "Needs definition", "Ready", "In progress", "Blocked", "Dropped"):
