@@ -31,15 +31,13 @@ _STANDARDS = _ROOT / "standards"
 # it is not default-eligible at all.
 _NO_DEFAULT_ROLES = {"reference-only", "internal"}
 
-# Pre-existing coverage gaps this invariant surfaced rather than caused: these
-# default versions have no test_<family>_<ver>.py of their own (project-toolbox
-# 1.0 is proven only incidentally, from test_release_consistency.py). Fixing the
-# gap means authoring a real per-version contract test against that family's own
-# bytes/digest/artifacts, which is separate work from this invariant; carrying it
-# here keeps the invariant meaningful for every other family without silently
-# widening this ticket's scope. Track and close via a follow-up issue, then
-# remove the corresponding entry here.
-_KNOWN_MISSING_CONTRACT_TESTS = frozenset({("project-toolbox", "1.0")})
+# No known gaps remain: every default version now has its own
+# test_<family>_<ver>.py (project-toolbox 1.0 closed in
+# test_project_toolbox_1_0.py). Keep this frozenset as the documented escape
+# hatch: a new gap gets a scoped ("family", "version") entry plus a comment
+# naming the follow-up issue, rather than letting this invariant go red for an
+# untracked reason.
+_KNOWN_MISSING_CONTRACT_TESTS: frozenset[tuple[str, str]] = frozenset()
 
 
 def _family_id_to_test_stub(family_id: str) -> str:
