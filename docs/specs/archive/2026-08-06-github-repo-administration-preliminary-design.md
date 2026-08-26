@@ -1452,6 +1452,8 @@ They are boundaries around responsibilities.
 
 # 34. Recommended Invariants
 
+> **Amended 2026-08-26 (`docs/specs/2026-08-06-github-workflow-package-spec.md` revision 1.9, DEV-002).** The `github-workflow` package version 1.5 wording of invariants 5 (`INV-005`) and 6 (`INV-006`) below diverges from this preserved document: invariant 5 becomes "the agent authors the acceptance criteria, sets `Workflow`, and admits work to `Ready` itself; an issue whose acceptance criteria the agent could not write is `Needs definition`, and open state alone never implies `Ready`", and invariant 6 splits into "`Unattended agent` is the owner's grant, never a mode an agent asserts" plus the unchanged human-applied org-schema rule. This also affects the "Ready semantics" prose above (section 6) and the "Execution mode" self-promotion prose above (section 10), both of which predate the 1.5 wording. See that spec's Glossary "Standing invariants" row and FR-009 for the current, authoritative text. `INV-005` and `INV-006` below are preserved as originally written and are no longer current.
+
 The following invariants are suitable candidates for later deterministic enforcement.
 
 ```text
