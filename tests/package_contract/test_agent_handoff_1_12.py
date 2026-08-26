@@ -107,7 +107,9 @@ def test_agent_handoff_1_12__identity__is_complete_and_retained() -> None:
     assert roles["1.12"] == "retained"
     assert roles["1.13"] == "retained"
     assert roles["1.14"] == "retained"
-    assert roles["1.15"] == "default"
+    # Which later version currently holds `default` is not asserted here: that role
+    # moves on every later cut in this family. See test_catalog_roles.py for the
+    # family-wide, catalog-derived invariant.
     assert "| [`agent-handoff`](agent-handoff/README.md) | active | 1.12 | retained |" in (
         _ROOT / "standards/catalog.md"
     ).read_text(encoding="utf-8")

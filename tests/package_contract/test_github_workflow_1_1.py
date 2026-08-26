@@ -21,15 +21,16 @@ what only the payload can answer: that the shipped bytes are the ones the digest
 chain pins, that they are not the predecessor's, and that the guide a consumer reads
 matches what the tool now does.
 
-The catalog role and the family landing-page repoint were deferred to release prep and
-landed with the 5.18.0 activation, as they did for the markdown-tooling 1.14 cut: the
-catalogs/5.toml advance batches with the other cuts of the release, so asserting either
-at cut time would have pinned work that commit was not allowed to do.
+Which version the catalog currently defaults to, and which version the family
+landing pages currently point at, are not asserted here: both move on every later
+cut in this family, so pinning either against this file would break it on a
+successor's release rather than on a regression of its own. That currency lives in
+the current cut's own contract test and in the family-wide invariant proven by
+test_catalog_roles.py.
 """
 
 from __future__ import annotations
 
-import tomllib
 from pathlib import Path
 
 from project_standards.package_contract.family import load_family_manifest
@@ -207,16 +208,15 @@ def test_github_workflow_1_1__adopt_guide__documents_the_narrow_size_guard_exemp
 
 
 def test_github_workflow_1_1__family_root__carries_the_sibling_navigation_documents() -> None:
-    """Issue #145: the family root gains the two documents every sibling family has."""
+    """Issue #145: the family root gains the two documents every sibling family has.
+
+    Which version those documents currently point at is release-prep's job, not
+    1.1's: the family root is mutable navigation that repoints on every activation,
+    so pinning "1.4" here would break the moment a later cut becomes current. That
+    generic, catalog-derived check lives in test_catalog_roles.py.
+    """
     for name in ("adopt.md", "agent-summary.md"):
-        document = _FAMILY / name
-        assert document.is_file()
-        # Family-root documents are mutable navigation pointing at the current payload,
-        # exactly as the agent-handoff and markdown-tooling roots do. The 5.18.0
-        # activation repointed them off the predecessor.
-        content = document.read_text(encoding="utf-8")
-        assert "versions/1.4/" in content
-        assert "versions/1.1/" not in content
+        assert (_FAMILY / name).is_file()
 
 
 def test_github_workflow_1_1__payload_projection__matches_successor() -> None:
@@ -232,23 +232,3 @@ def test_github_workflow_1_1__payload_projection__matches_successor() -> None:
     for relative, link in projected_links.items():
         assert not link.readlink().is_absolute()
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
-
-
-def test_github_workflow_1_1__catalog_role__selects_the_successor_as_default() -> None:
-    """The cut adds a payload; release prep decides what the catalog offers.
-
-    Asserted rather than left implicit because the alternative — advertising at cut
-    time — would freeze 1.1's bytes before the release train has verified them. The
-    5.18.0 activation is the first commit permitted to advance the role, and it must
-    retain 1.0 rather than remove it: every advertised version is permanent.
-    """
-    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
-    rows = [entry for entry in catalog["packages"] if entry["id"] == "github-workflow"]
-
-    assert [(entry["version"], entry["role"]) for entry in rows] == [
-        ("1.0", "retained"),
-        ("1.1", "retained"),
-        ("1.2", "retained"),
-        ("1.3", "retained"),
-        ("1.4", "default"),
-    ]

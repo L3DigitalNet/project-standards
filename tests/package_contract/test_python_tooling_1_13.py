@@ -491,13 +491,12 @@ def test_python_tooling_1_13__ruff_oracle__scopes_the_exemption_without_a_global
     assert "S101" not in tested_output, tested_output
 
 
-def test_python_tooling_1_13__catalog_role__selects_the_successor_as_default() -> None:
-    """Catalog 5 must actually select the successor these tests pin.
-
-    The payload can be complete and valid while the catalog still selects its
-    predecessor; only this row makes 1.13 the default a consumer on
-    `version = "latest"` resolves to. Landed by the 5.18.0 activation, which is
-    the first commit permitted to advance the catalog role.
+def test_python_tooling_1_13__catalog_role__is_retained() -> None:
+    """1.13 is a published, superseded row: withdrawing it is a catalog-major
+    transition (ADR 0024), so it stays advertised at `retained` rather than being
+    removed. Which later version currently holds `default` is not asserted here —
+    that lives in the current cut's own contract test and in the family-wide
+    invariant proven by test_catalog_roles.py.
     """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
@@ -510,14 +509,8 @@ def test_python_tooling_1_13__catalog_role__selects_the_successor_as_default() -
     assert roles["1.12"] == "retained"
 
 
-def test_python_tooling_1_13__mutable_navigation__names_the_new_authority() -> None:
-    """Family-level readers must resolve the same current payload as the index."""
-    expected_links = {
-        _FAMILY / "README.md": "versions/1.16/README.md",
-        _FAMILY / "adopt.md": "versions/1.16/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.16/agent-summary.md",
-    }
-    for path, expected_link in expected_links.items():
-        content = path.read_text(encoding="utf-8")
-        assert expected_link in content
-        assert "versions/1.13/" not in content
+# Which version the mutable family root currently points at is not asserted here:
+# it moves on every later cut in this family, and the earlier form of this test
+# hardcoded "1.16" — the exact cascade this file's sibling assertions guard
+# against elsewhere. See test_catalog_roles.py for the family-wide,
+# catalog-derived invariant.

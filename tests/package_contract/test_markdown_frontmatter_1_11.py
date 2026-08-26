@@ -264,7 +264,12 @@ def test_markdown_frontmatter_1_11__payload_projection__matches_successor() -> N
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_markdown_frontmatter_1_11__catalog_role_and_navigation_are_current() -> None:
+def test_markdown_frontmatter_1_11__catalog_role__is_retained() -> None:
+    """Which later version currently holds `default`, and where the mutable family
+    root now points, are not asserted here: both move on every later cut in this
+    family. See test_catalog_roles.py for the family-wide, catalog-derived
+    invariant.
+    """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     advertised_versions = {
         package["version"]: package["role"]
@@ -274,19 +279,10 @@ def test_markdown_frontmatter_1_11__catalog_role_and_navigation_are_current() ->
     assert advertised_versions["1.10"] == "retained"
     assert advertised_versions["1.11"] == "retained"
     assert advertised_versions["1.12"] == "retained"
-    assert advertised_versions["1.13"] == "default"
     assert (
         "| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.11 | "
         "retained | consumer |"
     ) in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
-
-    expected_links = {
-        _FAMILY / "README.md": "versions/1.13/README.md",
-        _FAMILY / "adopt.md": "versions/1.13/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.13/agent-summary.md",
-    }
-    for path, expected_link in expected_links.items():
-        assert expected_link in path.read_text(encoding="utf-8")
 
 
 def test_markdown_frontmatter_1_11__manifest__declares_one_config_only_verify_provider() -> None:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import tomllib
 from pathlib import Path
 
 from project_standards.package_contract.family import load_family_manifest
@@ -141,7 +140,11 @@ def test_github_workflow_1_2__binary__is_the_exact_executable_predecessor_artifa
     assert declared.mode == "0755"
 
 
-def test_github_workflow_1_2__projection_and_catalog__stay_complete_and_retained() -> None:
+def test_github_workflow_1_2__projection__stays_complete_and_current() -> None:
+    """Which catalog role 1.2 holds, and where the family root now points, are not
+    asserted here: both move on every later cut in this family (see
+    test_catalog_roles.py for the family-wide, catalog-derived invariant).
+    """
     source_files = {relative: path.read_bytes() for relative, path in _files(_SUCCESSOR).items()}
     projected_links = {
         path.relative_to(_PROJECTION).as_posix(): path
@@ -154,21 +157,3 @@ def test_github_workflow_1_2__projection_and_catalog__stay_complete_and_retained
     for relative, link in projected_links.items():
         assert not link.readlink().is_absolute()
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
-
-    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
-    roles = [
-        (package["version"], package["role"])
-        for package in catalog["packages"]
-        if package["id"] == "github-workflow"
-    ]
-    assert roles == [
-        ("1.0", "retained"),
-        ("1.1", "retained"),
-        ("1.2", "retained"),
-        ("1.3", "retained"),
-        ("1.4", "default"),
-    ]
-    for document in ("README.md", "adopt.md", "agent-summary.md"):
-        family_navigation = (_FAMILY / document).read_text(encoding="utf-8")
-        assert "versions/1.4/" in family_navigation
-        assert "versions/1.2/" not in family_navigation

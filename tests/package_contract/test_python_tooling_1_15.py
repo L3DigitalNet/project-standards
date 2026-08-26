@@ -264,13 +264,13 @@ def test_python_tooling_1_15__predecessor_tree_and_activation_stay_exact() -> No
     }
     # Withdrawing an advertised package is a catalog-major transition (ADR 0024),
     # so every predecessor stays advertised and only its role moves to `retained`.
-    assert roles == {
-        # 1.15 retired to `retained` when the 1.16 successor was activated (issue
-        # #182); a released role never moves backwards, and the predecessor rows
-        # are what this test actually guards.
-        **{f"1.{minor}": "retained" for minor in range(1, 16)},
-        "1.16": "default",
-    }
+    # 1.15 itself retired to `retained` when its successor was activated (issue
+    # #182); a released role never moves backwards. Which later version currently
+    # holds `default`, and the full membership of this family's catalog rows, are
+    # not asserted here: both grow and move on every later cut. See
+    # test_catalog_roles.py for the family-wide, catalog-derived invariant.
+    assert roles["1.14"] == "retained"
+    assert roles["1.15"] == "retained"
 
 
 def test_python_tooling_1_15__option_surface__adds_only_the_two_opt_in_options() -> None:
