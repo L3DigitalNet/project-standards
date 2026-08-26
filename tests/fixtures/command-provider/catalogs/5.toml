@@ -4,5 +4,5 @@ catalog_major = 5
 [[packages]]
 id = "command-provider-fixture"
 version = "1.0"
-digest = "sha256:66720e040b0c6eb6be3cf7397ee94955a996e8e9e28a17c81ebebd9c92df7986"
+digest = "sha256:03d74fd122f8deb4e725d84dbbe7b2516d43e2f6de82070377819f1e50470b91"
 role = "default"

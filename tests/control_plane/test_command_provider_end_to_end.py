@@ -20,6 +20,10 @@ from project_standards.control_plane.distribution import InstalledDistribution, 
 from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.provider_subprocess import ProviderSubprocessOutcome
 from project_standards.control_plane.providers import invoke_provider
+from project_standards.package_contract import (
+    build_package_repository,
+    validate_package_repository,
+)
 from project_standards.package_contract.payload import JsonObject
 from project_standards.package_contract.projection import sync_payload_projection
 
@@ -86,6 +90,20 @@ def reconcile_command_provider_repo(
 
 def _digest(content: bytes) -> str:
     return f"sha256:{hashlib.sha256(content).hexdigest()}"
+
+
+def test_command_fixture_source_tree_is_self_consistent() -> None:
+    """Pin the fixture's own catalog/family/payload digest chain.
+
+    Rebuilding the fixture binary re-digests payload.toml and standard.toml, and
+    tests/fixtures/command-provider/catalogs/5.toml has to move with them. When the
+    Go 1.26.6 bump (a5b74831) advanced the first two and left the catalog behind,
+    every end-to-end test below failed with the opaque runtime message "installed
+    catalog disagrees with its package family index", pointing at the control plane
+    instead of at the stale fixture byte. This case names the real disagreement.
+    """
+    repository = build_package_repository(COMMAND_FIXTURE_ROOT, catalog_major=5)
+    assert validate_package_repository(repository) == ()
 
 
 def test_go_fixture_runs_public_reconcile_validate_and_private_materialization(
