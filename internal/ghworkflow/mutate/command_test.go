@@ -127,6 +127,22 @@ const issueReady = `{"number":12,"title":"Ledger write leaves a partial file",
 		{"issue_field_name":"Execution mode","data_type":"single_select","value":"Interactive agent","single_select_option":{"name":"Interactive agent"}},
 		{"issue_field_name":"Severity","data_type":"single_select","value":"S2 — Moderate","single_select_option":{"name":"S2 — Moderate"}}]}`
 
+// issueDatelessTask is the #192 shape: a Task carrying every field its Type pins except
+// `Target date`, which the package's own field-vocabulary reference calls a valid and
+// expected empty state. Through payload 1.4 `check` refused it, so the issue was
+// admitted to Ready with `set` instead — the gate sent an agent around itself.
+const issueDatelessTask = `{"number":22,"title":"Cut the payload",
+	"html_url":"https://github.com/L3DigitalNet/example-repo/issues/22",
+	"state":"open","state_reason":null,
+	"body":"## Outcome\n\nShip it.\n\n## Acceptance criteria\n\n- Digests wired.\n",
+	"type":{"name":"Task"},
+	"issue_field_values":[
+		{"issue_field_name":"Workflow","data_type":"single_select","value":"In progress","single_select_option":{"name":"In progress"}},
+		{"issue_field_name":"Priority","data_type":"single_select","value":"P1 — Next","single_select_option":{"name":"P1 — Next"}},
+		{"issue_field_name":"Size","data_type":"single_select","value":"M","single_select_option":{"name":"M"}},
+		{"issue_field_name":"Change risk","data_type":"single_select","value":"R2 — Moderate","single_select_option":{"name":"R2 — Moderate"}},
+		{"issue_field_name":"Execution mode","data_type":"single_select","value":"Interactive agent","single_select_option":{"name":"Interactive agent"}}]}`
+
 const issueNotReady = `{"number":14,"title":"Add ledger TOC anchors",
 	"html_url":"https://github.com/L3DigitalNet/example-repo/issues/14",
 	"state":"open","state_reason":null,
@@ -384,6 +400,8 @@ func newHarness(t *testing.T) *harness {
 		"GET " + fixtureRepo + "/issues/12":                         {Status: http.StatusOK, Body: issueReady},
 		"GET " + fixtureRepo + "/issues/14":                         {Status: http.StatusOK, Body: issueNotReady},
 		"GET " + fixtureRepo + "/issues/16":                         {Status: http.StatusOK, Body: issueClosed},
+		"GET " + fixtureRepo + "/issues/22":                         {Status: http.StatusOK, Body: issueDatelessTask},
+		"GET " + fixtureRepo + "/issues/22/dependencies/blocked_by": {Status: http.StatusOK, Body: "[]"},
 		"GET " + fixtureRepo + "/issues/31":                         {Status: http.StatusOK, Body: issueCreated},
 		"GET " + fixtureRepo + "/issues/12/dependencies/blocked_by": {Status: http.StatusOK, Body: "[]"},
 		"GET " + fixtureRepo + "/issues/16/dependencies/blocked_by": {Status: http.StatusOK, Body: "[]"},
@@ -405,7 +423,7 @@ func newHarness(t *testing.T) *harness {
 	// answer — a rejection, or a server that drops the write — registers an explicit route,
 	// which wins.
 	model := newPatchModel(t, map[int]string{
-		12: issueReady, 14: issueNotReady, 16: issueClosed, 18: issueDropped,
+		12: issueReady, 14: issueNotReady, 16: issueClosed, 18: issueDropped, 22: issueDatelessTask,
 		20: issueUntyped, 31: issueCreated,
 	})
 	inner := &ghtest.Transport{Routes: routes}
@@ -1526,6 +1544,47 @@ func TestCheckPassesAnEligibleIssueAndItemizesEveryClass(t *testing.T) {
 		if c.Method != http.MethodGet {
 			t.Errorf("check issued a %s request; it is read-only", c.Method)
 		}
+	}
+}
+
+// Issue #192: `Target date` is pinned to Feature, Task, and Initiative, but the package
+// documents empty as valid, so its absence cannot block Ready. The cases below fix the
+// boundary in both directions — an absent optional pin is eligible, an absent required
+// pin is not — so a future edit cannot turn the exemption into "pinned fields are
+// advisory".
+func TestCheckDoesNotRequireAnOptionalPinnedFieldForReady(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		issue    string
+		wantExit int
+		wants    []string
+	}{
+		{
+			name: "task with every required pin and no target date", issue: "22",
+			wantExit: cli.ExitOK, wants: []string{"pinned-fields", "Ready"},
+		},
+		{
+			name: "feature missing a required pin", issue: "14",
+			wantExit: cli.ExitFailure, wants: []string{"pinned-fields", "Priority"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			if code := h.run("check", "--issue", tc.issue); code != tc.wantExit {
+				t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s",
+					code, tc.wantExit, h.stdout, h.stderr)
+			}
+			wants(t, h.stdout.String(), tc.wants...)
+			if strings.Contains(h.stdout.String(), "Target date") {
+				t.Errorf("check reported Target date as a readiness gap:\n%s", h.stdout)
+			}
+			h.assertNoMutations(t)
+		})
 	}
 }
 

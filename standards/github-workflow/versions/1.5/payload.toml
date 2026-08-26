@@ -22,7 +22,7 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:3cfe4c84c08f03a4eadddfd5c29425f4d85f355781c9f17f571531814a846766"
+digest = "sha256:92a49523b7f5669e125483e4d5255121eae5a7e71a8bb13de059ecbb783bf861"
 
 [[resources]]
 id = "agent-summary"
@@ -106,7 +106,7 @@ when_any = [{ option = "harnesses", contains = "codex" }]
 id = "tool-binary"
 target = ".agents/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:e3031dbbf79ff73e2fd4fdfc89b55ef4e08f2f8b4e0ddf22a7bcfc90ee8dac02"
+digest = "sha256:89e02aa3b3a4ddbe55613694bcd91aa70fed7122a7fbe2396fb8a68988c918b1"
 policy = "managed"
 mode = "0755"
 
@@ -114,7 +114,7 @@ mode = "0755"
 id = "reference-field-vocabulary"
 target = ".agents/skills/github-workflow/references/field-vocabulary.md"
 source = "skills/github-workflow/references/field-vocabulary.md"
-digest = "sha256:1b16f4d9b2c2df58e14ce0ed8edfa0e30981aa32ef8c24604cfc85a4f654a5b3"
+digest = "sha256:555d39eeb4706114106a1b83caf24922cf249964c998defc6d65d015a4ec2b8e"
 policy = "managed"
 
 [[artifacts]]
@@ -176,7 +176,7 @@ policy = "managed"
 id = "tool-binary-claude"
 target = ".claude/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:e3031dbbf79ff73e2fd4fdfc89b55ef4e08f2f8b4e0ddf22a7bcfc90ee8dac02"
+digest = "sha256:89e02aa3b3a4ddbe55613694bcd91aa70fed7122a7fbe2396fb8a68988c918b1"
 policy = "managed"
 mode = "0755"
 
@@ -184,7 +184,7 @@ mode = "0755"
 id = "reference-field-vocabulary-claude"
 target = ".claude/skills/github-workflow/references/field-vocabulary.md"
 source = "skills/github-workflow/references/field-vocabulary.md"
-digest = "sha256:1b16f4d9b2c2df58e14ce0ed8edfa0e30981aa32ef8c24604cfc85a4f654a5b3"
+digest = "sha256:555d39eeb4706114106a1b83caf24922cf249964c998defc6d65d015a4ec2b8e"
 policy = "managed"
 
 [[artifacts]]

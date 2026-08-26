@@ -123,24 +123,45 @@ func inspect(ctx context.Context, client *ghapi.Client, repo render.Repository, 
 	return report, nil
 }
 
+// readinessOptional names pinned fields whose emptiness does not block Ready.
+//
+// `Target date` is pinned to Feature, Task, and Initiative, but the package's own
+// field-vocabulary reference has always said to set it "only when a date carries
+// semantic meaning" and that empty is a valid, expected state. Through payload 1.4
+// `check` disagreed with that sentence and refused readiness over an absent date, which
+// sent agents around the gate — issue #192 was admitted with `set` after `check`
+// refused it. Payload 1.5 makes the tool agree with the documented semantics.
+//
+// The exemption is a name here rather than a flag in the data because the pinning
+// matrix has no machine-readable home: render's map is the matrix (see its comment),
+// and neither org-schema.yaml nor policy.toml can express "pinned but optional for
+// readiness". Only `check` consults this. Gaps() still reports an absent Target date on
+// a Type that pins it, because a receipt reports what is missing rather than gating on
+// it — and its output is a byte contract with 1.4 (spec FR-022).
+var readinessOptional = map[string]bool{render.FieldTargetDate: true}
+
 // pinnedFieldsFinding checks the fields this Issue Type pins. The matrix lives in the
 // render engine because the summary and receipt report the same gaps; readiness is the
 // same question asked as a gate rather than as a report.
 func pinnedFieldsFinding(item render.WorkItem) Finding {
-	pinned := render.PinnedFields(item.Type)
-	var missing []string
-	for _, field := range pinned {
+	var required, missing []string
+	for _, field := range render.PinnedFields(item.Type) {
+		if readinessOptional[field] {
+			continue
+		}
+		required = append(required, field)
 		if item.Field(field) == "" {
 			missing = append(missing, field)
 		}
 	}
 	if len(missing) > 0 {
 		return Finding{Class: classPinnedFields, Status: statusBlocked,
-			Detail: fmt.Sprintf("missing %s (of the %d fields pinned to %s)",
-				strings.Join(missing, ", "), len(pinned), typeLabel(item.Type))}
+			Detail: fmt.Sprintf("missing %s (of the %d fields %s pins that Ready requires)",
+				strings.Join(missing, ", "), len(required), typeLabel(item.Type))}
 	}
 	return Finding{Class: classPinnedFields, Status: statusOK,
-		Detail: fmt.Sprintf("all %d fields pinned to %s carry values", len(pinned), typeLabel(item.Type))}
+		Detail: fmt.Sprintf("all %d fields %s pins that Ready requires carry values",
+			len(required), typeLabel(item.Type))}
 }
 
 func acceptanceFinding(item render.WorkItem) Finding {
