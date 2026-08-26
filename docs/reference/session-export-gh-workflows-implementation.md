@@ -1,3 +1,11 @@
+<!--
+HISTORICAL RECORD. This is a verbatim session export from the implementation of the
+`gh-workflow` tool, kept for the reasoning it captures, not as current guidance. It
+describes the nine-subcommand surface including `ledger` and the generated
+docs/GH-WORKFLOWS.md, both of which github-workflow payload 1.5 removed (#175). Read
+standards/github-workflow/versions/1.5/ for what the package actually ships.
+-->
+
 ▐▛███▜▌ Claude Code v2.1.223 ▝▜█████▛▘ Fable 5 · Claude Max ▘▘ ▝▝ ~/projects/project-standards
 
 ❯ /clear

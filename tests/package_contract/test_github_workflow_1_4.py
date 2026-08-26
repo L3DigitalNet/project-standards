@@ -99,10 +99,9 @@ def test_github_workflow_1_4__successor__changes_only_the_binary_and_its_version
 def test_github_workflow_1_4__tool_binary__is_declared_and_built_for_this_version() -> None:
     """Pin the three-way contract between the committed bytes, the payload, and the build.
 
-    `scripts/build-gh-workflow.sh` names one output path and one version stamp, and
-    `make go-verify-binary` rebuilds exactly that path. Left pointing at 1.3, the
-    gate would either rewrite a released payload's immutable bytes or verify a file
-    this payload does not ship — both of which look green from inside the payload.
+    A cut that advertised a fix while shipping the predecessor's executable would
+    pass every other assertion here, so the declared digest is checked against the
+    committed bytes rather than against the manifest alone.
     """
     committed = _SUCCESSOR / _TOOL_BINARY_SOURCE
     digest = f"sha256:{hashlib.sha256(committed.read_bytes()).hexdigest()}"
@@ -114,10 +113,9 @@ def test_github_workflow_1_4__tool_binary__is_declared_and_built_for_this_versio
         assert entry["mode"] == "0755"
     assert committed.stat().st_mode & 0o777 == 0o755
 
-    build_script = _BUILD_SCRIPT.read_text(encoding="utf-8")
-    target = f'ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.4/{_TOOL_BINARY_SOURCE}"'
-    assert target in build_script
-    assert 'ARTIFACT_LDFLAGS="-buildid= -X main.version=1.4"' in build_script
+    # The build script tracks the version under development, so it points past 1.4
+    # from the moment 1.5 is cut (see its own header). That assertion lives in the
+    # successor's contract test; what stays here is the payload-internal contract.
 
 
 def test_github_workflow_1_4__identity__is_complete_and_current() -> None:
@@ -137,11 +135,11 @@ def test_github_workflow_1_4__identity__is_complete_and_current() -> None:
         for package in cast("list[dict[str, str]]", catalog["packages"])
         if package["id"] == "github-workflow"
     }
+    # 1.4 was the default until 1.5 superseded it. What this file still proves is
+    # that the released row is retained and its digest never moved; which version is
+    # current belongs to the current cut's own contract test.
     assert roles["1.3"] == "retained"
-    assert roles["1.4"] == "default"
-    assert "| [`github-workflow`](github-workflow/README.md) | active | 1.4 | default |" in (
-        _ROOT / "standards/catalog.md"
-    ).read_text(encoding="utf-8")
+    assert roles["1.4"] == "retained"
 
 
 def test_github_workflow_1_4__schemas__carry_no_predecessor_version_reference() -> None:

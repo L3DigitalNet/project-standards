@@ -295,6 +295,16 @@ Refreshing onto the 5.18.0 catalog rewrites nothing by default. All four package
 
 **Agent Handoff 1.11** and **GitHub Workflow 1.1** change no option, artifact, contribution, or provider byte; the Agent Handoff launcher is 1.10's exact executable. GitHub Workflow 1.1 rebuilds `gh-workflow`, whose `ledger` subcommand no longer stamps a read timestamp into `docs/GH-WORKFLOWS.md` — the first regeneration after the refresh therefore drops that line, and every later one against unchanged work state produces no diff at all.
 
+### What the 5.23.0 defaults rewrite on refresh: GitHub Workflow 1.5 removes the ledger
+
+**GitHub Workflow 1.4 → 1.5 removes the `ledger` subcommand**, and with it the generated `docs/GH-WORKFLOWS.md`. This is the one advance in this train that a consumer must act on by hand.
+
+`gh-workflow ledger` now exits `2` as an unknown subcommand; the remaining eight — `audit`, `new`, `set`, `close`, `reopen`, `summary`, `receipt`, `check` — are unchanged, and `summary` and `receipt` render byte-identically to 1.4 for the same work state. Any script, alias, or session habit that invoked `ledger` needs a different answer: `gh-workflow summary` prints the same view to stdout without writing a file.
+
+**Delete `docs/GH-WORKFLOWS.md` yourself if you committed it.** The file was never a payload artifact — no digest, outside drift-check — so reconcile does not know the path and will neither refresh nor remove it, and the package will not delete consumer content on your behalf. `project-standards upgrade` reports it as a warning instead. Left in place it is a frozen snapshot of work state that nothing regenerates and no tool owns. If you ignored the path rather than committing it, drop the `.gitignore` entry; if you excluded it from a tooling scope — a `markdown-frontmatter` `exclude` entry, for example — drop that too, in the same change.
+
+The rest of 1.5 is guidance: `SKILL.md` is now one bounded read carrying a single complete routing-and-flag table, `field-vocabulary.md` keeps only the vocabulary the binary cannot state in a refusal, and the managed `AGENTS.md` / `CLAUDE.md` block carries the routing table, so its bytes change on the first reconcile after the refresh. The Codex companion `agents/openai.yaml` is now delivered under `.agents/` only; the `.claude/` copy is removed on reconcile, because Claude Code never read it. No configuration option changed, so a repository that sets nothing keeps its `.standards/config.toml` as it is.
+
 ### Comments inside managed TOML regions
 
 Consumer comments attached to a managed `pyproject.toml` unit survive a rewrite. When an apply re-renders a managed table, keyed-set entry, or key, comments found in the rewritten region — inside a multi-line array, trailing an owned line, or on their own line between owned lines — are re-emitted directly above the statement with the same key or table in the new rendering; a comment whose key no longer exists moves above the rewritten unit. Rewrites consume the old region completely, so they leave no stray blank lines, and a follow-up `reconcile --check` stays a no-op. The rendered layout of the managed unit itself (line breaks, indentation, entry order) belongs to the package, so annotate managed regions with comment lines rather than relying on a specific array layout.
