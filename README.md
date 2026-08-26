@@ -92,10 +92,10 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` �
 
 ### Python Tooling SSOT Standard
 
-The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration. Package 1.14 includes scoped `ruff.extend_per_file_ignores` and adds the closed `vscode.task_prefix` choice for unprefixed or `"python: "` task labels.
+The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration. Package 1.14 includes scoped `ruff.extend_per_file_ignores` and adds the closed `vscode.task_prefix` choice for unprefixed or `"python: "` task labels. Package 1.15 adds `runner_labels` for the managed `Check` workflow's `runs-on` and `ruff.enforce_line_length` to make the declared line length a gate.
 
-- **Standard:** [`standards/python-tooling/versions/1.14/README.md`](standards/python-tooling/versions/1.14/README.md)
-- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.14/adopt.md)
+- **Standard:** [`standards/python-tooling/versions/1.15/README.md`](standards/python-tooling/versions/1.15/README.md)
+- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.15/adopt.md)
 
 ### Markdown Tooling Standard
 
@@ -122,17 +122,17 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 
 Repository-local project knowledge and bounded session continuity for coding agents. Agent Handoff creates consumer-owned status, task, and lifetime-routed knowledge under `docs/`; installs a repo-local `agent-handoff` skill; optionally registers one shared SessionStart hook for Claude Code and Codex; and validates layout, drift, provenance, document budgets, and credential references without owning workstation-global state.
 
-- **Standard:** [`standards/agent-handoff/versions/1.13/README.md`](standards/agent-handoff/versions/1.13/README.md)
-- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.13/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/` and `.claude/skills/agent-handoff/`.
-- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.13/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.13/resources/legacy-migration.md)
+- **Standard:** [`standards/agent-handoff/versions/1.14/README.md`](standards/agent-handoff/versions/1.14/README.md)
+- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.14/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/` and `.claude/skills/agent-handoff/`.
+- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.14/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.14/resources/legacy-migration.md)
 
 ### GitHub Workflow Standard
 
 GitHub work discipline for organization-owned repositories: typed issue contracts, field vocabulary, pull-request evidence, review expectations, and an attention-first operator summary. The package installs a mandatory repo-local `github-workflow` skill that keeps judgment with the agent, plus `gh-workflow` — a committed, reproducibly built static `linux/amd64` Go binary whose nine subcommands audit the organization schema, maintain the human-facing ledger at `docs/GH-WORKFLOWS.md`, and apply validated issue mutations. The organization schema itself is skill-audited and human-applied; the tool never creates or retires an issue type, field, or value.
 
-- **Standard:** [`standards/github-workflow/versions/1.3/README.md`](standards/github-workflow/versions/1.3/README.md)
-- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.3/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
-- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.3/adopt.md)
+- **Standard:** [`standards/github-workflow/versions/1.4/README.md`](standards/github-workflow/versions/1.4/README.md)
+- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.4/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
+- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.4/adopt.md)
 
 ### Project Toolbox Standard
 
@@ -151,9 +151,9 @@ Code-shape and agent-behavior rules for Python — the reference companion to Py
 
 ### Standard Bundle Authoring Standard (internal/reference)
 
-The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.6`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
+The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.7`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
 
-- **Standard:** [`standards/standard-bundle-authoring/versions/2.6/README.md`](standards/standard-bundle-authoring/versions/2.6/README.md)
+- **Standard:** [`standards/standard-bundle-authoring/versions/2.7/README.md`](standards/standard-bundle-authoring/versions/2.7/README.md)
 
 ## Consuming the standards
 
@@ -192,12 +192,12 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | --- | --- | --- |
 | Markdown Frontmatter | `1.12` | [`standards/markdown-frontmatter/versions/1.12/adopt.md`](standards/markdown-frontmatter/versions/1.12/adopt.md) |
 | ADR | `1.6` | [`standards/adr/versions/1.6/adopt.md`](standards/adr/versions/1.6/adopt.md) |
-| Python Tooling | `1.14` | [`standards/python-tooling/versions/1.14/adopt.md`](standards/python-tooling/versions/1.14/adopt.md) |
+| Python Tooling | `1.15` | [`standards/python-tooling/versions/1.15/adopt.md`](standards/python-tooling/versions/1.15/adopt.md) |
 | Markdown Tooling | `1.15` | [`standards/markdown-tooling/versions/1.15/adopt.md`](standards/markdown-tooling/versions/1.15/adopt.md) |
 | Project Specification | `1.9` | [`standards/project-spec/versions/1.9/adopt.md`](standards/project-spec/versions/1.9/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
-| Agent Handoff | `1.13` | [`standards/agent-handoff/versions/1.13/adopt.md`](standards/agent-handoff/versions/1.13/adopt.md) |
-| GitHub Workflow | `1.3` | [`standards/github-workflow/versions/1.3/adopt.md`](standards/github-workflow/versions/1.3/adopt.md) |
+| Agent Handoff | `1.14` | [`standards/agent-handoff/versions/1.14/adopt.md`](standards/agent-handoff/versions/1.14/adopt.md) |
+| GitHub Workflow | `1.4` | [`standards/github-workflow/versions/1.4/adopt.md`](standards/github-workflow/versions/1.4/adopt.md) |
 | Project Toolbox | `1.0` | [`standards/project-toolbox/versions/1.0/adopt.md`](standards/project-toolbox/versions/1.0/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
