@@ -10,15 +10,15 @@ Consumer packages are enabled through `.standards/config.toml` and reconciled as
 | --- | --- | --- | --- | --- | --- |
 | Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | 1.12 | default | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) |
 | ADR | Architecture Decision Records (MADR on the frontmatter profile) | 1.6 | default | [adr/](adr/) | [adopt](adr/adopt.md) |
-| Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | 1.14 | default | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
+| Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | 1.15 | default | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
 | Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | 1.15 | default | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
 | Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | 1.9 | default | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
 | CLI Documentation | Language-neutral CLI usage docs: help text, usage references, man pages, shell completion, CI drift checks | 1.6 | default | [cli-documentation/](cli-documentation/) | [adopt](cli-documentation/adopt.md) |
-| Agent Handoff | Repository-local project knowledge, bounded session continuity, repo-local skill and hooks, and conformance tooling | 1.13 | default | [agent-handoff/](agent-handoff/) | [adopt](agent-handoff/adopt.md) |
-| GitHub Workflow | GitHub work discipline for organization-owned repositories: typed issue contracts, PR evidence, an agent skill, and the `gh-workflow` tool | 1.3 | default | [github-workflow/](github-workflow/) | [adopt](github-workflow/adopt.md) |
+| Agent Handoff | Repository-local project knowledge, bounded session continuity, repo-local skill and hooks, and conformance tooling | 1.14 | default | [agent-handoff/](agent-handoff/) | [adopt](agent-handoff/adopt.md) |
+| GitHub Workflow | GitHub work discipline for organization-owned repositories: typed issue contracts, PR evidence, an agent skill, and the `gh-workflow` tool | 1.4 | default | [github-workflow/](github-workflow/) | [adopt](github-workflow/adopt.md) |
 | Project Toolbox | Proven cross-cutting repository workflows — housekeeping and drift-detection sweeps — with a routing agent skill | 1.0 | default | [project-toolbox/](project-toolbox/) | [adopt](project-toolbox/adopt.md) |
 | Python Coding | Code-shape and agent-behavior rules for Python (companion to Python Tooling SSOT) | 0.6 | reference-only | [python-coding/](python-coding/) | — (**in-development draft**; not released for adoption) |
-| Standard Bundle Authoring | The V2 family, payload, catalog, provider, relationship, and ownership contract | 2.6 | internal | [standard-bundle-authoring/](standard-bundle-authoring/) | — (**internal/reference**; governs this repository's packages) |
+| Standard Bundle Authoring | The V2 family, payload, catalog, provider, relationship, and ownership contract | 2.7 | internal | [standard-bundle-authoring/](standard-bundle-authoring/) | — (**internal/reference**; governs this repository's packages) |
 
 ## Table of Contents
 

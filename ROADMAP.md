@@ -23,6 +23,7 @@ This file tracks work planned for upcoming Project Standards releases. It is for
       - [Claude Code skill discovery](#claude-code-skill-discovery)
     - [5.21.0](#5210)
       - [Project Toolbox standards](#project-toolbox-standards)
+    - [5.22.0](#5220)
   - [Beyond](#beyond)
 
 ## Planned releases
@@ -122,5 +123,15 @@ Ordered. [#162](https://github.com/L3DigitalNet/project-standards/issues/162) re
 #### Project Toolbox standards
 
 - Develop and release the `project-toolbox` standards, tracked in [#168](https://github.com/L3DigitalNet/project-standards/issues/168). Owner direction 2026-08-09 originally placed this at 5.19.0; moved to 5.20.0 on 2026-08-10 so the triaged backlog consolidates first, then to 5.21.0 on 2026-08-15 when the skill-discovery repair train took 5.20.0.
+
+### 5.22.0
+
+**Shipped as v5.22.0.** Kept for the planning record; CHANGELOG.md is the release truth.
+
+- Agent Handoff 1.14 session-scoped closeout, tracked in [#184](https://github.com/L3DigitalNet/project-standards/issues/184).
+- Control-plane symlink containment/alias/hardening, tracked in [#179](https://github.com/L3DigitalNet/project-standards/issues/179) and [#186](https://github.com/L3DigitalNet/project-standards/issues/186)/[#187](https://github.com/L3DigitalNet/project-standards/issues/187).
+- GitHub Workflow 1.4 Prettier-stable ledger, tracked in [#177](https://github.com/L3DigitalNet/project-standards/issues/177) and [#185](https://github.com/L3DigitalNet/project-standards/issues/185).
+- Python Tooling 1.15 `runner_labels`/`enforce_line_length`, tracked in [#180](https://github.com/L3DigitalNet/project-standards/issues/180) and [#181](https://github.com/L3DigitalNet/project-standards/issues/181).
+- Standard Bundle Authoring 2.7, tracked in [#173](https://github.com/L3DigitalNet/project-standards/issues/173).
 
 ## Beyond
