@@ -257,6 +257,12 @@ role = "retained"
 id = "markdown-frontmatter"
 version = "1.12"
 digest = "sha256:568f19172b8324a9b1ba19f730b7e621abbd719d97cf469bd25fddd76231e8cb"
+role = "retained"
+
+[[packages]]
+id = "markdown-frontmatter"
+version = "1.13"
+digest = "sha256:40cbd73ee6f8c28cd0d5b7befbfd8c54c277c00563627f5d0d3c9d9a36dcf0b9"
 role = "default"
 
 [[packages]]

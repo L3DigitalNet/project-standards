@@ -1,0 +1,1 @@
+../../../../../../standards/markdown-frontmatter/versions/1.13/resources/legacy-markdown-frontmatter-skill.md

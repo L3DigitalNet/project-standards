@@ -121,7 +121,7 @@ def test_markdown_frontmatter_1_12__default_exclude__covers_both_installed_trees
     assert ".claude/**" in excluded
 
 
-def test_markdown_frontmatter_1_12__identity__is_complete_and_current() -> None:
+def test_markdown_frontmatter_1_12__identity__is_complete_and_retained() -> None:
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     integrity = validate_payload_integrity(_SUCCESSOR, manifest)
     family = load_family_manifest(_FAMILY / "standard.toml")
@@ -138,11 +138,9 @@ def test_markdown_frontmatter_1_12__identity__is_complete_and_current() -> None:
         if package["id"] == "markdown-frontmatter"
     }
     assert roles["1.11"] == "retained"
-    assert roles["1.12"] == "default"
-    assert (
-        "| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.12 | "
-        "default | consumer |"
-    ) in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
+    # Superseded by 1.13 but still advertised: withdrawing an advertised package is a
+    # catalog-major transition (ADR 0024), so the entry stays and only the role moves.
+    assert roles["1.12"] == "retained"
 
 
 def test_markdown_frontmatter_1_12__payload_projection__matches_successor() -> None:

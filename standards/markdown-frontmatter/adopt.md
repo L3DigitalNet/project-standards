@@ -1,11 +1,11 @@
 # Adopt the Markdown Frontmatter Standard
 
-The current consumer package is [`markdown-frontmatter@1.12`](versions/1.12/adopt.md). Use it for schema-validated metadata over an explicit Markdown corpus, the repo-local authoring skill, the composed validation workflow, and provider-backed validate/inspect/fix operations.
+The current consumer package is [`markdown-frontmatter@1.13`](versions/1.13/adopt.md). Use it for schema-validated metadata over an explicit Markdown corpus, the repo-local authoring skill, the composed validation workflow, and provider-backed validate/inspect/fix operations.
 
 ## Configure and reconcile
 
 ```bash
-project-standards standards enable markdown-frontmatter --version 1.12
+project-standards standards enable markdown-frontmatter --version 1.13
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -31,4 +31,4 @@ format-frontmatter --check
 project-standards reconcile --check
 ```
 
-Schema findings, invalid IDs, path escapes, managed-output overlap, and custom-schema ambiguity fail closed. Use `project-standards fix` only after reviewing its typed plan; custom schemas intentionally skip bundled fixes. See the [version-specific guide](versions/1.12/adopt.md) for exact options, outputs, migration rules, verification, and compliance checks.
+Schema findings, invalid IDs, path escapes, managed-output overlap, and custom-schema ambiguity fail closed. Use `project-standards fix` only after reviewing its typed plan; custom schemas intentionally skip bundled fixes. See the [version-specific guide](versions/1.13/adopt.md) for exact options, outputs, migration rules, verification, and compliance checks.
