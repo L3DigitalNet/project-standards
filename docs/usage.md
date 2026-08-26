@@ -6,7 +6,7 @@ description: 'Canonical man-style usage reference for the project-standards comm
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-08-11'
+updated: '2026-08-26'
 reviewed: '2026-08-11'
 owner: ''
 consumer: 'mix'
@@ -166,6 +166,8 @@ The default mode displays the plan. Exit 1 means drift, a conflict, an authoriza
 Plan verbs are `create`, `adopt`, `update`, `remove`, `preserve`, and `no-op`. `preserve` means the observed consumer bytes remain unchanged. An edit to an already-created create-only scaffold is consumer state and does not churn its locked installation evidence. A genuine lock-metadata-only change still exits 1 even when no target mutation is listed; human output identifies the lock path and the required reconcile apply. A clean `validate` is silent, while a clean `reconcile` prints its explicit reconciled-state confirmation.
 
 Exit status: `0` reconciled or apply succeeded · `1` drift/findings/apply failure · `2` invocation, authority, package, or filesystem boundary error.
+
+Every finding, refusal, and apply failure carries a stable `CP-` diagnostic code, in human output and as the `code` field under `--json`. [`docs/reference/control-plane-diagnostics.md`](reference/control-plane-diagnostics.md) documents the complete vocabulary — each code's meaning, the condition that raises it, and its remediation — for `reconcile`, `init`, `render`, managed restore, and sanctioned recovery.
 
 ### `render`
 
@@ -925,4 +927,5 @@ Exit status: `0` references valid, disabled, or skipped under a custom schema ·
 ## SEE ALSO
 
 - [`standards/cli-documentation/versions/1.3/README.md`](../standards/cli-documentation/versions/1.3/README.md) — the standard this document conforms to.
+- [`docs/reference/control-plane-diagnostics.md`](reference/control-plane-diagnostics.md) — every `CP-` diagnostic code the control plane emits, with meaning, cause, and remediation.
 - [`src/project_standards/README.md`](../src/project_standards/README.md) — the package's implementation and developer reference.

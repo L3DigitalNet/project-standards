@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-08-16'
+updated: '2026-08-26'
 reviewed: '2026-07-27'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -42,6 +42,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - Graph validation accepts both project-local skill destinations instead of rejecting one of them ([#174](https://github.com/L3DigitalNet/project-standards/issues/174)). `SG-ARTIFACT-SKILL-DEST` predated the ADR 0021 amendment of 2026-08-15 ([#170](https://github.com/L3DigitalNet/project-standards/issues/170)) and still treated `.agents/skills/` as the only legal root, so it would have rejected the `.claude/skills/` twin every skill-shipping package now declares. The check was aligned rather than retired because ADR 0021 assigns graph validation the job of enforcing the project-local boundary, and the rule still binds any artifact manifest the graph loads. Both roots are now accepted, the finding message and hint name both, and the destination is matched with the same containment test the hook rule uses — a plain prefix test accepted `.agents/skills/../../elsewhere`, which installs outside the consumer project.
 - `reconcile --check` classifies a symlink-aliased twin pair consistently, and a conflict on an aliased path no longer advises deleting it ([#188](https://github.com/L3DigitalNet/project-standards/issues/188)). Where a consumer links `.claude/skills/<name>` at `.agents/skills/<name>`, a twin that never reached the lock was classified pre-adoption while its recorded counterpart was a managed update, so the plan reported `CP-CONSUMER-CONFLICT` against bytes it was already updating and offered an `rm` that would have deleted the managed file with it. One lock record now governs every name in an alias group, and a genuine pre-adoption conflict on an aliased path names the sharing instead of proposing a deletion. Repositories that track no such link are unaffected.
 - `reconcile --restore-managed` no longer refuses a restore target whose immediate parent is an in-root symlink ([#190](https://github.com/L3DigitalNet/project-standards/issues/190)). The parent was judged lexically before the containment walk ran, so an in-root link one level above the target was accepted while the same link directly on the target's parent was rejected — the verdict depended on depth. The parent is now resolved through the same contained walk as every other ancestor; escapes, cycles, non-directory components, and destinations inside `.git/` or `.standards/` are still refused with the same coded error.
+### Added
+
+- **Control-plane diagnostic-code reference.** [`docs/reference/control-plane-diagnostics.md`](docs/reference/control-plane-diagnostics.md) documents every `CP-` code the reconcile/apply control plane emits — meaning, the condition that raises it, and remediation — for planning findings, apply failures, managed restore, sanctioned recovery, and legacy migration. Linked from `docs/usage.md`; `tests/test_control_plane_diagnostic_docs.py` derives the code set from `src/project_standards/control_plane/**` and fails in either direction, so the table cannot drift from the source. (#189)
 
 ## [5.22.0] — 2026-08-26
 
