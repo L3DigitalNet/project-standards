@@ -184,7 +184,7 @@ role = "retained"
 [[packages]]
 id = "github-workflow"
 version = "1.4"
-digest = "sha256:5b1dab3b65148b073778a38547ff32d84182c5c0554a67d5ed1e8ff1be6b6906"
+digest = "sha256:6bd63f74d43baf8a49bc87c28b6a25fb1aa2d0bfdf185229b74e7b685dee522e"
 role = "default"
 
 [[packages]]
