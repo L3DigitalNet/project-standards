@@ -1,24 +1,22 @@
-// Package render is the tool's one layout engine and the three surfaces that present
-// it: `ledger` writes the consumer's generated work-state file, `summary` prints the
-// operator summary, and `receipt` prints a single-item creation receipt.
+// Package render is the tool's one layout engine and the two read-only surfaces that
+// present it: `summary` prints the operator summary, and `receipt` prints a
+// single-item creation receipt.
 //
-// One engine, three surfaces, is the point (plan decision D-003, spec FR-022). The
+// One engine, several surfaces, is the point (plan decision D-003, spec FR-022). The
 // layouts are defined in the package's own summary-format.md reference, and their value
-// is comparability across sessions, agents, and repositories; three renderers that
-// happened to agree on the day they were written would lose that within one change. So
-// every surface here builds the same Snapshot model, derives the same needs-attention
-// findings from it, and shares the same table, escaping, and field-formatting code. A
-// single golden fixture set drives all three.
+// is comparability across sessions, agents, and repositories; renderers that happened to
+// agree on the day they were written would lose that within one change. So every surface
+// here builds the same Snapshot model, derives the same needs-attention findings from
+// it, and shares the same table, escaping, and field-formatting code. A single golden
+// fixture set drives them all.
 //
-// Two constraints shape the code more than anything else:
-//
-//   - The ledger is generated consumer content owned whole-file by the tool (spec
-//     DR-003), so it is written atomically and a failed refresh leaves the prior file
-//     byte-identical.
-//   - Its output must satisfy the markdown-tooling standard's default Prettier and
-//     markdownlint configuration unmodified (spec FR-019), which is why table layout
-//     reproduces Prettier's own alignment rule and every cell is escaped rather than
-//     trusted.
+// Payload 1.5 removed the third surface, `ledger`, which wrote a generated
+// docs/GH-WORKFLOWS.md into the consumer repository. Nothing here writes a file any
+// more: both surfaces print, so the atomic-replace machinery and the table of contents
+// that only the written file needed are gone. What survives is the Prettier and
+// markdownlint fidelity constraint (spec FR-019) — the printed output is still pasted
+// into Markdown documents, which is why table layout reproduces Prettier's own alignment
+// rule and every cell is escaped rather than trusted.
 package render
 
 import (
@@ -28,19 +26,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 )
-
-// DefaultVersion is the version an unstamped build reports. It is a constant because
-// `-ldflags "-X main.version=..."` only survives package initialization when the variable
-// it names is initialized to a constant string expression: cmd/gh-workflow initializes
-// main.version from this, and initializing it from Version below instead would let
-// initialization overwrite the linker's write and leave every stamped build silently
-// reporting this default.
-const DefaultVersion = "1.4"
-
-// Version is the tool version stamped into generated output (spec FR-019). It is a
-// variable so the reproducible build can override it, and it defaults to the package
-// version rather than "dev" so an unstamped build still labels the file honestly.
-var Version = DefaultVersion
 
 // Kind distinguishes the two work-item shapes. They share the model because they share
 // the layout, but they carry different fields: only issues have an Issue Type and Issue

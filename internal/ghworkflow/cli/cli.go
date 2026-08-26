@@ -5,7 +5,7 @@
 // The registry is deliberately write-only from the outside. Each subcommand package
 // registers itself from an init function, and cmd/gh-workflow pulls it in with a blank
 // import, so adding a subcommand adds a file and one import line and never edits shared
-// registration code. The nine subcommands of spec IR-004 land across several tasks;
+// registration code. The eight subcommands of spec IR-004 land across several tasks;
 // this shape is what keeps them from serializing behind one dispatch table.
 package cli
 
@@ -35,6 +35,20 @@ const (
 	ExitFailure = 1
 	ExitUsage   = 2
 )
+
+// DefaultVersion is the version an unstamped build reports. It must stay a constant
+// expression: `-ldflags "-X main.version=..."` only survives package initialization when
+// the variable it names is initialized from one, and cmd/gh-workflow initializes
+// main.version from this. Initializing main.version from Version below instead would let
+// package initialization overwrite the linker's write and leave every stamped build
+// silently reporting this default.
+const DefaultVersion = "1.5"
+
+// Version is the tool version `help` prints, and the only surface that reports it. It is
+// a variable so the reproducible build can stamp it (spec NFR-005); cmd/gh-workflow owns
+// the stamping. Payload 1.5 moved it here from internal/ghworkflow/render, whose removed
+// `ledger` surface used to be the thing that printed it.
+var Version = DefaultVersion
 
 // Delivered locations of the package artifacts the tool reads. IR-004 requires the tool
 // to find these with no arguments, so they are constants here rather than flag defaults.
@@ -196,7 +210,7 @@ func Run(ctx context.Context, env *Env, args []string) int {
 
 func writeUsage(w io.Writer) {
 	var b strings.Builder
-	b.WriteString("Usage: gh-workflow <subcommand> [flags]\n\nSubcommands:\n")
+	fmt.Fprintf(&b, "gh-workflow %s\n\nUsage: gh-workflow <subcommand> [flags]\n\nSubcommands:\n", Version)
 	for _, cmd := range Commands() {
 		_, _ = fmt.Fprintf(&b, "  %-10s %s\n", cmd.Name, cmd.Summary)
 	}

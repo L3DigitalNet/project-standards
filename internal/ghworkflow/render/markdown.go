@@ -136,7 +136,7 @@ func isPrettierPunctuation(r rune) bool {
 // An underscore opens or closes emphasis only at a word edge or beside punctuation;
 // CommonMark makes an intraword underscore inert, so escaping one is redundant. Prettier
 // enforces exactly that distinction and rewrites `\_` back to `_` between two word
-// characters, which is why the unconditional escape this replaced made every ledger
+// characters, which is why the unconditional escape this replaced made every rendered
 // refresh containing a `snake_case` title fail the consumer's `prettier --check` gate
 // until someone ran `prettier --write` by hand (#177).
 //
@@ -216,20 +216,5 @@ func EscapeText(text string) string {
 		last = match[1]
 	}
 	b.WriteString(escapeSegment(text[last:]))
-	return b.String()
-}
-
-// Anchor is the heading anchor GitHub generates, which is what the ledger's table of
-// contents links to.
-func Anchor(heading string) string {
-	var b strings.Builder
-	for _, r := range strings.ToLower(heading) {
-		switch {
-		case r == ' ':
-			b.WriteRune('-')
-		case r == '-' || unicode.IsLetter(r) || unicode.IsDigit(r):
-			b.WriteRune(r)
-		}
-	}
 	return b.String()
 }

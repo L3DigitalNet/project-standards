@@ -1,7 +1,6 @@
 package render_test
 
 import (
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -19,116 +18,54 @@ func TestSummaryMatchesGolden(t *testing.T) {
 	}
 }
 
-func TestLedgerMatchesGolden(t *testing.T) {
-	t.Parallel()
-
-	got := render.Ledger(fixtureSnapshot(t))
-	if want := golden(t, "ledger.md"); got != want {
-		t.Errorf("Ledger() mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
-	}
-}
-
 // An empty repository still renders every section: the layout is what makes summaries
 // comparable across repositories, so sections state their emptiness rather than vanish.
-func TestLedgerWithNoOpenWorkMatchesGolden(t *testing.T) {
+// There is no golden for this shape because the empty lines, not the whole document, are
+// the contract summary-format.md states.
+func TestSummaryWithNoOpenWorkStillRendersEverySection(t *testing.T) {
 	t.Parallel()
 
-	empty := render.NewSnapshot(fixtureTarget, fixtureReadAt(t), nil, nil)
-	if got, want := render.Ledger(empty), golden(t, "ledger-empty.md"); got != want {
-		t.Errorf("Ledger() mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	rendered := render.Summary(render.NewSnapshot(fixtureTarget, fixtureReadAt(t), nil, nil))
+	cases := []struct {
+		name string
+		want string
+	}{
+		{"attention heading", "## Needs attention"},
+		{"attention empty line", "Nothing needs attention"},
+		{"issues heading", "## Issues"},
+		{"issues empty line", "No open issues."},
+		{"pull requests heading", "## Pull requests"},
+		{"pull requests empty line", "No open pull requests."},
+		{"follow-ups heading", "## Discovered follow-ups"},
+		{"follow-ups empty line", "No follow-ups recorded"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if !strings.Contains(rendered, tc.want) {
+				t.Errorf("the empty summary is missing %q:\n%s", tc.want, rendered)
+			}
+		})
 	}
 }
 
-// FR-019 requires the generated-file header to carry the tool version and a do-not-edit
-// notice, and the summary to carry neither.
-func TestLedgerHeaderCarriesVersionAndNotice(t *testing.T) {
-	t.Parallel()
-
-	ledger := render.Ledger(fixtureSnapshot(t))
-	for _, want := range []string{render.Version, "Do not edit"} {
-		if !strings.Contains(ledger, want) {
-			t.Errorf("ledger header missing %q:\n%s", want, ledger)
-		}
-	}
-	if summary := render.Summary(fixtureSnapshot(t)); strings.Contains(summary, "Do not edit") {
-		t.Error("summary carries the ledger's generated-file notice; only the written file is generated content")
-	}
-}
-
-// Issue #154: the committed file must be a function of work state alone. The read time
-// is the only input that moves between two reads of an unchanged repository, so a ledger
-// that renders identically across a shifting read timestamp is a ledger that produces no
-// diff on regeneration — which is the property the consumer actually needs.
-//
-// The summary is checked in the same test as the deliberate contrast: it is printed, not
-// committed, so it keeps the timestamp the ledger gave up.
-func TestLedgerBodyIsIndependentOfTheReadTimestamp(t *testing.T) {
+// The summary is printed, never committed, so it carries the read timestamp that the
+// removed ledger deliberately gave up (issue #154). Nothing else in the document may
+// move between two reads of unchanged work state.
+func TestSummaryCarriesTheReadTimestampAndNothingElseThatMoves(t *testing.T) {
 	t.Parallel()
 
 	first := fixtureSnapshot(t)
 	later := render.NewSnapshot(fixtureTarget, fixtureReadAt(t).Add(72*time.Hour),
 		first.Issues, first.PullRequests)
 
-	if got, want := render.Ledger(later), render.Ledger(first); got != want {
-		t.Errorf("the ledger changed with the read timestamp alone\n--- got ---\n%s\n--- want ---\n%s", got, want)
-	}
-	if ledger := render.Ledger(first); strings.Contains(ledger, fixtureRead) {
-		t.Errorf("the ledger body carries the read timestamp:\n%s", ledger)
-	}
 	if summary := render.Summary(first); !strings.Contains(summary, fixtureRead) {
 		t.Errorf("the summary lost its read timestamp:\n%s", summary)
 	}
-}
-
-var (
-	headingPattern = regexp.MustCompile(`(?m)^## (.+)$`)
-	tocPattern     = regexp.MustCompile(`(?m)^- \[(.+)\]\(#(.+)\)$`)
-)
-
-// FR-019: a table of contents of anchor links to every section. Deriving the expectation
-// from the rendered headings rather than a hardcoded list is what keeps a future section
-// from silently escaping the contract.
-func TestLedgerTableOfContentsCoversEverySection(t *testing.T) {
-	t.Parallel()
-
-	ledger := render.Ledger(fixtureSnapshot(t))
-
-	anchors := map[string]string{}
-	for _, match := range tocPattern.FindAllStringSubmatch(ledger, -1) {
-		anchors[match[1]] = match[2]
+	got := strings.Replace(render.Summary(later), fixtureReadAt(t).Add(72*time.Hour).Format(time.RFC3339), fixtureRead, 1)
+	if want := render.Summary(first); got != want {
+		t.Errorf("the summary changed by more than its read timestamp\n--- got ---\n%s\n--- want ---\n%s", got, want)
 	}
-
-	sections := 0
-	for _, match := range headingPattern.FindAllStringSubmatch(ledger, -1) {
-		heading := match[1]
-		if heading == "Contents" {
-			// The table of contents does not link to itself.
-			continue
-		}
-		sections++
-		anchor, ok := anchors[heading]
-		if !ok {
-			t.Errorf("section %q has no table-of-contents entry", heading)
-			continue
-		}
-		if want := slug(heading); anchor != want {
-			t.Errorf("section %q anchor = %q, want %q", heading, anchor, want)
-		}
-	}
-	if sections != 4 {
-		t.Errorf("rendered %d linkable sections, want 4", sections)
-	}
-	if len(anchors) != sections {
-		t.Errorf("table of contents has %d entries for %d sections", len(anchors), sections)
-	}
-	if strings.Contains(render.Summary(fixtureSnapshot(t)), "## Contents") {
-		t.Error("summary carries a table of contents; the TOC is a navigation aid for the written file only")
-	}
-}
-
-// slug reproduces GitHub's heading-anchor rule for the headings this layout emits.
-func slug(heading string) string {
-	return strings.ToLower(strings.ReplaceAll(heading, " ", "-"))
 }
 
 func TestReceiptsMatchGolden(t *testing.T) {

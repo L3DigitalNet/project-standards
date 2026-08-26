@@ -12,10 +12,10 @@ import (
 	"os"
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
-	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 
 	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/audit"
 	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/mutate"
+	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 )
 
 // version is the tool version, overridable at link time with
@@ -25,19 +25,19 @@ import (
 // package version moves.
 //
 // The initializer must stay a constant. `-X` writes the linker's value into this
-// variable's initial data either way, but a non-constant initializer — render.Version
+// variable's initial data either way, but a non-constant initializer — cli.Version
 // itself, most temptingly — makes package initialization run afterwards and overwrite it,
 // which links cleanly, passes every in-process test, and leaves each stamped build
 // reporting the default.
-var version = render.DefaultVersion
+var version = cli.DefaultVersion
 
-// stampVersion carries the linked version into the generated surfaces.
+// stampVersion carries the linked version into the surface that reports it.
 //
-// Without this the ldflag would link cleanly and change nothing: render.Version is what
-// the ledger header actually prints, and a stamp that never reaches it would make every
-// generated file claim the default version regardless of which binary wrote it.
+// Without this the ldflag would link cleanly and change nothing: cli.Version is what
+// `gh-workflow help` actually prints, and a stamp that never reaches it would make every
+// build report the default version regardless of which binary is running.
 func stampVersion() {
-	render.Version = version
+	cli.Version = version
 }
 
 func main() {

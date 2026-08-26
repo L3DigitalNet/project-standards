@@ -5,21 +5,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/policy"
 )
 
-// The three rendering subcommands register themselves, so wiring them into the binary is
+// The two rendering subcommands register themselves, so wiring them into the binary is
 // a blank import in cmd/gh-workflow rather than an edit to shared dispatch code.
 func init() {
-	cli.Register(&cli.Command{
-		Name:    "ledger",
-		Summary: "regenerate the repository's docs/GH-WORKFLOWS.md work-state ledger",
-		Run:     runLedger,
-	})
 	cli.Register(&cli.Command{
 		Name:    "summary",
 		Summary: "print the attention-first operator summary of open work (read-only)",
@@ -97,7 +91,7 @@ func policyOrganization(env *cli.Env, explicit string) (string, error) {
 }
 
 // snapshot performs the whole read. Every fallible step finishes before a caller writes
-// anything, so a failed read produces no partial report and no ledger mutation.
+// anything, so a failed read produces no partial report at all.
 func snapshot(ctx context.Context, env *cli.Env, t *target) (*Snapshot, error) {
 	repo, err := t.resolve(env)
 	if err != nil {
@@ -126,52 +120,6 @@ func parse(fs *flag.FlagSet, env *cli.Env, args []string, usage string) error {
 		return cli.Usagef("unexpected argument %q; %s takes flags only", fs.Arg(0), fs.Name())
 	}
 	return nil
-}
-
-func runLedger(ctx context.Context, env *cli.Env, args []string) error {
-	fs := flag.NewFlagSet("ledger", flag.ContinueOnError)
-	tgt := addTargetFlags(fs)
-	path := fs.String("path", "", "ledger path to write (default: "+LedgerRelPath+" at the checkout root)")
-	if err := parse(fs, env, args, "Usage: gh-workflow ledger [flags]\n\n"+
-		"Regenerates the repository's work-state ledger from live GitHub state. The file\n"+
-		"is owned whole-file by the tool: it is replaced atomically and manual edits are\n"+
-		"overwritten. A failed refresh leaves the previous file byte-identical.\n"); err != nil {
-		return err
-	}
-
-	destination, err := ledgerPath(env, *path)
-	if err != nil {
-		return err
-	}
-	read, err := snapshot(ctx, env, tgt)
-	if err != nil {
-		return err
-	}
-	if err := WriteAtomic(destination, []byte(Ledger(read))); err != nil {
-		return err
-	}
-
-	// The read timestamp is reported here and not in the file. It is the one value that
-	// moves on every run, so stdout — which no consumer commits — is where it can be
-	// stated without making the written bytes churn (issue #154).
-	_, err = fmt.Fprintf(env.Stdout, "Wrote %s from a read at %s: %s, %s, %s needing attention.\n",
-		destination,
-		read.Timestamp(),
-		plural(len(read.Issues), "open issue", "open issues"),
-		plural(len(read.PullRequests), "open PR", "open PRs"),
-		plural(len(read.Attention()), "item", "items"))
-	return err
-}
-
-func ledgerPath(env *cli.Env, explicit string) (string, error) {
-	if explicit != "" {
-		return explicit, nil
-	}
-	root, err := CheckoutRoot(env.WorkDir)
-	if err != nil {
-		return "", fmt.Errorf("%w; pass --path", err)
-	}
-	return filepath.Join(root, filepath.FromSlash(LedgerRelPath)), nil
 }
 
 func runSummary(ctx context.Context, env *cli.Env, args []string) error {

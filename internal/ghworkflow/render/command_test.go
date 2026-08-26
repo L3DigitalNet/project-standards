@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -15,8 +17,8 @@ import (
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghtest"
 
-	// The three subcommands register themselves; importing the package under test is
-	// what wires them into the registry, exactly as cmd/gh-workflow does.
+	// Both subcommands register themselves; importing the package under test is what
+	// wires them into the registry, exactly as cmd/gh-workflow does.
 	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 )
 
@@ -25,8 +27,6 @@ const (
 	fixtureBase   = "https://api.github.test"
 	fixturePolicy = "organization = \"L3DigitalNet\"\npackage_version = \"1.0\"\n"
 	fixtureGit    = "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = git@github.com:L3DigitalNet/example-repo.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n"
-
-	ledgerRelPath = "docs/GH-WORKFLOWS.md"
 )
 
 // The JSON below is the same fixture work-item set as fixtureSnapshot, expressed as the
@@ -188,8 +188,26 @@ func (h *harness) run(args ...string) int {
 	return cli.Run(context.Background(), h.env, args)
 }
 
-func (h *harness) ledgerPath() string {
-	return filepath.Join(h.root, filepath.FromSlash(ledgerRelPath))
+// files lists every file in the harness checkout, which is what makes "this surface
+// writes nothing" assertable: payload 1.5 removed the one subcommand that wrote a file,
+// and a regression would land as a new path here rather than as a failed golden.
+func (h *harness) files(t *testing.T) []string {
+	t.Helper()
+
+	var found []string
+	if err := filepath.WalkDir(h.root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() {
+			found = append(found, path)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("walking the harness checkout: %v", err)
+	}
+	sort.Strings(found)
+	return found
 }
 
 func (h *harness) assertReadOnly(t *testing.T) {
@@ -224,9 +242,6 @@ func requireReadTimestamp(t *testing.T, rendered string) {
 // freeze replaces the read timestamp — the one value a live run cannot repeat — with the
 // fixture's, after checking it is a real, recent UTC instant. Everything else must match
 // the golden byte for byte.
-//
-// Only the summary needs this now: the ledger carries no timestamp, so its live output is
-// compared to its golden unfrozen (issue #154).
 func freeze(t *testing.T, rendered string) string {
 	t.Helper()
 
@@ -234,108 +249,19 @@ func freeze(t *testing.T, rendered string) string {
 	return timestampPattern.ReplaceAllString(rendered, fixtureRead)
 }
 
-func TestLedgerZeroArgumentRunWritesTheGoldenFile(t *testing.T) {
-	t.Parallel()
-
-	h := newHarness(t)
-	if got := h.run("ledger"); got != cli.ExitOK {
-		t.Fatalf("ledger = %d, want %d (stderr: %s)", got, cli.ExitOK, h.stderr)
-	}
-
-	data, err := os.ReadFile(h.ledgerPath())
-	if err != nil {
-		t.Fatalf("the ledger was not written to %s: %v", ledgerRelPath, err)
-	}
-	// Unfrozen: a live run of an unchanged repository must reproduce the golden exactly,
-	// timestamp substitution included — that is issue #154's whole guarantee.
-	if got, want := string(data), golden(t, "ledger.md"); got != want {
-		t.Errorf("ledger file mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
-	}
-
-	out := h.stdout.String()
-	for _, want := range []string{ledgerRelPath, "4 open issues", "3 open PRs"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("confirmation line %q missing %q", out, want)
-		}
-	}
-	// The read time did not vanish with the file header; it moved to stdout, which the
-	// consumer does not commit.
-	requireReadTimestamp(t, out)
-	if strings.Contains(out, fixtureToken) || strings.Contains(h.stderr.String(), fixtureToken) {
-		t.Error("output contains the token value; IR-002 forbids credential material in output")
-	}
-	h.assertReadOnly(t)
-}
-
-// Issue #154: regenerating against unchanged work state must produce no diff. This is
-// the end-to-end form of the unit-level guarantee — two real runs of the command, minutes
-// or milliseconds apart, writing the same bytes — because the churn the consumer reported
-// was observed here, at `git diff`, not in the renderer.
-func TestLedgerRegeneratedAgainstUnchangedStateWritesIdenticalBytes(t *testing.T) {
-	t.Parallel()
-
-	h := newHarness(t)
-	if got := h.run("ledger"); got != cli.ExitOK {
-		t.Fatalf("first ledger = %d, want %d (stderr: %s)", got, cli.ExitOK, h.stderr)
-	}
-	first, err := os.ReadFile(h.ledgerPath())
-	if err != nil {
-		t.Fatalf("reading the first ledger: %v", err)
-	}
-
-	if got := h.run("ledger"); got != cli.ExitOK {
-		t.Fatalf("second ledger = %d, want %d (stderr: %s)", got, cli.ExitOK, h.stderr)
-	}
-	second, err := os.ReadFile(h.ledgerPath())
-	if err != nil {
-		t.Fatalf("reading the second ledger: %v", err)
-	}
-
-	if !bytes.Equal(first, second) {
-		t.Errorf("regeneration changed the file\n--- first ---\n%s\n--- second ---\n%s", first, second)
-	}
-}
-
-func TestLedgerFailingTransportLeavesThePriorFileIntact(t *testing.T) {
-	t.Parallel()
-
-	h := newHarness(t)
-	if err := os.MkdirAll(filepath.Dir(h.ledgerPath()), 0o750); err != nil {
-		t.Fatalf("MkdirAll error = %v", err)
-	}
-	const prior = "# prior ledger\n"
-	if err := os.WriteFile(h.ledgerPath(), []byte(prior), 0o600); err != nil {
-		t.Fatalf("WriteFile error = %v", err)
-	}
-	h.transport.Err = http.ErrServerClosed
-
-	if got := h.run("ledger"); got != cli.ExitFailure {
-		t.Fatalf("ledger = %d, want %d", got, cli.ExitFailure)
-	}
-	data, err := os.ReadFile(h.ledgerPath())
-	if err != nil {
-		t.Fatalf("ReadFile error = %v", err)
-	}
-	if string(data) != prior {
-		t.Errorf("a failed read rewrote the ledger:\n%s", data)
-	}
-	if h.stdout.Len() != 0 {
-		t.Errorf("failed run wrote to stdout: %q", h.stdout)
-	}
-}
-
 func TestSummaryZeroArgumentRunMatchesGolden(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
+	before := h.files(t)
 	if got := h.run("summary"); got != cli.ExitOK {
 		t.Fatalf("summary = %d, want %d (stderr: %s)", got, cli.ExitOK, h.stderr)
 	}
 	if got, want := freeze(t, h.stdout.String()), golden(t, "summary.md"); got != want {
 		t.Errorf("summary mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
 	}
-	if _, err := os.Stat(h.ledgerPath()); !os.IsNotExist(err) {
-		t.Error("summary wrote the ledger file; it prints and nothing more")
+	if got := h.files(t); !slices.Equal(got, before) {
+		t.Errorf("summary changed the checkout's files; it prints and nothing more\n--- got ---\n%v\n--- want ---\n%v", got, before)
 	}
 	h.assertReadOnly(t)
 }

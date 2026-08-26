@@ -8,9 +8,6 @@ import (
 	"strings"
 )
 
-// LedgerRelPath is the ledger's location inside a consumer repository (spec DR-003).
-const LedgerRelPath = "docs/GH-WORKFLOWS.md"
-
 // Repository is the owner and name of a GitHub repository.
 type Repository struct {
 	Owner string `json:"owner"`
@@ -29,9 +26,10 @@ func ParseRepository(value string) (Repository, error) {
 	return Repository{Owner: owner, Name: name}, nil
 }
 
-// CheckoutRoot walks up from start to the enclosing Git checkout, which is what anchors
-// the ledger's path when the operator supplies none (spec IR-004).
-func CheckoutRoot(start string) (string, error) {
+// checkoutRoot walks up from start to the enclosing Git checkout, which is where the
+// `origin` remote that names the repository is configured. It is unexported because
+// OriginRepository is the only caller left now that no subcommand writes a file.
+func checkoutRoot(start string) (string, error) {
 	dir, err := filepath.Abs(start)
 	if err != nil {
 		return "", fmt.Errorf("resolving the working directory %s: %w", start, err)
@@ -55,7 +53,7 @@ func CheckoutRoot(start string) (string, error) {
 // contract. Git configuration is read directly rather than by shelling out to `git`,
 // which the tool does not require to be installed.
 func OriginRepository(start string) (Repository, error) {
-	root, err := CheckoutRoot(start)
+	root, err := checkoutRoot(start)
 	if err != nil {
 		return Repository{}, err
 	}
