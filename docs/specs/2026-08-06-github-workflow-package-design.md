@@ -6,7 +6,7 @@ description: 'Approved design for the github-workflow Catalog 5 consumer package
 doc_type: 'decision'
 status: 'active'
 created: '2026-08-06'
-updated: '2026-08-06'
+updated: '2026-08-26'
 tags:
   - 'standard'
 aliases: []
@@ -21,7 +21,7 @@ related: []
 - Operation: `create`
 - Decision owner: repository owner
 - Created and approved: `2026-08-06`
-- Revision: 1.6 — 2026-08-06 owner-approved amendment: PR existence is repository-local policy; the package binds PR obligations only once a PR exists (D12). Prior same-day: 1.5 tool plumbing subcommands (D11). Earlier same-day: 1.4 ledger and tool consolidation (D10), 1.3 creation receipts (D9), 1.2 operator summary layout (D8), 1.1 Go skill tooling (D7); initial approval 2026-08-06.
+- Revision: 1.7 — 2026-08-26 owner-approved amendment for package version 1.5: D10's ledger half is withdrawn and D13 records the removal, the guidance restructure, and the relaxed issue self-definition rules; D10's binary-consolidation half and every other decision stand. Prior: 1.6 — 2026-08-06 owner-approved amendment: PR existence is repository-local policy; the package binds PR obligations only once a PR exists (D12). Prior same-day: 1.5 tool plumbing subcommands (D11). Earlier same-day: 1.4 ledger and tool consolidation (D10), 1.3 creation receipts (D9), 1.2 operator summary layout (D8), 1.1 Go skill tooling (D7); initial approval 2026-08-06.
 - Prior design brief: none
 - Working-state source: `.project-pipeline/github-workflow-package/design-discovery/` (removed after promotion)
 - Design input: [GitHub Repository Administration Standard (preliminary)](archive/2026-08-06-github-repo-administration-preliminary-design.md)
@@ -90,22 +90,22 @@ One mandatory skill, `github-workflow`. Trigger boundary: agents must load it be
 | --- | --- | --- |
 | `SKILL.md` | `.agents/skills/github-workflow/SKILL.md` | Decision procedures, refusals, trigger boundary |
 | `openai.yaml` | `.agents/skills/github-workflow/agents/openai.yaml` | Codex skill companion |
-| `field-vocabulary.md` | `.agents/skills/github-workflow/references/` | Seven fields, values, pinning matrix, fields-not-to-create list |
+| `field-vocabulary.md` | `.agents/skills/github-workflow/references/` | Seven fields, values, pinning matrix, fields-not-to-create list. From package version 1.5 (D13): `Workflow` value semantics, the pinning matrix, and the independence rule only — the tool's refusals are the authoritative vocabulary surface |
 | `org-schema.yaml` | `.agents/skills/github-workflow/references/` | Machine-readable baseline schema the audit compares against |
 | `issue-structure.md` | `.agents/skills/github-workflow/references/` | Canonical issue body headings and the five Issue Type definitions |
 | `pr-standard.md` | `.agents/skills/github-workflow/references/` | PR content standard and draft-PR policy |
 | `review-checklist.md` | `.agents/skills/github-workflow/references/` | Layered PR-review checklist — discipline only, no gating |
 | `summary-format.md` | `.agents/skills/github-workflow/references/` | Attention-first layout for operator-requested issue/PR summaries plus the single-item creation receipt |
 | `policy.toml` | `.standards/packages/github-workflow/policy.toml` | Rendered consumer configuration for the skill to read |
-| `gh-workflow` | `.agents/skills/github-workflow/bin/gh-workflow` | Compiled Go tool (linux/amd64), mode 0755; subcommands `audit`, `ledger`, `new`, `set`, `close`, `reopen`, `summary`, `receipt`, `check` |
+| `gh-workflow` | `.agents/skills/github-workflow/bin/gh-workflow` | Compiled Go tool (linux/amd64), mode 0755; subcommands `audit`, `ledger`, `new`, `set`, `close`, `reopen`, `summary`, `receipt`, `check`. From package version 1.5 (D13): eight subcommands, `ledger` removed |
 
 ### Contributions
 
-A compact (~12-line) markdown-block contribution into `AGENTS.md` (Codex) and `CLAUDE.md` (Claude Code), gated on the `harnesses` option. It carries the skill mandate plus the standing invariants that must bind even when the skill was never loaded, because violating them is expensive before anyone notices:
+A compact (~12-line) markdown-block contribution into `AGENTS.md` (Codex) and `CLAUDE.md` (Claude Code), gated on the `harnesses` option. It carries the skill mandate plus the standing invariants that must bind even when the skill was never loaded, because violating them is expensive before anyone notices. From package version 1.5 (D13) the block also carries the complete action-routing table and its budget becomes a byte ceiling rather than a line count:
 
 - An Issue is the unit of authorized work; a nontrivial PR links its governing Issue (INV-008).
-- Never infer readiness — `Workflow = Ready` plus `Execution mode` authorization, never "the issue is open" (INV-005).
-- Never self-promote `Execution mode`; never mutate organization-level Issue Fields or Types — org schema changes are human-applied (INV-006).
+- Never infer readiness — `Workflow = Ready` plus `Execution mode` authorization, never "the issue is open" (INV-005). _From package version 1.5 (D13): the agent authors the acceptance criteria, sets `Workflow`, and admits work to `Ready` itself; an issue whose criteria the agent could not write is `Needs definition`. Open state alone still never implies `Ready`._
+- Never self-promote `Execution mode`; never mutate organization-level Issue Fields or Types — org schema changes are human-applied (INV-006). _From package version 1.5 (D13): the mode restriction narrows to `Unattended agent`, which stays the owner's grant; the org-schema half is unchanged._
 - Terminal-state sync: `Done` → closed as completed; `Dropped` → closed as not planned (INV-010/011).
 - Durable follow-up work discovered during implementation becomes an Issue, not prose (INV-015).
 
@@ -216,6 +216,7 @@ Exactly two options:
 - Alternatives rejected: a second separate binary (duplicate plumbing, two artifacts to pin); on-demand-only refresh (silent staleness); scheduled CI/cron refresh (automation committing to consumer repos — phase-3 territory, deferred with the other enforcement automation).
 - Rationale: a persisted, tool-maintained ledger gives durable work-state visibility at near-zero token cost and keeps context clean; consolidation keeps the D7 contract at one reproducible artifact.
 - Reopen when: the fixed ledger location or sections prove insufficient (consider a config option or layout variants), or scheduled refresh is wanted (phase-3 discussion).
+- **Superseded in part, 2026-08-26 (D13):** the ledger half of this decision is withdrawn at package version 1.5. The reopen clause above is what fired — measured session evidence showed the persisted file duplicating what `summary` renders on demand while still requiring a write into the consumer repository. The consolidation half (one binary, one artifact to pin and rebuild) is unchanged, and the shared layout engine survives for `summary` and `receipt`.
 
 ### D11: Tool absorbs deterministic skill plumbing
 
@@ -224,6 +225,15 @@ Exactly two options:
 - Boundary preserved: the tool gains repository-scoped mutation ability under the operator's existing `gh` authentication — the same authority agents already exercised via raw `gh` — while organization-schema access stays read-only (NG-001 untouched).
 - Rationale: field mutations are the worst API surface in the model (GraphQL field/option ID plumbing); terminal sync is the most invariant-critical two-step; rendering was already deterministic. Tool validation converts vocabulary and sync discipline from model memory into mechanical refusal.
 - Reopen when: a subcommand's scope starts absorbing judgment (value selection, content authoring) — that is the boundary violation signal.
+
+### D13: Ledger withdrawn, guidance budgeted, issue self-definition relaxed (package version 1.5)
+
+- Status: `approved` (owner, 2026-08-26; three owner decisions taken together on the session-corpus efficiency review)
+- Decision: (a) the `ledger` feature — the subcommand, the generated `docs/GH-WORKFLOWS.md`, and their guidance — is removed outright at package version 1.5 with no deprecation stub, superseding D10's ledger half; the removal ships as a MINOR by explicit owner designation. (b) The guidance surface is budgeted: `SKILL.md` merges its routing map and command surface into one two-column table naming both `gh-workflow` subcommands and the documented raw-`gh` forms, drops the per-session preflight mandate and the common-mistakes section, and declares its own length; `field-vocabulary.md` shrinks to the vocabulary the tool's refusals cannot supply; the routing table is duplicated into the managed `AGENTS.md`/`CLAUDE.md` block, which is the only package-owned text a delegated worker is guaranteed to read. (c) Issue self-definition is relaxed: agents author acceptance criteria, set `Workflow` including `Ready`, and set `Execution mode` by judgment, with `Unattended agent` reserved to the owner and the owner asked only where the definition itself depends on owner intent — direction, spend, or an irreversible action. Organization schema stays human-applied (D0/NG-001, untouched).
+- Boundary preserved: no new subcommand. An action earns one only when it has a vocabulary to validate or an invariant to pair (D11's boundary), and none of the uncovered actions — comment, retitle, PR create, PR merge, CI wait, issue read — does. `merge` is barred outright by the enforcement non-goal, not on cost.
+- Alternatives rejected: retaining `ledger` as a stub exiting nonzero for one payload version (a clean deprecation window, but the owner's decision is a deliberate contract break and a stub preserves a name nothing implements); cutting 2.0 on the argument that the enumerated subcommand list is consumer-facing contract (the stricter reading, overridden by the owner's MINOR designation); splitting `SKILL.md` into a stub plus a procedures reference (converts one whole-file read into two when agents already re-read); leaving the block invariant-only to protect its size (invariants alone did not stop raw-`gh` reinvention, and routing is what delegated workers demonstrably act on).
+- Rationale: the measured session corpus showed guidance read whole-file and repeatedly, calls spent on `help` for flags the same file printed, a documented retype route missed inside a 157-line file, CI waiting reinvented as poll loops, and roughly half of all mutations performed by delegated workers that loaded no guidance at all. The self-definition relaxation resolves a contradiction inside the package rather than loosening a coherent rule: `check` has always returned queue admission to the agent while the guidance forbade it.
+- Reopen when: a post-1.5 corpus window comparable to the review's still shows the `help` calls, the whole-file re-reads, the hand-rolled wait loops, or the delegated-worker bypass; or a consumer reports breakage from the removed subcommand, which would confirm the enumerated CLI surface is consumer-facing in practice.
 
 ### D12: PR existence is repository-local policy
 
@@ -307,9 +317,10 @@ Non-blocking:
   - D7 skill tooling in Go; audit ships as committed linux/amd64 binary, reproducibly built
   - D8 operator summaries follow the packaged attention-first layout (summary-format.md); summary presentation is a skill trigger
   - D9 agents present a consistent creation receipt (header, fields set, gaps) after creating an issue or PR
-  - D10 tool consolidated as `gh-workflow` (audit + ledger subcommands); maintained human-readable ledger at docs/GH-WORKFLOWS.md with TOC, refreshed after mutating tasks
+  - D10 tool consolidated as `gh-workflow` (audit + ledger subcommands); maintained human-readable ledger at docs/GH-WORKFLOWS.md with TOC, refreshed after mutating tasks — ledger half superseded by D13 at package version 1.5
   - D11 tool absorbs deterministic plumbing: new/set/close/reopen (validated mutations, atomic terminal sync), summary/receipt (rendering), check (Ready preconditions); judgment stays with the agent
   - D12 PR existence is repo-local policy (per-repo direct-push threshold); package binds PR obligations only once a PR exists; silent-repo default: PRs for consequential changes, direct push for minor ones
+  - D13 (2026-08-26, package version 1.5) ledger removed outright as a MINOR by owner designation; guidance budgeted into one routing table carried in both SKILL.md and the managed block; issue self-definition relaxed with `Unattended agent` reserved to the owner; no new subcommand
 - Agent-applied defaults:
   - org-schema resource in YAML (design-input §35 fidelity)
   - capability naming mirrors agent-handoff
