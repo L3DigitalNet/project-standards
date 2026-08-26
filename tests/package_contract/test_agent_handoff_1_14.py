@@ -192,7 +192,7 @@ def test_agent_handoff_1_14__closeout__is_session_scoped_and_delegable() -> None
     ).read_bytes()
 
 
-def test_agent_handoff_1_14__identity__is_complete_and_current() -> None:
+def test_agent_handoff_1_14__identity__is_complete_and_retained() -> None:
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     integrity = validate_payload_integrity(_SUCCESSOR, manifest)
     family = load_family_manifest(_FAMILY / "standard.toml")
@@ -209,10 +209,9 @@ def test_agent_handoff_1_14__identity__is_complete_and_current() -> None:
         if package["id"] == "agent-handoff"
     }
     assert roles["1.13"] == "retained"
-    assert roles["1.14"] == "default"
-    assert "| [`agent-handoff`](agent-handoff/README.md) | active | 1.14 | default |" in (
-        _ROOT / "standards/catalog.md"
-    ).read_text(encoding="utf-8")
+    # Superseded by 1.15 but still advertised: withdrawing an advertised package is a
+    # catalog-major transition (ADR 0024), so the entry stays and only the role moves.
+    assert roles["1.14"] == "retained"
 
 
 def test_agent_handoff_1_14__schemas__carry_no_predecessor_version_reference() -> None:

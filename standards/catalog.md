@@ -27,7 +27,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.11 | retained | consumer | 28 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.12 | retained | consumer | 28 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.13 | retained | consumer | 28 | 8 | 20 |
-| [`agent-handoff`](agent-handoff/README.md) | active | 1.14 | default | consumer | 28 | 8 | 20 |
+| [`agent-handoff`](agent-handoff/README.md) | active | 1.14 | retained | consumer | 28 | 8 | 20 |
+| [`agent-handoff`](agent-handoff/README.md) | active | 1.15 | default | consumer | 28 | 8 | 19 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.1 | retained | consumer | 13 | 3 | 1 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.2 | retained | consumer | 13 | 3 | 1 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.3 | retained | consumer | 13 | 3 | 1 |
@@ -125,6 +126,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.12` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `agent-handoff@1.13` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `agent-handoff@1.14` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
+| `agent-handoff@1.15` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `cli-documentation@1.1` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
 | `cli-documentation@1.2` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
 | `cli-documentation@1.3` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
@@ -756,6 +758,34 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.14` | `provider-findings` | `provider-resource` | `standards://agent-handoff/1.14/resources/provider-findings` | `schemas/findings.schema.json` |
 | `agent-handoff@1.14` | `provider-mutation-plan` | `provider-resource` | `standards://agent-handoff/1.14/resources/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
 | `agent-handoff@1.14` | `provider-migration-report` | `provider-resource` | `standards://agent-handoff/1.14/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `agent-handoff@1.15` | `readme` | `canonical-standard` | `standards://agent-handoff/1.15/resources/readme` | `README.md` |
+| `agent-handoff@1.15` | `adopt` | `adoption-guide` | `standards://agent-handoff/1.15/resources/adopt` | `adopt.md` |
+| `agent-handoff@1.15` | `agent-summary` | `agent-summary` | `standards://agent-handoff/1.15/resources/agent-summary` | `agent-summary.md` |
+| `agent-handoff@1.15` | `config-schema` | `config-schema` | `standards://agent-handoff/1.15/resources/config-schema` | `config.schema.json` |
+| `agent-handoff@1.15` | `legacy-guidance` | `standard-reference` | `standards://agent-handoff/1.15/resources/legacy-guidance` | `resources/legacy-migration.md` |
+| `agent-handoff@1.15` | `legacy-instructions-source` | `legacy-reference` | `standards://agent-handoff/1.15/resources/legacy-instructions-source` | `resources/integration/agent-instructions.md` |
+| `agent-handoff@1.15` | `legacy-claude-source` | `legacy-reference` | `standards://agent-handoff/1.15/resources/legacy-claude-source` | `resources/integration/claude-session-start.json` |
+| `agent-handoff@1.15` | `legacy-codex-source` | `legacy-reference` | `standards://agent-handoff/1.15/resources/legacy-codex-source` | `resources/integration/codex-session-start.toml` |
+| `agent-handoff@1.15` | `legacy-config-source` | `legacy-reference` | `standards://agent-handoff/1.15/resources/legacy-config-source` | `resources/integration/project-config.yml` |
+| `agent-handoff@1.15` | `skill` | `provider-resource` | `standards://agent-handoff/1.15/resources/skill` | `provider-resources/managed/skill.md` |
+| `agent-handoff@1.15` | `skill-openai` | `provider-resource` | `standards://agent-handoff/1.15/resources/skill-openai` | `provider-resources/managed/openai.yaml` |
+| `agent-handoff@1.15` | `policy` | `provider-resource` | `standards://agent-handoff/1.15/resources/policy` | `provider-resources/managed/policy.toml` |
+| `agent-handoff@1.15` | `template-status` | `template` | `standards://agent-handoff/1.15/resources/template-status` | `provider-resources/templates/STATUS.md` |
+| `agent-handoff@1.15` | `template-todo` | `template` | `standards://agent-handoff/1.15/resources/template-todo` | `provider-resources/templates/TODO.md` |
+| `agent-handoff@1.15` | `template-architecture` | `template` | `standards://agent-handoff/1.15/resources/template-architecture` | `provider-resources/templates/architecture.md` |
+| `agent-handoff@1.15` | `template-bugs-keep` | `template` | `standards://agent-handoff/1.15/resources/template-bugs-keep` | `provider-resources/templates/bugs.gitkeep` |
+| `agent-handoff@1.15` | `template-conventions` | `template` | `standards://agent-handoff/1.15/resources/template-conventions` | `provider-resources/templates/conventions.md` |
+| `agent-handoff@1.15` | `template-credentials` | `template` | `standards://agent-handoff/1.15/resources/template-credentials` | `provider-resources/templates/credentials.md` |
+| `agent-handoff@1.15` | `template-deployed` | `template` | `standards://agent-handoff/1.15/resources/template-deployed` | `provider-resources/templates/deployed.md` |
+| `agent-handoff@1.15` | `template-sessions-keep` | `template` | `standards://agent-handoff/1.15/resources/template-sessions-keep` | `provider-resources/templates/sessions.gitkeep` |
+| `agent-handoff@1.15` | `template-specs-plans` | `template` | `standards://agent-handoff/1.15/resources/template-specs-plans` | `provider-resources/templates/specs-plans.md` |
+| `agent-handoff@1.15` | `template-state` | `template` | `standards://agent-handoff/1.15/resources/template-state` | `provider-resources/templates/state.md` |
+| `agent-handoff@1.15` | `provider-code` | `provider-resource` | `standards://agent-handoff/1.15/resources/provider-code` | `providers/agent_handoff.py` |
+| `agent-handoff@1.15` | `provider-input` | `provider-resource` | `standards://agent-handoff/1.15/resources/provider-input` | `schemas/provider-input.schema.json` |
+| `agent-handoff@1.15` | `provider-content` | `provider-resource` | `standards://agent-handoff/1.15/resources/provider-content` | `schemas/content.schema.json` |
+| `agent-handoff@1.15` | `provider-findings` | `provider-resource` | `standards://agent-handoff/1.15/resources/provider-findings` | `schemas/findings.schema.json` |
+| `agent-handoff@1.15` | `provider-mutation-plan` | `provider-resource` | `standards://agent-handoff/1.15/resources/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
+| `agent-handoff@1.15` | `provider-migration-report` | `provider-resource` | `standards://agent-handoff/1.15/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
 | `cli-documentation@1.1` | `readme` | `canonical-standard` | `standards://cli-documentation/1.1/resources/readme` | `README.md` |
 | `cli-documentation@1.1` | `adopt` | `adoption-guide` | `standards://cli-documentation/1.1/resources/adopt` | `adopt.md` |
 | `cli-documentation@1.1` | `agent-summary` | `agent-summary` | `standards://cli-documentation/1.1/resources/agent-summary` | `agent-summary.md` |
@@ -2120,6 +2150,14 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.14` | `scaffold` | `scaffold` | `authoring` | `mutation-plan` | `payload:provider-code#run_scaffold` |
 | `agent-handoff@1.14` | `upgrade` | `upgrade` | `authoring` | `mutation-plan` | `payload:provider-code#run_upgrade` |
 | `agent-handoff@1.14` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `agent-handoff@1.15` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
+| `agent-handoff@1.15` | `validate` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
+| `agent-handoff@1.15` | `verify` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
+| `agent-handoff@1.15` | `drift-check` | `drift-check` | `validate` | `findings` | `payload:provider-code#run_drift_check` |
+| `agent-handoff@1.15` | `extract` | `extract` | `inspect` | `content` | `payload:provider-code#run_extract` |
+| `agent-handoff@1.15` | `scaffold` | `scaffold` | `authoring` | `mutation-plan` | `payload:provider-code#run_scaffold` |
+| `agent-handoff@1.15` | `upgrade` | `upgrade` | `authoring` | `mutation-plan` | `payload:provider-code#run_upgrade` |
+| `agent-handoff@1.15` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `cli-documentation@1.1` | `render-workflow` | `render` | `plan` | `content` | `payload:provider-code#run_render` |
 | `cli-documentation@1.1` | `verify-workflow` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
 | `cli-documentation@1.1` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
@@ -2721,6 +2759,25 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.14` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:agent-handoff` |
 | `agent-handoff@1.14` | contribution | `claude-session-start` | `.claude/settings.json` | `managed` | `jsonc` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
 | `agent-handoff@1.14` | contribution | `codex-session-start` | `.codex/config.toml` | `managed` | `toml` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
+| `agent-handoff@1.15` | artifact | `status` | `docs/STATUS.md` | `create-only` | whole-file |
+| `agent-handoff@1.15` | artifact | `todo` | `docs/TODO.md` | `create-only` | whole-file |
+| `agent-handoff@1.15` | artifact | `architecture` | `docs/handoff/architecture.md` | `create-only` | whole-file |
+| `agent-handoff@1.15` | artifact | `bugs-keep` | `docs/handoff/bugs/.gitkeep` | `create-only` | whole-file |
+| `agent-handoff@1.15` | artifact | `conventions` | `docs/handoff/conventions.md` | `create-only` | whole-file |
+| `agent-handoff@1.15` | artifact | `credentials` | `docs/handoff/credentials.md` | `create-only` | whole-file |
+| `agent-handoff@1.15` | artifact | `deployed` | `docs/handoff/deployed.md` | `create-only` | whole-file |
+| `agent-handoff@1.15` | artifact | `sessions-keep` | `docs/handoff/sessions/.gitkeep` | `create-only` | whole-file |
+| `agent-handoff@1.15` | artifact | `specs-plans` | `docs/handoff/specs-plans.md` | `create-only` | whole-file |
+| `agent-handoff@1.15` | artifact | `state` | `docs/handoff/state.md` | `create-only` | whole-file |
+| `agent-handoff@1.15` | artifact | `hook` | `.agents/hooks/agent-handoff/session-start` | `managed` | whole-file |
+| `agent-handoff@1.15` | artifact | `skill` | `.agents/skills/agent-handoff/SKILL.md` | `managed` | whole-file |
+| `agent-handoff@1.15` | artifact | `skill-openai` | `.agents/skills/agent-handoff/agents/openai.yaml` | `managed` | whole-file |
+| `agent-handoff@1.15` | artifact | `skill-claude` | `.claude/skills/agent-handoff/SKILL.md` | `managed` | whole-file |
+| `agent-handoff@1.15` | artifact | `policy` | `.standards/packages/agent-handoff/policy.toml` | `managed` | whole-file |
+| `agent-handoff@1.15` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:agent-handoff` |
+| `agent-handoff@1.15` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:agent-handoff` |
+| `agent-handoff@1.15` | contribution | `claude-session-start` | `.claude/settings.json` | `managed` | `jsonc` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
+| `agent-handoff@1.15` | contribution | `codex-session-start` | `.codex/config.toml` | `managed` | `toml` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
 | `cli-documentation@1.1` | artifact | `usage-document` | `docs/usage.md` | `create-only` | whole-file |
 | `cli-documentation@1.2` | artifact | `usage-document` | `docs/usage.md` | `create-only` | whole-file |
 | `cli-documentation@1.3` | artifact | `usage-document` | `docs/usage.md` | `create-only` | whole-file |

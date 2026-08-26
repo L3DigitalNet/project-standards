@@ -65,6 +65,7 @@ _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
         "standards/agent-handoff/versions/1.12/hooks/session-start/session-start",
         "standards/agent-handoff/versions/1.13/hooks/session-start/session-start",
         "standards/agent-handoff/versions/1.14/hooks/session-start/session-start",
+        "standards/agent-handoff/versions/1.15/hooks/session-start/session-start",
         "standards/github-workflow/versions/1.0/skills/github-workflow/bin/gh-workflow",
         "standards/github-workflow/versions/1.1/skills/github-workflow/bin/gh-workflow",
         "standards/github-workflow/versions/1.2/skills/github-workflow/bin/gh-workflow",

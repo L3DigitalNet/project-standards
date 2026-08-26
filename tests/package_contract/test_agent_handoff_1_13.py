@@ -133,7 +133,7 @@ def test_agent_handoff_1_13__identity__is_complete_and_retained() -> None:
         if package["id"] == "agent-handoff"
     }
     assert roles["1.12"] == "retained"
-    # Superseded by 1.14 but still advertised: withdrawing an advertised package is a
+    # Superseded by 1.15 but still advertised: withdrawing an advertised package is a
     # catalog-major transition (ADR 0024), so the entry stays and only the role moves.
     assert roles["1.13"] == "retained"
 

@@ -1,0 +1,1 @@
+../../../../../standards/agent-handoff/versions/1.15/adopt.md
