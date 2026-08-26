@@ -3253,9 +3253,17 @@ def plan_managed_restore(request: PlannerRequest, target: str) -> ManagedRestore
             message="managed restore target parent is not an existing safe directory",
             hint="replace the unsafe parent through its owning workflow before retrying",
         )
-    # Every component of the physical path was opened with `O_NOFOLLOW` during
-    # the walk, so it names real directories and this `lstat` cannot be
-    # redirected by a link the walk did not already adjudicate.
+    # The walk's own O_NOFOLLOW-opened descriptors are already closed by the
+    # time control reaches here, and `_walk` appends any components after the
+    # first absent one lexically rather than by descriptor — so this `lstat`
+    # is a fresh, unguarded path traversal, not a read through an already-safe
+    # handle. That is acceptable only because this verdict feeds a preview:
+    # `apply_managed_restore` re-derives and re-asserts the parent itself
+    # (`_open_existing_parent` / `_assert_parent_current` in executor.py) and
+    # publishes through a descriptor-bound `os.replace(..., dst_dir_fd=...)`
+    # (executor.py:~538-570). That apply-side re-walk is the real safety
+    # boundary; do not remove it on the assumption that this check already
+    # covers the race.
     parent = safe_repository_root(request.repo) / physical.parent
     try:
         parent_metadata = parent.lstat()

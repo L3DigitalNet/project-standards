@@ -620,3 +620,89 @@ def test_tc_t7_002_restore_refuses_an_immediate_parent_linked_into_a_protected_r
     assert plan.preview is None
     assert plan.findings[0].code == "CP-RESTORE-PATH"
     assert not (fixture.repo / ".git/objects/tool.txt").exists()
+
+
+def test_tc_t7_002_restore_refuses_an_immediate_parent_linked_outside_the_repository(
+    tmp_path: Path,
+) -> None:
+    """The walk's ESCAPE deny half must still reach restore (issue #190).
+
+    A link whose target sits outside the repository root is the containment
+    walk's other classic refusal alongside the destination deny-list already
+    covered above; this pins that it, too, surfaces as restore's own
+    `CP-RESTORE-PATH` finding rather than a raw exception.
+    """
+    fixture = _managed_fixture(tmp_path, current=None, target_name="link/tool.txt")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (fixture.repo / "link").symlink_to(outside, target_is_directory=True)
+
+    plan = plan_managed_restore(fixture.planner, "link/tool.txt")
+
+    assert not plan.applicable
+    assert plan.preview is None
+    assert plan.findings[0].code == "CP-RESTORE-PATH"
+    assert not (outside / "tool.txt").exists()
+
+
+def test_tc_t7_002_restore_refuses_a_cyclic_immediate_parent(
+    tmp_path: Path,
+) -> None:
+    """The walk's LOOP deny half must still reach restore (issue #190).
+
+    A self-referential link never resolves to a directory, so the walk raises
+    a cycle failure; restore must translate that into its own coded refusal
+    instead of letting the underlying `OSError`/`ContainmentError` propagate.
+    """
+    fixture = _managed_fixture(tmp_path, current=None, target_name="link/tool.txt")
+    (fixture.repo / "link").symlink_to(Path("link"), target_is_directory=True)
+
+    plan = plan_managed_restore(fixture.planner, "link/tool.txt")
+
+    assert not plan.applicable
+    assert plan.preview is None
+    assert plan.findings[0].code == "CP-RESTORE-PATH"
+
+
+def test_tc_t7_002_restore_refuses_an_immediate_parent_linked_to_a_regular_file(
+    tmp_path: Path,
+) -> None:
+    """The walk's NOT_DIRECTORY deny half must still reach restore (issue #190).
+
+    A link whose target is a regular file can never host the restored file, so
+    the walk raises a non-directory failure; restore must refuse it with the
+    same coded finding as every other containment denial rather than a raw
+    `NotADirectoryError`.
+    """
+    fixture = _managed_fixture(tmp_path, current=None, target_name="link/tool.txt")
+    (fixture.repo / "not_a_dir").write_bytes(b"regular file, not a directory")
+    (fixture.repo / "link").symlink_to(Path("not_a_dir"), target_is_directory=True)
+
+    plan = plan_managed_restore(fixture.planner, "link/tool.txt")
+
+    assert not plan.applicable
+    assert plan.preview is None
+    assert plan.findings[0].code == "CP-RESTORE-PATH"
+
+
+def test_tc_t7_002_restore_refuses_an_immediate_parent_linked_into_standards_root(
+    tmp_path: Path,
+) -> None:
+    """The `.standards/` half of the #187 destination deny-list, not just `.git/`.
+
+    `.standards/` is the control plane's own authority store (locks, catalogs);
+    a link redirecting a restore write into it is exactly as dangerous as a
+    redirect into `.git/`, and the walk denies both roots identically. This
+    pins the second root, which the neighboring `.git/` test above does not
+    exercise.
+    """
+    fixture = _managed_fixture(tmp_path, current=None, target_name="link/tool.txt")
+    (fixture.repo / ".standards/nested").mkdir(parents=True)
+    (fixture.repo / "link").symlink_to(Path(".standards/nested"), target_is_directory=True)
+
+    plan = plan_managed_restore(fixture.planner, "link/tool.txt")
+
+    assert not plan.applicable
+    assert plan.preview is None
+    assert plan.findings[0].code == "CP-RESTORE-PATH"
+    assert not (fixture.repo / ".standards/nested/tool.txt").exists()
