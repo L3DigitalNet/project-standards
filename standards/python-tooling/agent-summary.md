@@ -1,6 +1,6 @@
 # Python Tooling family: Agent Summary
 
-Current authority is the Catalog 5 consumer payload [`python-tooling@1.15`](versions/1.15/agent-summary.md). Its [versioned standard](versions/1.15/README.md) wins over this mutable navigation summary.
+Current authority is the Catalog 5 consumer payload [`python-tooling@1.16`](versions/1.16/agent-summary.md). Its [versioned standard](versions/1.16/README.md) wins over this mutable navigation summary.
 
 - Resolve options and resources from the selected immutable payload, never from `.project-standards.yml` under unified authority.
 - Let the control plane compose `pyproject.toml`, EditorConfig, VS Code, workflows, and bounded instruction units. Preserve unrelated consumer values.
@@ -9,6 +9,7 @@ Current authority is the Catalog 5 consumer payload [`python-tooling@1.15`](vers
 - Exempt a Ruff rule for one path with the typed `ruff.extend_per_file_ignores` option rather than widening `ruff.extend_ignore` repository-wide.
 - Select a self-hosted runner pool for the managed Check job with `runner_labels`; empty keeps the GitHub-hosted runner and the byte-identical render.
 - Set `ruff.enforce_line_length = true` to gate the declared `line_length` on prose too; `ruff.extend_select` cannot reach `E501`, because Ruff resolves `ignore` last.
+- Adopt `build_backend = "uv_build"` with uv 0.11 or later: 1.16 renders `uv_build>=0.11,<1.0`, and an older uv warns that its version falls outside the requirement.
 - Run the rendered verification gate before claiming completion.
 - Disable and migrate through the control plane so reference-counted shared units and central-lock ownership remain correct.
 

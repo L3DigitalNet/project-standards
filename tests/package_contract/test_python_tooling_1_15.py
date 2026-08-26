@@ -15,6 +15,11 @@ and would report a hand-edited file as CP-MODIFIED-MANAGED afterwards.
   resolves `ignore` after `extend-select`, so no consumer configuration could
   re-enable the rule. The declared `line-length` was therefore unenforceable on
   comment, docstring, and string prose, which `ruff format` never reflows.
+
+1.15 is a released, advertised payload: its bytes are immutable and its catalog
+role only ever moves forward to `retained`. The activation assertions below
+therefore track the family's current default rather than claiming 1.15 is still
+the selection.
 """
 
 from __future__ import annotations
@@ -260,8 +265,11 @@ def test_python_tooling_1_15__predecessor_tree_and_activation_stay_exact() -> No
     # Withdrawing an advertised package is a catalog-major transition (ADR 0024),
     # so every predecessor stays advertised and only its role moves to `retained`.
     assert roles == {
-        **{f"1.{minor}": "retained" for minor in range(1, 15)},
-        "1.15": "default",
+        # 1.15 retired to `retained` when the 1.16 successor was activated (issue
+        # #182); a released role never moves backwards, and the predecessor rows
+        # are what this test actually guards.
+        **{f"1.{minor}": "retained" for minor in range(1, 16)},
+        "1.16": "default",
     }
 
 
@@ -638,7 +646,8 @@ def test_python_tooling_1_15__projection_and_index__are_complete() -> None:
 
 
 def test_python_tooling_1_15__mutable_navigation__names_the_new_authority() -> None:
+    """The family pages track the current default, which moved to 1.16 (issue #182)."""
     for name in ("README.md", "adopt.md", "agent-summary.md"):
         content = (_FAMILY / name).read_text(encoding="utf-8")
-        assert f"versions/1.15/{name}" in content
-        assert "versions/1.14/" not in content
+        assert f"versions/1.16/{name}" in content
+        assert "versions/1.15/" not in content

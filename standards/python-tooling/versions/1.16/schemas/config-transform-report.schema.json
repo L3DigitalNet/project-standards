@@ -1,0 +1,46 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"$defs": {
+		"jsonValue": {
+			"anyOf": [
+				{ "type": ["boolean", "integer", "number", "string", "null"] },
+				{ "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+				{ "type": "object", "additionalProperties": { "$ref": "#/$defs/jsonValue" } }
+			]
+		}
+	},
+	"properties": {
+		"schema_version": { "const": "1.0" },
+		"package": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"standard_id": { "const": "python-tooling" },
+				"version": { "const": "1.16" },
+				"selector": { "enum": ["latest", "1.16"] },
+				"config": {
+					"type": "object",
+					"additionalProperties": { "$ref": "#/$defs/jsonValue" }
+				},
+				"recognized_settings": {
+					"type": "array",
+					"items": { "const": "/ci/performance" },
+					"maxItems": 1,
+					"uniqueItems": true
+				}
+			},
+			"required": [
+				"standard_id",
+				"version",
+				"selector",
+				"config",
+				"recognized_settings"
+			]
+		},
+		"claims": { "type": "array", "maxItems": 0 },
+		"findings": { "type": "array", "maxItems": 0 }
+	},
+	"required": ["schema_version", "package", "claims", "findings"]
+}

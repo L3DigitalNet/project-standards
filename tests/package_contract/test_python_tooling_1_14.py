@@ -246,11 +246,11 @@ def test_python_tooling_1_14__predecessor_tree_and_activation_stay_exact() -> No
         if item["id"] == "python-tooling"
     }
     assert roles == {
-        # 1.14 retired to `retained` when the 1.15 successor was activated
-        # (issues #180 and #181); a released role never moves backwards, and the
+        # 1.14 and 1.15 retired to `retained` as each successor was activated
+        # (issues #180, #181, then #182); a released role never moves backwards, and
         # predecessor rows are what this test actually guards.
-        **{f"1.{minor}": "retained" for minor in range(1, 15)},
-        "1.15": "default",
+        **{f"1.{minor}": "retained" for minor in range(1, 16)},
+        "1.16": "default",
     }
     desired = tomllib.loads((_ROOT / ".standards/config.toml").read_text(encoding="utf-8"))
     desired_standard = cast(
@@ -519,7 +519,8 @@ def test_python_tooling_1_14__source_projection_and_catalog_are_complete() -> No
         if item["id"] == "python-tooling"
     ]
     assert next(item for item in advertised if item["version"] == "1.14")["role"] == "retained"
-    assert next(item for item in advertised if item["version"] == "1.15")["role"] == "default"
+    assert next(item for item in advertised if item["version"] == "1.15")["role"] == "retained"
+    assert next(item for item in advertised if item["version"] == "1.16")["role"] == "default"
     assert next(item for item in advertised if item["version"] == "1.13")["role"] == "retained"
     assert "python-tooling@1.14" in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
 

@@ -1,0 +1,167 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"$defs": {
+		"jsonValue": {
+			"anyOf": [
+				{ "type": ["boolean", "integer", "number", "string", "null"] },
+				{ "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+				{ "type": "object", "additionalProperties": { "$ref": "#/$defs/jsonValue" } }
+			]
+		},
+		"configurationTransform": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"migration_id": {
+					"enum": [
+						"python-tooling-1-1-to-1-16",
+						"python-tooling-1-2-to-1-16",
+						"python-tooling-1-3-to-1-16",
+						"python-tooling-1-4-to-1-16",
+						"python-tooling-1-5-to-1-16",
+						"python-tooling-1-6-to-1-16",
+						"python-tooling-1-7-to-1-16",
+						"python-tooling-1-8-to-1-16",
+						"python-tooling-1-9-to-1-16",
+						"python-tooling-1-10-to-1-16",
+						"python-tooling-1-11-to-1-16"
+					]
+				},
+				"source": {
+					"enum": [
+						"package:1.1",
+						"package:1.2",
+						"package:1.3",
+						"package:1.4",
+						"package:1.5",
+						"package:1.6",
+						"package:1.7",
+						"package:1.8",
+						"package:1.9",
+						"package:1.10",
+						"package:1.11"
+					]
+				},
+				"target": { "const": "package:1.16" },
+				"provider_id": { "const": "migrate-config" },
+				"selector": { "enum": ["latest", "1.16"] },
+				"raw_config": {
+					"type": "object",
+					"additionalProperties": { "$ref": "#/$defs/jsonValue" }
+				},
+				"declared_pointers": { "const": ["/ci/performance"] }
+			},
+			"required": [
+				"migration_id",
+				"source",
+				"target",
+				"provider_id",
+				"selector",
+				"raw_config",
+				"declared_pointers"
+			],
+			"allOf": [
+				{
+					"oneOf": [
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-1-to-1-16" },
+								"source": { "const": "package:1.1" }
+							}
+						},
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-2-to-1-16" },
+								"source": { "const": "package:1.2" }
+							}
+						},
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-3-to-1-16" },
+								"source": { "const": "package:1.3" }
+							}
+						},
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-4-to-1-16" },
+								"source": { "const": "package:1.4" }
+							}
+						},
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-5-to-1-16" },
+								"source": { "const": "package:1.5" }
+							}
+						},
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-6-to-1-16" },
+								"source": { "const": "package:1.6" }
+							}
+						},
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-7-to-1-16" },
+								"source": { "const": "package:1.7" }
+							}
+						},
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-8-to-1-16" },
+								"source": { "const": "package:1.8" }
+							}
+						},
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-9-to-1-16" },
+								"source": { "const": "package:1.9" }
+							}
+						},
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-10-to-1-16" },
+								"source": { "const": "package:1.10" }
+							}
+						},
+						{
+							"properties": {
+								"migration_id": { "const": "python-tooling-1-11-to-1-16" },
+								"source": { "const": "package:1.11" }
+							}
+						}
+					]
+				}
+			]
+		}
+	},
+	"properties": {
+		"schema_version": { "const": "1.0" },
+		"standard_id": { "const": "python-tooling" },
+		"version": { "const": "1.16" },
+		"operation": { "const": "migrate" },
+		"config": {
+			"type": "object",
+			"additionalProperties": { "$ref": "#/$defs/jsonValue" }
+		},
+		"resources": { "type": "object", "additionalProperties": false },
+		"snapshots": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"configuration_transform": { "$ref": "#/$defs/configurationTransform" }
+			},
+			"required": ["configuration_transform"]
+		}
+	},
+	"required": [
+		"schema_version",
+		"standard_id",
+		"version",
+		"operation",
+		"config",
+		"resources",
+		"snapshots"
+	]
+}
