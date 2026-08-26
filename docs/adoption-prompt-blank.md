@@ -268,6 +268,32 @@ Run a second reconciliation and confirm it contains no findings or pending manag
 
 Review the complete diff. Confirm that `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`, and reconciled outputs agree; consumer-owned knowledge and unrelated files remain preserved; workflow and tool pins use the intended release line; and no temporary migration evidence is accidentally included.
 
+### Running the checks on a remote execution worker
+
+When repository policy routes moderate or heavy checks to an isolated remote worker, the read-only Project Standards checks may run there. A worker receives repository content, not the workstation's uv tool installations, so `project-standards` is normally absent from its `PATH`. Invoke it from the same immutable tag instead of expecting an installed executable:
+
+```bash
+uvx --from "git+https://github.com/L3DigitalNet/project-standards@${release_tag}" project-standards --version
+```
+
+This needs only `uv` on the worker plus network reach to GitHub; declare `uv` as a required worker tool in the repository's remote-execution configuration rather than shipping local tool state. The tag is the immutable `<release-tag>` recorded above, so the invocation can never follow `main` or silently select another release — confirm the probe prints `project-standards <release-version>` before trusting any result from the worker.
+
+These read-only checks may run on the worker, each with the same `uvx --from "git+https://github.com/L3DigitalNet/project-standards@${release_tag}"` prefix:
+
+- `project-standards validate`
+- `project-standards reconcile --check --json`
+- `project-standards agent-handoff validate --repo .`
+- `project-standards agent-handoff drift-check --repo .`
+
+Everything that mutates the checkout stays local, on the authoritative working tree: `project-standards init`, `project-standards fix`, `reconcile --apply`, `reconcile --repair-state --apply`, and `reconcile --restore-managed <path> --apply`. Apply authority is local by design — a worker's tree is disposable and its writes are not returned — so never route an apply through a worker to make a check pass.
+
+Distinguish the two failure shapes before reporting a result:
+
+- Exit `127` with `exec: project-standards: not found` means the CLI is absent on the worker. Nothing was validated. Use the `uvx` form above, or provision `uv`; do not report this as a standards failure.
+- A nonzero exit from the CLI itself is a standards result: `1` for findings, drift, or a refusal, and `2` for an invalid invocation or invalid control authority. Read the reported findings and `CP-` codes.
+
+If the worker cannot reach GitHub, the `uvx` resolution cannot run at all. Run these checks locally with the verified exact release and state in the final report where each one ran.
+
 ## Final report
 
 Report:

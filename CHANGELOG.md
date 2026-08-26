@@ -45,6 +45,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 ### Added
 
 - **Control-plane diagnostic-code reference.** [`docs/reference/control-plane-diagnostics.md`](docs/reference/control-plane-diagnostics.md) documents every `CP-` code the reconcile/apply control plane emits — meaning, the condition that raises it, and remediation — for planning findings, apply failures, managed restore, sanctioned recovery, and legacy migration. Linked from `docs/usage.md`; `tests/test_control_plane_diagnostic_docs.py` derives the code set from `src/project_standards/control_plane/**` and fails in either direction, so the table cannot drift from the source. (#189)
+- **Remote-worker guidance for the standards CLI.** `docs/usage.md` and both adoption prompts document the supported `uvx --from 'git+https://github.com/L3DigitalNet/project-standards@vX.Y.Z' project-standards <command>` form for an isolated remote execution worker, which read-only checks (`validate`, `reconcile --check --json`, `agent-handoff validate`, `agent-handoff drift-check`) may run there, that apply and every mutating command stay local, and how to tell an absent CLI (exit `127`) from a standards-validation failure. (#183)
 
 ## [5.22.0] — 2026-08-26
 
