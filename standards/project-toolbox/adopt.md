@@ -1,20 +1,20 @@
 # Adopt the Project Toolbox Standard
 
-The current consumer package is [`project-toolbox@1.0`](versions/1.0/adopt.md). Use it in a repository whose periodic maintenance sweeps should follow one written, versioned procedure: it delivers two workflow documents under `.standards/packages/project-toolbox/workflows/` and a routing skill into both `.agents/skills/project-toolbox/` and `.claude/skills/project-toolbox/`.
+The current consumer package is [`project-toolbox@1.1`](versions/1.1/adopt.md). Use it in a repository whose periodic maintenance sweeps should follow one written, versioned procedure: it delivers two workflow documents under `.standards/packages/project-toolbox/workflows/` and a routing skill into both `.agents/skills/project-toolbox/` and `.claude/skills/project-toolbox/`.
 
 There are no prerequisites beyond an initialized `project-standards` consumer repository. The package requires no other standards package, no particular language or toolchain, and no forge account.
 
 ## Configure and reconcile
 
-The package has no configuration options; enabling the family installs its complete inventory.
+The package has one configuration option, `harnesses` (default `["claude-code", "codex"]`), which controls only which skill artifacts install where a target is harness-specific — currently just the Codex-only `agents/openai.yaml` sidecar.
 
 ```bash
-project-standards standards enable project-toolbox --version 1.0
+project-standards standards enable project-toolbox --version 1.1
 project-standards reconcile
 project-standards reconcile --apply
 ```
 
-Reconciliation is offline and deterministic; rerunning it converges rather than accumulating changes. It delivers six managed whole-file artifacts. The two skill trees are byte-identical copies of one payload source, because Claude Code discovers project skills only under `.claude/skills/` while Codex uses `.agents/skills/`. Commit all six.
+Reconciliation is offline and deterministic; rerunning it converges rather than accumulating changes. It delivers five managed whole-file artifacts by default. The two `SKILL.md` trees are byte-identical copies of one payload source, because Claude Code discovers project skills only under `.claude/skills/` while Codex uses `.agents/skills/`. `agents/openai.yaml` installs only under `.agents/skills/project-toolbox/`, gated on `harnesses` containing `codex` (issue #175). Commit all delivered files.
 
 ## Verify and troubleshoot
 

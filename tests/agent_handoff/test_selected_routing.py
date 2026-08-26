@@ -23,6 +23,7 @@ from project_standards.control_plane.diagnostics import ControlFinding
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import (
     ApplyRequest,
+    ApplyResult,
     AuthoringApplyResult,
     apply_reconciliation,
 )
@@ -947,3 +948,73 @@ def test_legacy_report__emitted_inventory_with_errors__returns_success_and_retai
         assert captured.err == (
             "error: legacy.txt: legacy evidence requires review (locus: legacy inventory)\n"
         )
+
+
+# The first version that scopes a skill unit to one root: `agents/openai.yaml` is
+# declared under `.agents/` only and gated on Codex (issue #175).
+_ROOT_SCOPED_VERSION = "1.15"
+
+
+def _harness_consumer(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    harnesses: tuple[str, ...],
+    *,
+    version: str,
+) -> tuple[Path, ApplyResult]:
+    """Reconcile a consumer that selected exactly `harnesses`, returning the result.
+
+    The apply result is returned rather than asserted here because the #175 defect
+    surfaced as a failed post-apply verification, not as an unusable plan: the plan
+    was applicable and the writes happened, and only `verification_findings` named
+    the target nothing had installed.
+    """
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    set_standard_enabled(repo, "agent-handoff", True)
+    set_standard_selection(repo, "agent-handoff", version=version)
+    config = repo / ".standards/config.toml"
+    selection = ", ".join(f'"{harness}"' for harness in harnesses)
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + "\n[standards.agent-handoff.config]\n"
+        + 'contract_version = "1.1"\nstartup = "automatic"\n'
+        + f"harnesses = [{selection}]\n",
+        encoding="utf-8",
+    )
+    request = build_planner_request(repo, distribution, frozenset())
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+    return repo, apply_reconciliation(ApplyRequest(request, plan))
+
+
+@pytest.mark.parametrize(
+    ("harnesses", "installed"),
+    [(("claude-code", "codex"), True), (("claude-code",), False)],
+)
+def test_root_scoped_openai_companion_reconciles_a_clean_consumer(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    harnesses: tuple[str, ...],
+    installed: bool,
+) -> None:
+    """Issue #175: nothing may demand a copy of the sidecar the payload never installs.
+
+    This reconciles 1.15 end to end rather than inspecting the provider's table,
+    because the defect was only visible that way: the payload dropped the `.claude/`
+    artifact and gated the `.agents/` one on Codex, the provider kept demanding both
+    unconditionally, and every reconcile of a correct tree then failed verification
+    with AH-DRIFT and CP-VERIFY. The Claude-only selection is parametrized in because
+    it is the case the harness gate — not the root scoping — governs.
+    """
+    repo, result = _harness_consumer(
+        tmp_path, distribution, harnesses, version=_ROOT_SCOPED_VERSION
+    )
+
+    assert result.verification_findings == ()
+    assert result.success
+    assert (repo / ".agents/skills/agent-handoff/agents/openai.yaml").is_file() is installed
+    assert not (repo / ".claude/skills/agent-handoff/agents/openai.yaml").exists()
+    assert run(["validate", "--repo", str(repo)], distribution=distribution) == 0
+    assert run(["drift-check", "--repo", str(repo)], distribution=distribution) == 0

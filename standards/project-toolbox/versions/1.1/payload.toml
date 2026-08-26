@@ -1,0 +1,108 @@
+schema_version = "1.0"
+
+[payload]
+standard = "project-toolbox"
+version = "1.1"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["project-toolbox.workflows"]
+consumes_platform = ["project-standards.reconcile"]
+
+# The family is deliberately dependency-free: ADR 0023 forbids requiring another
+# standard for a platform need, and the design brief's soft-dependency posture is
+# implemented instructionally instead — each workflow document reads
+# `.standards/config.toml` and folds whatever is installed into its sweep. Declaring
+# companions here would turn that composition into a resolution constraint.
+[relations]
+companions = []
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:0c07bb66d7275de4fd6ae26fbeb95e07cf42c3d49542abb64cc2027cb4946a4b"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:99c05e8c8e67f4e9f17290a4abc24c29b1e727d5cc29ca66fe7fb905192a979f"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:7100918cc5504deb1bdd1804bcc4982d306484ea933a30cdf7f3d040dc96ab9c"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:6978d7355df62e33de1e31d476c39b7e8acbb18122de1daf177be693e65398f1"
+
+[[artifacts]]
+id = "workflow-repo-housekeeping"
+target = ".standards/packages/project-toolbox/workflows/repo-housekeeping.md"
+source = "workflows/repo-housekeeping.md"
+digest = "sha256:8e5b20645eb16411dbc41033e5f71fd9a3e012c999025695c021c1209e0d50cc"
+policy = "managed"
+
+[[artifacts]]
+id = "workflow-drift-detection"
+target = ".standards/packages/project-toolbox/workflows/drift-detection.md"
+source = "workflows/drift-detection.md"
+digest = "sha256:7acbbf8e3bc6e3e2a0426b039836706218a42898833604c95a0914a8c626ac04"
+policy = "managed"
+
+[[artifacts]]
+id = "skill"
+target = ".agents/skills/project-toolbox/SKILL.md"
+source = "skills/project-toolbox/SKILL.md"
+digest = "sha256:3668b977b1778851e79c485d7ed237bb03cf201307a381d27460e3aa022425fb"
+policy = "managed"
+
+# `openai.yaml` is a Codex-only descriptor (Claude Code has no analogous sidecar
+# convention), so it installs solely under Codex's `.agents/skills/` tree and only
+# when the consumer actually selected Codex. Unlike SKILL.md below, it has no
+# `.claude/skills/` counterpart to keep in sync. See #175.
+[[artifacts]]
+id = "skill-openai"
+target = ".agents/skills/project-toolbox/agents/openai.yaml"
+source = "skills/project-toolbox/agents/openai.yaml"
+digest = "sha256:3b2d361850da3d6ffbf99fcbd725456a04a040f3e4caf9026fe6c2ffe31170d8"
+policy = "managed"
+when_any = [{ option = "harnesses", contains = "codex" }]
+
+# Claude Code discovers project skills only under `.claude/skills/`; it has never
+# read `.agents/skills/`, which is Codex's convention. SKILL.md is therefore
+# installed twice from one source, so both harnesses see the same bytes. The pair
+# must stay byte-identical: same `source` and `digest`, differing only in `id` and
+# `target`. Copies, not symlinks — a symlink checks out as a plain text file on a
+# Windows clone without Developer Mode, which would silently install the link path
+# as the skill body. Divergence is already guarded because both targets are
+# digest-locked managed artifacts. See ADR 0021 and issue #170.
+[[artifacts]]
+id = "skill-claude"
+target = ".claude/skills/project-toolbox/SKILL.md"
+source = "skills/project-toolbox/SKILL.md"
+digest = "sha256:3668b977b1778851e79c485d7ed237bb03cf201307a381d27460e3aa022425fb"
+policy = "managed"
+
+# ADR 0006 requires supplying no provider implementation to be explicit rather than
+# a silent no-op: 1.1 still ships guidance documents only, so it declares no
+# `[[providers]]`, `[[contributions]]`, `[[extensions]]`, `[[migrations]]`,
+# `[[legacy_states]]`, or `[[legacy_signatures]]`. `[[migrations]]` tracks a
+# legacy pre-catalog state, not a package-version bump — this family has never
+# had one, so 1.1 still declares none even though it now has an in-repo
+# predecessor. A mechanical drift-detection verify provider is a recorded
+# deferral, not an omission.

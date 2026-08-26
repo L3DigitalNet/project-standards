@@ -1,7 +1,0 @@
-interface:
-  display_name: "GitHub Workflow"
-  short_description: "Apply the packaged GitHub work discipline before touching work state."
-  default_prompt: "Use $github-workflow before creating or mutating GitHub work state — issues, issue field values, pull requests, lifecycle transitions, milestones — before triage or an organization-schema audit, and before presenting an operator-requested issue or PR summary. Route routine actions through the gh-workflow subcommands; keep type, value, and content judgment with the agent; honor the skill's refusals."
-
-policy:
-  allow_implicit_invocation: true

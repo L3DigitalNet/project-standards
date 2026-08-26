@@ -48,8 +48,8 @@ _ROOT = Path(__file__).resolve().parents[2]
 # `uv.lock`, both `.standards/` release fields, and the dated CHANGELOG heading. It
 # moves only in the release commit that bumps those files; `scripts/release_prep.py`
 # reports this file in its version-reference sweep for exactly that reason.
-_BASELINE_REF = "v5.21.0"
-_RELEASE_VERSION = "5.22.0"
+_BASELINE_REF = "v5.22.0"
+_RELEASE_VERSION = "5.23.0"
 
 
 def _repository() -> PackageRepository:
@@ -350,7 +350,7 @@ def test_catalog_activation__release_changelog__has_dated_candidate_section() ->
     )
 
 
-def test_catalog_activation__github_workflow_1_4__is_current_and_records_transport_boundary() -> (
+def test_catalog_activation__github_workflow_1_5__is_current_and_records_transport_boundary() -> (
     None
 ):
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
@@ -364,31 +364,32 @@ def test_catalog_activation__github_workflow_1_4__is_current_and_records_transpo
         ("1.1", "retained"),
         ("1.2", "retained"),
         ("1.3", "retained"),
-        ("1.4", "default"),
+        ("1.4", "retained"),
+        ("1.5", "default"),
     ]
 
     consumer_catalog = tomllib.loads(
         (_ROOT / ".standards/catalog.toml").read_text(encoding="utf-8")
     )
     selection = consumer_catalog["standards"]["github-workflow"]
-    assert selection["available"] == ["1.0", "1.1", "1.2", "1.3", "1.4"]
-    assert selection["default"] == "1.4"
+    assert selection["available"] == ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"]
+    assert selection["default"] == "1.5"
 
     consumer_lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
-    assert consumer_lock["standards"]["github-workflow"]["resolved"] == "1.4"
+    assert consumer_lock["standards"]["github-workflow"]["resolved"] == "1.5"
 
     current_references = {
-        "standards/github-workflow/README.md": "versions/1.4/README.md",
-        "standards/github-workflow/adopt.md": "versions/1.4/adopt.md",
-        "standards/github-workflow/agent-summary.md": "versions/1.4/agent-summary.md",
-        "standards/README.md": "| 1.4 | default | [github-workflow/]",
+        "standards/github-workflow/README.md": "versions/1.5/README.md",
+        "standards/github-workflow/adopt.md": "versions/1.5/adopt.md",
+        "standards/github-workflow/agent-summary.md": "versions/1.5/agent-summary.md",
+        "standards/README.md": "| 1.5 | default | [github-workflow/]",
     }
     for relative, expected in current_references.items():
         assert expected in (_ROOT / relative).read_text(encoding="utf-8")
 
     # The transport boundary was established by 1.2 and its CHANGELOG line is
-    # immutable history, so this still reads the 1.2 entry: 1.4 changes delivery
-    # paths only, and re-asserting the claim under a 1.4 heading would demand a
+    # immutable history, so this still reads the 1.2 entry: 1.5 changes delivery
+    # paths only, and re-asserting the claim under a 1.5 heading would demand a
     # CHANGELOG entry that does not exist until the release commit.
     changelog_entry = next(
         line

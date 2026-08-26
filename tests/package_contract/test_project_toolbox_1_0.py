@@ -40,7 +40,7 @@ def _files(root: Path) -> dict[str, Path]:
     }
 
 
-def test_project_toolbox_1_0__identity__is_complete_and_current() -> None:
+def test_project_toolbox_1_0__identity__is_complete_and_retained() -> None:
     manifest = load_payload_manifest(_VERSION / "payload.toml")
     integrity = validate_payload_integrity(_VERSION, manifest)
     family = load_family_manifest(_FAMILY / "standard.toml")
@@ -61,10 +61,13 @@ def test_project_toolbox_1_0__identity__is_complete_and_current() -> None:
         for package in cast("list[dict[str, str]]", catalog["packages"])
         if package["id"] == "project-toolbox"
     }
-    assert roles == {"1.0": "default"}
-    assert "| [`project-toolbox`](project-toolbox/README.md) | active | 1.0 | default |" in (
-        _ROOT / "standards/catalog.md"
-    ).read_text(encoding="utf-8")
+    # Superseded by 1.1 (#175, the openai.yaml sidecar gating fix) but still
+    # advertised: withdrawing an advertised package is a catalog-major
+    # transition (ADR 0024), so the entry stays and only the role moves. This
+    # test owns only 1.0's own bytes and retained-role currency, per #193 —
+    # the "still current default" assertions belong to the successor's own
+    # contract test (test_project_toolbox_1_1.py).
+    assert roles["1.0"] == "retained"
 
 
 def test_project_toolbox_1_0__declared_inventory__matches_the_bytes_on_disk() -> None:

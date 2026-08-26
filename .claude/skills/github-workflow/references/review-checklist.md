@@ -23,9 +23,18 @@ Each layer has a distinct job:
 - **Independent review agent where useful** — a second reading with no stake in the implementation, valuable exactly where the checklist below is hard.
 - **Human acceptance for consequential changes** — required for high-risk work; a human accepts, agents do not accept on a human's behalf.
 
-## What higher-risk review examines
+## Review depth by change risk
 
-For higher-risk work — R3 and R4 on the `Change risk` scale — review explicitly examines:
+`Change risk` sets the baseline treatment; it measures how dangerous it is to implement the change incorrectly, not how bad the existing problem is.
+
+| Risk | Baseline treatment |
+| --- | --- |
+| **R1** | Normal tests and review |
+| **R2** | Acceptance-criteria trace plus focused regression coverage |
+| **R3** | Independent review, negative testing, explicit rollback consideration |
+| **R4** | Human-approved plan before implementation, independent verification, explicit recovery/rollback procedure |
+
+For higher-risk work — R3 and R4 — review explicitly examines:
 
 1. acceptance-criteria coverage
 2. repository conventions and governing ADRs

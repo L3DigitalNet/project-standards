@@ -57,7 +57,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/gh_workflow.py"
 media_type = "text/x-python"
-digest = "sha256:5e2eaf991283fedf0de946f7ccc02979c8094c45d3d96ea52848ede6dea68150"
+digest = "sha256:f911c5d2852351665ee8b6041b9cfa2783c3cd5b34f5dfabe2fe1d8f7aac0eb9"
 
 [[resources]]
 id = "provider-input"

@@ -187,6 +187,19 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
 fi
 trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT
 
+# This wipe already reaps any stale basetemp left by a prior run of THIS
+# script (crash, SIGKILL past the EXIT trap, or a run a human aborted after
+# manually clearing $LOCK_DIR) — it runs only after the mkdir-based lock
+# above proves no concurrent verify.sh holds $TMP_ROOT, so it can never
+# destroy another run's live TMPDIR, basetemps, or coverage data (see the
+# lock comment). What it does NOT cover is space exhausted WITHIN a single
+# run: each pytest lane's --basetemp tree survives until this line runs
+# again next time, so three lanes' worth of scratch data can coexist during
+# one gate and, on a full tmpfs, starve the coverage/performance lanes that
+# run last (observed: 15 GiB in one basetemp tree after repeated runs,
+# `printf: write error: No space left on device` mid-lane). The per-lane
+# reap_basetemp calls below close that gap by freeing each lane's basetemp
+# as soon as that lane succeeds, instead of waiting for the next run.
 rm -rf "$TMP_ROOT" || die "cannot clean $TMP_ROOT"
 LOG_DIR="$TMP_ROOT/logs"
 RESULT_DIR="$TMP_ROOT/results"
@@ -264,6 +277,18 @@ lane_statics() {
     return "$status"
 }
 
+# Frees one lane's --basetemp tree once that lane no longer needs it. Called
+# only on the lane's success path (never wired to a failure or non-zero
+# return), so a failing lane's scratch tree survives on disk for a human to
+# inspect — the reap trades that diagnostic copy for headroom in the
+# common (green) case, which is the case that runs the gate repeatedly and
+# fills the tmpfs. It touches only $BASETEMP_ROOT/<lane>, never the sibling
+# coverage or logs directories under $TMP_ROOT, which later lanes and the
+# final report/log dump still need.
+reap_basetemp() {
+    rm -rf "$1" 2>/dev/null || true
+}
+
 lane_ordinary() {
     local args=(
         --source=project_standards -m pytest
@@ -272,7 +297,8 @@ lane_ordinary() {
         --basetemp="$BASETEMP_ROOT/ordinary"
     )
     [[ "$SMOKE" == "1" ]] && args+=(-k test_repository_workflow)
-    "$VENV_BIN/coverage" run "${args[@]}"
+    "$VENV_BIN/coverage" run "${args[@]}" || return $?
+    reap_basetemp "$BASETEMP_ROOT/ordinary"
 }
 
 lane_ordinary_serial() {
@@ -282,7 +308,8 @@ lane_ordinary_serial() {
         --basetemp="$BASETEMP_ROOT/ordinary"
     )
     [[ "$SMOKE" == "1" ]] && args+=(-k test_repository_workflow)
-    "$VENV_BIN/coverage" run "${args[@]}"
+    "$VENV_BIN/coverage" run "${args[@]}" || return $?
+    reap_basetemp "$BASETEMP_ROOT/ordinary"
 }
 
 lane_compatibility() {
@@ -294,13 +321,15 @@ lane_compatibility() {
     # The compatibility matrix installs wheels per case; there is no cheap
     # subset, so smoke mode proves the lane runs by collecting only.
     [[ "$SMOKE" == "1" ]] && args+=(--collect-only -q)
-    "$VENV_BIN/pytest" "${args[@]}"
+    "$VENV_BIN/pytest" "${args[@]}" || return $?
+    reap_basetemp "$BASETEMP_ROOT/compatibility"
 }
 
 lane_performance() {
     local args=(-m performance --basetemp="$BASETEMP_ROOT/performance")
     [[ "$SMOKE" == "1" ]] && args+=(--collect-only -q)
-    "$VENV_BIN/pytest" "${args[@]}"
+    "$VENV_BIN/pytest" "${args[@]}" || return $?
+    reap_basetemp "$BASETEMP_ROOT/performance"
 }
 
 lane_coverage_combine() {

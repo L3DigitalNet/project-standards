@@ -68,3 +68,5 @@ Marking a PR ready for review asserts that the implementation is complete agains
 ## Lifecycle coupling
 
 A PR is evidence, not state. The governing Issue's `Workflow` field carries the lifecycle: `In progress` while implementation continues, `In review` once the deliverable awaits acceptance or verification, and a terminal value only when acceptance criteria are satisfied or the work is abandoned. Merging a PR does not by itself make an Issue `Done`; route the terminal transition through `gh-workflow close` so the `Workflow` value and the GitHub close reason stay paired.
+
+Creation and merge themselves are raw `gh` — `gh pr create --body-file PATH`, `gh pr merge N` — because a PR body has no vocabulary for the tool to validate. What the tool does validate is the part that matters: run `gh-workflow receipt --pr N` immediately after creating a PR, which reports the governing-issue link and the other gaps while they are still cheap to close.

@@ -20,9 +20,11 @@ import hashlib
 from collections.abc import Mapping
 from typing import cast
 
-# The skill tree installs to both harness roots as byte-identical copies: Codex
-# reads `.agents/skills/`, Claude Code reads only `.claude/skills/` (issue #170).
-# `.agents/` stays first so its artifact ids keep their unsuffixed payload names.
+# The two harness roots: Codex reads `.agents/skills/`, Claude Code reads only
+# `.claude/skills/` (issue #170). Most skill files install into both as
+# byte-identical copies, but which roots a given file reaches is per-unit — see
+# `_SKILL_UNITS` below. `.agents/` stays first so its artifact ids keep their
+# unsuffixed payload names.
 _SKILL_ROOTS = (".agents/skills/github-workflow", ".claude/skills/github-workflow")
 
 # The skill reads the policy from this exact path and the tool defaults to it
@@ -46,21 +48,31 @@ _BLOCK_END = f"<!-- END project-standards:{_BLOCK_MARKER} -->"
 
 _SUPPORTED_HARNESSES = frozenset({"claude-code", "codex"})
 
+# Root scoping per unit. Almost every skill file is installed into both harness
+# roots as byte-identical copies; `agents/openai.yaml` is Codex's own companion
+# format that Claude Code has never read, so 1.5 declares it under `.agents/` only
+# (issue #175). Scoping is a per-unit field rather than a check against the artifact
+# id, because an id-string special case is invisible to the next unit that needs the
+# same treatment and silently wrong if an id is ever renamed.
+_BOTH_ROOTS: tuple[str, ...] = _SKILL_ROOTS
+_AGENTS_ROOT_ONLY: tuple[str, ...] = (_SKILL_ROOTS[0],)
+
 # One skill file per row, keyed by its path relative to a skill root: (payload
-# artifact id, required mode, harness that must be selected for it to materialize).
+# artifact id, required mode, harness that must be selected for it to materialize,
+# roots the payload installs it into).
 # The mode is asserted only where the payload pins one — an ordinary artifact
 # inherits the consumer umask, so demanding `0644` would report drift on a
 # legitimate `0664` tree.
-_SKILL_UNITS: tuple[tuple[str, str, str | None, str | None], ...] = (
-    ("SKILL.md", "skill", None, None),
-    ("agents/openai.yaml", "skill-openai", None, "codex"),
-    ("bin/gh-workflow", "tool-binary", "0755", None),
-    ("references/field-vocabulary.md", "reference-field-vocabulary", None, None),
-    ("references/issue-structure.md", "reference-issue-structure", None, None),
-    ("references/org-schema.yaml", "reference-org-schema", None, None),
-    ("references/pr-standard.md", "reference-pr-standard", None, None),
-    ("references/review-checklist.md", "reference-review-checklist", None, None),
-    ("references/summary-format.md", "reference-summary-format", None, None),
+_SKILL_UNITS: tuple[tuple[str, str, str | None, str | None, tuple[str, ...]], ...] = (
+    ("SKILL.md", "skill", None, None, _BOTH_ROOTS),
+    ("agents/openai.yaml", "skill-openai", None, "codex", _AGENTS_ROOT_ONLY),
+    ("bin/gh-workflow", "tool-binary", "0755", None, _BOTH_ROOTS),
+    ("references/field-vocabulary.md", "reference-field-vocabulary", None, None, _BOTH_ROOTS),
+    ("references/issue-structure.md", "reference-issue-structure", None, None, _BOTH_ROOTS),
+    ("references/org-schema.yaml", "reference-org-schema", None, None, _BOTH_ROOTS),
+    ("references/pr-standard.md", "reference-pr-standard", None, None, _BOTH_ROOTS),
+    ("references/review-checklist.md", "reference-review-checklist", None, None, _BOTH_ROOTS),
+    ("references/summary-format.md", "reference-summary-format", None, None, _BOTH_ROOTS),
 )
 
 
@@ -68,25 +80,29 @@ def _artifact_id(base: str, root: str) -> str:
     """Return the payload artifact id for one skill unit under one root.
 
     Mirrors the payload's own naming: the `.agents/` copy keeps the original id and
-    the `.claude/` copy carries a `-claude` suffix. Both copies share a source and a
-    digest, so the ids are the only thing distinguishing them in a finding.
+    the `.claude/` copy carries a `-claude` suffix. Where a unit is installed into
+    both roots the two copies share a source and a digest, so the ids are the only
+    thing distinguishing them in a finding.
     """
     return base if root == _SKILL_ROOTS[0] else f"{base}-claude"
 
 
-# Every whole-file artifact, keyed by its consumer target. Expanded over both roots
-# rather than restated per root: a second literal table is precisely how one tree
-# silently loses drift coverage when a later version adds a skill file, and mode
-# and harness gating must stay identical across a pair or the copies diverge in
+# Every whole-file artifact, keyed by its consumer target. Expanded from the unit
+# table rather than restated per root: a second literal table is precisely how one
+# tree silently loses drift coverage when a later version adds a skill file, and
+# mode and harness gating must stay identical across a pair or the copies diverge in
 # ways no single-tree check can see.
 #
-# Cross-file contract: `_SKILL_ROOTS` x `_SKILL_UNITS` must equal the skill
-# `[[artifacts]]` set in this version's payload.toml, whose pairing
-# `tests/package_contract/test_github_workflow_1_3.py` pins.
+# Cross-file contract: expanding `_SKILL_UNITS` over each row's own roots must equal
+# the skill `[[artifacts]]` set in this version's payload.toml. A root claimed here
+# that the payload does not declare makes every reconcile of a correct consumer tree
+# fail GHW-DRIFT on a file nothing ever installs, which is how the 1.5 `.claude/`
+# openai.yaml row blocked the release. `tests/package_contract/
+# test_github_workflow_1_5.py` pins the equality.
 _ARTIFACTS: dict[str, tuple[str, str | None, str | None]] = {
     f"{root}/{relative}": (_artifact_id(identity, root), mode, gate)
-    for root in _SKILL_ROOTS
-    for relative, identity, mode, gate in _SKILL_UNITS
+    for relative, identity, mode, gate, roots in _SKILL_UNITS
+    for root in roots
 }
 
 # Harness → (instruction file, payload contribution id). Codex reads AGENTS.md and

@@ -120,12 +120,27 @@ uv run ruff check src tests --fix
 <!-- markdownlint-disable MD025 -->
 # GitHub Workflow
 
-Load the repo-local `github-workflow` skill before creating or mutating GitHub work state — issues, field values, pull requests, lifecycle transitions, milestones — before triage, and before an organization-schema audit. This repository's work belongs to the `L3DigitalNet` organization. These rules bind even when the skill was never loaded:
+This repository's work belongs to the `L3DigitalNet` organization. Route every GitHub work-state action through the row below — this table is complete, so a delegated worker needs nothing else to route correctly. Load the repo-local `github-workflow` skill (`SKILL.md`, one read, ~69 lines) before triage, an organization-schema audit, or any judgment call the table leaves to you.
 
-- Never infer readiness: an open issue is not `Ready` until acceptance criteria exist and it was deliberately admitted to the executable queue.
-- Never promote your own `Execution mode`, and never create, rename, or retire an organization issue type, field, or value — that schema is human-applied.
+| Action | Command |
+| --- | --- |
+| Create a typed issue | `gh-workflow new --type T --title S [--field Name=Value]` |
+| Set field values or the Issue Type | `gh-workflow set --issue N [--type T] [--field Name=Value]` |
+| Close as Done or Dropped | `gh-workflow close --issue N --as done\|dropped` |
+| Reopen | `gh-workflow reopen --issue N --workflow VALUE` |
+| Check Ready preconditions | `gh-workflow check --issue N` |
+| Read one issue's state and gaps | `gh-workflow receipt --issue N` |
+| Operator summary / schema audit | `gh-workflow summary` / `gh-workflow audit` |
+| Comment, retitle, create or merge a PR | raw `gh` — see `SKILL.md` |
+| Wait for CI | `gh pr checks N --watch --fail-fast` or `gh run watch ID --exit-status` |
+
+The binary is at `.agents/skills/github-workflow/bin/gh-workflow` (and the `.claude/` twin). Its refusals name the valid values, so invoke it rather than looking a vocabulary up first. These rules bind even when the skill was never loaded:
+
+- You author acceptance criteria, set `Workflow`, and admit work to `Ready` yourself; an issue whose criteria you could not write is `Needs definition`.
+- Set `Execution mode` by judgment, but `Unattended agent` is the operator's grant.
+- Never create, rename, or retire an organization issue type, field, or value — that schema is human-applied.
 - A nontrivial pull request links the issue that governs it.
-- Keep terminal state synchronized: `Done` closes as completed, `Dropped` closes as not planned, and a reopened issue returns to a nonterminal `Workflow` value in the same action.
+- Keep terminal state synchronized: `Done` closes as completed, `Dropped` closes as not planned, and a reopened issue returns to a nonterminal `Workflow` value in the same action. Merging a PR does not make its issue `Done`.
 - Durable follow-up work discovered while implementing becomes an issue before the session ends.
 
 <!-- markdownlint-enable MD025 -->

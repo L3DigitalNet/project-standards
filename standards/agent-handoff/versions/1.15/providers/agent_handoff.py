@@ -203,26 +203,56 @@ def _digest(content: bytes) -> str:
     return f"sha256:{hashlib.sha256(content).hexdigest()}"
 
 
-# The skill installs to both harness roots as byte-identical copies, so the tree
-# shape is declared once here and expanded over each root. Codex reads
-# `.agents/skills/`, Claude Code reads only `.claude/skills/` (issue #170).
+# The two harness roots: Codex reads `.agents/skills/`, Claude Code reads only
+# `.claude/skills/` (issue #170). Most skill files install into both as
+# byte-identical copies, but which roots a given file reaches, and which harness
+# selection it needs, are per-unit facts — see `_SKILL_UNITS` below.
+_SKILL_ROOTS = (".agents/skills/agent-handoff", ".claude/skills/agent-handoff")
+
+# Root scoping per unit. `SKILL.md` is installed into both roots from one source;
+# `agents/openai.yaml` is Codex's own companion format that Claude Code has never
+# read, so 1.15 declares it under `.agents/` only and only for a Codex-selecting
+# consumer (issue #175). Scoping is a per-unit field rather than a check against the
+# resource id, because an id-string special case is invisible to the next unit that
+# needs the same treatment and silently wrong if an id is ever renamed.
+_BOTH_ROOTS: tuple[str, ...] = _SKILL_ROOTS
+_AGENTS_ROOT_ONLY: tuple[str, ...] = (_SKILL_ROOTS[0],)
+
+# One skill file per row, keyed by its path relative to a skill root: (payload
+# provider-resource id holding the expected bytes, harness that must be selected for
+# the file to materialize, roots the payload installs it into). The resource id is
+# shared across a unit's copies — every copy compares against the same packaged
+# bytes, which is what makes an accidental divergence between the trees a reported
+# finding rather than an invisible one.
 #
 # Restating the paths per root was rejected: the payload already pairs each target
 # against one source and one digest, and a second literal table is exactly how one
-# root silently loses drift coverage when a later version adds a skill file. The
-# relative path is the shared key, and the resource id is shared too — both copies
-# compare against the same packaged bytes, which is what makes an accidental
-# divergence between the trees a reported finding rather than an invisible one.
-#
-# Cross-file contract: `_SKILL_ROOTS` must list every root the payload's
-# `[[artifacts]]` skill targets use, and `_SKILL_UNITS` every relative path under
-# them. `tests/package_contract/test_agent_handoff_1_13.py` pins the payload side.
-_SKILL_ROOTS = (".agents/skills/agent-handoff", ".claude/skills/agent-handoff")
-_SKILL_UNITS = (("SKILL.md", "skill"), ("agents/openai.yaml", "skill-openai"))
+# root silently loses drift coverage when a later version adds a skill file.
+_SKILL_UNITS: tuple[tuple[str, str, str | None, tuple[str, ...]], ...] = (
+    ("SKILL.md", "skill", None, _BOTH_ROOTS),
+    ("agents/openai.yaml", "skill-openai", "codex", _AGENTS_ROOT_ONLY),
+)
+
+# Cross-file contract: expanding `_SKILL_UNITS` over each row's own roots must equal
+# the skill `[[artifacts]]` set in this version's payload.toml, and each row's gate
+# must match that artifact's `when_any` harness predicate. A target demanded here
+# that the payload never installs fails every reconcile of a correct consumer with
+# AH-DRIFT and then CP-VERIFY, which is how the 1.15 `.claude/` openai.yaml copy
+# blocked the release. `tests/package_contract/test_agent_handoff_1_15.py` pins the
+# equality; `tests/agent_handoff/test_selected_routing.py` proves it end to end.
 _SKILL_TARGETS = {
     f"{root}/{relative}": resource_id
-    for root in _SKILL_ROOTS
-    for relative, resource_id in _SKILL_UNITS
+    for relative, resource_id, _gate, roots in _SKILL_UNITS
+    for root in roots
+}
+
+# Targets that exist only for a selected harness, keyed the same way. A target absent
+# from this map is unconditional.
+_SKILL_HARNESS_GATES = {
+    f"{root}/{relative}": gate
+    for relative, _resource_id, gate, roots in _SKILL_UNITS
+    if gate is not None
+    for root in roots
 }
 
 _MANAGED = {
@@ -398,6 +428,24 @@ def _managed_findings(
             if isinstance(state, Mapping)
             else {}
         )
+        gate = _SKILL_HARNESS_GATES.get(path)
+        if gate is not None and gate not in _harnesses(config):
+            # The payload gates this target on a harness the consumer did not select,
+            # so no reconcile installs it and demanding its bytes would fail a correct
+            # tree. A file left behind by an earlier profile still has to be reported:
+            # silence here would let a stale Codex companion survive a switch away
+            # from Codex with every check green.
+            if observed.get("kind") != "missing" and observed:
+                findings.append(
+                    _finding(
+                        "AH-PROFILE-DRIFT",
+                        path,
+                        resource_id,
+                        "managed skill file exists for an unselected harness",
+                        "reconcile the selected Agent Handoff profile",
+                    )
+                )
+            continue
         if resource_id == "hook" and config.get("startup") != "automatic":
             if observed.get("kind") != "missing" and observed:
                 findings.append(

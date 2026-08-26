@@ -7,15 +7,19 @@ harness that cannot use it (issue #175, cross-package design drift found on the
 v5.20.0 train). The cut removes that declared artifact entirely and gates the
 remaining `.agents/skills/agent-handoff/agents/openai.yaml` copy on the consumer
 having selected Codex, mirroring the pattern github-workflow 1.4 already uses for
-the same descriptor. Nothing else changes: `SKILL.md`, the hook, the provider,
-policy, templates, and every other artifact target are byte-identical to 1.14.
+the same descriptor. The provider carries the other half of that cut: its drift
+registry is expanded per unit so the openai sidecar is demanded only under
+`.agents/` and only for a Codex consumer. Nothing else changes: `SKILL.md`, the
+hook, policy, templates, and every other artifact target are byte-identical to 1.14.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import re
 import tomllib
 from pathlib import Path
+from types import ModuleType
 from typing import cast
 
 from project_standards.package_contract.family import load_family_manifest
@@ -39,6 +43,8 @@ _SUCCESSOR_CHANGES = frozenset(
         # Documentation of the gating change for readers who never open payload.toml.
         "README.md",
         "adopt.md",
+        # The drift registry has to agree with the gated declaration (issue #175).
+        "providers/agent_handoff.py",
     }
 )
 
@@ -114,6 +120,65 @@ def test_agent_handoff_1_15__openai_sidecar__installs_only_under_codex_gating() 
     # declares.
     manifest_text = (_SUCCESSOR / "payload.toml").read_text(encoding="utf-8")
     assert "artifact:skill-openai-claude" not in manifest_text
+
+
+def _load_provider(name: str) -> ModuleType:
+    """Import this version's provider by path.
+
+    The provider is payload bytes rather than an importable module, so it is loaded
+    from its declared path; importing `standards....providers.agent_handoff` would
+    depend on a package layout the payload deliberately does not have.
+    """
+    source = _SUCCESSOR / "providers/agent_handoff.py"
+    spec = importlib.util.spec_from_file_location(name, source)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_agent_handoff_1_15__provider_registry__matches_the_declared_skill_targets() -> None:
+    """The provider's drift table and the payload cannot disagree about any target.
+
+    1.15 shipped its provider unchanged from 1.14, so the registry kept expanding
+    `agents/openai.yaml` over both skill roots after the payload dropped the
+    `.claude/` copy and gated the `.agents/` one (issue #175). A demanded target the
+    payload never installs fails every reconcile of a correct consumer with AH-DRIFT
+    and then CP-VERIFY, so the equality is asserted in both directions rather than as
+    containment, and the harness gates are compared the same way.
+    """
+    provider = _load_provider("agent_handoff_1_15_registry")
+    manifest = tomllib.loads((_SUCCESSOR / "payload.toml").read_text(encoding="utf-8"))
+    resource_digests = {
+        cast("str", resource["id"]): cast("str", resource["digest"])
+        for resource in cast("list[dict[str, object]]", manifest["resources"])
+    }
+    declared = {
+        cast("str", artifact["target"]): artifact
+        for artifact in _artifacts(_SUCCESSOR).values()
+        if "/skills/agent-handoff/" in cast("str", artifact["target"])
+    }
+    registry = cast(
+        "dict[str, str]",
+        provider._SKILL_TARGETS,  # pyright: ignore[reportPrivateUsage]  # payload-internal table
+    )
+    gates = cast(
+        "dict[str, str]",
+        provider._SKILL_HARNESS_GATES,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    assert registry.keys() == declared.keys()
+    assert ".claude/skills/agent-handoff/agents/openai.yaml" not in registry
+    # The registry names provider resources, not artifact ids, so the two sides are
+    # bound through the bytes they share: a target's expected content is the resource
+    # the provider compares against, which must be the artifact's own digest.
+    for target, resource_id in registry.items():
+        assert resource_digests[resource_id] == declared[target]["digest"], target
+    assert gates == {
+        target: cast("list[dict[str, str]]", artifact["when_any"])[0]["contains"]
+        for target, artifact in declared.items()
+        if "when_any" in artifact
+    }
 
 
 def test_agent_handoff_1_15__identity__is_complete_and_current() -> None:

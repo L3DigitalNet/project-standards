@@ -124,7 +124,7 @@ role = "retained"
 [[packages]]
 id = "agent-handoff"
 version = "1.15"
-digest = "sha256:b3431c1337455c998f6f16142996e5df9ec0ba3e6e45ff453a7224035561f588"
+digest = "sha256:96a8ed59dbbc870fd6d1335d557f48798ff3d63544cab673b4bcd789a2d5e8d3"
 role = "default"
 
 [[packages]]
@@ -196,7 +196,7 @@ role = "retained"
 [[packages]]
 id = "github-workflow"
 version = "1.5"
-digest = "sha256:e5d1fb761bc6fdb48601ed3fc055bfcec311c13976e1f2083cd6ac4106b7b548"
+digest = "sha256:cb91ea5899362690402729633ac547017a5dd262b87a64ea45d3a253b6d93dc8"
 role = "default"
 
 [[packages]]
@@ -413,6 +413,12 @@ role = "default"
 id = "project-toolbox"
 version = "1.0"
 digest = "sha256:48020eacd25a34578b6cc9c2cd7314af14bc6a808bd6d21531df29726c754bf8"
+role = "retained"
+
+[[packages]]
+id = "project-toolbox"
+version = "1.1"
+digest = "sha256:74b53ba82d783e13d554980ab7f3a90c4a0553ff65fa4f36036310e39a27018a"
 role = "default"
 
 [[packages]]

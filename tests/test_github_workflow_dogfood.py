@@ -64,6 +64,9 @@ _SKILL_ROOTS = (_SKILL_ROOT, ".claude/skills/github-workflow")
 # The first version that installs the second tree; the expected-tree fixtures
 # above still describe 1.0, so only the symmetry test selects this one.
 _DUAL_TREE_VERSION = "1.3"
+# The first version that scopes a skill unit to one root: `agents/openai.yaml` is
+# declared under `.agents/` only (issue #175).
+_ROOT_SCOPED_VERSION = "1.5"
 _POLICY_TARGET = ".standards/packages/github-workflow/policy.toml"
 _BLOCK_BEGIN = "<!-- BEGIN project-standards:github-workflow -->"
 _BLOCK_END = "<!-- END project-standards:github-workflow -->"
@@ -509,6 +512,25 @@ def test_github_workflow_dogfood__skill_tree_tamper__is_reported_in_either_root(
     agents_root, claude_root = _SKILL_ROOTS
     assert observed[agents_root] == [("GHW-DRIFT", relative, "reference-pr-standard")]
     assert observed[claude_root] == observed[agents_root]
+
+
+def test_github_workflow_dogfood__root_scoped_companion__leaves_a_clean_consumer(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+) -> None:
+    """Issue #175: nothing may demand a `.claude/` copy the payload never installs.
+
+    This reconciles 1.5 rather than inspecting a table, because the defect was only
+    visible end to end: the payload dropped `skill-openai-claude`, the provider kept
+    expanding the unit over both roots, and every reconcile of a correct tree then
+    reported GHW-DRIFT for a file no reconcile had ever written. A Codex-selecting
+    consumer is used so the harness gate cannot mask the missing target.
+    """
+    repo = _consumer(tmp_path, distribution, _SELECTIONS["both"], version=_ROOT_SCOPED_VERSION)
+
+    assert (repo / f"{_SKILL_ROOT}/agents/openai.yaml").is_file()
+    assert not (repo / ".claude/skills/github-workflow/agents/openai.yaml").exists()
+    assert _findings(repo, distribution, ProviderOperation.DRIFT_CHECK) == ()
 
 
 def test_github_workflow_dogfood__unselected_harness_artifact__is_profile_drift(

@@ -44,12 +44,12 @@ from tests.control_plane.planner_helpers import resolution_request
 _ROOT = Path(__file__).resolve().parents[2]
 _LABELS: list[JsonValue] = ["self-hosted", "linux", "x64", "l3digital-private"]
 _VERSIONS = {
-    "markdown-frontmatter": "1.12",
+    "markdown-frontmatter": "1.13",
     "markdown-tooling": "1.15",
     "project-spec": "1.9",
 }
 _VERIFICATION_REQUESTS = (
-    VerificationRequest("markdown-frontmatter", "1.12", "verify-runner-labels"),
+    VerificationRequest("markdown-frontmatter", "1.13", "verify-runner-labels"),
     VerificationRequest("markdown-tooling", "1.15", "verify-format"),
     VerificationRequest("markdown-tooling", "1.15", "verify-lint"),
     VerificationRequest("project-spec", "1.9", "verify-runner-labels"),
@@ -58,7 +58,7 @@ _WARNING_IDENTITIES = (
     (
         "FM-RUNNER-LABELS-UNREACHABLE",
         "markdown-frontmatter",
-        "1.12",
+        "1.13",
         ".github/workflows/validate-standards.yml",
         "key:/jobs/frontmatter",
     ),
@@ -292,7 +292,7 @@ def test_runner_label_advisory__release_and_self_host_selections__stay_unchanged
     }
     assert advertised[("markdown-frontmatter", "1.10")] == "retained"
     assert advertised[("markdown-frontmatter", "1.11")] == "retained"
-    assert advertised[("markdown-frontmatter", "1.12")] == "default"
+    assert advertised[("markdown-frontmatter", "1.13")] == "default"
     assert advertised[("markdown-tooling", "1.14")] == "retained"
     assert advertised[("markdown-tooling", "1.15")] == "default"
     assert advertised[("project-spec", "1.8")] == "retained"
@@ -301,7 +301,7 @@ def test_runner_label_advisory__release_and_self_host_selections__stay_unchanged
     lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
     standards = cast("dict[str, dict[str, object]]", lock["standards"])
     assert {standard_id: standards[standard_id]["resolved"] for standard_id in _VERSIONS} == {
-        "markdown-frontmatter": "1.12",
+        "markdown-frontmatter": "1.13",
         "markdown-tooling": "1.15",
         "project-spec": "1.9",
     }
@@ -320,7 +320,7 @@ def test_runner_label_advisory__release_and_self_host_selections__stay_unchanged
     assert workflow_versions == {
         ".github/workflows/format.yml": {"markdown-tooling": "1.15"},
         ".github/workflows/lint-markdown.yml": {"markdown-tooling": "1.15"},
-        ".github/workflows/validate-markdown-frontmatter.yml": {"markdown-frontmatter": "1.12"},
+        ".github/workflows/validate-markdown-frontmatter.yml": {"markdown-frontmatter": "1.13"},
         ".github/workflows/validate-specs.yml": {"project-spec": "1.9"},
     }
 

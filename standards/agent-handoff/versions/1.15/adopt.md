@@ -99,7 +99,7 @@ For markdownlint-cli2, preserve existing settings and add the same tree to `igno
 { "ignores": [".agents/skills/agent-handoff/**", ".claude/skills/agent-handoff/**"] }
 ```
 
-The skill tree exclusions cover `SKILL.md` and `agents/openai.yaml` under both installed trees — `.agents/skills/agent-handoff/` and `.claude/skills/agent-handoff/`. The hook exclusion covers `.agents/hooks/agent-handoff/session-start`. Exclusions may remain when automatic startup is disabled; an absent path matches no file.
+The skill tree exclusions cover `SKILL.md` under both installed trees — `.agents/skills/agent-handoff/` and `.claude/skills/agent-handoff/` — plus `agents/openai.yaml`, which 1.15 installs under `.agents/` only. The hook exclusion covers `.agents/hooks/agent-handoff/session-start`. Exclusions may remain when automatic startup is disabled; an absent path matches no file.
 
 ### Added-file size guards and the compiled launcher
 

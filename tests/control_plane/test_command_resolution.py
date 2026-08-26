@@ -353,7 +353,7 @@ _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 # copy relocates out of `agent_handoff/cli.py` in T15.3, so the oracle keeps its
 # own and fails loudly if the declared set ever changes shape.
 _HANDOFF_DECLARED_PATHS = (
-    # Every target agent-handoff 1.13 declares, restated by hand. The seam derives
+    # Every target agent-handoff 1.15 declares (the Codex companion lives under `.agents/` only since 1.15), restated by hand. The seam derives
     # this set from the selected payload's artifacts and contributions, so the oracle
     # must NOT do the same or it would prove only that the derivation equals itself
     # (issue #171).
@@ -363,7 +363,6 @@ _HANDOFF_DECLARED_PATHS = (
     ".claude/settings.json",
     # The skill installs to both harness roots; Claude Code reads only this one.
     ".claude/skills/agent-handoff/SKILL.md",
-    ".claude/skills/agent-handoff/agents/openai.yaml",
     ".codex/config.toml",
     ".standards/packages/agent-handoff/policy.toml",
     "AGENTS.md",
@@ -387,7 +386,7 @@ _HANDOFF_DECLARED_PATHS = (
     "docs/handoff/sessions",
 )
 
-# Test-owned restatement of every target github-workflow 1.3 declares, kept
+# Test-owned restatement of every target github-workflow 1.5 declares (the Codex companion lives under `.agents/` only since 1.5), kept
 # byte-independent of the seam for the same reason as the handoff copy above:
 # importing or re-deriving the implementation's set would prove only that the seam
 # agrees with itself. ORDER is load-bearing — `_key_ordered` compares the
@@ -404,7 +403,6 @@ _GH_WORKFLOW_DECLARED_PATHS = (
     ".agents/skills/github-workflow/references/review-checklist.md",
     ".agents/skills/github-workflow/references/summary-format.md",
     ".claude/skills/github-workflow/SKILL.md",
-    ".claude/skills/github-workflow/agents/openai.yaml",
     ".claude/skills/github-workflow/bin/gh-workflow",
     ".claude/skills/github-workflow/references/field-vocabulary.md",
     ".claude/skills/github-workflow/references/issue-structure.md",

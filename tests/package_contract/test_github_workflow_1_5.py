@@ -20,6 +20,7 @@ import importlib.util
 import re
 import tomllib
 from pathlib import Path
+from types import ModuleType
 from typing import cast
 
 from project_standards.package_contract.family import load_family_manifest
@@ -79,18 +80,24 @@ def _text(relative: str) -> str:
     return (_SUCCESSOR / relative).read_text(encoding="utf-8")
 
 
-def _block_body() -> str:
-    """Render the managed block the way the control plane does, without a reconcile.
+def _load_provider(name: str) -> ModuleType:
+    """Import this version's provider by path.
 
     The provider is payload bytes rather than an importable module, so it is loaded
     from its declared path; importing `standards....providers.gh_workflow` would
     depend on a package layout the payload deliberately does not have.
     """
     source = _SUCCESSOR / "providers/gh_workflow.py"
-    spec = importlib.util.spec_from_file_location("gh_workflow_1_5", source)
+    spec = importlib.util.spec_from_file_location(name, source)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    return module
+
+
+def _block_body() -> str:
+    """Render the managed block the way the control plane does, without a reconcile."""
+    module = _load_provider("gh_workflow_1_5")
     return cast("str", module._block_body("ExampleOrg"))  # pyright: ignore[reportPrivateUsage]
 
 
@@ -277,13 +284,33 @@ def test_github_workflow_1_5__openai_companion__is_declared_under_agents_only() 
     assert artifacts["skill-claude"]["target"] == ".claude/skills/github-workflow/SKILL.md"
 
 
+def test_github_workflow_1_5__provider_registry__matches_the_declared_skill_targets() -> None:
+    """The provider's drift table and the payload cannot disagree about any root.
+
+    The 1.3 cut pinned this pairing; 1.5 did not, which is how the provider kept
+    expanding `agents/openai.yaml` over both skill roots after the payload dropped
+    the `.claude/` copy (issue #175). A demanded target the payload never installs
+    fails every reconcile of a correct consumer with GHW-DRIFT, so the equality is
+    asserted in both directions rather than as containment.
+    """
+    provider = _load_provider("gh_workflow_1_5_registry")
+    declared = {
+        artifact["target"]: artifact["id"]
+        for artifact in _artifacts(_SUCCESSOR).values()
+        if "/skills/github-workflow/" in artifact["target"]
+    }
+    registry = cast(
+        "dict[str, tuple[str, str | None, str | None]]",
+        provider._ARTIFACTS,  # pyright: ignore[reportPrivateUsage]  # payload-internal table
+    )
+
+    assert {path: entry[0] for path, entry in registry.items()} == declared
+    assert ".claude/skills/github-workflow/agents/openai.yaml" not in registry
+
+
 def test_github_workflow_1_5__upgrade_provider__reports_the_orphaned_ledger_file() -> None:
     """Nothing deletes a consumer file silently, so the upgrade plan has to say it."""
-    source = _SUCCESSOR / "providers/gh_workflow.py"
-    spec = importlib.util.spec_from_file_location("gh_workflow_1_5_upgrade", source)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = _load_provider("gh_workflow_1_5_upgrade")
 
     cases: tuple[tuple[str, dict[str, object]], ...] = (
         ("unobserved", {}),

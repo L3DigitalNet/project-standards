@@ -16,7 +16,7 @@ Use Python Tooling for the uv/uv_build `src/` baseline, Ruff formatting and lint
 
 Package 1.16 adds no option. It corrects the rendered `[build-system]` requirement for `build_backend = "uv_build"` to `uv_build>=0.11,<1.0`, so a current uv no longer warns that its own version falls outside the pin, and states uv 0.11 as the adoption prerequisite. Reconciling from 1.15 or earlier rewrites that one table.
 
-Package 1.15 retains the scoped `ruff.extend_per_file_ignores` table and the closed `vscode.task_prefix` choice, and adds two opt-in options whose defaults render exactly the 1.14 bytes: `runner_labels` selects the runner pool the managed Check job requests, templating the job's own `runs-on`; `ruff.enforce_line_length` makes the declared `line_length` a real gate by dropping `E501` from the rendered ignore list, which no consumer could do before because Ruff resolves `ignore` after `extend-select`.
+The predecessor 1.15 retains the scoped `ruff.extend_per_file_ignores` table and the closed `vscode.task_prefix` choice, and adds two opt-in options whose defaults render exactly the 1.14 bytes: `runner_labels` selects the runner pool the managed Check job requests, templating the job's own `runs-on`; `ruff.enforce_line_length` makes the declared `line_length` a real gate by dropping `E501` from the rendered ignore list, which no consumer could do before because Ruff resolves `ignore` after `extend-select`.
 
 ## Adopt
 

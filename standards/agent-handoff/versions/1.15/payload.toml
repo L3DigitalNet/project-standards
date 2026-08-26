@@ -36,7 +36,7 @@ id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:709c6c3ce7a19b4ddc06a57b4ee3012ba3cf0112a1eb9b7b8189f41dd5f25872"
+digest = "sha256:f25df3b5d2dc92b5b8e06840a62f842904f373e36ba251e451f9dfec60db2513"
 
 [[resources]]
 id = "agent-summary"
@@ -183,7 +183,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/agent_handoff.py"
 media_type = "text/x-python"
-digest = "sha256:b4429de87a1baf69844ec7c6f8f2a26f2cdebcf3b02891d69de055bda8e844bb"
+digest = "sha256:986ccb8e62019715ac6ce0c7faba375fff373952c8f1c39bb1137379879240cf"
 
 [[resources]]
 id = "provider-input"
