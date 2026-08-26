@@ -99,7 +99,7 @@ func fixtureSnapshot(t *testing.T) *render.Snapshot {
 		},
 		{
 			Kind: render.KindIssue, Number: 16,
-			// Underscore-bearing on purpose: the ledger golden this fixture drives has to
+			// Underscore-bearing on purpose: the summary golden this fixture drives has to
 			// carry a bare intraword underscore (#177) — a plain title would let a
 			// regression that escapes every underscore pass unnoticed.
 			Title: "Support runner_labels for python_tooling check.yml",

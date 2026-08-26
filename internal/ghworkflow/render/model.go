@@ -10,8 +10,8 @@
 // it, and shares the same table, escaping, and field-formatting code. A single golden
 // fixture set drives them all.
 //
-// Payload 1.5 removed the third surface, `ledger`, which wrote a generated
-// docs/GH-WORKFLOWS.md into the consumer repository. Nothing here writes a file any
+// Payload 1.5 removed the third surface, the generated-document subcommand, which wrote
+// a generated docs/GH-WORKFLOWS.md into the consumer repository. Nothing here writes a file any
 // more: both surfaces print, so the atomic-replace machinery and the table of contents
 // that only the written file needed are gone. What survives is the Prettier and
 // markdownlint fidelity constraint (spec FR-019) — the printed output is still pasted
@@ -132,7 +132,7 @@ type Snapshot struct {
 
 // NewSnapshot orders the items and resolves the cross-references between them.
 //
-// Ordering is deliberate: the API returns issues newest-first, but a ledger that
+// Ordering is deliberate: the API returns issues newest-first, but a generated summary that
 // reshuffles its rows on every refresh produces a diff on every commit and stops being
 // reviewable. Sorting by number makes the generated file stable under an unchanged
 // repository.

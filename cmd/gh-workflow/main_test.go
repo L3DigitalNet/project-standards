@@ -90,9 +90,9 @@ const ldflagsProbe = "0.0.0-ldflags-probe-4d1f0c8a"
 // stamped build reports the default. Only a stamped process can tell the two apart.
 //
 // Before payload 1.5 this needed a second link into this package's own test binary,
-// because no offline subcommand printed the version and the surface that did (`ledger`)
-// read a live repository. `help` now prints it, so one link and one offline invocation
-// cover the whole claim.
+// because no offline subcommand printed the version — the surface that read a live
+// repository was the removed generated-document subcommand. `help` now prints it, so
+// one link and one offline invocation cover the whole claim.
 func TestLdflagsVersionStampIsLinkerEffective(t *testing.T) {
 	t.Parallel()
 
