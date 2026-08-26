@@ -729,3 +729,98 @@ def test_open_existing_parent_refuses_a_protected_destination(tmp_path: Path) ->
         os.close(root_descriptor)
 
     assert failure.value.code == CONTAINMENT_DESTINATION_CODE
+
+
+def test_aliased_twin_of_a_managed_target_is_not_classified_pre_adoption(
+    tmp_path: Path,
+) -> None:
+    """An alias group is one file, so one lock record governs every member (issue #188).
+
+    Reproduces agent-configs: the consumer adopted a version that declared only
+    the `.agents` copy, so only that name reached the lock. When a later version
+    adds the `.claude` twin, the twin has no lock entry of its own even though
+    the bytes it names are the managed ones — classifying it pre-adoption made
+    `--check` report a `CP-CONSUMER-CONFLICT` against a file the plan is already
+    updating, and the conflict's remediation named an `rm` that would delete the
+    managed copy with it.
+    """
+    repo = _skill_repo(tmp_path)
+    adopted = write_payload(
+        tmp_path / "v1",
+        "symlinked-skill",
+        artifacts=[
+            {"id": "skill", "target": ".agents/skills/demo/SKILL.md", "content": b"# Skill\n"}
+        ],
+    )
+    request = PlannerRequest(repo, resolution_request((adopted,)), (adopted,))
+    _seed_control(repo, request)
+    adoption = plan_reconciliation(request)
+    assert apply_reconciliation(ApplyRequest(request, adoption)).success
+    assert {artifact.path.original for artifact in adoption.next_lock.artifacts} == {
+        ".agents/skills/demo/SKILL.md"
+    }
+
+    successor = write_payload(
+        tmp_path / "v2",
+        "symlinked-skill",
+        version="1.1",
+        artifacts=[
+            {"id": "skill", "target": ".agents/skills/demo/SKILL.md", "content": b"# Skill 2\n"},
+            {"id": "claude", "target": ".claude/skills/demo/SKILL.md", "content": b"# Skill 2\n"},
+        ],
+    )
+    upgrade = PlannerRequest(
+        repo,
+        resolution_request(
+            (adopted, successor),
+            previous_lock=adoption.next_lock,
+            selected_versions={"symlinked-skill": "1.1"},
+        ),
+        (adopted, successor),
+    )
+
+    plan = plan_reconciliation(upgrade)
+
+    assert plan.applicable, plan.findings
+    assert not [finding for finding in plan.findings if finding.code == "CP-CONSUMER-CONFLICT"]
+    kinds = {
+        action.target: action.kind
+        for action in plan.actions
+        if action.target.endswith("skills/demo/SKILL.md")
+    }
+    assert kinds == {
+        ".agents/skills/demo/SKILL.md": ActionKind.UPDATE,
+        ".claude/skills/demo/SKILL.md": ActionKind.UPDATE,
+    }
+    assert apply_reconciliation(ApplyRequest(upgrade, plan)).success
+    assert (repo / ".agents/skills/demo/SKILL.md").read_bytes() == b"# Skill 2\n"
+
+
+def test_aliased_pre_adoption_conflict_never_advises_deleting_the_shared_file(
+    tmp_path: Path,
+) -> None:
+    """Both names are one inode, so `rm` on either destroys the other's file too.
+
+    Neither twin is lock-recorded here, so both are genuinely pre-adoption and
+    both conflict — the classification is symmetric, which is half of #188. The
+    other half is the remediation: the generic pre-adoption hint offers `rm --
+    <path> && reconcile --apply`, which on an alias group deletes the file the
+    other declaration also names.
+    """
+    repo = _skill_repo(tmp_path)
+    (repo / ".agents/skills/demo/SKILL.md").write_bytes(b"# Local\n")
+    payload = _skill_payload(tmp_path, aliased=True)
+    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    _seed_control(repo, request)
+
+    plan = plan_reconciliation(request)
+
+    conflicts = [finding for finding in plan.findings if finding.code == "CP-CONSUMER-CONFLICT"]
+    assert {finding.path for finding in conflicts} == {
+        ".agents/skills/demo/SKILL.md",
+        ".claude/skills/demo/SKILL.md",
+    }
+    for finding in conflicts:
+        assert finding.hint is not None
+        assert "rm --" not in finding.hint
+        assert "one repository file" in finding.hint

@@ -855,7 +855,18 @@ def _consumer_alignment_hint(group: _DesiredGroup) -> str:
     return "resolve the declared ownership or repository content before applying"
 
 
-def _consumer_conflict_hint(group: _DesiredGroup, migration_catalog: CatalogMajor | None) -> str:
+def _consumer_conflict_hint(
+    group: _DesiredGroup,
+    migration_catalog: CatalogMajor | None,
+    aliases: tuple[str, ...] = (),
+) -> str:
+    """Explain the conflict's ownership class and the remediation it authorizes.
+
+    `aliases` names the other declared targets that a consumer symlink collapsed
+    onto this one's file, and it suppresses the `rm` remediation entirely (issue
+    #188): the two names are one inode, so deleting "this" pre-adoption path also
+    destroys the file the aliased declaration — possibly a managed one — names.
+    """
     if len(group.owners) > 1:
         return (
             f"ownership class: shared semantic unit; deleting {group.target.original} "
@@ -870,12 +881,22 @@ def _consumer_conflict_hint(group: _DesiredGroup, migration_catalog: CatalogMajo
             if migration_catalog is None
             else f"project-standards init --catalog {migration_catalog.value} --migrate"
         )
-        recovery_command = f"rm -- {shlex.quote(group.target.original)} && {write_command}"
-        hint = (
-            "ownership class: pre-adoption exclusive whole-file target; deleting "
-            f"{group.target.original} is permitted to let the selected package create "
-            f"it; from the repository root, run {recovery_command}"
-        )
+        if aliases:
+            shared = ", ".join(aliases)
+            hint = (
+                "ownership class: pre-adoption exclusive whole-file target; "
+                f"{group.target.original} and {shared} name one repository file "
+                "through a symlink, so deleting either destroys the other "
+                "declaration's content; replace the symlink with a real directory, "
+                f"or align the file's content, then run {write_command}"
+            )
+        else:
+            recovery_command = f"rm -- {shlex.quote(group.target.original)} && {write_command}"
+            hint = (
+                "ownership class: pre-adoption exclusive whole-file target; deleting "
+                f"{group.target.original} is permitted to let the selected package create "
+                f"it; from the repository root, run {recovery_command}"
+            )
         if migration_catalog is not None:
             hint = f"{hint}, then apply the reviewed plan with {write_command} --apply"
         if group.ownership_options:
@@ -912,6 +933,7 @@ def _consumer_conflict_finding(
     group: _DesiredGroup,
     current: AdapterUnit,
     migration_catalog: CatalogMajor | None,
+    aliases: tuple[str, ...] = (),
 ) -> ControlFinding:
     expected_value = group.unit.value
     actual_value = current.value
@@ -932,7 +954,7 @@ def _consumer_conflict_finding(
         standard_id=group.owners[0],
         version=group.versions[0][1],
         message="pre-existing consumer unit differs from the selected package value",
-        hint=_consumer_conflict_hint(group, migration_catalog),
+        hint=_consumer_conflict_hint(group, migration_catalog, aliases),
         expected=_published_unit_value(expected_value),
         actual=_published_unit_value(actual_value),
         expected_digest=group.unit.semantic_digest.value,
@@ -1516,6 +1538,7 @@ def _classify_desired(
     *,
     preserve_absence: bool,
     migration_catalog: CatalogMajor | None,
+    aliases: tuple[str, ...] = (),
 ) -> tuple[PlannedUnit | None, ControlFinding | None]:
     if previous is None:
         if current is None:
@@ -1526,7 +1549,7 @@ def _classify_desired(
             return _unit_plan(ActionKind.ADOPT, group, current), None
         if group.policy is ArtifactPolicy.CREATE_ONLY and entry.kind is EntryKind.REGULAR:
             return _unit_plan(ActionKind.PRESERVE, group, current), None
-        return None, _consumer_conflict_finding(group, current, migration_catalog)
+        return None, _consumer_conflict_finding(group, current, migration_catalog, aliases)
     if previous.adapter is not group.adapter or previous.scope != group.scope:
         return None, _finding(
             "CP-LOCK-INCONSISTENT",
@@ -1831,6 +1854,7 @@ def _render_targets(
     previous_lock: CentralLock,
     registry: AdapterRegistry,
     blocked_targets: frozenset[str],
+    alias_members: Mapping[str, tuple[str, ...]],
     retained_absence_keys: frozenset[_OwnedNaturalKey],
     transitions: frozenset[DeclaredTransition],
     migration_catalog: CatalogMajor | None,
@@ -1905,6 +1929,16 @@ def _render_targets(
             )
             continue
         previous_map = {(item.adapter, item.scope): item for item in previous}
+        # An alias group is one file, so one lock record governs every name in it
+        # (issue #188). Without this borrow the twin that never reached the lock
+        # is classified pre-adoption while the recorded name is a managed update,
+        # and the plan reports a consumer conflict against bytes it is already
+        # updating. Only an exactly matching (adapter, scope) is borrowed, so a
+        # borrowed record can never trigger the lock-identity mismatch below.
+        aliases = alias_members.get(target, ())
+        for sibling in aliases:
+            for item in previous_by_target.get(sibling, ()):
+                previous_map.setdefault((item.adapter, item.scope), item)
         desired_map = {(item.adapter, item.scope): item for item in desired}
         target_units: list[PlannedUnit] = []
         target_findings: list[ControlFinding] = []
@@ -1918,6 +1952,7 @@ def _render_targets(
                 entry,
                 preserve_absence=_group_natural_key(group) in retained_absence_keys,
                 migration_catalog=migration_catalog,
+                aliases=aliases,
             )
             if finding is not None:
                 target_findings.append(finding)
@@ -2744,9 +2779,28 @@ def _end_state(
     return None if item is None else (item.content, item.mode)
 
 
+def _alias_members(resolved: Mapping[str, PurePosixPath]) -> dict[str, tuple[str, ...]]:
+    """Map each declared target to the OTHER declared names sharing its file.
+
+    Derived from the same resolution `_alias_analysis` reconciles with, so
+    classification, remediation, and publication cannot disagree about which
+    targets a consumer symlink collapsed. Unaliased targets are absent from the
+    mapping, which is what keeps a repository that tracks no such link planning
+    exactly as it did before alias handling existed.
+    """
+    groups: dict[PurePosixPath, list[str]] = {}
+    for original, physical in resolved.items():
+        groups.setdefault(physical, []).append(original)
+    return {
+        member: tuple(other for other in sorted(members) if other != member)
+        for members in groups.values()
+        if len(members) > 1
+        for member in members
+    }
+
+
 def _alias_analysis(
-    repo: Path,
-    targets: tuple[SafeRelativePath, ...],
+    resolved: Mapping[str, PurePosixPath],
     actions: tuple[ControlAction, ...],
     planned_targets: tuple[PlannedTarget, ...],
 ) -> tuple[tuple[ControlFinding, ...], tuple[str, ...]]:
@@ -2770,9 +2824,11 @@ def _alias_analysis(
     letting the last action win — hides a genuine payload or consumer conflict
     behind a plan that silently discards bytes.
 
+    `resolved` is the shared target-to-physical-path resolution; see
+    `resolved_target_paths`.
+
     Returns the conflict findings and the follower targets, in that order.
     """
-    resolved = resolved_target_paths(repo, targets)
     groups: dict[PurePosixPath, list[str]] = {}
     for original, physical in resolved.items():
         groups.setdefault(physical, []).append(original)
@@ -2855,6 +2911,12 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
             )
         )
     snapshot = RepositorySnapshot.capture(request.repo, paths)
+    # Resolved once and shared by target rendering and the alias analysis below:
+    # a second resolution could observe a tree that changed underneath the plan
+    # and let the two halves disagree about which targets are aliased. The walk
+    # cannot fail here without capture having already failed on the same paths.
+    resolved_targets = resolved_target_paths(request.repo, snapshot.targets)
+    alias_members = _alias_members(resolved_targets)
     if request.retired_targets or request.retired_content:
         # Migration replacement plans must not parse retired whole-file bytes as
         # consumer content. Bounded legacy blocks instead expose their preserved
@@ -2986,6 +3048,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         previous_lock=request.resolution.previous_lock,
         registry=registry,
         blocked_targets=frozenset(finding.path for finding in findings if finding.path),
+        alias_members=alias_members,
         retained_absence_keys=retained_absence_keys,
         transitions=request.resolution.transition_paths,
         migration_catalog=request.migration_catalog,
@@ -3011,8 +3074,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
     # defined by publication order, and that order must not depend on where a
     # tuple happens to be assembled.
     alias_findings, alias_followers = _alias_analysis(
-        request.repo,
-        snapshot.targets,
+        resolved_targets,
         ((config_action, *actions) if config_action is not None else actions),
         ((config_target, *targets) if config_target is not None else targets),
     )
