@@ -65,6 +65,8 @@ After successful implementation, any agent session in a consuming repository loa
 
 ### 2.1 In Scope
 
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - An adoptable `standards/github-workflow/` package family at payload version `1.0` under the Standard Bundle Authoring 2.6 contract.
 - A mandatory repo-local skill at `.agents/skills/github-workflow/` with a Codex companion and six on-demand reference files.
 - A machine-readable organization-schema reference (`org-schema.yaml`) and a skill-driven audit over live organization state.

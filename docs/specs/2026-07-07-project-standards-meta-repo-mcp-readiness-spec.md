@@ -210,6 +210,8 @@ A future MCP server can then be thin:
 
 The readiness goal remains satisfied, but Catalog 5 has evolved beyond the provisional names and layouts used by this implementation contract:
 
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - Project Standards 5.8.0 remains the published baseline. The 5.9.0 release candidate carries nine independently versioned package families: seven consumer packages, reference-only Python Coding, and internal Standard Bundle Authoring 2.6.
 - Immutable V2 family and payload manifests now carry exact version, exposure, capability, relationship, provider, resource, media-type, and digest contracts.
 - `InstalledDistribution` is the production package authority; `PackageRepository` is the bounded source validation and test-injection authority.

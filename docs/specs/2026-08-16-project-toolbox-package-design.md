@@ -34,6 +34,9 @@ Proven cross-cutting workflows and tools — repository housekeeping, drift dete
 - Issue #168 anchors the work; its acceptance criteria were deliberately absent until this design cycle. The package ships activated in the v5.21.0 release train.
 - The only prior recorded intent is `docs/TODO.md`: a "provider-neutral `project-toolbox` standard, including its proven workflows and routing skill."
 - Structural precedent: eight consumer families; the nine-site new-family integration surface (`docs/handoff/conventions.md` §19, `scripts/family_preflight.py`); the `github-workflow` family's self-hosted proving pattern.
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - Authority reconciliation (2026-08-16): every consequential decision below was checked against the ADR corpus and Standard Bundle Authoring 2.6; none is constrained into a different shape. Binding constraints are listed with their decisions.
 
 ## Scope
@@ -152,6 +155,9 @@ None blocking. Non-blocking matters, owned by specification authoring:
 - `docs/TODO.md` future-programs entries (recorded intent).
 - `docs/feature-proposals/README.md` (downstream sequencing).
 - `docs/adr/adr-0006`, `adr-0009`, `adr-0011`, `adr-0013`, `adr-0019`, `adr-0021` (amended 2026-08-15), `adr-0023` (governing rules cited above).
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - `standards/standard-bundle-authoring/versions/2.6/` (mandatory anatomy and furniture).
 - `standards/markdown-frontmatter/versions/1.12/payload.toml`, `standards/agent-handoff/versions/1.13/payload.toml` (dual-tree skill artifact precedent).
 - `docs/handoff/conventions.md` §19 (new-family integration surface).

@@ -225,6 +225,9 @@ validate_package_graph
 - **dependency_reason:** consumes `schema-payload-reference-graph-validation-v1` so documentation describes shipped behavior rather than a planned convention
 - **requirements:** [REQ-005]
 - **proof:** [PV-T2-001]
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - **source_refs:** [issue:L3DigitalNet/project-standards#156, repo:standards/standard-bundle-authoring/README.md, repo:standards/standard-bundle-authoring/versions/2.6/README.md#author-workflow, repo:src/project_standards/package_contract/graph.py::validate_package_graph]
 - **consumes:** [schema-payload-reference-graph-validation-v1, mutable family landing-page ownership, current V2 author workflow]
 - **produces:** [successor-schema-reference-author-guidance-v1, local-integrated-validation-receipt]

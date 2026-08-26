@@ -73,6 +73,9 @@ The intended result is one internally phased, owner-approved correction train. I
 - Markdown Tooling exclusion parity, workflow permissions, caller formatting, lint/format convergence, and safe autofix guidance.
 - Agent Handoff exclusion guidance for independently managed `.agents/` files.
 - Valid CLI Documentation adoption TOML and one optional consumer-owned multi-CLI usage index.
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - Release-facing project/package/default consistency checks, including the Standard Bundle Authoring 2.6 successor reference, candidate qualification, and authorized release closeout.
 - A committed, machine-checkable regression ledger seeded with issues #3 and #8-#31, extended with this train before closure, and including a dedicated issue #21 semantic documentation guard.
 

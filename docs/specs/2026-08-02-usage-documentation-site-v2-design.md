@@ -36,6 +36,9 @@ The outcome is a Catalog 5 `usage-documentation-site` consumer package for v5.16
 ## Current context
 
 - The preserved July 2026 drafts established local MkDocs and Material rendering, a user-facing boundary, navigation, search, feedback, validation, and dogfood.
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - They predate Standard Bundle Authoring 2.6 and contain stale registry, copy-adopt, path, configuration, and compatibility assumptions.
 - CLI Documentation 1.6 owns CLI reference content and currently names `docs/usage.md`; this is a destination-path issue, not a rendering conflict.
 - ADR 0027 keeps Go and Python tooling independent. Documentation tooling does not enter an adopting repository's application environment.
@@ -167,6 +170,9 @@ None.
 ## Sources
 
 - `docs/specs/usage-documentation-site/` — preserved drafts and transcript.
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - `standards/standard-bundle-authoring/versions/2.6/README.md` — V2 architecture.
 - `standards/cli-documentation/versions/1.6/README.md` and `payload.toml` — CLI profiles and path convention.
 - `docs/plans/2026-08-01-open-issue-resolution-program-plan.md` — v5.15.0 boundary.
@@ -200,6 +206,7 @@ None.
   - Create new specs, including the CLI Documentation successor; later update v5.16.0 planning and indexes.
 - Material source artifacts:
   - `docs/specs/usage-documentation-site/`
+  <!-- release-consistency: historical standard-bundle-authoring -->
   - `standards/standard-bundle-authoring/versions/2.6/README.md`
   - `standards/cli-documentation/versions/1.6/README.md`
   - `docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md`

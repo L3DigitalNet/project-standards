@@ -134,6 +134,8 @@ The long-term goal is to make agent workflows safer and more efficient while pre
 
 Project Standards 5.11.0 is the published baseline and supplies the current package authorities:
 
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - Catalog 5 contains nine independently versioned package families; seven are consumer packages, Python Coding is reference-only, and Standard Bundle Authoring 2.6 is internal.
 - V2 family and payload manifests declare exact versions, capabilities, relations, providers, resources, media types, and SHA-256 digests.
 - `InstalledDistribution` loads published package projections; `PackageRepository` validates source bundles for development and tests.
@@ -1033,6 +1035,9 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 - Project Specification package 1.4 — installed Catalog 5 resource.
 - Meta-Repository MCP Readiness Preparation Spec — `SPEC-MT01`.
 - MCP Enablement Roadmap Spec — `SPEC-RD01`.
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - Standard Bundle Authoring 2.6 — current internal package authoring authority.
 - V2 package contracts — `src/project_standards/package_contract/`.
 - Installed distribution and unified consumer control plane — `src/project_standards/control_plane/`.
