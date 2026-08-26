@@ -241,23 +241,50 @@ def test_generated_artifact_requires_safe_existing_canonical_source(tmp_path: Pa
     assert "SG-ARTIFACT-CANONICAL-MISSING" in _codes(tmp_path)
 
 
-def test_standard_packaged_skill_must_install_project_locally(tmp_path: Path) -> None:
+def _write_packaged_skill_artifact(root: Path, *, dest: str) -> None:
     relative = _write_artifact_manifest(
-        tmp_path,
+        root,
         "alpha",
         '\n[[artifact]]\nkind = "file"\nsource = "skills/demo/SKILL.md"\n'
-        'dest = ".codex/skills/demo/SKILL.md"\nprovenance = "package-owned"\n',
+        f'dest = "{dest}"\nprovenance = "package-owned"\n',
     )
     write_standard(
-        tmp_path,
+        root,
         "alpha",
         adoption="copy-adopt",
         resources={"adopt": "adopt.md"},
         artifact_manifest=relative,
     )
-    skill = tmp_path / "src/project_standards/bundles/alpha/skills/demo/SKILL.md"
+    skill = root / "src/project_standards/bundles/alpha/skills/demo/SKILL.md"
     skill.parent.mkdir(parents=True)
     skill.write_text("# demo\n", encoding="utf-8")
+
+
+def test_standard_packaged_skill_must_install_project_locally(tmp_path: Path) -> None:
+    _write_packaged_skill_artifact(tmp_path, dest=".codex/skills/demo/SKILL.md")
+
+    assert "SG-ARTIFACT-SKILL-DEST" in _codes(tmp_path)
+
+
+def test_standard_packaged_skill_may_install_under_agents_skills_root(tmp_path: Path) -> None:
+    _write_packaged_skill_artifact(tmp_path, dest=".agents/skills/demo/SKILL.md")
+
+    assert "SG-ARTIFACT-SKILL-DEST" not in _codes(tmp_path)
+
+
+def test_standard_packaged_skill_may_install_under_claude_skills_root(tmp_path: Path) -> None:
+    # Pins the ADR 0021 amendment of 2026-08-15 (#170): a skill-shipping package
+    # declares the same bytes at both roots because Claude Code reads only
+    # `.claude/skills/`, so the second copy is legal, not drift.
+    _write_packaged_skill_artifact(tmp_path, dest=".claude/skills/demo/SKILL.md")
+
+    assert "SG-ARTIFACT-SKILL-DEST" not in _codes(tmp_path)
+
+
+def test_standard_packaged_skill_rejects_traversal_out_of_skills_root(tmp_path: Path) -> None:
+    # A prefix test alone accepts this dest while it installs outside the
+    # consumer project, which is exactly what ADR 0021 forbids.
+    _write_packaged_skill_artifact(tmp_path, dest=".agents/skills/../../../demo/SKILL.md")
 
     assert "SG-ARTIFACT-SKILL-DEST" in _codes(tmp_path)
 

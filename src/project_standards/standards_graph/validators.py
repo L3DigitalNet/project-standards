@@ -29,6 +29,14 @@ _PLATFORM_CAPABILITIES = frozenset(
         "project-standards.render",
     }
 )
+# Every project-local skill root ADR 0021 declares legal, in the order a finding
+# message should name them. Both are required, not alternatives: a skill-shipping
+# package declares each skill file at both roots as byte-identical managed copies,
+# because Codex reads `.agents/skills/` and Claude Code reads only `.claude/skills/`
+# (ADR 0021 amendment of 2026-08-15, issue #170). Adding a root here is the
+# ordinary-reviewed-work path that record describes; removing `.agents/skills/`
+# or admitting a destination outside the consumer project is an ADR amendment.
+_SKILL_DEST_ROOTS = (".agents/skills", ".claude/skills")
 _ADOPT_RESOURCE_REQUIRED_MODES = frozenset(
     {AdoptionMode.VALIDATOR, AdoptionMode.COPY_ADOPT, AdoptionMode.CLI}
 )
@@ -239,16 +247,17 @@ def _validate_artifact_manifests(graph: StandardsGraph) -> list[GraphFinding]:
                         )
                     )
             source_rel = artifact.source or ""
-            if (source_rel.startswith("skills/") or "/skills/" in source_rel) and (
-                artifact.dest is None or not artifact.dest.startswith(".agents/skills/")
+            if (source_rel.startswith("skills/") or "/skills/" in source_rel) and not any(
+                _is_path_below(artifact.dest, root) for root in _SKILL_DEST_ROOTS
             ):
+                roots = ", ".join(f"{root}/" for root in _SKILL_DEST_ROOTS)
                 findings.append(
                     _finding(
                         "SG-ARTIFACT-SKILL-DEST",
                         node,
                         _rel(node.artifact_manifest_path),
-                        f"standard-packaged skill installs outside .agents/skills: {artifact.dest!r}",
-                        "install standard-owned skills under .agents/skills/<skill-id>/",
+                        f"standard-packaged skill installs outside {roots}: {artifact.dest!r}",
+                        f"install standard-owned skills under {roots} as <skill-id>/ subtrees",
                     )
                 )
             if (

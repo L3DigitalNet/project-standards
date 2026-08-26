@@ -37,6 +37,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Fixed
+
+- Graph validation accepts both project-local skill destinations instead of rejecting one of them ([#174](https://github.com/L3DigitalNet/project-standards/issues/174)). `SG-ARTIFACT-SKILL-DEST` predated the ADR 0021 amendment of 2026-08-15 ([#170](https://github.com/L3DigitalNet/project-standards/issues/170)) and still treated `.agents/skills/` as the only legal root, so it would have rejected the `.claude/skills/` twin every skill-shipping package now declares. The check was aligned rather than retired because ADR 0021 assigns graph validation the job of enforcing the project-local boundary, and the rule still binds any artifact manifest the graph loads. Both roots are now accepted, the finding message and hint name both, and the destination is matched with the same containment test the hook rule uses — a plain prefix test accepted `.agents/skills/../../elsewhere`, which installs outside the consumer project.
+
 ## [5.22.0] — 2026-08-26
 
 ### Added
