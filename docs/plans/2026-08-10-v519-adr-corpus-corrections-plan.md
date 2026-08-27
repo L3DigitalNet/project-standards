@@ -3,9 +3,9 @@ plan_format: 3
 title: 'v5.19 ADR Corpus Corrections Implementation Plan'
 slug: 'v519-adr-corpus-corrections'
 status: active
-revision: 4
-revises_revision: 3
-revision_reason: 'repoint the section 7 preflight to the successor plan-authoring helper (issue 178)'
+revision: 5
+revises_revision: 4
+revision_reason: 'retire the command-provider-execution master cited as a source row after its harvest'
 pause_reason: ''
 source: 'issues L3DigitalNet/project-standards#161, #160, #159, and #162; owner decisions recorded 2026-08-10'
 spec_ref: ''
@@ -50,7 +50,7 @@ The work is documentation-only. It preserves every accepted `## Decision Outcome
 | `repo:docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md#decision-outcome` | current-state evidence | Skill-subtree decision that expressly reserves `.agents/` root authority for a new ADR. | `5e1b04f1` | §§4–6; T3 |
 | `repo:docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md#decision-outcome` | current-state evidence | Hook-subtree decision that expressly reserves `.agents/` root authority for a new ADR. | `5e1b04f1` | §§4–6; T3 |
 | `repo:docs/plans/2026-08-10-v519-adr-corpus-corrections-plan.md` | current-state evidence | Active format-3 master containing bridge-required source coverage and task identity metadata that must remain historically exact through T4. | revision 1 execution state | §§3–7, 9–12; T4 |
-| `repo:docs/plans/2026-08-10-command-provider-execution-plan.md` | current-state evidence | Active format-3 master containing bridge-required source coverage and task identity metadata for the ADR 0025 pre-rename path. | integrated execution state | §§3–7, 9–12; T4 |
+| `repo:docs/handoff/specs-plans.md` | current-state evidence | Successor pointer for the retired command-provider-execution master, which was the format-3 master carrying bridge-required source coverage and task identity metadata for the ADR 0025 pre-rename path. That master shipped in 5.19.0, was harvested into this record and deleted on 2026-08-27 under the completed-plan policy, and T4 had already consumed it at terminal checkpoint `4f4a3644`, so the allowlist it justified is closed rather than reopened. | retired and harvested 2026-08-27 | §§3–7, 9–12; T4 |
 | `repo:.standards/config.toml` | operational evidence | ADR `1.5`, required ADR body sections, and Markdown Frontmatter validation are selected for the dogfood corpus. | `5e1b04f1` | §§3, 7, 12; T1–T4 |
 | `repo:docs/handoff/conventions.md#13-keep-documentation-only-closeout-proportional` | operational evidence | Documentation-only work uses changed-surface validation rather than the implementation/release battery. | `5e1b04f1` | §§3, 7, 12–13; T1–T4 |
 
