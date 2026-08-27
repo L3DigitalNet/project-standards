@@ -152,7 +152,15 @@ def test_one_hundred_requested_and_discovery_orders_are_byte_deterministic(
     for target in baseline_plan.targets:
         assert (repo / target.target).read_bytes() == target.content
     elapsed = perf_counter() - started
-    assert elapsed < 40.0, f"100-order compatibility sweep took {elapsed:.3f}s"
+    # Calibrated for the self-hosted runner (2026-08-27), following the
+    # 2026-08-12 hosted-ceiling precedent (commit 127bd3dd, 7.5s -> 10.0s):
+    # hosted `Check` run 33091631763 measured 44.661s, and the workstation
+    # measured 43.9s at afffa83e and 43.6s at the v5.24.0 release commit
+    # 3a387543 (no regression between them); the 40-core rexec worker stays
+    # under 40s. This ceiling guards against order-dependent blow-ups and
+    # regressions, not absolute speed, and it must not be met by caching or
+    # reusing work across the 100 permuted orders.
+    assert elapsed < 60.0, f"100-order compatibility sweep took {elapsed:.3f}s"
 
 
 @pytest.mark.performance
