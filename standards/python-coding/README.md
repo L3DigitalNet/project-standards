@@ -16,7 +16,7 @@ Use Python Coding as reference guidance when designing, implementing, debugging,
 
 ## Availability
 
-Package `0.6` is `reference-only`: it has no consumer artifacts, configuration options, adoption guide, or executable provider. Read the versioned standard directly. The package is not part of the seven-package consumer default set and cannot be enabled as a normal reconciliation target.
+Package `0.6` is `reference-only`: it has no consumer artifacts, configuration options, adoption guide, or executable provider. Read the versioned standard directly. The package is not part of the nine-package consumer default set and cannot be enabled as a normal reconciliation target.
 
 ## Released-version errata
 
