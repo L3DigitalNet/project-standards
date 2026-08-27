@@ -36,3 +36,5 @@
 - Bug 006 stays a platform constraint, not a `github-workflow` one: that package ships zero create-only artifacts and a guard test enforces it.
 - **`github-workflow@1.0` release placement:** OQ-001 answered — ships in v5.17.0. Execution-discovered follow-ups sit in the plan §13 close-out register.
 - **ADR corpus conformance:** 11 of 23 active ADRs state no boundary; five authorities contested, five unowned. See `docs/reviews/adr-conformance/`; scheduled as v5.18.0.
+- **Owner deviation:** spec keeps `Unattended agent` owner-only, narrower than "all three by judgment"; no mechanism honors it yet.
+- **Consumer-pin rollout** deferred to owner scheduling; `@v5` trackers inherit new versions automatically without a manual bump.
