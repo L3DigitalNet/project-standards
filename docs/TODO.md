@@ -54,17 +54,16 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
-- [x] Propose `github-workflow` changes from the 2026-08-26 session-corpus review.
+- [ ] Re-measure the github-workflow session corpus after 1.5 deploys (#191); wait for the measurement window
+  (opens 2026-09-06).
 
-  Landed as github-workflow 1.5 in v5.23.0 (ledger subcommand + `docs/GH-WORKFLOWS.md` removed, leaner guidance,
-  agent self-defined acceptance criteria/Ready/Execution mode except `Unattended agent`).
+- [ ] Owner: decide #197 (v4 bundle + family-root skill, Needs definition) and #198 (`created_container=False`
+  preserve semantics, Needs definition).
 
-- [ ] Re-measure the github-workflow session corpus after 1.5 deploys (#191); wait for the measurement window.
+- [ ] Owner: resolve SPEC-GSF3 OQ-001, which blocks that plan's T1.
 
-- [ ] Decide the plan disposition for #178 (owner decision, still open).
-
-- [ ] Triage #194 (Ready: generic provider-registry==payload contract check) and #195 (Ready: `CP-VERIFY` should
-  name its target).
+- [ ] Triage #196 (Ready: frozen provider comments), #199 (Ready: project-spec 1.9 template drift → 1.10 cut), and
+  #200 (Ready: stale characterization digests).
 
 - [ ] Migrate `agent-ventures` and `llm-wiki` off `.agents`-only skill trees onto the dual-tree layout, per the
   2026-08-26 session-corpus review's F2 finding.

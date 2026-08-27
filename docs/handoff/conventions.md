@@ -458,3 +458,16 @@ Six registries named the Agent Handoff hook; each failed a different gate when 1
 **Sources:** `~/.local/bin/rexec` v0.2.0 live checks on 2026-08-10; `.rexec.toml`; bug 007; `remote-execution/docs/usage.md`.
 
 **Related:** 3, 13, 18.
+
+## 23. Plan-authoring writes need a Prettier pass and completed plans retire via harvest
+
+**Applies when:** the plan-authoring engine writes a plan file, or a completed master plan needs retirement.
+
+**Rule:** run Prettier after any plan-authoring engine write — its emitted Markdown is not guaranteed
+pre-formatted. Retire a completed plan by harvesting its durable content into the owning handoff document first,
+then `git rm` the plan file; never leave a completed plan under `docs/plans/` as dead weight.
+
+**Related:** tests enumerate payload trees through `tests/payload_tree.py`, which already ignores `__pycache__` —
+add new payload-tree test coverage there rather than re-deriving file enumeration ad hoc.
+
+**Sources:** v5.24.0 closeout session, 2026-08-27.
