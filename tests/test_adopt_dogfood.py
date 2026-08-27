@@ -149,7 +149,7 @@ def test_generated_workflow_yaml_has_no_tabs() -> None:
 
 @pytest.mark.parametrize(
     "standard_id,version",
-    [("markdown-frontmatter", "1.13"), ("adr", "1.6"), ("project-spec", "1.9")],
+    [("markdown-frontmatter", "1.14"), ("adr", "1.6"), ("project-spec", "1.9")],
 )
 def test_current_adoption_guides_use_v5_packages_not_v1_fragments(
     standard_id: str,

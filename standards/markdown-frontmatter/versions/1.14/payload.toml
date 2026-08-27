@@ -1,0 +1,525 @@
+schema_version = "1.0"
+
+[payload]
+standard = "markdown-frontmatter"
+version = "1.14"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = [
+  "markdown.frontmatter.format",
+  "markdown.frontmatter.schema",
+  "markdown.id.validate",
+  "markdown.references.validate",
+]
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = ["adr", "markdown-tooling"]
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:63bce866299113191cf82d8d52f6524545c0e2b1b4f005523c5b2cbe315ab218"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:0e195bd4afe7351985f56b0b20b8a1e72d3a80f41b765fdb89f870fecb116f42"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:50aa2555af898ce83787d4a8c9735a8ee37a252ee57f1fdd62992b134e4e590c"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:044b9f9669252094f65b6fa15707f16b6064103e180dcd3d860b2ab3a5ae4f1c"
+
+[[resources]]
+id = "structure"
+role = "standard-reference"
+path = "structure.md"
+media_type = "text/markdown"
+digest = "sha256:17de59d59bd50636bb3bf626c2479518e20b2a28a368f8a12e4aa389acc3635f"
+
+[[resources]]
+id = "field-values"
+role = "standard-reference"
+path = "field-values.md"
+media_type = "text/markdown"
+digest = "sha256:a5e665d06c509c39ce09b56dd8978db1ae47b94136f2e909e0c323a2e214499d"
+
+[[resources]]
+id = "example-concept"
+role = "example"
+path = "examples/concept.example.md"
+media_type = "text/markdown"
+digest = "sha256:32abd4154a13b175539719630422d80e1a0f6e5d997ba9e24bbd1ec0f67d5054"
+
+[[resources]]
+id = "example-note"
+role = "example"
+path = "examples/note.example.md"
+media_type = "text/markdown"
+digest = "sha256:e8bdd86aa1aa9752026b5fae95d96173e4a0d483d3857ea07e9c41a0867bc649"
+
+[[resources]]
+id = "example-runbook"
+role = "example"
+path = "examples/runbook.example.md"
+media_type = "text/markdown"
+digest = "sha256:191db9e43be66b6be2090692dac8894519f24524ea14d9d05c074d5dbba939c2"
+
+[[resources]]
+id = "template-concept"
+role = "template"
+path = "templates/concept.md"
+media_type = "text/markdown"
+digest = "sha256:da264b3bbf5c6ffadc54514a0d5e0ce843a93689ec3f10027c840b2fc94a5a03"
+
+[[resources]]
+id = "template-frontmatter-minimal"
+role = "template"
+path = "templates/frontmatter-minimal.yml"
+media_type = "application/yaml"
+digest = "sha256:776944c57280aa3e2e622f02d56f93e48a7e098ddabcdab790a5a1fd0d4d9edb"
+
+[[resources]]
+id = "template-frontmatter-standard"
+role = "template"
+path = "templates/frontmatter-standard.yml"
+media_type = "application/yaml"
+digest = "sha256:c2a7b0e8033155afbb0ad6b420f351e9398753cb91c12a5336e4160239447de1"
+
+[[resources]]
+id = "template-note"
+role = "template"
+path = "templates/note.md"
+media_type = "text/markdown"
+digest = "sha256:2302878839002ec7ac1341d247eb366fef775f0ed2693727771528cb33139930"
+
+[[resources]]
+id = "template-repo-pages"
+role = "template"
+path = "templates/repo-pages/README.directory.template.md"
+media_type = "text/markdown"
+digest = "sha256:bc248ce21493501820f01c52f64a611152020749b67fbda689a179d95aca5b48"
+
+[[resources]]
+id = "template-repository-frontmatter-adr"
+role = "template"
+path = "templates/repository-frontmatter-adr.md"
+media_type = "text/markdown"
+digest = "sha256:8aa133f97c03c34d59a4dee7c2a4f55dae059176543da54c9ceb082df718e1e2"
+
+[[resources]]
+id = "template-research"
+role = "template"
+path = "templates/research.md"
+media_type = "text/markdown"
+digest = "sha256:c7e65ef026866263459f04379c58d569d5cda5d5f654716d983aed50d938bccf"
+
+[[resources]]
+id = "template-runbook"
+role = "template"
+path = "templates/runbook.md"
+media_type = "text/markdown"
+digest = "sha256:92f72422e4284e7ceda08cf6fbf2bd00932cb6cfc59a89b7a72f165ee2ab5b4d"
+
+[[resources]]
+id = "template-spec"
+role = "template"
+path = "templates/spec.md"
+media_type = "text/markdown"
+digest = "sha256:1298f3e9be8aff4a8d59ed6ae8deaab8108c3956e48e1510b13c726498d26e57"
+
+[[resources]]
+id = "legacy-skill"
+role = "legacy-reference"
+path = "resources/legacy-markdown-frontmatter-skill.md"
+media_type = "text/markdown"
+digest = "sha256:b4bbac003ee8f0a30dfeae892c145a53bc6002ad162c85a0834553fefd9093a2"
+
+[[resources]]
+id = "workflow-caller"
+role = "workflow-template"
+path = "validate-markdown-frontmatter.caller.yml"
+media_type = "application/yaml"
+digest = "sha256:6eb151ca271e7e869d10378175a9c9d30c4fb8c33e4ea54e927ec6645b68b651"
+
+[[resources]]
+id = "workflow-job-caller"
+role = "provider-resource"
+path = "workflow-job.yml"
+media_type = "application/yaml"
+digest = "sha256:c3e9fce5de356b728481c565f1262f0421b1eb9652018f0022a741ba48fdd1c0"
+
+[[resources]]
+id = "workflow-job-self-hosted"
+role = "provider-resource"
+path = "workflow-job.self-hosted.yml"
+media_type = "application/yaml"
+digest = "sha256:ed9d0ef8a515d2409bf2f916675de4848cf4311a5a266606fc5045c9d3b7b403"
+
+[[resources]]
+id = "provider-code"
+role = "provider-resource"
+path = "providers/frontmatter.py"
+media_type = "text/x-python"
+digest = "sha256:2ba23981b11d1a6bc5adca4d263173e5b5577c01aee508d173ae6ad997bb58d6"
+
+[[resources]]
+id = "legacy-validate-standards-workflow"
+role = "legacy-reference"
+path = "resources/legacy-validate-standards.yml"
+media_type = "text/yaml"
+digest = "sha256:931900b2811dd8b369836a5e0f8dcc4b7e3de42a447a78dc5d93164c78d0125f"
+
+[[resources]]
+id = "provider-input"
+role = "provider-resource"
+path = "schemas/provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:5583b0aa582eb399a2c13454f069567f578d58ac2f0c9a89c0fbb4b1a6697c8f"
+
+[[resources]]
+id = "provider-findings"
+role = "provider-resource"
+path = "schemas/findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:b9b10baef03565b623509c63c3d7cd3fea18021ac11307c5e887b3aa698d75de"
+
+[[resources]]
+id = "provider-content"
+role = "provider-resource"
+path = "schemas/content.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:760d819048c1f2a153e72227c940f36eed96deb5e2336e802f34caa37ccf14b3"
+
+[[resources]]
+id = "provider-mutation-plan"
+role = "provider-resource"
+path = "schemas/mutation-plan.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57fd"
+
+[[resources]]
+id = "provider-migration-report"
+role = "provider-resource"
+path = "schemas/migration-report.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:e2b4e1d8fc60e60a94dfa94c74df645e86523ec077dd5e0548a3445facd0574d"
+
+[[resources]]
+id = "frontmatter-schema"
+role = "provider-resource"
+path = "schemas/markdown-frontmatter.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:f19943b7f68c02bedd25214d7184b2e5a8909b9d8a9aef236794b2b389e9952a"
+
+[[artifacts]]
+id = "agent-summary-package"
+target = ".standards/packages/markdown-frontmatter/agent-summary.md"
+source = "artifacts/agent-summary.md"
+digest = "sha256:0ccf45f68416d08f64d9ebb010a02d7a9aa0624193f20ce8d7b8d589c2395394"
+policy = "managed"
+
+[[artifacts]]
+id = "skill"
+target = ".agents/skills/markdown-frontmatter/SKILL.md"
+source = "skills/markdown-frontmatter/SKILL.md"
+digest = "sha256:5c83d75d5cb985d58421c2d905d6e793bdcf436fd79f7c1916010e1870ed6ece"
+policy = "managed"
+
+# `openai.yaml` is a Codex-only descriptor (Claude Code has no analogous sidecar
+# convention), so it installs solely under Codex's `.agents/skills/` tree and only
+# when the consumer actually selected Codex. Unlike SKILL.md and new-doc-id below,
+# it has no `.claude/skills/` counterpart to keep in sync. See #175.
+[[artifacts]]
+id = "skill-openai"
+target = ".agents/skills/markdown-frontmatter/agents/openai.yaml"
+source = "skills/markdown-frontmatter/agents/openai.yaml"
+digest = "sha256:d63c2c63683e78fa9adb10e7004fe9315b18a069240c4457e39cdc167951716c"
+policy = "managed"
+when_any = [{ option = "harnesses", contains = "codex" }]
+
+[[artifacts]]
+id = "skill-new-doc-id"
+target = ".agents/skills/markdown-frontmatter/scripts/new-doc-id"
+source = "skills/markdown-frontmatter/scripts/new-doc-id"
+digest = "sha256:abec9fc9e78390949320dc0b0a9e63d2d6a9959990068782ec6d60596fcf14b5"
+policy = "managed"
+mode = "0755"
+
+# Claude Code discovers project skills only under `.claude/skills/`; it has never
+# read `.agents/skills/`, which is Codex's convention. SKILL.md and new-doc-id are
+# therefore installed twice from one source, so both harnesses see the same bytes.
+# Each pair must stay byte-identical: same `source`, `digest`, and `mode`,
+# differing only in `id` and `target`. Copies, not symlinks — a symlink checks out
+# as a plain text file on a Windows clone without Developer Mode, which would
+# silently install the link path as the file body. Divergence is already guarded
+# because both targets are digest-locked managed artifacts. See issue #170.
+[[artifacts]]
+id = "skill-claude"
+target = ".claude/skills/markdown-frontmatter/SKILL.md"
+source = "skills/markdown-frontmatter/SKILL.md"
+digest = "sha256:5c83d75d5cb985d58421c2d905d6e793bdcf436fd79f7c1916010e1870ed6ece"
+policy = "managed"
+
+[[artifacts]]
+id = "skill-new-doc-id-claude"
+target = ".claude/skills/markdown-frontmatter/scripts/new-doc-id"
+source = "skills/markdown-frontmatter/scripts/new-doc-id"
+digest = "sha256:abec9fc9e78390949320dc0b0a9e63d2d6a9959990068782ec6d60596fcf14b5"
+policy = "managed"
+mode = "0755"
+
+[[artifacts]]
+id = "self-host-workflow"
+target = ".github/workflows/validate-markdown-frontmatter.yml"
+source = "resources/self-host-validate-markdown-frontmatter.yml"
+digest = "sha256:292ac4e601fd30b82620a0b3a527db61c24883876b3359c787a753d2bcc5e163"
+policy = "managed"
+when_any = [{ option = "workflow_mode", equals = "self-hosted" }]
+
+# 5.8.0 FR-006/FR-007 / issue #28: the four validate-standards.yml contributions
+# compose the managed caller only while workflow_ownership stays "managed". Setting
+# it "consumer-owned" gates every contribution off so a customized caller (see the
+# legacy-validate-standards-workflow intent pointer) is left wholly to the consumer.
+[[contributions]]
+id = "workflow-name"
+target = ".github/workflows/validate-standards.yml"
+adapter = "yaml"
+scope = "key:/name"
+policy = "create-only"
+source = "workflow-name.yml"
+source_digest = "sha256:1fb1ff15ea473a338ab301633364d875a68837e547e148e0c5a6ce6ccfc576c2"
+shared_identity = "github-workflow/validate-standards-name"
+when_any = [{ option = "workflow_ownership", equals = "managed" }]
+
+[[contributions]]
+id = "workflow-on"
+target = ".github/workflows/validate-standards.yml"
+adapter = "yaml"
+scope = "key:/on"
+policy = "create-only"
+source = "workflow-on.yml"
+source_digest = "sha256:a30345f577f7e40934be6a9f7be3cf9f36f8da457d990e3d8b30613ea1750a86"
+shared_identity = "github-workflow/validate-standards-triggers"
+when_any = [{ option = "workflow_ownership", equals = "managed" }]
+
+[[contributions]]
+id = "workflow-permissions"
+target = ".github/workflows/validate-standards.yml"
+adapter = "yaml"
+scope = "key:/permissions"
+policy = "managed"
+source = "workflow-permissions.yml"
+source_digest = "sha256:e8f2263b0413f25128aa11d16dd3ae0ef6b0c660fb5b1dc08fe71e0a7daabb4b"
+when_any = [{ option = "workflow_ownership", equals = "managed" }]
+
+[[contributions]]
+id = "workflow-frontmatter-job"
+target = ".github/workflows/validate-standards.yml"
+adapter = "yaml"
+scope = "key:/jobs/frontmatter"
+policy = "managed"
+provider = "render-workflow-job"
+when_any = [{ option = "workflow_ownership", equals = "managed" }]
+
+# Ambient reach (1.14): before this version the package contributed only to the CI
+# caller, so a consumer repository gave agents no standing statement that managed
+# Markdown carries frontmatter at all — the skill was in context for roughly 5% of
+# the sessions that wrote frontmatter. These two blocks are the same instruction
+# surface `agent-handoff`, `markdown-tooling`, `github-workflow`, and
+# `python-tooling` already occupy, one block per harness because each harness reads
+# only its own instruction file and only its own skill tree.
+#
+# Static `source` rather than a render provider: the block text is fixed, so no
+# option can change it, and a provider would exist only to return a constant. The
+# source file is the whole Prettier/marker envelope, not the bare body — the
+# planner re-parses contribution content as a Markdown document and extracts the
+# named block from it (see `_normalize_desired`), so a body-only fragment would
+# resolve to no unit at all. Keep both files' envelopes and block IDs identical to
+# `scope` here; they differ only in the skill path they name.
+[[contributions]]
+id = "agents-instructions"
+target = "AGENTS.md"
+adapter = "markdown-block"
+scope = "block:markdown-frontmatter"
+policy = "managed"
+source = "agents-instructions.md"
+source_digest = "sha256:28be5f6bc3587b43537ffc7dea93b120100a8f48835391b2b4dc1f2d06ddcb76"
+governing_options = []
+when_any = [{ option = "harnesses", contains = "codex" }]
+
+[[contributions]]
+id = "claude-instructions"
+target = "CLAUDE.md"
+adapter = "markdown-block"
+scope = "block:markdown-frontmatter"
+policy = "managed"
+source = "claude-instructions.md"
+source_digest = "sha256:7053e17f6056856215a0b55538858e271839740aba5dcab3d793c6ee1b5b48c1"
+governing_options = []
+when_any = [{ option = "harnesses", contains = "claude-code" }]
+
+[[extensions]]
+id = "custom-schema"
+option = "schema_path"
+media_type = "application/schema+json"
+path_policy = "repository-relative"
+preferred_root = ".standards/extensions/markdown-frontmatter/"
+
+[[providers]]
+id = "render-workflow-job"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_workflow"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["workflow-job-caller", "workflow-job-self-hosted"]
+
+[[providers]]
+id = "verify-runner-labels"
+operation = "verify"
+kind = "python"
+phase = "verify"
+effect = "findings"
+entrypoint = "payload:provider-code#run_verify_runner_labels"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = []
+
+[[providers]]
+id = "validate-frontmatter"
+operation = "validate"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_validate"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["frontmatter-schema"]
+
+[[providers]]
+id = "id-next"
+operation = "id-next"
+kind = "python"
+phase = "inspect"
+effect = "content"
+entrypoint = "payload:provider-code#run_id_next"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["frontmatter-schema"]
+
+[[providers]]
+id = "fix-frontmatter"
+operation = "fix"
+kind = "python"
+phase = "authoring"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#run_fix"
+input_schema = "provider-input"
+output_schema = "provider-mutation-plan"
+resources = ["frontmatter-schema"]
+
+[[providers]]
+id = "migrate-legacy"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#run_migrate"
+input_schema = "provider-input"
+output_schema = "provider-migration-report"
+resources = []
+
+[[legacy_states]]
+id = "v4-markdown-frontmatter"
+
+# 1.14 adds the two agent-instruction blocks and rewrites skill prose; every
+# pre-existing target keeps its predecessor rendering, and the new blocks are
+# additions to files the consumer already owns rather than moves, so there is no
+# package-to-package migration edge to declare — an upgrading consumer gains
+# managed units and loses none. Issue #170 established the same reasoning when the
+# predecessor added the `.claude/skills/` twin.
+[[migrations]]
+id = "legacy-v4-to-1-12"
+from = "legacy:v4-markdown-frontmatter"
+to = "package:1.14"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = [
+  "artifact:skill",
+  "artifact:skill-claude",
+  "artifact:skill-new-doc-id",
+  "artifact:skill-new-doc-id-claude",
+  "artifact:skill-openai",
+  "artifact:self-host-workflow",
+  "config:*",
+  "contribution:agents-instructions",
+  "contribution:claude-instructions",
+  "contribution:workflow-frontmatter-job",
+  "contribution:workflow-permissions",
+]
+signatures = [
+  "legacy-skill",
+  "legacy-skill-script",
+  "legacy-validate-standards-workflow",
+  "legacy-workflow",
+]
+
+[[legacy_signatures]]
+id = "legacy-skill"
+kind = "whole-file"
+targets = [".agents/skills/markdown-frontmatter/SKILL.md"]
+known_content_digests = ["sha256:b4bbac003ee8f0a30dfeae892c145a53bc6002ad162c85a0834553fefd9093a2"]
+
+[[legacy_signatures]]
+id = "legacy-skill-script"
+kind = "whole-file"
+targets = [".agents/skills/markdown-frontmatter/scripts/new-doc-id"]
+known_content_digests = ["sha256:0f80ec4d966b59d8310f88f4d45478a1272b3b94491cf2a44efb9765bbbe2edc"]
+
+[[legacy_signatures]]
+id = "legacy-workflow"
+kind = "whole-file"
+targets = [".github/workflows/validate-markdown-frontmatter.yml"]
+known_content_digests = [
+  "sha256:82a9ef1cb1e4f48eddc4a6cc43f317ba93aebe6d485fed6d8736e8e9e0aa279e",
+  "sha256:09eb0cc6d6fe20a12b7c7cc5022f9a902ed29d0cdf35ef42c8685c5c93cea036",
+]
+
+# 5.8.0 FR-006/FR-007 / issue #28: the intent pointer authorizes relinquishment.
+# A customized (unknown-digest) caller migrates to consumer ownership only when the
+# legacy markdown.frontmatter.workflow_ownership setting is "consumer-owned"; the
+# migrate-legacy provider then emits a preserve claim carrying this pointer. No
+# unknown_content_disposition — the payload model forbids that combination, and the
+# escape is opt-in through the recognized setting, never an implicit takeover.
+[[legacy_signatures]]
+id = "legacy-validate-standards-workflow"
+kind = "whole-file"
+targets = [".github/workflows/validate-standards.yml"]
+known_content_digests = [
+  "sha256:931900b2811dd8b369836a5e0f8dcc4b7e3de42a447a78dc5d93164c78d0125f",
+]
+consumer_owned_intent_pointer = "/markdown/frontmatter/workflow_ownership"

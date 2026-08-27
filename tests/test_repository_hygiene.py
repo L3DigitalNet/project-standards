@@ -76,6 +76,7 @@ _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
         "standards/markdown-frontmatter/versions/1.11/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/markdown-frontmatter/versions/1.12/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/markdown-frontmatter/versions/1.13/skills/markdown-frontmatter/scripts/new-doc-id",
+        "standards/markdown-frontmatter/versions/1.14/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/markdown-frontmatter/versions/1.8/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/markdown-frontmatter/versions/1.9/skills/markdown-frontmatter/scripts/new-doc-id",
         "standards/project-spec/versions/1.6/resources/tooling-notes.md",
