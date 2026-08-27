@@ -212,6 +212,14 @@ mkdir -p "$TMP_ROOT/tmp" "$TMP_ROOT/coverage" "$LOG_DIR" "$RESULT_DIR" "$BASETEM
 export PYTHONPATH="$WHEEL_RUNTIME"
 export TMPDIR="$TMP_ROOT/tmp"
 export COVERAGE_FILE="$TMP_ROOT/coverage/.coverage"
+# No import in this battery may leave bytecode beside a payload provider: on a
+# workspace-reusing runner those caches survive into the next run's checkout and
+# every suite that enumerates a payload source tree then sees an undeclared file
+# (hosted `Check` red for four consecutive runs from 1a01038d). tests/payload_tree.py
+# makes the enumerations themselves immune; this keeps the caches from appearing at
+# all. The compileall pre-warm below is unaffected — py_compile writes explicitly,
+# while this variable only stops the *import system* from writing.
+export PYTHONDONTWRITEBYTECODE=1
 # `uv run` prepends .venv/bin to PATH; invoking the venv binaries directly
 # skips that, so test-spawned subprocesses calling bare `python3` would
 # resolve into whatever shim the workstation puts first (the v5.12.0 CI

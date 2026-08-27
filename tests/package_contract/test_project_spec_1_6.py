@@ -15,6 +15,7 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/project-spec"
@@ -46,12 +47,12 @@ def test_project_spec_1_6__successor__pins_the_root_workflow_and_preserves_1_5()
 
     predecessor_files = {
         path.relative_to(_PREDECESSOR).as_posix(): path
-        for path in _PREDECESSOR.rglob("*")
+        for path in payload_tree(_PREDECESSOR)
         if path.is_file()
     }
     successor_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path
-        for path in _SUCCESSOR.rglob("*")
+        for path in payload_tree(_SUCCESSOR)
         if path.is_file()
     }
     assert successor_files.keys() == predecessor_files.keys()

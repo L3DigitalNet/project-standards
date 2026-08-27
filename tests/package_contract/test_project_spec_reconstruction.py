@@ -39,6 +39,7 @@ from project_standards.package_contract.payload import (
 from project_standards.package_contract.projection import sync_payload_projection
 from project_standards.specs import registry as spec_registry
 from tests.package_contract.helpers import copy_minimal_repository
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/project-spec"
@@ -769,14 +770,14 @@ spec:
     monkeypatch.setattr(socket, "socket", deny_network)
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
     plan = plan_legacy_migration(repo, distribution, "5")
     assert plan.applicable, plan.findings
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before
 
@@ -822,7 +823,7 @@ spec:
         shutil.copy2(source, destination)
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
 
@@ -830,7 +831,7 @@ spec:
     assert plan.applicable, plan.findings
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before
     assert {report.package.standard_id for report in plan.reports} == {
@@ -1023,7 +1024,7 @@ source-include = ["standards/**"]
         }
     source_files = {
         path.relative_to(payload_root).as_posix(): path.read_bytes()
-        for path in payload_root.rglob("*")
+        for path in payload_tree(payload_root)
         if path.is_file()
     }
     assert wheel_files == source_files
@@ -1127,7 +1128,7 @@ source-include = ["standards/**"]
 
     monkeypatch.setattr(socket, "socket", deny_network)
     expected_effects = {provider.id: provider.effect for provider in extracted_manifest.providers}
-    before = tuple(provider_repo.rglob("*"))
+    before = tuple(payload_tree(provider_repo))
     for selected_payload in (payload, extracted_payload):
         for provider_id, (operation, snapshots) in cases.items():
             result = invoke_provider(
@@ -1149,4 +1150,4 @@ source-include = ["standards/**"]
                 )
             )
             assert result.effect is expected_effects[provider_id]
-            assert tuple(provider_repo.rglob("*")) == before
+            assert tuple(payload_tree(provider_repo)) == before

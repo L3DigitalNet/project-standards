@@ -101,6 +101,7 @@ from tests.control_plane.test_command_provider_end_to_end import (
 from tests.control_plane.test_command_providers import command_payload
 from tests.mcp_services.helpers import FULL_FIXTURE, import_mcp_services
 from tests.mcp_services.test_consumer import TOOL_RELEASE, dumped, field_names, model_config_of
+from tests.payload_tree import payload_tree
 
 # The four operations ADR 0025 approves. Nothing in the suite asserts that an
 # implementation publishes this tuple under any name (T4.2 review F15): the
@@ -1147,7 +1148,7 @@ def tree_state(repo: Path) -> dict[str, tuple[int, int, int, int, str, bytes | N
     still detected by the before/after comparison the plan names as the oracle.
     """
     captured: dict[str, tuple[int, int, int, int, str, bytes | None]] = {}
-    for path in sorted(repo.rglob("*")):
+    for path in payload_tree(repo):
         info = path.lstat()
         link = str(path.readlink()) if path.is_symlink() else ""
         content = path.read_bytes() if path.is_file() and not path.is_symlink() else None
@@ -1836,7 +1837,7 @@ def test_drift_check__create_only_stale_advisory__is_stable_and_read_only(
     repo, _request, plan = stale_create_only_plan(tmp_path / "consumer-fixture")
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
 
@@ -1874,7 +1875,7 @@ def test_drift_check__create_only_stale_advisory__is_stable_and_read_only(
     )
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before
 

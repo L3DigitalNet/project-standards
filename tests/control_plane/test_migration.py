@@ -78,6 +78,7 @@ from project_standards.validate_id import validate_id
 from tests.control_plane.helpers import installed_distribution
 from tests.control_plane.planner_helpers import previous_lock, resolution_request, write_payload
 from tests.package_compatibility.matrix import source_distribution
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FULL_ALPHA = _ROOT / "tests/fixtures/package_contract/valid/full/standards/alpha/versions/2.0"
@@ -345,7 +346,7 @@ def _legacy_repo(tmp_path: Path, yaml_text: str | None = None) -> Path:
 
 def _tree(root: Path) -> dict[str, tuple[str, bytes]]:
     result: dict[str, tuple[str, bytes]] = {}
-    for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+    for path in sorted(payload_tree(root), key=lambda item: item.relative_to(root).as_posix()):
         relative = path.relative_to(root).as_posix()
         if path.is_symlink():
             result[relative] = ("symlink", str(path.readlink()).encode())
@@ -3039,7 +3040,7 @@ def test_current_legacy_fixture_corpus_covers_namespaces_and_ownership_states() 
     }
     assert {
         path.relative_to(artifact_root).as_posix()
-        for path in artifact_root.rglob("*")
+        for path in payload_tree(artifact_root)
         if path.is_file()
     } == required
     assert "Consumer instructions before" in (artifact_root / "AGENTS.md").read_text(

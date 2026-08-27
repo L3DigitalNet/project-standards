@@ -61,6 +61,7 @@ from project_standards.validate_references import (
 )
 from tests.control_plane.planner_helpers import resolution_request
 from tests.package_contract.helpers import clone_demo_family, copy_minimal_repository
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _LEGACY_WORKFLOW = (
@@ -847,7 +848,7 @@ markdown:
     ).read_bytes()
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
     second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
@@ -857,7 +858,7 @@ markdown:
     )
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before
 
@@ -910,7 +911,7 @@ markdown:
     changed.write_bytes(changed.read_bytes() + b"\nlocal modification\n")
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
 
@@ -919,7 +920,7 @@ markdown:
     assert not plan.applicable
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before
 
@@ -1354,7 +1355,7 @@ def test_frontmatter_fresh_apply_converges_to_a_byte_level_noop(tmp_path: Path) 
     assert (repo / ".agents/skills/markdown-frontmatter/SKILL.md").is_file()
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
     second_resolution = resolution_request((payload,), previous_lock=first.next_lock)
@@ -1366,7 +1367,7 @@ def test_frontmatter_fresh_apply_converges_to_a_byte_level_noop(tmp_path: Path) 
     )
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before
 
@@ -1460,7 +1461,7 @@ source-include = ["standards/**"]
         archive.extractall(installed)
     source_files = {
         path.relative_to(_PAYLOAD).as_posix(): path.read_bytes()
-        for path in _PAYLOAD.rglob("*")
+        for path in payload_tree(_PAYLOAD)
         if path.is_file()
     }
 

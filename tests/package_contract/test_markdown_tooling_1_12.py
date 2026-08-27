@@ -15,6 +15,7 @@ from pathlib import Path
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/markdown-tooling"
@@ -76,12 +77,12 @@ def test_markdown_tooling_1_12__successor__preserves_1_11_and_indexes_complete_p
 
     predecessor_files = {
         path.relative_to(_PREDECESSOR).as_posix(): path
-        for path in _PREDECESSOR.rglob("*")
+        for path in payload_tree(_PREDECESSOR)
         if path.is_file()
     }
     successor_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path
-        for path in _SUCCESSOR.rglob("*")
+        for path in payload_tree(_SUCCESSOR)
         if path.is_file()
     }
     assert successor_files.keys() == predecessor_files.keys()

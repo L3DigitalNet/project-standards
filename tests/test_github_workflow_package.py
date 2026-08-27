@@ -58,6 +58,7 @@ from project_standards.package_contract.release import (
     classify_catalog_diff,
 )
 from project_standards.package_contract.schemas import SCHEMA_BASE
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[1]
 _FAMILY = _ROOT / "standards/github-workflow"
@@ -334,7 +335,7 @@ def _organization_findings(family_dir: Path) -> tuple[str, ...]:
     not a placeholder.
     """
     findings: list[str] = []
-    for path in sorted(family_dir.rglob("*")):
+    for path in payload_tree(family_dir):
         if not path.is_file():
             continue
         relative = path.relative_to(family_dir).as_posix()
@@ -367,7 +368,7 @@ def test_github_workflow__compiled_binary__is_the_only_undecodable_payload_file(
     # committed binary stops the exemption from silently widening to a future
     # artifact whose bytes nobody has read.
     undecodable: list[str] = []
-    for path in sorted(_PAYLOAD.rglob("*")):
+    for path in payload_tree(_PAYLOAD):
         if not path.is_file():
             continue
         try:

@@ -33,6 +33,7 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/adr"
@@ -63,9 +64,7 @@ _REQUIRED_SECTIONS = frozenset(
 
 def _files(root: Path) -> dict[str, Path]:
     return {
-        path.relative_to(root).as_posix(): path
-        for path in root.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        path.relative_to(root).as_posix(): path for path in payload_tree(root) if path.is_file()
     }
 
 
@@ -595,7 +594,7 @@ def test_adr_1_6__payload_projection__matches_successor() -> None:
     source_files = {relative: path.read_bytes() for relative, path in _files(_SUCCESSOR).items()}
     projected_links = {
         path.relative_to(_PROJECTION).as_posix(): path
-        for path in _PROJECTION.rglob("*")
+        for path in payload_tree(_PROJECTION)
         if path.is_symlink()
     }
 

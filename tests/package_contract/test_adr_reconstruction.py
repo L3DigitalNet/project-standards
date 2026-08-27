@@ -35,6 +35,7 @@ from project_standards.package_contract.payload import (
 from project_standards.package_contract.projection import sync_payload_projection
 from tests.control_plane.planner_helpers import resolution_request
 from tests.package_contract.helpers import clone_demo_family, copy_minimal_repository
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/adr"
@@ -220,7 +221,7 @@ def test_adr_legacy_provider_maps_yaml_without_fragment_output(tmp_path: Path) -
         "/markdown/adr/version",
     )
     assert [claim.disposition.value for claim in result.migration_report.claims] == ["preserve"]
-    assert not any(path.name.endswith("fragment.yml") for path in _PAYLOAD.rglob("*"))
+    assert not any(path.name.endswith("fragment.yml") for path in payload_tree(_PAYLOAD))
 
 
 def test_adr_validate_provider_uses_immutable_snapshots_and_option(tmp_path: Path) -> None:
@@ -413,7 +414,7 @@ source-include = ["standards/**"]
         }
     source_files = {
         path.relative_to(_PAYLOAD).as_posix(): path.read_bytes()
-        for path in _PAYLOAD.rglob("*")
+        for path in payload_tree(_PAYLOAD)
         if path.is_file()
     }
     assert wheel_files == source_files

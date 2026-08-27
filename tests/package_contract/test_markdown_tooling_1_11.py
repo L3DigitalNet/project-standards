@@ -37,6 +37,7 @@ from project_standards.package_contract.integrity import validate_payload_integr
 from project_standards.package_contract.payload import load_payload_manifest
 from project_standards.package_contract.projection import sync_payload_projection
 from tests.package_contract.helpers import copy_minimal_repository
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/markdown-tooling"
@@ -215,12 +216,12 @@ def test_markdown_tooling_1_11__managed_bytes__are_unchanged_from_1_10() -> None
 
     predecessor_files = {
         path.relative_to(_PREDECESSOR).as_posix(): path
-        for path in _PREDECESSOR.rglob("*")
+        for path in payload_tree(_PREDECESSOR)
         if path.is_file()
     }
     successor_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path
-        for path in _SUCCESSOR.rglob("*")
+        for path in payload_tree(_SUCCESSOR)
         if path.is_file()
     }
     assert successor_files.keys() == predecessor_files.keys()
@@ -267,12 +268,12 @@ def test_markdown_tooling_1_11__catalog_role__retains_predecessor() -> None:
 def test_markdown_tooling_1_11__payload_projection__matches_complete_successor() -> None:
     source_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path.read_bytes()
-        for path in _SUCCESSOR.rglob("*")
+        for path in payload_tree(_SUCCESSOR)
         if path.is_file()
     }
     projected_links = {
         path.relative_to(_PROJECTION).as_posix(): path
-        for path in _PROJECTION.rglob("*")
+        for path in payload_tree(_PROJECTION)
         if path.is_symlink()
     }
 

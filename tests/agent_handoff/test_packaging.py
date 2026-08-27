@@ -11,6 +11,7 @@ from pathlib import Path
 import yaml
 
 from project_standards.cli import main
+from tests.payload_tree import payload_tree
 
 _REPO = Path(__file__).parents[2]
 _SOURCE = _REPO / "standards/agent-handoff"
@@ -19,7 +20,7 @@ _V2_MANAGED = _SOURCE / "versions/1.2/provider-resources/managed"
 
 
 def _source_files() -> tuple[Path, ...]:
-    return tuple(sorted(path for path in _SOURCE.rglob("*") if path.is_file()))
+    return tuple(sorted(path for path in payload_tree(_SOURCE) if path.is_file()))
 
 
 def _legacy_mirrored_source_files() -> tuple[Path, ...]:
@@ -35,7 +36,7 @@ def test_every_standard_source_file_has_byte_identical_bundle_mirror() -> None:
     source_relatives = {path.relative_to(_SOURCE) for path in _legacy_mirrored_source_files()}
     bundled_relatives = {
         path.relative_to(_BUNDLE)
-        for path in _BUNDLE.rglob("*")
+        for path in payload_tree(_BUNDLE)
         if path.is_file()
         and path.name
         not in {"README.md", "adopt.md", "adopt.toml", "agent-summary.md", "standard.toml"}
@@ -189,7 +190,7 @@ def test_wheel_contains_complete_agent_handoff_bundle(tmp_path: Path) -> None:
     (wheel,) = tmp_path.glob("*.whl")
     names = set(zipfile.ZipFile(wheel).namelist())
 
-    for bundled in _BUNDLE.rglob("*"):
+    for bundled in payload_tree(_BUNDLE):
         if not bundled.is_file():
             continue
         relative = bundled.relative_to(_BUNDLE).as_posix()

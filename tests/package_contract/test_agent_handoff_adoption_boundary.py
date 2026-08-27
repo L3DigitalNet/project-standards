@@ -9,6 +9,7 @@ from pathlib import Path
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import ArtifactPolicy, load_payload_manifest
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/agent-handoff"
@@ -120,12 +121,12 @@ def test_agent_handoff_1_5__retained_predecessor__is_complete_and_immutable() ->
 
     predecessor_files = {
         path.relative_to(_PREDECESSOR).as_posix(): path
-        for path in _PREDECESSOR.rglob("*")
+        for path in payload_tree(_PREDECESSOR)
         if path.is_file()
     }
     successor_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path
-        for path in _SUCCESSOR.rglob("*")
+        for path in payload_tree(_SUCCESSOR)
         if path.is_file()
     }
     assert successor_files.keys() == predecessor_files.keys()
@@ -171,12 +172,12 @@ def test_agent_handoff_1_5__retained_predecessor__is_complete_and_immutable() ->
 def test_agent_handoff_1_5__payload_projection__matches_complete_successor() -> None:
     source_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path.read_bytes()
-        for path in _SUCCESSOR.rglob("*")
+        for path in payload_tree(_SUCCESSOR)
         if path.is_file()
     }
     projected_links = {
         path.relative_to(_PROJECTION).as_posix(): path
-        for path in _PROJECTION.rglob("*")
+        for path in payload_tree(_PROJECTION)
         if path.is_symlink()
     }
 

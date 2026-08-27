@@ -45,6 +45,7 @@ from project_standards.package_contract.projection import sync_payload_projectio
 from project_standards.validate_id import validate_id
 from tests.control_plane.planner_helpers import resolution_request
 from tests.package_contract.helpers import copy_minimal_repository
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/cli-documentation"
@@ -1180,7 +1181,7 @@ source-include = ["standards/**"]
         }
     source_files = {
         path.relative_to(_PAYLOAD).as_posix(): path.read_bytes()
-        for path in _PAYLOAD.rglob("*")
+        for path in payload_tree(_PAYLOAD)
         if path.is_file()
     }
     assert wheel_files == source_files

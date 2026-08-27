@@ -17,6 +17,7 @@ from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.locking import LockedControlDirectory
 from project_standards.control_plane.snapshot import safe_repository_root
 from project_standards.package_contract.projection import sync_payload_projection
+from tests.payload_tree import payload_tree
 from tests.wheel_helpers import extract_pure_python_wheel
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -39,7 +40,7 @@ def _installed_fixture(tmp_path: Path, *, tool_release: str = "5.0.0") -> Instal
 
 def _tree(root: Path) -> dict[str, tuple[str, bytes]]:
     result: dict[str, tuple[str, bytes]] = {}
-    for path in sorted(root.rglob("*")):
+    for path in payload_tree(root):
         relative = path.relative_to(root).as_posix()
         if path.is_dir():
             result[relative] = ("directory", b"")

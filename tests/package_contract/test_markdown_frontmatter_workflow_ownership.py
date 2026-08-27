@@ -48,6 +48,7 @@ from tests.package_contract.helpers import (
     clone_demo_family,
     copy_minimal_repository,
 )
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/markdown-frontmatter"
@@ -160,7 +161,7 @@ def _v4_consumer(
 def _repo_snapshot(repo: Path) -> dict[str, bytes]:
     return {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
 

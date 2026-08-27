@@ -38,6 +38,7 @@ from tests.control_plane.planner_helpers import (
     resolution_request,
     write_payload,
 )
+from tests.payload_tree import payload_tree
 
 _CURRENT_SECRET = b"api_token = current-secret-value\n"
 _DESIRED_SECRET = b"api_token = desired-secret-value\n"
@@ -59,7 +60,7 @@ class _RestoreFixture:
 
 def _tree_snapshot(root: Path) -> dict[str, tuple[str, bytes]]:
     snapshot: dict[str, tuple[str, bytes]] = {}
-    for path in sorted(root.rglob("*")):
+    for path in payload_tree(root):
         relative = path.relative_to(root).as_posix()
         if path.is_symlink():
             snapshot[relative] = ("symlink", path.readlink().as_posix().encode())
@@ -347,7 +348,9 @@ def test_tc_t7_003_restore_apply_rejects_post_preview_target_type_race(
     else:
         assert fixture.target.is_dir()
     assert outside.read_bytes() == _RACED_SECRET
-    assert not any(path.name.startswith(".project-standards-") for path in fixture.repo.rglob("*"))
+    assert not any(
+        path.name.startswith(".project-standards-") for path in payload_tree(fixture.repo)
+    )
 
 
 def test_tc_t7_003_restore_rejects_absent_target_with_missing_parent(
@@ -391,7 +394,9 @@ def test_tc_t7_003_restore_apply_rejects_parent_identity_race_without_creating_i
     assert result.error_code == "CP-STALE-PLAN"
     assert not parent.exists()
     assert (moved_parent / "tool.txt").read_bytes() == _CURRENT_SECRET
-    assert not any(path.name.startswith(".project-standards-") for path in moved_parent.rglob("*"))
+    assert not any(
+        path.name.startswith(".project-standards-") for path in payload_tree(moved_parent)
+    )
 
 
 def _ineligible_fixture(tmp_path: Path, kind: str) -> _RestoreFixture:

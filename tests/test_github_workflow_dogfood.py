@@ -51,6 +51,7 @@ from project_standards.package_contract.payload import (
     ProviderOperation,
     load_payload_manifest,
 )
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[1]
 _FAMILY = _ROOT / "standards/github-workflow"
@@ -226,7 +227,7 @@ def _delivered_files(repo: Path) -> tuple[str, ...]:
     """
     control_state = {".standards/catalog.toml", ".standards/config.toml", ".standards/lock.toml"}
     found: list[str] = []
-    for path in repo.rglob("*"):
+    for path in payload_tree(repo):
         if not path.is_file():
             continue
         relative = path.relative_to(repo).as_posix()

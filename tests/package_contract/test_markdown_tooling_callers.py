@@ -37,6 +37,7 @@ from project_standards.package_contract.payload import (
 from project_standards.package_contract.projection import sync_payload_projection
 from tests.issue_regressions.tool_oracle import prettier_differences
 from tests.package_contract.helpers import copy_minimal_repository
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/markdown-tooling"
@@ -116,7 +117,7 @@ role = "default"
 
 def _tree(root: Path) -> dict[str, tuple[str, bytes]]:
     snapshot: dict[str, tuple[str, bytes]] = {}
-    for path in sorted(root.rglob("*")):
+    for path in payload_tree(root):
         relative = path.relative_to(root).as_posix()
         if path.is_symlink():
             snapshot[relative] = ("symlink", path.readlink().as_posix().encode())

@@ -53,6 +53,8 @@ from typing import Any
 
 import pytest
 
+from tests.payload_tree import payload_tree
+
 ADAPTER_PACKAGE = "project_standards.mcp_server"
 
 # Frozen by §5.5 as amended 2026-07-29 (T5 RED review F3): the explicit input
@@ -227,7 +229,7 @@ def tree_state(root: Path) -> dict[str, tuple[int, int, str, str, int, int]]:
     rewrite-then-restore pass. Unprivileged code cannot forge ``st_ctime_ns``.
     """
     state: dict[str, tuple[int, int, str, str, int, int]] = {}
-    for path in sorted(root.rglob("*")):
+    for path in payload_tree(root):
         info = path.lstat()
         is_link = stat.S_ISLNK(info.st_mode)
         target = str(path.readlink()) if is_link else ""

@@ -50,6 +50,7 @@ from project_standards.package_contract.payload import (
     ProviderPhase,
 )
 from project_standards.package_contract.repository import build_package_repository
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _ALL_NAMESPACES = (
@@ -473,7 +474,7 @@ def source_distribution(target: Path) -> InstalledDistribution:
 
 def _tree_snapshot(repo: Path) -> dict[str, tuple[str, bytes | str, int]]:
     snapshot: dict[str, tuple[str, bytes | str, int]] = {}
-    for path in sorted(repo.rglob("*"), key=lambda item: item.as_posix().encode()):
+    for path in sorted(payload_tree(repo), key=lambda item: item.as_posix().encode()):
         relative = path.relative_to(repo).as_posix()
         mode = path.lstat().st_mode
         if stat.S_ISLNK(mode):
@@ -543,7 +544,7 @@ def _assert_declared_validators(
                 continue
             repository_paths = tuple(
                 sorted(
-                    (path.relative_to(repo).as_posix() for path in repo.rglob("*")),
+                    (path.relative_to(repo).as_posix() for path in payload_tree(repo)),
                     key=str.encode,
                 )
             )

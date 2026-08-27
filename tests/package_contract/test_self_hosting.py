@@ -42,6 +42,7 @@ from project_standards.package_contract.release import (
     ToolVersions,
     classify_catalog_diff,
 )
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/standard-bundle-authoring"
@@ -297,7 +298,7 @@ def test_authoring_workflow_validates_indexes_catalogs_and_projects(tmp_path: Pa
     assert sync_payload_projection(root, check=True) == ()
     projected = root / "src/project_standards/payloads/standard-bundle-authoring/2.0"
     assert projected.is_dir()
-    assert all(path.is_symlink() for path in projected.rglob("*") if path.is_file())
+    assert all(path.is_symlink() for path in payload_tree(projected) if path.is_file())
 
 
 def test_authoring_payload_is_byte_identical_in_the_built_wheel(tmp_path: Path) -> None:
@@ -339,7 +340,7 @@ source-include = ["standards/**"]
         }
     source_files = {
         path.relative_to(_PAYLOAD).as_posix(): path.read_bytes()
-        for path in _PAYLOAD.rglob("*")
+        for path in payload_tree(_PAYLOAD)
         if path.is_file()
     }
     assert wheel_files == source_files

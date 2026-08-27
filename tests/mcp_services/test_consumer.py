@@ -56,6 +56,7 @@ from project_standards.control_plane.state import (
 )
 from project_standards.package_contract.repository import build_package_repository
 from tests.mcp_services.helpers import FULL_FIXTURE, build_installed_tree, import_mcp_services
+from tests.payload_tree import payload_tree
 
 TOOL_RELEASE = "5.0.0"
 
@@ -233,7 +234,7 @@ def tree_state(repo: Path) -> dict[str, tuple[int, int, str, bytes | None]]:
     replaces a directory with a file would pass a bytes-only comparison.
     """
     captured: dict[str, tuple[int, int, str, bytes | None]] = {}
-    for path in sorted(repo.rglob("*")):
+    for path in payload_tree(repo):
         info = path.lstat()
         link = str(path.readlink()) if path.is_symlink() else ""
         content = path.read_bytes() if path.is_file() and not path.is_symlink() else None

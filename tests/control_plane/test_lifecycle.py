@@ -29,6 +29,7 @@ from tests.control_plane.planner_helpers import (
     resolution_request,
     write_payload,
 )
+from tests.payload_tree import payload_tree
 
 
 def _materialize(repo: Path, plan: ReconciliationPlan) -> None:
@@ -48,7 +49,7 @@ def _materialize(repo: Path, plan: ReconciliationPlan) -> None:
             path.chmod(int(target.mode, 8))
     for relative in plan.namespace_prunes:
         path = repo / relative
-        for directory in sorted(path.rglob("*"), reverse=True):
+        for directory in sorted(payload_tree(path), reverse=True):
             if directory.is_dir():
                 directory.rmdir()
         path.rmdir()

@@ -34,6 +34,7 @@ from tests.issue_regressions.tool_oracle import (
     prettier_differences,
     prettier_workflow,
 )
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/markdown-tooling"
@@ -271,12 +272,12 @@ def test_t9_projection__successor_family_links_cover_every_payload_file() -> Non
     projection = _ROOT / "src/project_standards/payloads/markdown-tooling/1.9"
     source_files = {
         path.relative_to(_V19).as_posix(): path.read_bytes()
-        for path in _V19.rglob("*")
+        for path in payload_tree(_V19)
         if path.is_file()
     }
     links = {
         path.relative_to(projection).as_posix(): path
-        for path in projection.rglob("*")
+        for path in payload_tree(projection)
         if path.is_symlink()
     }
 

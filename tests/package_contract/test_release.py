@@ -26,6 +26,7 @@ from project_standards.package_contract.release import (
     classify_catalog_diff,
     load_git_release_snapshot,
 )
+from tests.payload_tree import payload_tree
 
 _FIXTURE = Path(__file__).resolve().parents[1] / "fixtures/package_contract/valid/minimal"
 _DIGEST_A = Sha256Digest("sha256:1ec8d07e07de0defe61804181b75e9139a7d6e9ed8540f677138efa8d2335dcb")
@@ -518,7 +519,7 @@ def _rewrite_declared_digests(repository: Path, payload_dir: Path) -> None:
     """
     entries = sorted(
         (path.relative_to(payload_dir).as_posix(), _sha256(path.read_bytes()))
-        for path in payload_dir.rglob("*")
+        for path in payload_tree(payload_dir)
         if path.is_file()
     )
     canonical = b"".join(

@@ -28,6 +28,7 @@ from project_standards.package_contract.payload import JsonObject, load_payload_
 from project_standards.package_contract.projection import sync_payload_projection
 from project_standards.specs.cli import run
 from tests.package_contract.helpers import copy_minimal_repository
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[1]
 _FAMILY = _ROOT / "standards/project-spec"
@@ -671,7 +672,7 @@ def test_new_stdout_uses_render_preview_and_writes_nothing(
     _enable_selected(repo, distribution)
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
 
@@ -705,7 +706,7 @@ def test_new_stdout_uses_render_preview_and_writes_nothing(
     assert "spec_id: SPEC-7F3Q" in capsys.readouterr().out
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before
 

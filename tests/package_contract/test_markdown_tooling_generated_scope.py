@@ -29,6 +29,7 @@ from project_standards.package_contract.payload import (
     load_payload_manifest,
 )
 from tests.issue_regressions.tool_oracle import markdownlint_findings, prettier_differences
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/markdown-tooling"
@@ -250,12 +251,12 @@ def test_projection__successor_family_links_cover_every_payload_file() -> None:
     projection = _ROOT / "src/project_standards/payloads/markdown-tooling/1.10"
     source_files = {
         path.relative_to(_V110).as_posix(): path.read_bytes()
-        for path in _V110.rglob("*")
+        for path in payload_tree(_V110)
         if path.is_file()
     }
     links = {
         path.relative_to(projection).as_posix(): path
-        for path in projection.rglob("*")
+        for path in payload_tree(projection)
         if path.is_symlink()
     }
 

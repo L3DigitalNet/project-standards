@@ -21,6 +21,7 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/markdown-frontmatter"
@@ -55,13 +56,13 @@ def test_markdown_frontmatter_1_9__successor__is_complete_and_preserves_1_8() ->
 
     predecessor_files = {
         path.relative_to(_PREDECESSOR).as_posix(): path
-        for path in _PREDECESSOR.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        for path in payload_tree(_PREDECESSOR)
+        if path.is_file()
     }
     successor_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path
-        for path in _SUCCESSOR.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        for path in payload_tree(_SUCCESSOR)
+        if path.is_file()
     }
 
     assert successor_files.keys() == predecessor_files.keys()
@@ -164,12 +165,12 @@ def test_markdown_frontmatter_1_9__catalog_role__stays_retained_behind_the_succe
 def test_markdown_frontmatter_1_9__payload_projection__matches_successor() -> None:
     source_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path.read_bytes()
-        for path in _SUCCESSOR.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        for path in payload_tree(_SUCCESSOR)
+        if path.is_file()
     }
     projected_links = {
         path.relative_to(_PROJECTION).as_posix(): path
-        for path in _PROJECTION.rglob("*")
+        for path in payload_tree(_PROJECTION)
         if path.is_symlink()
     }
 

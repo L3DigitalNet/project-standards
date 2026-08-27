@@ -38,6 +38,7 @@ from tests.package_compatibility.matrix import (
     partial_legacy_config,
     seed_consumer_pyproject,
 )
+from tests.payload_tree import payload_tree
 
 pytestmark = pytest.mark.compatibility
 
@@ -444,7 +445,7 @@ def test_modified_artifact_state_fixture_is_fail_closed_without_writes(
     shutil.copyfile(_ALL_NAMESPACES, repo / ".project-standards.yml")
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
 
@@ -458,6 +459,6 @@ def test_modified_artifact_state_fixture_is_fail_closed_without_writes(
     assert not (repo / ".standards").exists()
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before

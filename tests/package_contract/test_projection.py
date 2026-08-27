@@ -17,6 +17,7 @@ from project_standards.package_contract.projection import (
     sync_payload_projection,
 )
 from tests.package_contract.helpers import copy_minimal_repository
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 
@@ -31,7 +32,7 @@ def _prepare_repository(tmp_path: Path) -> Path:
 
 def _snapshot(root: Path) -> dict[str, tuple[str, bytes | str]]:
     result: dict[str, tuple[str, bytes | str]] = {}
-    for path in sorted(root.rglob("*")):
+    for path in payload_tree(root):
         relative = path.relative_to(root).as_posix()
         if path.is_symlink():
             result[relative] = ("symlink", path.readlink().as_posix())
@@ -76,7 +77,7 @@ def test_projection_plan_and_apply_create_only_relative_file_symlinks(
     assert (root / "src/project_standards/families/demo/README.md").is_symlink()
 
     projection = root / "src/project_standards/payloads"
-    links = sorted(path for path in projection.rglob("*") if path.is_symlink())
+    links = sorted(path for path in payload_tree(projection) if path.is_symlink())
     assert len(links) == 5
     for link in links:
         assert not link.readlink().is_absolute()
@@ -96,12 +97,12 @@ def test_cli_documentation_1_2_projection__canonical_sources__match_symlinks() -
     assert projection.is_dir()
     source_files = {
         path.relative_to(source).as_posix(): path.read_bytes()
-        for path in source.rglob("*")
+        for path in payload_tree(source)
         if path.is_file()
     }
     projected_links = {
         path.relative_to(projection).as_posix(): path
-        for path in projection.rglob("*")
+        for path in payload_tree(projection)
         if path.is_symlink()
     }
     assert source_files
@@ -324,7 +325,7 @@ def test_current_root_build__direct_and_sdist_wheels__match_projected_assets(
     expected_assets = {
         path.relative_to(root / "src").as_posix(): path.resolve(strict=True).read_bytes()
         for directory in projected_directories
-        for path in sorted((package / directory).rglob("*"))
+        for path in payload_tree(package / directory)
         if path.is_file()
     }
     prefixes = tuple(f"project_standards/{directory}/" for directory in projected_directories)

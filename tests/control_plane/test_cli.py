@@ -23,6 +23,7 @@ from project_standards.control_plane.providers import ProviderInvocation, Provid
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.payload import ProviderEffect
 from tests.control_plane.helpers import installed_distribution
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FULL_ALPHA = _ROOT / "tests/fixtures/package_contract/valid/full/standards/alpha/versions/2.0"
@@ -55,7 +56,7 @@ def _legacy_repo(root: Path, *, extra_yaml: str = "") -> Path:
 
 def _tree_snapshot(root: Path) -> dict[str, tuple[str, bytes]]:
     snapshot: dict[str, tuple[str, bytes]] = {}
-    for path in sorted(root.rglob("*")):
+    for path in payload_tree(root):
         relative = path.relative_to(root).as_posix()
         if path.is_symlink():
             snapshot[relative] = ("symlink", path.readlink().as_posix().encode())
@@ -189,7 +190,7 @@ def test_render_emits_selected_provider_content_without_planning_inputs_or_write
     _use_distribution(monkeypatch, distribution)
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
 
@@ -198,7 +199,7 @@ def test_render_emits_selected_provider_content_without_planning_inputs_or_write
     assert capsys.readouterr().out == "[alpha]\nenabled = true\n"
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before
 
@@ -449,7 +450,7 @@ def test_init_migration_blocked_apply_explicitly_refuses_without_writes(
     )
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     }
     arguments = [
@@ -469,7 +470,7 @@ def test_init_migration_blocked_apply_explicitly_refuses_without_writes(
     assert refused["plan"]["findings"][0]["code"] == "CP-MIGRATION-STATE"
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before
 
@@ -480,7 +481,7 @@ def test_init_migration_blocked_apply_explicitly_refuses_without_writes(
     assert "no repository writes were performed" in human.err
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in repo.rglob("*")
+        for path in payload_tree(repo)
         if path.is_file()
     } == before
 

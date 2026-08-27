@@ -21,6 +21,7 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).parents[2]
 _FAMILY = _ROOT / "standards/agent-handoff"
@@ -140,12 +141,12 @@ def test_agent_handoff_1_10__registrations__invoke_the_binary_without_an_interpr
 def test_agent_handoff_1_10__payload_projection__matches_source() -> None:
     source_files = {
         path.relative_to(_PAYLOAD).as_posix(): path.read_bytes()
-        for path in _PAYLOAD.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        for path in payload_tree(_PAYLOAD)
+        if path.is_file()
     }
     projected_links = {
         path.relative_to(_PROJECTION).as_posix(): path
-        for path in _PROJECTION.rglob("*")
+        for path in payload_tree(_PROJECTION)
         if path.is_symlink()
     }
 

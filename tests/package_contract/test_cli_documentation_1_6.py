@@ -21,6 +21,7 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/cli-documentation"
@@ -100,11 +101,13 @@ def test_cli_docs_1_6__predecessor_is_immutable_and_successor_is_indexed() -> No
     successor = _payload_at(_SUCCESSOR)
     predecessor_files = {
         path.relative_to(_PREDECESSOR).as_posix()
-        for path in _PREDECESSOR.rglob("*")
+        for path in payload_tree(_PREDECESSOR)
         if path.is_file()
     }
     successor_files = {
-        path.relative_to(_SUCCESSOR).as_posix() for path in _SUCCESSOR.rglob("*") if path.is_file()
+        path.relative_to(_SUCCESSOR).as_posix()
+        for path in payload_tree(_SUCCESSOR)
+        if path.is_file()
     }
 
     assert predecessor.integrity.aggregate_digest.value == _PREDECESSOR_DIGEST

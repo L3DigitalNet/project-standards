@@ -61,6 +61,7 @@ from project_standards.package_contract.payload import (
 from project_standards.package_contract.repository import build_package_repository
 from tests.control_plane.planner_helpers import resolution_request
 from tests.package_contract.helpers import assert_schema_payload_references
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/python-tooling"
@@ -245,8 +246,8 @@ def test_python_tooling_1_15__predecessor_tree_and_activation_stay_exact() -> No
             stat.S_IMODE(path.stat().st_mode),
             hashlib.sha256(path.read_bytes()).hexdigest(),
         )
-        for path in _V114.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        for path in payload_tree(_V114)
+        if path.is_file()
     }
     assert actual == {path: (0o644, digest) for path, digest in _V114_FILES.items()}
     assert (
@@ -589,7 +590,7 @@ def test_python_tooling_1_15__machine_readable_payload__carries_no_1_14_referenc
 
     stale = {
         path.relative_to(_V115).as_posix()
-        for path in _V115.rglob("*")
+        for path in payload_tree(_V115)
         if path.is_file()
         and path.suffix in {".json", ".toml", ".yml"}
         and re.search(
@@ -618,13 +619,11 @@ def test_python_tooling_1_15__migration_edges__retarget_without_a_new_edge() -> 
 
 def test_python_tooling_1_15__projection_and_index__are_complete() -> None:
     source_files = {
-        path.relative_to(_V115).as_posix()
-        for path in _V115.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        path.relative_to(_V115).as_posix() for path in payload_tree(_V115) if path.is_file()
     }
     projected_files = {
         path.relative_to(_PROJECTION_115).as_posix()
-        for path in _PROJECTION_115.rglob("*")
+        for path in payload_tree(_PROJECTION_115)
         if path.is_symlink()
     }
     assert projected_files == source_files
@@ -633,7 +632,7 @@ def test_python_tooling_1_15__projection_and_index__are_complete() -> None:
         for relative in source_files
     )
     assert not [
-        path for path in _PROJECTION_115.rglob("*") if path.is_file() and not path.is_symlink()
+        path for path in payload_tree(_PROJECTION_115) if path.is_file() and not path.is_symlink()
     ]
 
     standard = tomllib.loads((_FAMILY / "standard.toml").read_text(encoding="utf-8"))

@@ -23,6 +23,7 @@ from project_standards.agent_handoff.validation import (
     validate_repository,
 )
 from project_standards.cli import main
+from tests.payload_tree import payload_tree
 
 POLICY_PATH = (
     Path(__file__).parents[2] / "src/project_standards/bundles/agent-handoff/resources/policy.toml"
@@ -65,7 +66,7 @@ def _adopt(
 def _snapshot(root: Path) -> dict[str, bytes]:
     return {
         path.relative_to(root).as_posix(): path.read_bytes()
-        for path in sorted(root.rglob("*"))
+        for path in payload_tree(root)
         if path.is_file() and not path.is_symlink()
     }
 

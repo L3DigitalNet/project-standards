@@ -44,6 +44,7 @@ from project_standards.package_contract.payload import (
 )
 from project_standards.package_contract.projection import sync_payload_projection
 from tests.package_contract.helpers import copy_minimal_repository
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/agent-handoff"
@@ -1409,7 +1410,7 @@ source-include = ["standards/**"]
         archive.extractall(extracted)
     source_files = {
         path.relative_to(payload_root).as_posix(): path.read_bytes()
-        for path in payload_root.rglob("*")
+        for path in payload_tree(payload_root)
         if path.is_file()
     }
     assert wheel_files == source_files

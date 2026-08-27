@@ -14,6 +14,7 @@ from project_standards.control_plane.executor import ApplyRequest, apply_reconci
 from project_standards.control_plane.planner import PlannerRequest, plan_reconciliation
 from project_standards.package_contract.projection import sync_payload_projection
 from tests.control_plane.planner_helpers import resolution_request, write_payload
+from tests.payload_tree import payload_tree
 from tests.wheel_helpers import extract_pure_python_wheel
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -23,7 +24,7 @@ _FULL = _ROOT / "tests/fixtures/package_contract/valid/full"
 def _tree_bytes(repo: Path) -> dict[str, bytes]:
     return {
         path.relative_to(repo).as_posix(): path.read_bytes()
-        for path in sorted(repo.rglob("*"))
+        for path in payload_tree(repo)
         if path.is_file()
     }
 

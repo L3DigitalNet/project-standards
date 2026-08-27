@@ -10,6 +10,7 @@ from pathlib import Path
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/markdown-frontmatter"
@@ -36,12 +37,12 @@ def test_markdown_frontmatter_1_8__successor__is_complete_and_preserves_1_7() ->
     """A released predecessor stays byte-stable while its successor is complete."""
     predecessor_files = {
         path.relative_to(_PREDECESSOR).as_posix(): path.read_bytes()
-        for path in _PREDECESSOR.rglob("*")
+        for path in payload_tree(_PREDECESSOR)
         if path.is_file()
     }
     successor_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path.read_bytes()
-        for path in _SUCCESSOR.rglob("*")
+        for path in payload_tree(_SUCCESSOR)
         if path.is_file()
     }
 
@@ -63,11 +64,11 @@ def test_markdown_frontmatter_1_8__predecessor__matches_the_released_baseline() 
         ).stdout.splitlines()
     )
     local_paths = {
-        path.relative_to(_ROOT).as_posix() for path in _PREDECESSOR.rglob("*") if path.is_file()
+        path.relative_to(_ROOT).as_posix() for path in payload_tree(_PREDECESSOR) if path.is_file()
     }
     assert local_paths == released_paths
 
-    for path in _PREDECESSOR.rglob("*"):
+    for path in payload_tree(_PREDECESSOR):
         if not path.is_file():
             continue
         relative = path.relative_to(_ROOT).as_posix()

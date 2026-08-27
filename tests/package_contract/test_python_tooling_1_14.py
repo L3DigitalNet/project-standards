@@ -39,6 +39,7 @@ from project_standards.package_contract.payload import (
     load_payload_manifest,
 )
 from tests.control_plane.planner_helpers import resolution_request
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/python-tooling"
@@ -228,7 +229,7 @@ def test_python_tooling_1_14__predecessor_tree_and_activation_stay_exact() -> No
             stat.S_IMODE(path.stat().st_mode),
             hashlib.sha256(path.read_bytes()).hexdigest(),
         )
-        for path in _V113.rglob("*")
+        for path in payload_tree(_V113)
         if path.is_file()
     }
     assert actual == {path: (0o644, digest) for path, digest in _V113_FILES.items()}
@@ -492,11 +493,11 @@ def test_python_tooling_1_14__versioned_guidance_matches_verified_migrations() -
 def test_python_tooling_1_14__source_projection_and_catalog_are_complete() -> None:
     _require_candidate()
     source_files = {
-        path.relative_to(_V114).as_posix() for path in _V114.rglob("*") if path.is_file()
+        path.relative_to(_V114).as_posix() for path in payload_tree(_V114) if path.is_file()
     }
     projected_files = {
         path.relative_to(_PROJECTION_114).as_posix()
-        for path in _PROJECTION_114.rglob("*")
+        for path in payload_tree(_PROJECTION_114)
         if path.is_symlink()
     }
     assert projected_files == source_files
@@ -531,6 +532,6 @@ def test_python_tooling_1_14__projection_contains_only_symlinks() -> None:
     _require_candidate()
     assert _PROJECTION_114.is_dir()
     assert not [
-        path for path in _PROJECTION_114.rglob("*") if path.is_file() and not path.is_symlink()
+        path for path in payload_tree(_PROJECTION_114) if path.is_file() and not path.is_symlink()
     ]
-    assert all(path.readlink() for path in _PROJECTION_114.rglob("*") if path.is_symlink())
+    assert all(path.readlink() for path in payload_tree(_PROJECTION_114) if path.is_symlink())

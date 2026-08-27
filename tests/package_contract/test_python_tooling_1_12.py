@@ -50,6 +50,7 @@ from tests.package_contract.helpers import (
     ruff_value,
     selects_ruff,
 )
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/python-tooling"
@@ -1009,12 +1010,12 @@ def test_python_tooling_1_12__payload_projection__matches_successor() -> None:
     _require_payload(_V112)
     source_files = {
         path.relative_to(_V112).as_posix(): path.read_bytes()
-        for path in _V112.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        for path in payload_tree(_V112)
+        if path.is_file()
     }
     projected_links = {
         path.relative_to(_PROJECTION).as_posix(): path
-        for path in _PROJECTION.rglob("*")
+        for path in payload_tree(_PROJECTION)
         if path.is_symlink()
     }
 

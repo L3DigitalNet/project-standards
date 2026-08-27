@@ -71,6 +71,7 @@ from tests.mcp_services.test_providers import (
     tree_state,
     worker_identity,
 )
+from tests.payload_tree import payload_tree
 
 # The four ADR-approved operations paired with the fixture provider that
 # declares each one.
@@ -261,7 +262,7 @@ def test_python_callers_share_one_control_plane_transport_implementation() -> No
 
 def ipc_artifacts(scratch: Path) -> list[str]:
     """Return every filesystem artifact left inside the dedicated IPC directory."""
-    return sorted(item.relative_to(scratch).as_posix() for item in scratch.rglob("*"))
+    return sorted(item.relative_to(scratch).as_posix() for item in payload_tree(scratch))
 
 
 @requires_fd_introspection

@@ -23,6 +23,7 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/project-spec"
@@ -70,9 +71,7 @@ _SUCCESSOR_CHANGES = frozenset(
 
 def _files(root: Path) -> dict[str, Path]:
     return {
-        path.relative_to(root).as_posix(): path
-        for path in root.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        path.relative_to(root).as_posix(): path for path in payload_tree(root) if path.is_file()
     }
 
 
@@ -245,12 +244,12 @@ def test_project_spec_1_9__identity_and_conformance_guidance_are_complete() -> N
 def test_project_spec_1_9__projection_and_unadvertised_catalog_role_are_exact() -> None:
     source_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path.read_bytes()
-        for path in _SUCCESSOR.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        for path in payload_tree(_SUCCESSOR)
+        if path.is_file()
     }
     projected_links = {
         path.relative_to(_PROJECTION).as_posix(): path
-        for path in _PROJECTION.rglob("*")
+        for path in payload_tree(_PROJECTION)
         if path.is_symlink()
     }
     assert projected_links.keys() == source_files.keys()

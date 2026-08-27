@@ -11,11 +11,12 @@ from project_standards.agent_handoff.paths import RepositoryRoot
 from project_standards.agent_handoff.planning import apply_adoption, plan_adoption
 from project_standards.cli import main
 from project_standards.control_plane.distribution import InstalledDistribution
+from tests.payload_tree import payload_tree
 
 
 def _snapshot(root: Path) -> dict[str, tuple[str, bytes | str]]:
     snapshot: dict[str, tuple[str, bytes | str]] = {}
-    for path in sorted(root.rglob("*")):
+    for path in payload_tree(root):
         relative = path.relative_to(root).as_posix()
         if path.is_symlink():
             snapshot[relative] = ("symlink", str(path.readlink()))

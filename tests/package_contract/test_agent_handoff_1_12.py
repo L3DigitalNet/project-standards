@@ -15,6 +15,7 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
+from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/agent-handoff"
@@ -41,9 +42,7 @@ _LEGACY_INTEGRATION_RESOURCES = {
 
 def _files(root: Path) -> dict[str, Path]:
     return {
-        path.relative_to(root).as_posix(): path
-        for path in root.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
+        path.relative_to(root).as_posix(): path for path in payload_tree(root) if path.is_file()
     }
 
 
@@ -142,7 +141,7 @@ def test_agent_handoff_1_12__launcher_and_projection__preserve_package_bytes() -
     source_files = {relative: path.read_bytes() for relative, path in _files(_SUCCESSOR).items()}
     projected_links = {
         path.relative_to(_PROJECTION).as_posix(): path
-        for path in _PROJECTION.rglob("*")
+        for path in payload_tree(_PROJECTION)
         if path.is_symlink()
     }
     assert projected_links.keys() == source_files.keys()

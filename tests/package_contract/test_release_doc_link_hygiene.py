@@ -68,6 +68,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.payload_tree import payload_tree
+
 _ROOT = Path(__file__).resolve().parents[2]
 _STANDARDS_ROOT = _ROOT / "standards"
 
@@ -162,8 +164,8 @@ def _find_mutable_refs(version_dir: Path) -> list[str]:
     """Return `relative/path:lineno` for every mutable self-referential link."""
     exclude = _legacy_reference_paths(version_dir)
     violations: list[str] = []
-    for path in sorted(version_dir.rglob("*")):
-        if path.is_dir() or "__pycache__" in path.parts:
+    for path in payload_tree(version_dir):
+        if path.is_dir():
             continue
         rel = path.relative_to(version_dir).as_posix()
         if rel in exclude:
