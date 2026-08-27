@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'index-xxxxxx-replace-with-readable-slug' # format: {doc_type}-{6-char base36 token}-{frozen slug} — see the standard's Formatting rules
+id: 'index-XXXXXX-replace-with-readable-slug' # format: {doc_type}-{6-char base36 token}-{frozen slug} — see the standard's Formatting rules
 title: 'Human Title'
 description: 'One-sentence description of this directory.'
 doc_type: 'index'

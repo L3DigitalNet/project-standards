@@ -11,7 +11,7 @@ Every managed document supports this minimal form. These eleven fields are requi
 ```yaml
 ---
 schema_version: '1.1'
-id: 'note-xxxxxx-human-title'
+id: 'note-XXXXXX-human-title'
 title: 'Human Title'
 description: 'One-sentence description of the document.'
 doc_type: 'note'
@@ -31,7 +31,7 @@ Use this richer form for most project documentation.
 ```yaml
 ---
 schema_version: '1.1'
-id: 'note-xxxxxx-human-title'
+id: 'note-XXXXXX-human-title'
 title: 'Human Title'
 description: 'One-sentence description of the document.'
 doc_type: 'note'

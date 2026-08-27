@@ -9,7 +9,7 @@ Most managed documents should use the standard profile:
 ```yaml
 ---
 schema_version: '1.1'
-id: 'note-xxxxxx-human-title'
+id: 'note-XXXXXX-human-title'
 title: 'Human Title'
 description: 'One-sentence description of the document.'
 doc_type: 'note'
