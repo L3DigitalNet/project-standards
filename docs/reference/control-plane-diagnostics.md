@@ -6,7 +6,7 @@ description: 'Reference for every CP- diagnostic code the reconcile, init, rende
 doc_type: 'reference'
 status: 'active'
 created: '2026-08-26'
-updated: '2026-08-26'
+updated: '2026-08-27'
 reviewed: '2026-08-26'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -88,11 +88,23 @@ An apply failure names the stage that refused. The executor rechecks every preco
 | `CP-APPLY-STAGE` | Content could not be staged before publication. | The staged temporary write failed, produced zero bytes, or a catalog refresh target does not share the control-plane filesystem. | Check free space, permissions, and that `.standards/` is not on a separate filesystem, then retry. |
 | `CP-APPLY-PUBLISH` | The staged replacement could not be published. | The atomic removal, replacement, namespace prune, control-file write, or lock write failed at the last step. | Inspect the reported path for permissions or filesystem errors, then rerun the preview and apply again. |
 | `CP-APPLY-FAILED` | An apply failed with no more specific code. | The generic classification for an apply refusal the executor could not attribute to one stage. | Read the detail, resolve the reported state, rerun the preview, and retry. |
-| `CP-VERIFY` | Post-apply verification refused the result. | A published target changed before verification, a verification provider failed or reported the wrong effect, or verification returned an error. | Re-run the read-only preview to see the current state before making further changes; the published bytes are on disk but unverified. |
+| `CP-VERIFY` | Post-apply verification refused the result. | A published target changed before verification, a verification provider failed or reported the wrong effect, or verification returned an error. | Read the emitted finding: a published-target refusal names the offending target in `path` and its mismatch kind in `locus` (see below). Re-run the read-only preview to see the current state before making further changes; the published bytes are on disk but unverified. |
 | `CP-CATALOG-ROLLBACK` | The committed catalog could not be restored after an apply failure. | A catalog refresh failed and rolling `.standards/catalog.toml` back also failed. | Restore `.standards/catalog.toml` from version control before running any further control-plane command. |
 | `CP-AUTHORING-PLAN` | An authoring plan is not a complete, unambiguous set of actions. | The plan repeats a target, carries a package refusal, is not whole-file, or a replacement was never staged. | Rebuild the authoring plan; this is an internal-consistency refusal, not a repository condition. |
 | `CP-AUTHORING-PUBLISH` | An authoring replacement could not be published. | The authoring removal or replacement failed at the filesystem. | Check the target's permissions and parent directory, then retry. |
 | `CP-MIGRATION-REMOVE` | Legacy state could not be retired after a migration. | Removing `.project-standards.yml` or a recognized empty legacy directory failed. | Remove the reported legacy path by hand once the migration is verified. |
+
+### `CP-VERIFY` published-target mismatch kinds
+
+When post-apply verification rejects a published target, the reported finding carries the target path in `path` and one of these kinds in `locus`, repeated in the message. `CP-VERIFY` raised by a verification provider carries that provider's own findings instead.
+
+| Kind | Meaning |
+| --- | --- |
+| `missing` | The plan requires a file at the path and nothing is there — a target deleted between planning and verification, including one the plan only holds unchanged. |
+| `entry-kind` | Something other than a regular file occupies the path (a directory, a symlink, or another entry kind). |
+| `content` | The bytes on disk differ from the reviewed plan. The finding publishes the planned and observed content digests; consumer bytes are never included. |
+| `mode` | The bytes match but the file mode does not match the planned mode. |
+| `removal-present` | The plan asserts the path is absent after apply — a removal, or a create-only unit the consumer deleted — but an entry is present. |
 
 ## Managed restore
 

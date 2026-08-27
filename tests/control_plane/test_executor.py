@@ -13,8 +13,12 @@ from pathlib import Path, PurePosixPath
 import pytest
 
 import project_standards.control_plane.executor as executor
-from project_standards.control_plane.codec import parse_lock, render_lock
-from project_standards.control_plane.diagnostics import ActionKind, ControlFinding
+from project_standards.control_plane.codec import content_digest, parse_lock, render_lock
+from project_standards.control_plane.diagnostics import (
+    ActionKind,
+    ControlFinding,
+    findings_to_jsonable,
+)
 from project_standards.control_plane.executor import (
     ApplyRequest,
     ApplyResult,
@@ -867,6 +871,89 @@ def test_apply_converges_a_deleted_create_only_target_whose_policy_turned_manage
     published = parse_lock((control / "lock.toml").read_bytes())
     assert [unit.path.original for unit in published.artifacts] == ["notes.md"]
     assert published.create_only_absences == []
+
+
+def test_cp_verify_names_the_missing_locked_target_and_its_mismatch_kind(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A locked no-op target deleted before verification is named in the finding (issue #195).
+
+    The v5.23.0 release-prep failure this pins reported a bare `CP-VERIFY` with no
+    path, and the offending file was identified only by instrumenting the executor
+    by hand. `ApplyResult` carries no failure message, so the finding attached to
+    the refusal is the only channel that reaches both the human report and
+    `--json`; asserting on `verification_findings` is therefore asserting on what
+    an operator actually sees. The deletion happens at the end of
+    `_publish_targets` — the last step before `_verify` — because that is the real
+    window: the plan is re-derived under the control lock, so an earlier deletion
+    would simply be planned around.
+    """
+    repo, planner, plan = _fixture(tmp_path)
+    assert _apply(planner, plan).success
+
+    settled_resolution = resolution_request((planner.payloads[0],), previous_lock=plan.next_lock)
+    settled_planner = PlannerRequest(repo, settled_resolution, planner.payloads)
+    settled = plan_reconciliation(settled_planner)
+    assert all(action.kind is ActionKind.NOOP for action in settled.actions)
+    assert "alpha.txt" in {unit.path.original for unit in settled.next_lock.artifacts}
+
+    published = executor._publish_targets  # pyright: ignore[reportPrivateUsage]
+
+    def publish_then_delete(*args: object, **kwargs: object) -> object:
+        outcome = published(*args, **kwargs)  # pyright: ignore[reportCallIssue, reportArgumentType]
+        (repo / "alpha.txt").unlink()
+        return outcome
+
+    monkeypatch.setattr(executor, "_publish_targets", publish_then_delete)
+
+    result = _apply(settled_planner, settled)
+
+    assert not result.success
+    assert result.error_code == "CP-VERIFY"
+    assert len(result.verification_findings) == 1
+    finding = result.verification_findings[0]
+    assert finding.code == "CP-VERIFY"
+    assert finding.severity == "error"
+    assert finding.path == "alpha.txt"
+    assert finding.locus == "missing"
+    assert finding.message == (
+        "published target is absent from the repository (mismatch kind: missing)"
+    )
+    # The JSON report carries the same path and kind, so `--json` consumers need
+    # no separate enrichment path.
+    payload = findings_to_jsonable(result.verification_findings)
+    assert payload[0]["path"] == "alpha.txt"
+    assert payload[0]["locus"] == "missing"
+
+
+def test_cp_verify_names_a_content_mismatch_with_both_digests(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The non-missing kinds are named too, with content evidence kept to digests.
+
+    Consumer bytes never enter a finding, so the content kind publishes the
+    planned and observed digests rather than either body.
+    """
+    repo, planner, plan = _fixture(tmp_path)
+    published = executor._publish_targets  # pyright: ignore[reportPrivateUsage]
+
+    def publish_then_overwrite(*args: object, **kwargs: object) -> object:
+        outcome = published(*args, **kwargs)  # pyright: ignore[reportCallIssue, reportArgumentType]
+        (repo / "alpha.txt").write_bytes(b"overwritten by the consumer\n")
+        return outcome
+
+    monkeypatch.setattr(executor, "_publish_targets", publish_then_overwrite)
+
+    result = _apply(planner, plan)
+
+    assert result.error_code == "CP-VERIFY"
+    finding = result.verification_findings[0]
+    assert finding.path == "alpha.txt"
+    assert finding.locus == "content"
+    assert finding.expected_digest == content_digest(b"alpha\n").value
+    assert finding.actual_digest == content_digest(b"overwritten by the consumer\n").value
 
 
 def test_apply_refuses_a_disclaimed_target_that_reappears_before_verification(

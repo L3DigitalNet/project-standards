@@ -24,7 +24,7 @@ from project_standards._filesystem import (
     _prune_empty_directory,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
 )
 from project_standards.control_plane.catalog_refresh import CATALOG_REFRESH_BACKUP
-from project_standards.control_plane.codec import parse_lock, render_lock
+from project_standards.control_plane.codec import content_digest, parse_lock, render_lock
 from project_standards.control_plane.containment import (
     CONTAINMENT_DESTINATION_CODE,
     ContainmentError,
@@ -48,6 +48,7 @@ from project_standards.control_plane.locking import (
 )
 from project_standards.control_plane.planner import (
     ManagedRestorePlan,
+    PlannedTarget,
     PlannerRequest,
     ReconciliationPlan,
     plan_managed_restore,
@@ -923,6 +924,89 @@ def _disclaimed_targets(plan: ReconciliationPlan) -> frozenset[str]:
     )
 
 
+_VERIFY_HINT = (
+    "rerun reconcile --check to inspect the current state; the published bytes are on "
+    "disk but unverified"
+)
+
+
+def _verify_finding(
+    target: str,
+    kind: str,
+    message: str,
+    *,
+    expected_digest: str | None = None,
+    actual_digest: str | None = None,
+) -> ControlFinding:
+    """Attach the target path and mismatch kind to a CP-VERIFY refusal.
+
+    `ApplyResult` carries only `error_code`, so the `_ApplyFailure` message never
+    reaches an operator: before issue #195 a verification refusal printed a bare
+    `CP-VERIFY` and the offending path could only be recovered by instrumenting
+    this module by hand. The finding is the one channel the CLI renders in both
+    human output and `--json`, so the diagnosis travels as a finding rather than
+    as failure text.
+
+    `kind` is one of `missing`, `entry-kind`, `content`, `mode`, or
+    `removal-present`, and appears in the message as well as in `locus`, which is
+    its machine-readable field. `docs/reference/control-plane-diagnostics.md`
+    documents that vocabulary; extending it here means extending the CP-VERIFY
+    row there too. Only consumer digests cross the boundary, never consumer bytes.
+    """
+    return ControlFinding(
+        code="CP-VERIFY",
+        severity="error",
+        standard_id="project-standards",
+        version="",
+        path=target,
+        identity="$target",
+        message=f"{message} (mismatch kind: {kind})",
+        hint=_VERIFY_HINT,
+        locus=kind,
+        expected_digest=expected_digest,
+        actual_digest=actual_digest,
+    )
+
+
+def _published_target_finding(
+    planned: PlannedTarget, entry: SnapshotEntry
+) -> ControlFinding | None:
+    """Return the CP-VERIFY finding for a target the plan says must exist, if it mismatches.
+
+    Ordering is diagnostic, not merely stylistic: absence and the wrong entry
+    kind are reported before content, because a directory or symlink at the path
+    has no comparable bytes and would otherwise be reported as a content
+    difference against `None`.
+    """
+    if entry.kind is EntryKind.MISSING:
+        return _verify_finding(
+            planned.target,
+            "missing",
+            "published target is absent from the repository",
+        )
+    if entry.kind is not EntryKind.REGULAR:
+        return _verify_finding(
+            planned.target,
+            "entry-kind",
+            f"published target is a {entry.kind.value} entry rather than a regular file",
+        )
+    if entry.content != planned.content:
+        return _verify_finding(
+            planned.target,
+            "content",
+            "published target content differs from the reviewed plan",
+            expected_digest=content_digest(planned.content).value,
+            actual_digest=None if entry.content_digest is None else entry.content_digest.value,
+        )
+    if planned.mode is not None and entry.mode != planned.mode:
+        return _verify_finding(
+            planned.target,
+            "mode",
+            f"published target mode is {entry.mode} rather than the planned {planned.mode}",
+        )
+    return None
+
+
 def _verify_published_targets(repo: Path, plan: ReconciliationPlan) -> None:
     """Recheck every published target against the reviewed virtual tree."""
     paths = tuple(SafeRelativePath.parse(item.target) for item in plan.targets)
@@ -933,14 +1017,25 @@ def _verify_published_targets(repo: Path, plan: ReconciliationPlan) -> None:
         entry = snapshot.entry(SafeRelativePath.parse(planned.target))
         if planned.target in removed or planned.target in unstaged:
             if entry.kind is not EntryKind.MISSING:
-                raise _ApplyFailure("CP-VERIFY", "published removal changed before verification")
+                raise _ApplyFailure(
+                    "CP-VERIFY",
+                    f"published removal changed before verification: {planned.target}",
+                    findings=(
+                        _verify_finding(
+                            planned.target,
+                            "removal-present",
+                            f"path the plan removes is present as a {entry.kind.value} entry",
+                        ),
+                    ),
+                )
             continue
-        if (
-            entry.kind is not EntryKind.REGULAR
-            or entry.content != planned.content
-            or (planned.mode is not None and entry.mode != planned.mode)
-        ):
-            raise _ApplyFailure("CP-VERIFY", "published target changed before verification")
+        finding = _published_target_finding(planned, entry)
+        if finding is not None:
+            raise _ApplyFailure(
+                "CP-VERIFY",
+                f"published target changed before verification: {planned.target}",
+                findings=(finding,),
+            )
 
 
 def _selected_payloads(request: ApplyRequest) -> dict[tuple[str, str], InstalledPayload]:
