@@ -27,11 +27,11 @@ rationale = "The legacy fixture corpus preserves subset-aware namespace and owne
 introduced_release = "5.1.1"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/control_plane/test_migration.py::test_current_legacy_fixture_corpus_covers_namespaces_and_ownership_states"]
-amendments = []
+amendments = [{ approved_by = "owner", date = "2026-08-27", new_digest = "sha256:db3ad78cb30213bf764deeffb4d6b29f0a37f87050edba6feb6e21cc01ba1302", new_symbol = "tests/control_plane/test_migration.py::test_current_legacy_fixture_corpus_covers_namespaces_and_ownership_states", old_digest = "sha256:ec65d6a7021962f193a40e16ada4fa5a7d78f20b960f8397acebf5cd87e31450", old_symbol = "tests/control_plane/test_migration.py::test_current_legacy_fixture_corpus_covers_namespaces_and_ownership_states", reason = "c128fc55 payload_tree sweep: enumeration helper substitution, behaviour unchanged", requirement = "REQ-900" }]
 
 [[issues.proofs]]
 symbol = "tests/control_plane/test_migration.py::test_current_legacy_fixture_corpus_covers_namespaces_and_ownership_states"
-digest = "sha256:ec65d6a7021962f193a40e16ada4fa5a7d78f20b960f8397acebf5cd87e31450"
+digest = "sha256:db3ad78cb30213bf764deeffb4d6b29f0a37f87050edba6feb6e21cc01ba1302"
 
 [[issues]]
 id = "GH-9"
@@ -411,6 +411,8 @@ amendments = [
     { approved_by = "Codex independent review", date = "2026-08-10", new_digest = "sha256:e6fa5b5fe8f6563b3a833fb50f0ebab565946975a93b9135a24eb5bb94d814bf", new_symbol = "tests/control_plane/test_conflict_guidance.py::test_pre_adoption_whole_file__managed_selector__permits_delete_and_reconcile", old_digest = "sha256:d842cddc6d9048cc462ddfd1f2052befcde00293a13c1d2deab24b7257488637", old_symbol = "tests/control_plane/test_conflict_guidance.py::test_pre_adoption_whole_file__managed_selector__permits_delete_and_reconcile", reason = "include the read-only create-only advisory planner closure from d8d5c52f while the GH-37 managed-selector guidance assertion remains unchanged", requirement = "REQ-005" },
     { approved_by = "Codex independent review", date = "2026-08-10", new_digest = "sha256:901b1a3ee25e8ff9b39dff85028e3229bb519bcff6a22a53eff9f2b22f0833db", new_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point", old_digest = "sha256:2ebc488614345c623be016ec770b07604e3109cab506a755407afd232c5a61c2", old_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point", reason = "include the read-only create-only advisory planner closure from d8d5c52f while the GH-37 restoration fixed-point assertion remains unchanged", requirement = "REQ-005" },
     { approved_by = "Codex independent review", date = "2026-08-10", new_digest = "sha256:9cb97bca908ee43e17dc4127064085a8bb46fc5edfbcb92b761feab90d6a550e", new_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions", old_digest = "sha256:886bdb1712b50b9ebe637d2b909a43d1bce0a3795df201ca5b109746d3b3d737", old_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions", reason = "include the read-only create-only advisory planner closure from d8d5c52f while the GH-37 stale-precondition assertion remains unchanged", requirement = "REQ-005" },
+    { approved_by = "owner", date = "2026-08-27", new_digest = "sha256:1cfa8dc06e2f67c3da9393402d0697db02f5dc0b1d05629c87df46c23f0ae665", new_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point", old_digest = "sha256:901b1a3ee25e8ff9b39dff85028e3229bb519bcff6a22a53eff9f2b22f0833db", old_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point", reason = "c128fc55 payload_tree sweep: enumeration helper substitution, behaviour unchanged", requirement = "REQ-900" },
+    { approved_by = "owner", date = "2026-08-27", new_digest = "sha256:6e7bd4e8003b03bd18ed7be055b37edd6bfe3b9e81e795f234992cb423cd9e25", new_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions", old_digest = "sha256:9cb97bca908ee43e17dc4127064085a8bb46fc5edfbcb92b761feab90d6a550e", old_symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions", reason = "c128fc55 payload_tree sweep: enumeration helper substitution, behaviour unchanged", requirement = "REQ-900" },
 ]
 
 [[issues.proofs]]
@@ -419,11 +421,11 @@ digest = "sha256:e6fa5b5fe8f6563b3a833fb50f0ebab565946975a93b9135a24eb5bb94d814b
 
 [[issues.proofs]]
 symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point"
-digest = "sha256:901b1a3ee25e8ff9b39dff85028e3229bb519bcff6a22a53eff9f2b22f0833db"
+digest = "sha256:1cfa8dc06e2f67c3da9393402d0697db02f5dc0b1d05629c87df46c23f0ae665"
 
 [[issues.proofs]]
 symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions"
-digest = "sha256:9cb97bca908ee43e17dc4127064085a8bb46fc5edfbcb92b761feab90d6a550e"
+digest = "sha256:6e7bd4e8003b03bd18ed7be055b37edd6bfe3b9e81e795f234992cb423cd9e25"
 
 [[issues]]
 id = "GH-38"
