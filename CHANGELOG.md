@@ -37,6 +37,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added
+
+- `markdown-frontmatter@1.14` contributes a managed `markdown-frontmatter` instruction block to `AGENTS.md` (when `harnesses` contains `codex`) and `CLAUDE.md` (when it contains `claude-code`), matching the four sibling skill-shipping packages, so an agent sees that a repository's Markdown is governed without loading the skill first.
+
+### Changed
+
+- Package-contract tests now assert, catalog-wide, that a payload provider's managed-target registry matches the payload's own `[[artifacts]]` targets, identity bindings, and `when_any` harness gates, replacing the per-family assertions added for github-workflow 1.5 and agent-handoff 1.15 ([#194](https://github.com/L3DigitalNet/project-standards/issues/194)).
+- Restored the SPEC-GSF3 durable-document-references implementation plan at plan format 3 so the current engine can validate and govern it, and revised the specification to 0.2 with a currency audit against the repository ([#178](https://github.com/L3DigitalNet/project-standards/issues/178)).
+- `markdown-frontmatter@1.14` replaces the shipped placeholder id token `xxxxxx` with `XXXXXX` in every template, example, and standard page. The old token satisfied `^[0-9a-z]{6}$`, so a copied template could ship a schema-valid but meaningless id; the uppercase form fails id validation and `validate-id --fix` repairs it. The validator's token pattern and `new-doc-id` are unchanged.
+- `markdown-frontmatter@1.14`'s skill now states that `validate-id`, `format-frontmatter`, and `validate-frontmatter` are console scripts installed by the `project-standards` distribution rather than subcommands or skill-local files, leads its usage block with `--scaffold` as the default path for a new document, names `validate-id --fix` as the bulk id route, and corrects the install-path statement to the dual `.agents/` and `.claude/` digest-locked copies. Catalog 5 promotes 1.14 and retains 1.13.
+- Repointed the v5.19 ADR corpus corrections plan's execution preflight from the retired `scripts/plan.py` bridge to the `plan-authoring` skill helper (#178).
+
+### Fixed
+
+- **`CP-VERIFY` names the target it refused and how it mismatched** ([#195](https://github.com/L3DigitalNet/project-standards/issues/195)). A post-apply verification refusal used to reach the operator as a bare `CP-VERIFY` code with no path, because `ApplyResult` carries only an error code and the failure message is discarded — the v5.23.0 release-prep failure was diagnosed only by instrumenting the executor by hand. Verification now emits a `CP-VERIFY` finding carrying the target in `path` and the mismatch kind in `locus` and its message: `missing`, `entry-kind`, `content` (with the planned and observed content digests, never consumer bytes), `mode`, or `removal-present`. Both the human report and `--json` already render findings, so no output shape changed beyond previously-unset optional keys; trigger conditions and verification semantics are untouched.
+
 ## [5.23.0] — 2026-08-26
 
 ### Removed
