@@ -48,7 +48,13 @@ def test_managed_markdown_snapshot_spans_all_packages_while_local_units_stay_loc
     assert {(item["target"], item["scope"]) for item in markdown_units} == {
         (target, f"block:{owner}")
         for target in ("AGENTS.md", "CLAUDE.md")
-        for owner in ("agent-handoff", "github-workflow", "markdown-tooling", "python-tooling")
+        for owner in (
+            "agent-handoff",
+            "github-workflow",
+            "markdown-frontmatter",
+            "markdown-tooling",
+            "python-tooling",
+        )
     }
     local_units = cast(
         "list[JsonObject]",

@@ -44,7 +44,7 @@ The server is optional and replaces nothing: the CLI and the CI gates remain the
 **The MCP server ships in every published release from v5.12.0 onward.** Install the current release from its immutable tag:
 
 ```bash
-uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.23.0"
+uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.24.0"
 ```
 
 Releases before v5.12.0 do not contain the server; on those, `project-standards mcp --help` fails as an unknown command.
@@ -58,7 +58,7 @@ uv sync --all-groups
 uv run project-standards standards sync-payload-projection --root .
 uv build --wheel --out-dir dist
 sha256sum dist/project_standards-5.24.0-py3-none-any.whl
-uv tool install ./dist/project_standards-5.23.0-py3-none-any.whl
+uv tool install ./dist/project_standards-5.24.0-py3-none-any.whl
 ```
 
 Keep that SHA-256. A candidate carries no release identity, so the digest is the only thing that says which bytes your client is talking to; quote it in any bug report about server behaviour.

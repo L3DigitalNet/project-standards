@@ -1,8 +1,8 @@
 [project_standards]
 schema_version = "1.0"
 catalog = "5"
-release = "5.23.0"
-digest = "sha256:103120c9cb7ef6e2c8ba9e2749f19218eb6e5e94d7c64772aab74fb1db5ab24c"
+release = "5.24.0"
+digest = "sha256:d9d6d0762d0ca51c2230288bd3d5e8812deec8e1c1e172fe8c8ca52535ec44e3"
 
 [standards.adr]
 status = "active"
@@ -195,8 +195,8 @@ payload_digest = "sha256:cb91ea5899362690402729633ac547017a5dd262b87a64ea45d3a25
 
 [standards.markdown-frontmatter]
 status = "active"
-available = ["1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "1.10", "1.11", "1.12", "1.13"]
-default = "1.13"
+available = ["1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "1.10", "1.11", "1.12", "1.13", "1.14"]
+default = "1.14"
 candidates = []
 
 [standards.markdown-frontmatter.versions."1.2"]
@@ -255,9 +255,14 @@ availability = "consumer"
 payload_digest = "sha256:568f19172b8324a9b1ba19f730b7e621abbd719d97cf469bd25fddd76231e8cb"
 
 [standards.markdown-frontmatter.versions."1.13"]
-channel = "stable"
+channel = "retained"
 availability = "consumer"
 payload_digest = "sha256:40cbd73ee6f8c28cd0d5b7befbfd8c54c277c00563627f5d0d3c9d9a36dcf0b9"
+
+[standards.markdown-frontmatter.versions."1.14"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:530491a10ed1f6bcfafcfcbd80f99206de9e28da66aa81dc38d74f2ec938a144"
 
 [standards.markdown-tooling]
 status = "active"

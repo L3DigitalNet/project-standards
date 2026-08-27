@@ -70,13 +70,13 @@ The standards this repository defines. Each lives in a family under [`standards/
 
 A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation, giving every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, never at the top level.
 
-- **Standard:** [`standards/markdown-frontmatter/versions/1.13/README.md`](standards/markdown-frontmatter/versions/1.13/README.md)
-- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.13/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.13/field-values.md)
-- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.13/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
-- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.13/skills/markdown-frontmatter/) — installed repo-local as byte-identical copies at `.agents/skills/markdown-frontmatter` for Codex CLI and `.claude/skills/markdown-frontmatter` for Claude Code.
-- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.13/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.13/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.13/adopt.md)
+- **Standard:** [`standards/markdown-frontmatter/versions/1.14/README.md`](standards/markdown-frontmatter/versions/1.14/README.md)
+- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.14/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.14/field-values.md)
+- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.14/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
+- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.14/skills/markdown-frontmatter/) — installed repo-local as byte-identical copies at `.agents/skills/markdown-frontmatter` for Codex CLI and `.claude/skills/markdown-frontmatter` for Claude Code.
+- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.14/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.14/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.14/adopt.md)
 
-The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.13/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.13/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.13/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
+The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.14/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.14/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.14/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
 
 ### ADR Standard
 
@@ -168,7 +168,7 @@ The version command must report `project-standards 5.24.0`. The first probe imme
 
 ```bash
 project-standards init --catalog 5
-project-standards standards enable markdown-frontmatter --version 1.13
+project-standards standards enable markdown-frontmatter --version 1.14
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -190,7 +190,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 
 | Package | Current payload | Adoption guide |
 | --- | --- | --- |
-| Markdown Frontmatter | `1.13` | [`standards/markdown-frontmatter/versions/1.13/adopt.md`](standards/markdown-frontmatter/versions/1.13/adopt.md) |
+| Markdown Frontmatter | `1.14` | [`standards/markdown-frontmatter/versions/1.14/adopt.md`](standards/markdown-frontmatter/versions/1.14/adopt.md) |
 | ADR | `1.6` | [`standards/adr/versions/1.6/adopt.md`](standards/adr/versions/1.6/adopt.md) |
 | Python Tooling | `1.16` | [`standards/python-tooling/versions/1.16/adopt.md`](standards/python-tooling/versions/1.16/adopt.md) |
 | Markdown Tooling | `1.15` | [`standards/markdown-tooling/versions/1.15/adopt.md`](standards/markdown-tooling/versions/1.15/adopt.md) |

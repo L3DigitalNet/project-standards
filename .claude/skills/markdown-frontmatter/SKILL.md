@@ -5,16 +5,16 @@ compatibility: Claude Code and Codex CLI
 license: MIT
 metadata:
   author: Chris Purcell
-  version: '1.4'
+  version: '1.5'
 ---
 
 # Markdown Frontmatter
 
 ## Overview
 
-Author and fix YAML frontmatter for **managed Markdown documents** under the [project-standards Markdown Frontmatter Standard](https://github.com/L3DigitalNet/project-standards/blob/v5.23.0/standards/markdown-frontmatter/versions/1.13/README.md).
+Author and fix YAML frontmatter for **managed Markdown documents** under the [project-standards Markdown Frontmatter Standard](https://github.com/L3DigitalNet/project-standards/blob/v5.24.0/standards/markdown-frontmatter/versions/1.14/README.md).
 
-This skill ships with the standard package and is installed repo-local at `.agents/skills/markdown-frontmatter` when a repository adopts the standard. That path is deliberate: both Claude Code and Codex CLI can discover it without a global skill owner.
+This skill ships with the standard package. When a repository adopts the standard it is installed repo-local as byte-identical, digest-locked copies at **both** `.agents/skills/markdown-frontmatter` (Codex CLI) and `.claude/skills/markdown-frontmatter` (Claude Code) — each harness reads only its own tree. The duplication is deliberate; neither copy may be edited or deleted to deduplicate them.
 
 **Core principle: the schema is authoritative, not this file.** The machine contract is `markdown-frontmatter.schema.json` in project-standards, enforced by `project-standards validate`. This skill is the operating layer for the rules agents get wrong most often. On any conflict, the schema and current standard pages win.
 
@@ -24,7 +24,7 @@ This skill ships with the standard package and is installed repo-local at `.agen
 - A `project-standards validate`, `validate-frontmatter`, or `format-frontmatter --check` run failed and you need to fix the block.
 - Deciding which `doc_type` / `status` / other controlled value to set.
 
-**When NOT to use: files that must NEVER carry frontmatter.** Agent-instruction and agent-skill files are harness config, not managed documents: `CLAUDE.md`, `AGENTS.md`, and anything under `.claude/`, `.agents/`, `.codex/`. That includes this installed skill at `.agents/skills/markdown-frontmatter`. Exclude those paths through the package's `exclude` option in `.standards/config.toml` instead of adding metadata. A repo may also exclude its root `README.md` if it prefers no metadata table on its landing page.
+**When NOT to use: files that must NEVER carry frontmatter.** Agent-instruction and agent-skill files are harness config, not managed documents: `CLAUDE.md`, `AGENTS.md`, and anything under `.claude/`, `.agents/`, `.codex/`. That includes both installed copies of this skill, at `.agents/skills/markdown-frontmatter` and `.claude/skills/markdown-frontmatter`. A packaged `SKILL.md`'s own leading `---` block (`name`, `description`, `compatibility`, …) is Agent-Skills manifest metadata for the harness, not a managed-document profile, so it is not a violation of this prohibition and must not be "fixed" into one. Exclude those paths through the package's `exclude` option in `.standards/config.toml` instead of adding metadata. A repo may also exclude its root `README.md` if it prefers no metadata table on its landing page.
 
 ## Required fields (the eleven)
 
@@ -33,7 +33,7 @@ Every managed document opens with a `---` fenced YAML block carrying at least th
 ```yaml
 ---
 schema_version: '1.1'
-id: 'note-xxxxxx-human-title'
+id: 'note-XXXXXX-human-title'
 title: 'Human Title'
 description: 'One-sentence description of the document.'
 doc_type: 'note'
@@ -83,7 +83,7 @@ These fields accept only these values (the schema is the source of truth):
 
 ## The `id` field — standard-enforced format
 
-> **This is a standard rule, not a local addition.** `markdown-frontmatter@1.13` enforces the id format below via `validate-id` (run by `project-standards validate` and the V5 CI workflow). An id whose leading segment is not a valid `doc_type` **fails validation** with `prefix '<x>' is not a valid doc_type`. Earlier repo-name-prefixed ids no longer pass.
+> **This is a standard rule, not a local addition.** `markdown-frontmatter@1.14` enforces the id format below via `validate-id` (run by `project-standards validate` and the V5 CI workflow). An id whose leading segment is not a valid `doc_type` **fails validation** with `prefix '<x>' is not a valid doc_type`. Earlier repo-name-prefixed ids no longer pass.
 
 ```text
 {doc_type}-{base36-6}-{document-name}
@@ -91,15 +91,22 @@ These fields accept only these values (the schema is the source of truth):
 
 The `doc_type` (one of the controlled values above), then a random 6-character base36 token, then a readable document slug, all lower kebab-case (e.g. `runbook-0f943i-restart-netbox-after-config-change`). The token keeps the id globally unique; the slug is frozen at creation and does **not** change when the title is edited.
 
-**Generate the id with the script. Never invent the token yourself.** An LLM asked for a "random" base36 token produces low-entropy, collision-prone strings and reuses tokens already in context, defeating the uniqueness goal. `scripts/` is this skill's own directory (invoke by absolute path if your cwd is elsewhere):
+**Generate the id with the script. Never invent the token yourself.** An LLM asked for a "random" base36 token produces low-entropy, collision-prone strings and reuses tokens already in context, defeating the uniqueness goal. `scripts/` is this skill's own directory and holds `new-doc-id` and nothing else (invoke by absolute path if your cwd is elsewhere):
 
 ```bash
-scripts/new-doc-id <document-name>                        # bare id, doc_type 'note'
-scripts/new-doc-id --doc-type runbook <document-name>     # bare id, 'runbook' prefix
-scripts/new-doc-id --scaffold --doc-type runbook <name>   # full canonical frontmatter block
+# New document — the default path. Emits the whole canonical block, not just an id.
+scripts/new-doc-id --scaffold --doc-type runbook <document-name>
+
+# Existing document missing or repairing an id — bare id only.
+scripts/new-doc-id --doc-type runbook <document-name>     # 'runbook' prefix
+scripts/new-doc-id <document-name>                        # doc_type 'note'
 ```
 
-The `--doc-type` value becomes both the id prefix and (in `--scaffold`) the `doc_type` field, so the two always agree; it defaults to `note`. `--doc-type` and `--status` must be standard-controlled values. `--scaffold` emits the eleven required fields in canonical order with today's date correctly quoted. Replace the `REPLACE:` description placeholder before committing.
+`--scaffold` is the default path for a **new** document: it emits the eleven required fields in canonical order, with today's date correctly quoted and empty lists as `[]`, so none of the hand-authoring mistakes below can occur. The bare-id forms are the repair path for a document that already has a frontmatter block. **Replace the `REPLACE:` description placeholder in scaffolded output before committing.**
+
+The `--doc-type` value becomes both the id prefix and (in `--scaffold`) the `doc_type` field, so the two always agree; it defaults to `note`. `--doc-type` and `--status` must be standard-controlled values.
+
+For a batch of documents, do not loop the script per file. Write the placeholder id `{doc_type}-XXXXXX-{slug}` into each document, then make one `validate-id --fix` pass over the batch to mint the real tokens. The placeholder is uppercase deliberately: the token must match `^[0-9a-z]{6}$`, so `XXXXXX` fails validation loudly and `--fix` repairs it, whereas a lowercase placeholder is itself a valid token and would ship silently.
 
 ADRs are the exception: follow the standard's ADR id form (`adr-{NNNN}-{repo-name}-{title}`, e.g. `adr-0001-homelab-use-postgresql-for-persistent-storage`), not the `doc_type`-prefixed format. Do not use the script for ADR ids.
 
@@ -155,6 +162,8 @@ format-frontmatter --check
 
 To check or repair a single file's id: `validate-id <file>` (add `--fix` to rewrite an invalid id through the platform executor).
 
+**Where these commands come from.** `validate-id`, `format-frontmatter`, and `validate-frontmatter` are separate console scripts installed by the `project-standards` distribution — they are top-level commands on `PATH`. They are **not** `project-standards` subcommands (`project-standards validate-id` fails with `invalid choice`) and they are **not** files in this skill's `scripts/` directory, which holds `new-doc-id` alone. A repository may need its own runner prefix to reach the installed distribution; use whatever prefix its other `project-standards` invocations use.
+
 ## Common mistakes
 
 | Mistake | Fix |
@@ -169,8 +178,8 @@ To check or repair a single file's id: `validate-id <file>` (add `--fix` to rewr
 
 ## Authoritative references
 
-- [Standard README](https://github.com/L3DigitalNet/project-standards/blob/v5.23.0/standards/markdown-frontmatter/versions/1.13/README.md) — overview and adoption surface.
-- [Structure Requirements](https://github.com/L3DigitalNet/project-standards/blob/v5.23.0/standards/markdown-frontmatter/versions/1.13/structure.md) — hard fields, key order, scalar/list rules, IDs, and validation.
-- [Field Values](https://github.com/L3DigitalNet/project-standards/blob/v5.23.0/standards/markdown-frontmatter/versions/1.13/field-values.md) — lifecycle, ownership, canonical tags, aliases, relationships, sources, and extensions.
-- [Adoption guide](https://github.com/L3DigitalNet/project-standards/blob/v5.23.0/standards/markdown-frontmatter/versions/1.13/adopt.md) — unified config, CI workflow, repo-local skill install, and compliance procedure.
-- `standards/markdown-frontmatter/versions/1.13/schemas/markdown-frontmatter.schema.json` (in project-standards) — the selected package contract; wins on any conflict.
+- [Standard README](https://github.com/L3DigitalNet/project-standards/blob/v5.24.0/standards/markdown-frontmatter/versions/1.14/README.md) — overview and adoption surface.
+- [Structure Requirements](https://github.com/L3DigitalNet/project-standards/blob/v5.24.0/standards/markdown-frontmatter/versions/1.14/structure.md) — hard fields, key order, scalar/list rules, IDs, and validation.
+- [Field Values](https://github.com/L3DigitalNet/project-standards/blob/v5.24.0/standards/markdown-frontmatter/versions/1.14/field-values.md) — lifecycle, ownership, canonical tags, aliases, relationships, sources, and extensions.
+- [Adoption guide](https://github.com/L3DigitalNet/project-standards/blob/v5.24.0/standards/markdown-frontmatter/versions/1.14/adopt.md) — unified config, CI workflow, repo-local skill install, and compliance procedure.
+- `standards/markdown-frontmatter/versions/1.14/schemas/markdown-frontmatter.schema.json` (in project-standards) — the selected package contract; wins on any conflict.

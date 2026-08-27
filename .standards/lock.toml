@@ -1,9 +1,9 @@
 [project_standards]
 schema_version = "1.1"
 catalog = "5"
-release = "5.23.0"
-catalog_digest = "sha256:103120c9cb7ef6e2c8ba9e2749f19218eb6e5e94d7c64772aab74fb1db5ab24c"
-config_digest = "sha256:9c3cd4a2974eb0fb5772038410d7467184ec246e2050e2a4c76ceb89adb55308"
+release = "5.24.0"
+catalog_digest = "sha256:d9d6d0762d0ca51c2230288bd3d5e8812deec8e1c1e172fe8c8ca52535ec44e3"
+config_digest = "sha256:75181bdd5e27f8dac9c565666b87e8e38893a0b1bc37b5d2ce36f9ac387bc046"
 
 [standards.adr]
 requested = "latest"
@@ -35,10 +35,10 @@ effective_config_digest = "sha256:f675a924a3693ca08c4e132725a702344200b5988aee13
 
 [standards.markdown-frontmatter]
 requested = "latest"
-resolved = "1.13"
+resolved = "1.14"
 selection = "stable"
-payload_digest = "sha256:40cbd73ee6f8c28cd0d5b7befbfd8c54c277c00563627f5d0d3c9d9a36dcf0b9"
-effective_config_digest = "sha256:6b26b4b7a7b9d0897e18a8992d21434479ef3d04caeb7cfddee39c128de20306"
+payload_digest = "sha256:530491a10ed1f6bcfafcfcbd80f99206de9e28da66aa81dc38d74f2ec938a144"
+effective_config_digest = "sha256:fb8966e18d64e368739d965f931f7c96c3ecaf1746ff0c8672f47a71069069e9"
 
 [standards.markdown-tooling]
 requested = "latest"
@@ -52,7 +52,7 @@ requested = "latest"
 resolved = "1.9"
 selection = "stable"
 payload_digest = "sha256:980f922a3980de82e1302db6d2d22ec88ca2457b2affd64876ada4dc09ab669e"
-effective_config_digest = "sha256:6e15b50e2d3aa39645f42b7a105e40b5d8907b43c789233dbfe8f41adb24d9f4"
+effective_config_digest = "sha256:a800e0b127a30c7c0d1999a8ede88bdcd8ce5fc92619041803f8f7c0ee6218e1"
 
 [standards.project-toolbox]
 requested = "latest"
@@ -219,11 +219,11 @@ path = ".agents/skills/markdown-frontmatter/SKILL.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["markdown-frontmatter"]
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "source"
 policy = "managed"
-semantic_digest = "sha256:bef07bb4376d07393a9029c2ba08dfc0c9adf9ed9e8d6bcbd00e55a0811dd01c"
-content_digest = "sha256:bef07bb4376d07393a9029c2ba08dfc0c9adf9ed9e8d6bcbd00e55a0811dd01c"
+semantic_digest = "sha256:5c83d75d5cb985d58421c2d905d6e793bdcf436fd79f7c1916010e1870ed6ece"
+content_digest = "sha256:5c83d75d5cb985d58421c2d905d6e793bdcf436fd79f7c1916010e1870ed6ece"
 created_container = false
 
 [[artifacts]]
@@ -231,7 +231,7 @@ path = ".agents/skills/markdown-frontmatter/agents/openai.yaml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["markdown-frontmatter"]
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:d63c2c63683e78fa9adb10e7004fe9315b18a069240c4457e39cdc167951716c"
@@ -243,7 +243,7 @@ path = ".agents/skills/markdown-frontmatter/scripts/new-doc-id"
 adapter = "whole-file"
 scope = "$file"
 owners = ["markdown-frontmatter"]
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:abec9fc9e78390949320dc0b0a9e63d2d6a9959990068782ec6d60596fcf14b5"
@@ -401,11 +401,11 @@ path = ".claude/skills/markdown-frontmatter/SKILL.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["markdown-frontmatter"]
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "source"
 policy = "managed"
-semantic_digest = "sha256:bef07bb4376d07393a9029c2ba08dfc0c9adf9ed9e8d6bcbd00e55a0811dd01c"
-content_digest = "sha256:bef07bb4376d07393a9029c2ba08dfc0c9adf9ed9e8d6bcbd00e55a0811dd01c"
+semantic_digest = "sha256:5c83d75d5cb985d58421c2d905d6e793bdcf436fd79f7c1916010e1870ed6ece"
+content_digest = "sha256:5c83d75d5cb985d58421c2d905d6e793bdcf436fd79f7c1916010e1870ed6ece"
 created_container = false
 
 [[artifacts]]
@@ -413,7 +413,7 @@ path = ".claude/skills/markdown-frontmatter/scripts/new-doc-id"
 adapter = "whole-file"
 scope = "$file"
 owners = ["markdown-frontmatter"]
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:abec9fc9e78390949320dc0b0a9e63d2d6a9959990068782ec6d60596fcf14b5"
@@ -673,7 +673,7 @@ path = ".github/workflows/validate-markdown-frontmatter.yml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["markdown-frontmatter"]
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:292ac4e601fd30b82620a0b3a527db61c24883876b3359c787a753d2bcc5e163"
@@ -697,7 +697,7 @@ path = ".github/workflows/validate-standards.yml"
 adapter = "yaml"
 scope = "key:/jobs/frontmatter"
 owners = ["markdown-frontmatter"]
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:c55492c4b5051f64989307a2b0d73054adc31cf533fa0785c5e83a22d34fe5a7"
@@ -710,7 +710,7 @@ adapter = "yaml"
 scope = "key:/name"
 owners = ["markdown-frontmatter"]
 shared_identity = "github-workflow/validate-standards-name"
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:5a736be1ee4a3bcf1f3e0b23b0fec3236f10f0c5b44348e262a810f92f9b4049"
@@ -723,7 +723,7 @@ adapter = "yaml"
 scope = "key:/on"
 owners = ["markdown-frontmatter"]
 shared_identity = "github-workflow/validate-standards-triggers"
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:b42fe6c9ee28a0e9efdd70c9506fa49cd94d21d7343b0d3a580ca518ba0f72df"
@@ -735,7 +735,7 @@ path = ".github/workflows/validate-standards.yml"
 adapter = "yaml"
 scope = "key:/permissions"
 owners = ["markdown-frontmatter"]
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "source"
 policy = "managed"
 semantic_digest = "sha256:d8d6aceb1abc41990618a503082c3badcca8897feee0976f222af5b74e30bec2"
@@ -807,11 +807,11 @@ path = ".standards/packages/markdown-frontmatter/agent-summary.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["markdown-frontmatter"]
-versions = { markdown-frontmatter = "1.13" }
+versions = { markdown-frontmatter = "1.14" }
 provenance = "source"
 policy = "managed"
-semantic_digest = "sha256:2edce5a2540dbdc96c5bf8bf37f267770510f780df7bad02084f1cc896549926"
-content_digest = "sha256:2edce5a2540dbdc96c5bf8bf37f267770510f780df7bad02084f1cc896549926"
+semantic_digest = "sha256:0ccf45f68416d08f64d9ebb010a02d7a9aa0624193f20ce8d7b8d589c2395394"
+content_digest = "sha256:0ccf45f68416d08f64d9ebb010a02d7a9aa0624193f20ce8d7b8d589c2395394"
 created_container = false
 
 [[artifacts]]
@@ -1275,6 +1275,18 @@ created_container = false
 [[artifacts]]
 path = "AGENTS.md"
 adapter = "markdown-block"
+scope = "block:markdown-frontmatter"
+owners = ["markdown-frontmatter"]
+versions = { markdown-frontmatter = "1.14" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:637a1168f3b6f1d736cdc4d586fed8e816f7c7169635138b11d0cb97a3cc1817"
+content_digest = "sha256:637a1168f3b6f1d736cdc4d586fed8e816f7c7169635138b11d0cb97a3cc1817"
+created_container = false
+
+[[artifacts]]
+path = "AGENTS.md"
+adapter = "markdown-block"
 scope = "block:markdown-tooling"
 owners = ["markdown-tooling"]
 versions = { markdown-tooling = "1.15" }
@@ -1318,6 +1330,18 @@ provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:deff6f16b076bc0a1270afaede661448f582506499828fb3d909ab49b29f9ff8"
 content_digest = "sha256:deff6f16b076bc0a1270afaede661448f582506499828fb3d909ab49b29f9ff8"
+created_container = false
+
+[[artifacts]]
+path = "CLAUDE.md"
+adapter = "markdown-block"
+scope = "block:markdown-frontmatter"
+owners = ["markdown-frontmatter"]
+versions = { markdown-frontmatter = "1.14" }
+provenance = "source"
+policy = "managed"
+semantic_digest = "sha256:85c26d5754482ad87cbeae3b97426ea88ce5d01b2098626bcdbf8103e009ee80"
+content_digest = "sha256:85c26d5754482ad87cbeae3b97426ea88ce5d01b2098626bcdbf8103e009ee80"
 created_container = false
 
 [[artifacts]]

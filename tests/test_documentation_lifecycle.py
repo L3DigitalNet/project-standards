@@ -46,8 +46,8 @@ def test_completed_specs_point_to_durable_evidence_and_current_delivery_state() 
     assert "server implementation may begin at T2" not in roadmap
     assert "read-only server was delivered in 5.12.0" in roadmap
     assert "controlled-write and remote-transport phases remain deferred" in roadmap
-    assert "approved and locked rev 1.7; read-only server delivered in 5.12.0" in _read(_SPEC_INDEX)
-    assert "approved and locked rev 1.7; read-only server delivered in 5.12.0" in _read(
+    assert "approved and locked rev 1.8; read-only server delivered in 5.12.0" in _read(_SPEC_INDEX)
+    assert "approved and locked rev 1.8; read-only server delivered in 5.12.0" in _read(
         _HANDOFF_INDEX
     )
 

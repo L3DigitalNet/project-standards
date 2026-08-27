@@ -1,8 +1,8 @@
 # Markdown Frontmatter Standard: Agent Summary
 
-The canonical [Markdown Frontmatter 1.13 standard](https://github.com/L3DigitalNet/project-standards/blob/v5.23.0/standards/markdown-frontmatter/versions/1.13/README.md) is authoritative and wins if this summary conflicts with it.
+The canonical [Markdown Frontmatter 1.14 standard](https://github.com/L3DigitalNet/project-standards/blob/v5.24.0/standards/markdown-frontmatter/versions/1.14/README.md) is authoritative and wins if this summary conflicts with it.
 
-Lifecycle: active. Package: `markdown-frontmatter@1.13`.
+Lifecycle: active. Package: `markdown-frontmatter@1.14`.
 
 ## Use this summary when
 
@@ -25,7 +25,7 @@ validate-id
 validate-references
 ```
 
-The aggregate validator covers schema, ID, and enabled reference checks. `format-frontmatter` checks or fixes canonical source style. The repo-local skill guides authoring and ID generation. It is installed as byte-identical managed copies at `.agents/skills/markdown-frontmatter/SKILL.md` for Codex and `.claude/skills/markdown-frontmatter/SKILL.md` for Claude Code; neither copy may be edited or deleted to deduplicate them.
+The aggregate validator covers schema, ID, and enabled reference checks. `format-frontmatter` checks or fixes canonical source style. The repo-local skill guides authoring and ID generation. It is installed as byte-identical managed copies at `.agents/skills/markdown-frontmatter/SKILL.md` for Codex and `.claude/skills/markdown-frontmatter/SKILL.md` for Claude Code; neither copy may be edited or deleted to deduplicate them. The package also owns one marked `markdown-frontmatter` block in the selected harnesses' `AGENTS.md` and `CLAUDE.md`; that block is body content, never frontmatter.
 
 ## Boundaries and companions
 
@@ -33,4 +33,4 @@ This standard governs metadata, not Markdown body formatting. Markdown Tooling i
 
 ## Canonical resources
 
-Use the [versioned package documentation](https://github.com/L3DigitalNet/project-standards/tree/v5.23.0/standards/markdown-frontmatter/versions/1.13) for complete requirements.
+Use the [versioned package documentation](https://github.com/L3DigitalNet/project-standards/tree/v5.24.0/standards/markdown-frontmatter/versions/1.14) for complete requirements.

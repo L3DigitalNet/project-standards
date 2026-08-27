@@ -26,7 +26,7 @@ config = { harnesses = ["claude-code", "codex"], organization = "L3DigitalNet" }
 [standards.markdown-frontmatter]
 enabled = true
 version = "latest"
-config = { contract_version = "1.1", exclude = ["**/*.template.md", "standards/**", "README.md", "CLAUDE.md", "AGENTS.md", ".claude/**", ".agents/**", ".codex/**", "docs/handoff/**"], include = ["CHANGELOG.md", "UPGRADING.md", "docs/usage.md", "docs/mcp-readiness.md", "docs/workflows/**/*.md", "meta/**/*.md", "docs/adr/**/*.md", "docs/reference/control-plane-diagnostics.md"], required = true, schema = "markdown-frontmatter", workflow_mode = "self-hosted" }
+config = { contract_version = "1.1", exclude = ["**/*.template.md", "standards/**", "README.md", "CLAUDE.md", "AGENTS.md", ".claude/**", ".agents/**", ".codex/**", "docs/handoff/**"], include = ["CHANGELOG.md", "UPGRADING.md", "docs/usage.md", "docs/mcp-server.md", "docs/workflows/**/*.md", "meta/**/*.md", "docs/adr/**/*.md", "docs/reference/control-plane-diagnostics.md"], required = true, schema = "markdown-frontmatter", workflow_mode = "self-hosted" }
 
 [standards.markdown-tooling]
 enabled = true
@@ -36,7 +36,7 @@ config = { contract_version = "1.1", workflow_mode = "self-hosted" }
 [standards.project-spec]
 enabled = true
 version = "latest"
-config = { contract_version = "1.1", include_patterns = ["standards/project-spec/examples/**/*.md", "docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md", "docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md", "docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md", "docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md", "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md", "docs/specs/2026-07-09-agent-handoff-standard-package.md", "docs/specs/2026-07-10-consumer-standards-control-plane-spec.md", "docs/specs/2026-07-26-v5-adoption-integrity-correction-train-spec.md", "docs/specs/2026-07-27-v5-validation-fidelity-correction-train-spec.md", "docs/specs/future/usage-documentation-site/**/*.md"], workflow_mode = "self-hosted" }
+config = { contract_version = "1.1", include_patterns = ["standards/project-spec/examples/**/*.md", "docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md", "docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md", "docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md", "docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md", "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md", "docs/specs/2026-07-09-agent-handoff-standard-package.md", "docs/specs/2026-07-10-consumer-standards-control-plane-spec.md", "docs/specs/2026-07-26-v5-adoption-integrity-correction-train-spec.md", "docs/specs/2026-07-27-v5-validation-fidelity-correction-train-spec.md", "docs/specs/usage-documentation-site/*.md"], workflow_mode = "self-hosted" }
 
 [standards.project-toolbox]
 enabled = true

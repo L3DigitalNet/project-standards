@@ -295,12 +295,6 @@ Refreshing onto the 5.18.0 catalog rewrites nothing by default. All four package
 
 **Agent Handoff 1.11** and **GitHub Workflow 1.1** change no option, artifact, contribution, or provider byte; the Agent Handoff launcher is 1.10's exact executable. GitHub Workflow 1.1 rebuilds `gh-workflow`, whose `ledger` subcommand no longer stamps a read timestamp into `docs/GH-WORKFLOWS.md` — the first regeneration after the refresh therefore drops that line, and every later one against unchanged work state produces no diff at all.
 
-### What the 5.24.0 defaults rewrite on refresh: Markdown Frontmatter 1.14 adds agent-instruction blocks
-
-**Markdown Frontmatter 1.13 → 1.14** adds a managed `markdown-frontmatter` block to `AGENTS.md` (when `harnesses` contains `codex`) and to `CLAUDE.md` (when `harnesses` contains `claude-code`); a `reconcile --apply` onto this catalog writes the block where it is missing and nothing is removed.
-
-Installed skill and template copies also switch their placeholder token from `xxxxxx` to `XXXXXX`. A copy carried over from before the switch keeps the old token and now fails `validate-id`; run `validate-id --fix` to bring it current.
-
 ### What the 5.23.0 defaults rewrite on refresh: GitHub Workflow 1.5 removes the ledger
 
 **GitHub Workflow 1.4 → 1.5 removes the `ledger` subcommand**, and with it the generated `docs/GH-WORKFLOWS.md`. This is the one advance in this train that a consumer must act on by hand.
@@ -310,6 +304,12 @@ Installed skill and template copies also switch their placeholder token from `xx
 **Delete `docs/GH-WORKFLOWS.md` yourself if you committed it.** The file was never a payload artifact — no digest, outside drift-check — so reconcile does not know the path and will neither refresh nor remove it, and the package will not delete consumer content on your behalf. `project-standards upgrade` reports it as a warning instead. Left in place it is a frozen snapshot of work state that nothing regenerates and no tool owns. If you ignored the path rather than committing it, drop the `.gitignore` entry; if you excluded it from a tooling scope — a `markdown-frontmatter` `exclude` entry, for example — drop that too, in the same change.
 
 The rest of 1.5 is guidance: `SKILL.md` is now one bounded read carrying a single complete routing-and-flag table, `field-vocabulary.md` keeps only the vocabulary the binary cannot state in a refusal, and the managed `AGENTS.md` / `CLAUDE.md` block carries the routing table, so its bytes change on the first reconcile after the refresh. The Codex companion `agents/openai.yaml` is now delivered under `.agents/` only; the `.claude/` copy is removed on reconcile, because Claude Code never read it. No configuration option changed, so a repository that sets nothing keeps its `.standards/config.toml` as it is.
+
+### What the 5.24.0 defaults rewrite on refresh: Markdown Frontmatter 1.14 adds agent-instruction blocks
+
+**Markdown Frontmatter 1.13 → 1.14** adds a managed `markdown-frontmatter` block to `AGENTS.md` (when `harnesses` contains `codex`) and to `CLAUDE.md` (when `harnesses` contains `claude-code`); a `reconcile --apply` onto this catalog writes the block where it is missing and nothing is removed.
+
+Installed skill and template copies also switch their placeholder token from `xxxxxx` to `XXXXXX`. A copy carried over from before the switch keeps the old token and now fails `validate-id`; run `validate-id --fix` to bring it current.
 
 ### Comments inside managed TOML regions
 

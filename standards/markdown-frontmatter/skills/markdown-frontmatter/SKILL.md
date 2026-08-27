@@ -33,7 +33,7 @@ Every managed document opens with a `---` fenced YAML block carrying at least th
 ```yaml
 ---
 schema_version: '1.1'
-id: 'note-XXXXXX-human-title'
+id: 'note-xxxxxx-human-title'
 title: 'Human Title'
 description: 'One-sentence description of the document.'
 doc_type: 'note'

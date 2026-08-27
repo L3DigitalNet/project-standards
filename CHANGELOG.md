@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.24.0] — 2026-08-27
+
 ### Added
 
 - `markdown-frontmatter@1.14` contributes a managed `markdown-frontmatter` instruction block to `AGENTS.md` (when `harnesses` contains `codex`) and `CLAUDE.md` (when it contains `claude-code`), matching the four sibling skill-shipping packages, so an agent sees that a repository's Markdown is governed without loading the skill first.
@@ -48,10 +50,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - `markdown-frontmatter@1.14` replaces the shipped placeholder id token `xxxxxx` with `XXXXXX` in every template, example, and standard page. The old token satisfied `^[0-9a-z]{6}$`, so a copied template could ship a schema-valid but meaningless id; the uppercase form fails id validation and `validate-id --fix` repairs it. The validator's token pattern and `new-doc-id` are unchanged.
 - `markdown-frontmatter@1.14`'s skill now states that `validate-id`, `format-frontmatter`, and `validate-frontmatter` are console scripts installed by the `project-standards` distribution rather than subcommands or skill-local files, leads its usage block with `--scaffold` as the default path for a new document, names `validate-id --fix` as the bulk id route, and corrects the install-path statement to the dual `.agents/` and `.claude/` digest-locked copies. Catalog 5 promotes 1.14 and retains 1.13.
 - Repointed the v5.19 ADR corpus corrections plan's execution preflight from the retired `scripts/plan.py` bridge to the `plan-authoring` skill helper (#178).
+- Every completed implementation plan was retired under the completed-plan policy, leaving `docs/plans/` with only unexecuted work: the Agent Handoff 1.12 documentation successor (#140, #165), the runner-label reachability advisory (#143), the Python Tooling 1.14 `vscode.task_prefix` cut (#153), ADR 1.6 amendment relationship validation (#163), command provider execution (#142), schema payload reference validation (#156), the package version reference sweep (#164), the create-only stale-content advisory (#157), and the v5.19 ADR corpus corrections (#159–#162) all shipped in v5.19.0, and the repository hygiene remediation shipped in v5.14.0. Every task was terminal with a mainline checkpoint; release evidence, checkpoint OIDs, and each deferred register are preserved in `docs/handoff/specs-plans.md`.
 
 ### Fixed
 
 - **`CP-VERIFY` names the target it refused and how it mismatched** ([#195](https://github.com/L3DigitalNet/project-standards/issues/195)). A post-apply verification refusal used to reach the operator as a bare `CP-VERIFY` code with no path, because `ApplyResult` carries only an error code and the failure message is discarded — the v5.23.0 release-prep failure was diagnosed only by instrumenting the executor by hand. Verification now emits a `CP-VERIFY` finding carrying the target in `path` and the mismatch kind in `locus` and its message: `missing`, `entry-kind`, `content` (with the planned and observed content digests, never consumer bytes), `mode`, or `removal-present`. Both the human report and `--json` already render findings, so no output shape changed beyond previously-unset optional keys; trigger conditions and verification semantics are untouched.
+- Repository-wide documentation drift audit (docs only) landed alongside the release: stale package versions and counts on the catalog 5 landing pages, the specs index (eight stale revision numbers) and SPEC-DPEY currency (revision 1.2), ADR 0022/0025 citations, the handoff architecture family count and bug 005 status, the research index (eleven unlisted reports), the feature-proposals inventory (two dead rows, a moved `specs/future/` path), the roadmap 5.20.0 shipped marker, and ten completed plans retired under the completed-plan policy.
+- The repository's own `.standards/config.toml` frontmatter include list named `docs/mcp-readiness.md`, deleted in `64c014b5`; it now names its successor `docs/mcp-server.md`, which is validated again.
+- The `usage-documentation-site` specification bundle index (`docs/specs/usage-documentation-site/README.md`) carried a non-canonical `## 0. Context` section; its design-session-transcript pointer now lives in §1 Purpose & Background, so the file passes `project-standards spec validate` under Project Specification Standard 1.9 — a finding the corrected include pattern exposed.
 
 ## [5.23.0] — 2026-08-26
 

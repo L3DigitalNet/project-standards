@@ -521,7 +521,7 @@ Checklist tied to the DoD:
 
 ### Project References
 
-- docs/specs/future/usage-documentation-site/05-open-items-and-decision-log.md
+- docs/specs/usage-documentation-site/05-open-items-and-decision-log.md
 - standards/adr/README.md
 
 ---

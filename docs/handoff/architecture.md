@@ -5,7 +5,7 @@
 ## Components
 
 - `standards/` holds the eleven catalog 5 families, their manifests, package guidance, templates, examples, and index.
-- `github-workflow@1.0` is the tenth family: skill, six references, org-schema oracle, and a committed `gh-workflow` binary.
+- `github-workflow@1.5` is the tenth family: skill, six references, org-schema oracle, and a committed `gh-workflow` binary.
 - `project-toolbox` ships workflow checklists (repo-housekeeping, drift-detection) plus a routing skill, no providers/binaries (standards/project-toolbox/README.md; v5.21.0).
 - `cmd/gh-workflow/` and `internal/ghworkflow/` are the first Go packages; `scripts/build-gh-workflow.sh` builds them reproducibly.
 - `scripts/verify.sh` is the canonical local gate; `go.mod` plus `Makefile` carry the Go lane, now with sources and a `go-verify-binary` step.
