@@ -124,7 +124,7 @@ Every provider invocation reached through `invoke_read_provider` runs in a spawn
 
 - `semantic-review` also declares the `findings` effect but is excluded from the approved set: its exposure is governed by `SPEC-RD01 OQ-006`, which omits it from v1 unless the selected client surface preserves its user-controlled semantics.
 - The `content` effect (`payload.py:421`; operations `id-next`, `extract`, `render`) is non-mutating in itself but is not in the approved set, because no v1 tool exposes those operations. Adding one requires an approved amendment.
-- The `mutation-plan` effect (`payload.py:421`; operations `fix`, `scaffold`, `upgrade`) and the `migration-report` effect (`payload.py:422`; operation `migrate`) are excluded outright: they belong to the apply and authoring path this server does not serve.
+- The `mutation-plan` effect (`payload.py:422`; operations `fix`, `scaffold`, `upgrade`) and the `migration-report` effect (`payload.py:423`; operation `migrate`) are excluded outright: they belong to the apply and authoring path this server does not serve.
 
 ### Consequences
 
