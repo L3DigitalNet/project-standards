@@ -106,11 +106,11 @@ Direct commands used to keep the lanes visible without a repository-specific orc
 
 **Applies when:** adding or changing Python tooling, the CI gate, package layout, or agent instructions for Python projects.
 
-**Rule:** follow `standards/python-tooling/versions/1.10/README.md` — `uv_build` backend, `src/` layout, `basedpyright` strict, branch coverage (`fail_under = 85`), `pip-audit`, and the six-step gate.
+**Rule:** follow `standards/python-tooling/versions/1.16/README.md` — `uv_build` backend, `src/` layout, `basedpyright` strict, branch coverage (`fail_under = 85`), `pip-audit`, and the six-step gate.
 
 **Why:** ensures every Python project in this ecosystem is recoverable, repeatable, and self-explaining for agents.
 
-**Sources:** `standards/python-tooling/versions/1.10/README.md` (adopted 2026-06-06; current payload selected 2026-07-27).
+**Sources:** `standards/python-tooling/versions/1.16/README.md` (adopted 2026-06-06; current payload selected 2026-08-27).
 
 **Related:** 3.
 

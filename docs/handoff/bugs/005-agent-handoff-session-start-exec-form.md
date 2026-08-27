@@ -3,12 +3,12 @@ bug_id: '005'
 date: '2026-08-04'
 title: 'agent-handoff 1.8 SessionStart never runs because args selects exec form'
 services: '[agent-handoff, claude-code, hooks]'
-status: 'open'
+status: 'fixed'
 ---
 
 # 005 â€” Agent Handoff SessionStart never runs under exec form
 
-**Status:** open. Diagnosed and tracked as issues #122 and #124; the correction is planned as T38 in the open-issue program at revision 4.
+**Status:** fixed. Diagnosed and tracked as issues #122 and #124; shipped in Agent Handoff 1.9 as part of the v5.15.0 open-issue resolution program.
 
 ## Symptom
 
@@ -24,7 +24,7 @@ The Agent Handoff 1.8 Claude Code integration declares its hook with a `sh -c 'â
 
 ## Fix
 
-Planned, not shipped. T38 authors an Agent Handoff 1.9 successor whose rendered Claude entry reaches a shell, changing nothing else about the wrapper or its timeout, and leaving 1.8 byte-identical and selectable.
+Shipped. Agent Handoff 1.9 in v5.15.0 fixes the Claude SessionStart spawn form (#122; #124 duplicate): the rendered Claude entry reaches a shell, changing nothing else about the wrapper or its timeout, and leaving 1.8 byte-identical and selectable. See the `v5.15.0` row in `docs/handoff/deployed.md`.
 
 ## Lesson
 
