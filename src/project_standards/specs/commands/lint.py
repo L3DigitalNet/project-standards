@@ -36,6 +36,17 @@ _URI_AUTOLINK = r"[A-Za-z][A-Za-z0-9+.-]{1,31}:[^<>\s]*"
 _EMAIL_LABEL = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
 _EMAIL_AUTOLINK = rf"[A-Za-z0-9.!#$%&'*+/=?^_`{{|}}~-]+@{_EMAIL_LABEL}(?:\.{_EMAIL_LABEL})*"
 _AUTOLINK = re.compile(rf"<(?:{_URI_AUTOLINK}|{_EMAIL_AUTOLINK})>")
+# An HTML comment renders as nothing, so its body can never be an unfilled field a
+# reader would see. The motivating construct is the release-consistency marker
+# `<!-- release-consistency: historical standard-bundle-authoring -->`, which
+# `package_contract/release_consistency.py` `_MARKER` reads out of specification
+# bodies: its text carries no `>` before the closing `-->`, so `_ANGLE` swallowed the
+# whole comment as one angle pair and every marked spec failed `lint --strict` (and
+# with it the hosted "Validate Specs" gate). The markers cannot be reworded or moved
+# out of the specs, because their placement inside the document body is exactly what
+# release-consistency keys off, so the exemption has to live here. Non-greedy to
+# `-->` and DOTALL, since a comment legitimately spans lines.
+_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _GUIDANCE = "> **Template instructions"
 
 
@@ -77,6 +88,19 @@ def _mask_code_spans(line: str) -> str:
     return "".join(parts)
 
 
+def _mask_html_comments(text: str) -> str:
+    """Blank HTML comments while preserving character and newline offsets.
+
+    Whole-text rather than per-line, so a comment spanning lines is masked on every
+    line it covers. Masking to spaces (the same convention as the fenced-code view)
+    keeps every reported line number and column meaningful, and stops the text on
+    either side of a removed comment from joining into an angle pair nobody wrote.
+    """
+    return _HTML_COMMENT.sub(
+        lambda m: "".join(char if char in "\r\n" else " " for char in m.group(0)), text
+    )
+
+
 def _placeholder_angles(line: str) -> bool:
     """Report whether a line holds an angle pair that is neither notation nor a link."""
     visible = _mask_code_spans(line)
@@ -101,8 +125,15 @@ def lint_document(doc: SpecDocument, reg: Registry, *, conformance: bool = False
     if _check_frontmatter(doc, reg):
         out.append(_w("SL-STRUCTURE", "not a valid specification; run spec validate"))
     structural_body = _masked_structural_view(doc.body)
-    for i, line in enumerate(structural_body.splitlines(), start=1):
-        if _placeholder_angles(line):
+    # Comment masking runs AFTER fence masking, so a `<!--` written inside a fenced
+    # example is already blank and cannot open a comment that swallows live prose
+    # below the fence. Only the placeholder scan reads the comment-masked view: the
+    # guidance rule deliberately keeps reading the fenced view, so template
+    # instructions parked inside an HTML comment are still reported as undeleted.
+    placeholder_body = _mask_html_comments(structural_body)
+    lines = zip(structural_body.splitlines(), placeholder_body.splitlines(), strict=True)
+    for i, (line, placeholder_line) in enumerate(lines, start=1):
+        if _placeholder_angles(placeholder_line):
             out.append(_w("SL-PLACEHOLDER", "unfilled <angle-bracket> placeholder", line=i))
         if line.lstrip().startswith(_GUIDANCE):
             out.append(_w("SL-GUIDANCE", "template guidance not deleted", line=i))

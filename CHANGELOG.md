@@ -37,6 +37,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Fixed
+
+- `spec lint --strict` no longer reports HTML comments as unfilled `<angle-bracket>` placeholders, so release-consistency markers in linted specifications stop failing the Validate Specs gate.
+
 ## [5.24.0] — 2026-08-27
 
 ### Added

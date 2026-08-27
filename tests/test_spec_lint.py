@@ -4,6 +4,9 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.package_contract.release_consistency import (
+    _MARKER,  # pyright: ignore[reportPrivateUsage]
+)
 from project_standards.specs.commands.lint import lint_document
 from project_standards.specs.document import parse_document
 from project_standards.specs.registry import load_registry
@@ -147,6 +150,15 @@ def _placeholder_lines(body: str) -> list[int | None]:
         # A double-backtick span may nest a single-backtick run; CommonMark closes
         # it on the next run of the same length, so the whole span is notation.
         "Nested notation is ``x` <t> `y`` in one span.",
+        # An HTML comment renders as nothing, so it holds no field a reader could
+        # fail to fill. The marker case is what broke Validate Specs: its body has
+        # no `>` before `-->`, so the whole comment read as one angle pair.
+        "<!-- release-consistency: historical standard-bundle-authoring -->",
+        "<!-- a bare note -->",
+        "Prose before <!-- an aside --> and after.",
+        "  <!-- release-consistency: catalog-range markdown-tooling catalog -->",
+        # A real placeholder inside a comment is still commented out.
+        "<!-- TODO: fill in <owner> here -->",
     ],
 )
 def test_inline_code_and_autolinks_are_not_placeholders(line: str) -> None:
@@ -170,10 +182,34 @@ def test_inline_code_and_autolinks_are_not_placeholders(line: str) -> None:
         # GFM renders these as literal text, not links, so they are placeholders.
         "Owner is <owner@>.",
         "Owner is <user@@example.com>.",
+        # The comment exemption is scoped to the comment: a placeholder beside one,
+        # or an unterminated `<!--`, must not ride the exemption out of the report.
+        "<!-- an aside --> leaves <owner> unfilled.",
+        "Owner is <owner> <!-- confirm before approval -->.",
     ],
 )
 def test_real_placeholders_are_still_flagged(line: str) -> None:
     assert _placeholder_lines(line + "\n") == [2]
+
+
+def test_multi_line_html_comment_is_not_a_placeholder() -> None:
+    body = "<!-- a note that\nwraps over <lines>\nand closes here -->\n"
+
+    assert _placeholder_lines(body) == []
+
+
+def test_release_consistency_marker_line_is_clean() -> None:
+    """Pin the cross-file contract: the marker release_consistency reads must lint.
+
+    `package_contract.release_consistency._MARKER` matches this exact line inside
+    approved specification bodies, and the markers cannot move out of the body, so
+    a lint rule that flags them makes the Validate Specs gate unsatisfiable. If
+    `_MARKER`'s grammar changes, this test is the place that notices.
+    """
+    marker = "<!-- release-consistency: historical standard-bundle-authoring -->"
+
+    assert _MARKER.fullmatch(marker) is not None
+    assert _placeholder_lines(marker + "\n") == []
 
 
 def test_fenced_traceability_example_does_not_satisfy_mapping() -> None:
