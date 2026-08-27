@@ -10,7 +10,9 @@ not the wording.
 
 The removal itself is proven where it lives: the binary's registry is asserted in
 cmd/gh-workflow's own tests, and this file only checks that the payload's shipped
-bytes and prose agree with it.
+bytes and prose agree with it. The provider's managed-target registry is likewise
+proven where it lives — `test_provider_registry.py` asserts that agreement for every
+advertised payload (issue #194), so nothing here restates it per family.
 """
 
 from __future__ import annotations
@@ -282,30 +284,6 @@ def test_github_workflow_1_5__openai_companion__is_declared_under_agents_only() 
     assert entry["when_any"] == [{"option": "harnesses", "contains": "codex"}]
     # Every other skill file still lands in both trees.
     assert artifacts["skill-claude"]["target"] == ".claude/skills/github-workflow/SKILL.md"
-
-
-def test_github_workflow_1_5__provider_registry__matches_the_declared_skill_targets() -> None:
-    """The provider's drift table and the payload cannot disagree about any root.
-
-    The 1.3 cut pinned this pairing; 1.5 did not, which is how the provider kept
-    expanding `agents/openai.yaml` over both skill roots after the payload dropped
-    the `.claude/` copy (issue #175). A demanded target the payload never installs
-    fails every reconcile of a correct consumer with GHW-DRIFT, so the equality is
-    asserted in both directions rather than as containment.
-    """
-    provider = _load_provider("gh_workflow_1_5_registry")
-    declared = {
-        artifact["target"]: artifact["id"]
-        for artifact in _artifacts(_SUCCESSOR).values()
-        if "/skills/github-workflow/" in artifact["target"]
-    }
-    registry = cast(
-        "dict[str, tuple[str, str | None, str | None]]",
-        provider._ARTIFACTS,  # pyright: ignore[reportPrivateUsage]  # payload-internal table
-    )
-
-    assert {path: entry[0] for path, entry in registry.items()} == declared
-    assert ".claude/skills/github-workflow/agents/openai.yaml" not in registry
 
 
 def test_github_workflow_1_5__upgrade_provider__reports_the_orphaned_ledger_file() -> None:
