@@ -54,7 +54,7 @@ The Project Standards MCP server must expose the installed Catalog 5 distributio
 
 The evidence register records revision `2026-07-28` as final and records `mcp` 2.0.0 as serving that revision and every earlier revision from one server, which the installed Codex CLI 0.145.0 requires because it speaks `2025-06-18` only. See the [protocol, SDK, and client evidence matrix](../research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md).
 
-The existing dispatcher is the second problem. `invoke_provider` at `src/project_standards/control_plane/providers.py:732` compiles and executes provider code in-process with no timeout, signal handling, or subprocess boundary anywhere in its body. That is acceptable for a synchronous CLI run and unacceptable underneath a protocol server, where an unbounded provider stalls the transport for every client.
+The existing dispatcher is the second problem. `invoke_provider` at `src/project_standards/control_plane/providers.py:1064` compiles and executes provider code in-process with no timeout, signal handling, or subprocess boundary anywhere in its body. That is acceptable for a synchronous CLI run and unacceptable underneath a protocol server, where an unbounded provider stalls the transport for every client.
 
 ## Decision Drivers
 
@@ -110,7 +110,7 @@ Changing any of these names or shapes requires an approved amendment to this rec
 
 Every provider invocation reached through `invoke_read_provider` runs in a spawned worker process using the same interpreter and virtual environment as the server.
 
-- The worker calls the existing `invoke_provider` dispatcher at `src/project_standards/control_plane/providers.py:732` with exact installed payload identity and typed, JSON-safe input, against the resolved effective consumer root. The MCP path therefore produces results equivalent to authoritative direct dispatch; it does not re-implement provider semantics.
+- The worker calls the existing `invoke_provider` dispatcher at `src/project_standards/control_plane/providers.py:1064` with exact installed payload identity and typed, JSON-safe input, against the resolved effective consumer root. The MCP path therefore produces results equivalent to authoritative direct dispatch; it does not re-implement provider semantics.
 - The provider timeout is **30 seconds per provider invocation**. It exists to bound a single hung or runaway provider and to make termination decidable, nothing more.
 - **No aggregate per-tool-call budget is frozen by this record.** The composite tools `validate_repo` and `drift_check` perform N invocations, so their worst case is 30·N seconds. Client-side tool timeouts are client-owned configuration; the evidence matrix documents Codex CLI 0.145.0's `tool_timeout_sec` default of 60 seconds and notes that consumers running composite tools against large consumer sets may need to raise it.
 - On timeout the worker is terminated with `SIGTERM`, then `SIGKILL` if it has not exited, and is reaped in both cases. The service returns a structured timeout `ServiceError` and the repository is left unchanged.
@@ -120,10 +120,10 @@ Every provider invocation reached through `invoke_read_provider` runs in a spawn
 
 #### T1-approved non-mutating effect set
 
-`invoke_read_provider` may dispatch only provider operations whose declared effect is `findings` (`ProviderEffect.FINDINGS`, `src/project_standards/package_contract/payload.py:419`), restricted to the operations `validate`, `verify`, `lint`, and `drift-check` as declared in the operation contract at `src/project_standards/package_contract/payload.py:425`.
+`invoke_read_provider` may dispatch only provider operations whose declared effect is `findings` (`ProviderEffect.FINDINGS`, `src/project_standards/package_contract/payload.py:420`), restricted to the operations `validate`, `verify`, `lint`, and `drift-check` as declared in the operation contract at `src/project_standards/package_contract/payload.py:426`.
 
 - `semantic-review` also declares the `findings` effect but is excluded from the approved set: its exposure is governed by `SPEC-RD01 OQ-006`, which omits it from v1 unless the selected client surface preserves its user-controlled semantics.
-- The `content` effect (`payload.py:420`; operations `id-next`, `extract`, `render`) is non-mutating in itself but is not in the approved set, because no v1 tool exposes those operations. Adding one requires an approved amendment.
+- The `content` effect (`payload.py:421`; operations `id-next`, `extract`, `render`) is non-mutating in itself but is not in the approved set, because no v1 tool exposes those operations. Adding one requires an approved amendment.
 - The `mutation-plan` effect (`payload.py:421`; operations `fix`, `scaffold`, `upgrade`) and the `migration-report` effect (`payload.py:422`; operation `migrate`) are excluded outright: they belong to the apply and authoring path this server does not serve.
 
 ### Consequences

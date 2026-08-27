@@ -89,7 +89,7 @@ This decision governs hooks shipped by standard packages as a class. It does not
 
 Chosen option: **install one shared project-local hook under `.agents/hooks/`**.
 
-Under Catalog 5, a standard-owned hook's canonical authored source lives under `standards/<standard-id>/versions/<version>/hooks/<hook-id>/` and its versioned `payload.toml` declares the managed destination. The current Agent Handoff source is `standards/agent-handoff/versions/1.11/hooks/session-start/session-start`; the symlink-only `src/project_standards/payloads/agent-handoff/1.11/` projection carries that byte-identical source into built distributions. Historical V1 bundle copies are migration evidence only.
+Under Catalog 5, a standard-owned hook's canonical authored source lives under `standards/<standard-id>/versions/<version>/hooks/<hook-id>/` and its versioned `payload.toml` declares the managed destination. The current Agent Handoff source is `standards/agent-handoff/versions/<default>/hooks/session-start/session-start`, where `<default>` is whatever version `catalogs/5.toml` marks `role = "default"` for the `agent-handoff` package (currently 1.15); the symlink-only `src/project_standards/payloads/agent-handoff/<default>/` projection carries that byte-identical source into built distributions. Historical V1 bundle copies are migration evidence only.
 
 Standard adoption installs hook files under `.agents/hooks/<standard-id>/` at the consuming project root. Harness-specific project configuration may reference that shared installed path. A package with multiple hook entrypoints may place them together under the standard's directory, while filenames remain part of that standard's declared contract.
 
