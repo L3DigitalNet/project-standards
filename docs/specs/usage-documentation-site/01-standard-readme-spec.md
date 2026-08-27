@@ -25,7 +25,7 @@ related:
 | ------- | ---------- | ------- | ---------------------------------------------- |
 | 0.1     | 2026-07-08 | ChatGPT | Initial conformant Project Specification draft |
 
-**Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the Deviations Log, not silently patched into requirements.
+**Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
 ---
 
@@ -124,24 +124,26 @@ The README requirements are captured as a conformant project spec, and the final
 
 ## 7. Requirements
 
+> **Quality rule:** Each requirement is one testable statement with a stable ID, a rationale, an acceptance criterion, and a priority. Priorities: **Must** (release-blocking), **Should** (important, briefly deferrable), **Could** (nice-to-have, must not delay release). Anything "Won't" belongs in §2.3, not here.
+
 ### 7.1 Functional Requirements
 
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
-| FR-001 | The README shall define `usage-documentation-site` as a copy-adopted distributable standard. | Consumers need to understand adoption semantics. | README states standard identity, contract version, and copy-adopt posture. | Must |
-| FR-002 | The README shall define the exact consuming-repo layout under `docs/usage/`. | Consistent paths prevent drift. | Layout table includes site root, content root, assets, build output, and issue form. | Must |
-| FR-003 | The README shall state that `docs/usage/content/` is strictly user-facing usage documentation. | Scope protection is the core purpose of the standard. | In-scope and out-of-scope lists are present. | Must |
-| FR-004 | The README shall require canonical Markdown Frontmatter for rendered usage pages by default. | Avoids conflict with the Markdown Frontmatter Standard. | Frontmatter examples use canonical fields. | Must |
-| FR-005 | The README shall define tag vocabulary and issue-form field IDs as controlled contracts. | Feedback JS and Material tags depend on stable names. | Vocabulary and field ID tables are present. | Must |
-| FR-006 | The README shall explain how this standard composes with CLI Documentation, Markdown Tooling, Frontmatter, ADR, Python Tooling, and Project Specification. | Sibling standards already govern adjacent concerns. | Relationship table is present. | Must |
+| FR-001 | The system shall, in its governing README, define `usage-documentation-site` as a copy-adopted distributable standard. | Consumers need to understand adoption semantics. | README states standard identity, contract version, and copy-adopt posture. | Must |
+| FR-002 | The system shall, in its governing README, define the exact consuming-repo layout under `docs/usage/`. | Consistent paths prevent drift. | Layout table includes site root, content root, assets, build output, and issue form. | Must |
+| FR-003 | The system shall, in its governing README, state that `docs/usage/content/` is strictly user-facing usage documentation. | Scope protection is the core purpose of the standard. | In-scope and out-of-scope lists are present. | Must |
+| FR-004 | The system shall, in its governing README, require canonical Markdown Frontmatter for rendered usage pages by default. | Avoids conflict with the Markdown Frontmatter Standard. | Frontmatter examples use canonical fields. | Must |
+| FR-005 | The system shall, in its governing README, define tag vocabulary and issue-form field IDs as controlled contracts. | Feedback JS and Material tags depend on stable names. | Vocabulary and field ID tables are present. | Must |
+| FR-006 | The system shall, in its governing README, explain how this standard composes with CLI Documentation, Markdown Tooling, Frontmatter, ADR, Python Tooling, and Project Specification. | Sibling standards already govern adjacent concerns. | Relationship table is present. | Must |
 
 ### 7.2 Non-Functional Requirements
 
 | ID | Category | Requirement | Measurement / Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
-| NFR-001 | Maintainability | The implementation shall avoid creating parallel governance, validation, or instruction systems. | Review confirms reuse of existing standards patterns. | Must |
-| NFR-002 | Interoperability | The implementation shall pass alongside all other governed standards in the distributor repository. | Full repository validation gate passes. | Must |
-| NFR-003 | Usability | The adopted site shall be viewable in a local browser with one documented command. | `mkdocs serve` command works from the repository root. | Must |
+| NFR-001 | Maintainability | The system shall avoid creating parallel governance, validation, or instruction systems. | Review confirms reuse of existing standards patterns. | Must |
+| NFR-002 | Interoperability | The system shall pass alongside all other governed standards in the distributor repository. | Full repository validation gate passes. | Must |
+| NFR-003 | Usability | The system shall make the adopted site viewable in a local browser with one documented command. | `mkdocs serve` command works from the repository root. | Must |
 
 ### 7.3 Interface Requirements
 
@@ -534,7 +536,7 @@ Checklist tied to the DoD:
 
 ## Appendix A: ID Conventions
 
-Stable IDs allow requirements to be referenced from commits, tests, issues, ADRs, and review comments. Section numbers match the Project Specification Standard's Standard profile.
+Stable IDs allow requirements to be referenced from commits, tests, issues, ADRs, and review comments — and let an implementer's completion claims be mechanically checked. Section numbers below match `spec-full-template.md`, so an ID keeps the same "Defined In" reference across every profile.
 
 | Prefix | Meaning                     | Defined In     |
 | ------ | --------------------------- | -------------- |
@@ -555,67 +557,71 @@ Stable IDs allow requirements to be referenced from commits, tests, issues, ADRs
 | `OQ-`  | Open question               | §21            |
 | `DEV-` | Deviation                   | Deviations Log |
 
-The `R-` prefix is Full-tier and is not used at the Standard profile. Priority values are column values, not ID prefixes; IDs never change when priorities do.
+The `R-` (Risk) prefix is Full-tier (§15) and is not used at the Standard profile. Priority values (`Must/Should/Could`) are column values, not ID prefixes — IDs never change when priorities do.
 
 ---
 
 ## Appendix B: Agent Implementation Contract
 
-Binding when this spec is implemented by a coding agent.
+Binding when this spec is implemented by a coding agent. (Applies equally well to human contractors.)
 
 ### B.1 Implementation Rules
 
 The implementer shall:
 
-- read this entire specification before making changes;
-- preserve all explicit non-goals, won't-haves, constraints, and design constraints;
-- treat Must requirements as mandatory and blocking open questions as hard stops for affected work;
-- record any underspecified behavior as an `OQ-` row with a proposed default assumption;
-- record any implementation divergence as a `DEV-` row rather than adapting silently;
-- add or update tests for every implemented requirement;
-- keep §17.3 current as completion evidence;
-- follow the milestone order in §19;
-- prefer small, reviewable changes.
+- Read this entire specification before making changes; per session thereafter, re-read at minimum §7 (Requirements), §21 (Open Questions), and the Deviations Log — Background and References may be read once.
+- Preserve all explicit non-goals, won't-haves, constraints, and design constraints.
+- Treat **Must** requirements as mandatory and **blocking** open questions as hard stops for the affected work.
+- On encountering underspecified behavior: file an `OQ-` row **with a proposed default assumption** and proceed on it only if non-blocking — never guess silently.
+- On any divergence from the spec: record a `DEV-` row (spec reference, what, why) rather than adapting silently.
+- Add or update tests for every implemented requirement; keep §17.3 (traceability) current.
+- Follow the milestone order in §19; do not build later milestones on unproven earlier ones.
+- Prefer small, reviewable changes; avoid broad refactors unless the spec requires them.
+- Document any discovered mismatch between the spec and existing code as a `DEV-` or `OQ-` row.
 
 ### B.2 Prohibited Behaviors
 
 The implementer shall not:
 
-- invent requirements not present in this spec;
-- remove existing behavior unless explicitly required;
-- introduce external services or dependencies not agreed with the owner without an approved open question;
-- store secrets in source control or print them in CI logs;
-- ignore failing tests unrelated to the change without documenting them;
-- treat examples as exhaustive or normative unless explicitly stated;
-- mark a requirement complete without a verification entry in §17.3.
+- Invent requirements not present in this spec.
+- Remove existing behavior unless explicitly required.
+- Introduce external services or dependencies not agreed with the owner without an approved `OQ-`.
+- Store secrets in source control or print them in CI logs.
+- Ignore failing tests unrelated to the change without documenting them.
+- Treat examples as exhaustive or normative unless explicitly stated.
+- Mark a requirement complete without a verification entry in §17.3.
 
-### B.3 Required Completion Report
+### B.3 Required Completion Report (verification gate)
 
 At completion, provide:
 
-- summary of changes and files changed;
-- requirements implemented, each mapped to the test or command that proves it;
-- tests added or changed;
-- deviations and their approval status;
-- known limitations and remaining open questions;
-- documentation deliverables completed.
+- Summary of changes and files changed.
+- **Requirements implemented, each mapped to the test or command that proves it** — i.e., the completed §17.3 matrix. Claims without verification entries are not accepted.
+- Tests added or changed.
+- Deviations (`DEV-` rows) and their approval status.
+- Known limitations and remaining open questions.
+- Documentation deliverables completed (§18.7).
 
 ### B.4 Session Handoff
 
-For multi-session implementations, record current milestone, in-progress requirement IDs, and unresolved open questions or deviations in the repository's session-state or handoff documents according to repository convention.
+For multi-session implementations: record current milestone, in-progress requirement IDs, and unresolved `OQ-`/`DEV-` items in the repository's session-state/handoff documents at the end of each session, per the repo's documentation convention. The spec records _what and why_; handoff docs record _where work stands_.
 
 ---
 
-> **Appendix C (Optional Modules) is Full-tier** and is intentionally omitted at the Standard profile.
+> **Appendix C (Optional Modules) is Full-tier** — external-integration, scheduling, entity-resolution, and scoring modules — and is intentionally omitted at the Standard profile.
 
 ## Appendix D: Tailoring
 
-This specification uses the Standard profile because the change spans one repository, several standards, packaged CLI behavior, validation machinery, and dogfooding requirements, but it does not introduce durable runtime data or external production services.
+Pick the smallest profile that fits; upgrade if the project grows. Because numbering is stable across profiles, upgrading is **additive**: insert the missing sections at their canonical numbers and set `profile:` in the frontmatter — no existing section or ID reference changes.
 
-| Profile | Use For | Decision |
+| Profile | Template File | Use For |
 | --- | --- | --- |
-| Light | Small single-session changes | Too small for this standard addition. |
-| Standard | Typical feature or standards-bundle work | Selected. |
-| Full | Multi-service systems, durable data, or external integrations | Not required for this change. |
+| **Light** | `spec-light-template.md` | Scripts, small tools, single-session agent tasks |
+| **Standard** | this file | Typical features and services |
+| **Full** | `spec-full-template.md` | Multi-service systems, durable data, external integrations, or multiple stakeholders |
 
-Upgrade to Full only if the implementation introduces a durable service, external integration, release orchestration system, or substantial runtime data model beyond standard repository files.
+Rules of thumb:
+
+- Owns durable data → §18.6 Backup/DR is required.
+- Talks to external paid/rate-limited APIs, makes automated decisions users must trust, or spans multiple services/stakeholders → upgrade to **Full** (adds §5, §8.4, §8.6, §14–§16, §18.4, §20, §19 Waves, and Appendix C modules).
+- Implemented by a coding agent → Appendix B is required (it is the cheapest section and the highest-leverage one).
