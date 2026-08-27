@@ -110,6 +110,8 @@ Ordered. [#162](https://github.com/L3DigitalNet/project-standards/issues/162) re
 
 ### 5.20.0
 
+**Shipped as v5.20.0.** Kept for the planning record; CHANGELOG.md is the release truth.
+
 #### Claude Code skill discovery
 
 - Verified 2026-08-15: Claude Code has never read `.agents/skills/` (Codex's convention), so every packaged skill was silently invisible to it in every consumer. [#170](https://github.com/L3DigitalNet/project-standards/issues/170) ships the fix: `agent-handoff` 1.13, `github-workflow` 1.3, and `markdown-frontmatter` 1.12 install byte-identical, digest-locked skill copies to both `.agents/skills/<id>/` and `.claude/skills/<id>/`, carried by the same-path-same-digest declaration allowance in the package contract (ADRs 0016 and 0021 amended 2026-08-15).

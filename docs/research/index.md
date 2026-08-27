@@ -6,7 +6,7 @@ description: 'Index of research reports maintained with the research corpus.'
 doc_type: 'index'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-08-07'
+updated: '2026-08-27'
 tags:
   - 'research'
   - 'index'
@@ -18,6 +18,17 @@ related: []
 
 | id | title | created | updated | status | confidence | tags | related |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| research-s8hhpt-open-issue-resolution-program-closeout-evidence | Open-Issue Resolution Program Closeout Evidence | 2026-08-12 | 2026-08-12 | active | high | release closeout issues | docs/research/2026-08-01-project-spec-feature-release-evidence.md |
+| research-gw67x6-project-spec-feature-release-evidence | Project Specification feature release evidence | 2026-08-12 | 2026-08-12 | active | high | release validation | CHANGELOG.md |
+| research-2zxxmq-project-specification-1-9-conformance-dogfood-evidence | Project Specification 1.9 Conformance Dogfood Evidence | 2026-08-11 | 2026-08-11 | active | high | project-spec conformance dogfood verification-evidence | docs/plans/2026-08-01-project-spec-conformance-plan.md |
+| research-mdxbi8-project-spec-conformance-release-evidence | Project Specification Conformance Release Evidence | 2026-08-11 | 2026-08-11 | active | high | project-spec conformance verification-evidence | docs/plans/2026-08-01-open-issue-resolution-program-plan.md |
+| res-ghw1ev-github-workflow-live-run-evidence | EV-001: github-workflow Live Audit and Ledger Run | 2026-08-07 | 2026-08-07 | active | high | github-workflow evidence | docs/specs/2026-08-06-github-workflow-package-spec.md |
+| res-g5y9d3-deferred-tooling-release-evidence | EV-008: v5.16.0 Deferred Tooling Successor Release Evidence | 2026-08-05 | 2026-08-05 | active | high | release evidence | docs/plans/2026-08-01-open-issue-resolution-program-plan.md |
+| res-w41cls-widened-v5-15-closure-evidence | EV-011: Widened v5.15.0 Closure Evidence | 2026-08-04 | 2026-08-05 | active | high | release evidence | docs/plans/2026-08-01-open-issue-resolution-program-plan.md |
+| research-t7kd2p-agent-handoff-1-8-closeout-evidence | Agent Handoff 1.8 Closeout Evidence for Issue 80 | 2026-08-04 | 2026-08-04 | active | high | agent-handoff issue-closeout verification-evidence | docs/plans/2026-08-01-open-issue-resolution-program-plan.md |
+| research-w8fn3k-pyyaml-transient-disposition | PyYAML Transient Import Failure Disposition | 2026-08-04 | 2026-08-04 | active | high | issue-disposition installation verification-evidence | docs/plans/2026-08-01-open-issue-resolution-program-plan.md |
+| research-m2rq8v-release-level-classification-evidence | Release-Level Classification Verification Evidence | 2026-08-04 | 2026-08-04 | active | high | release-classification verification-evidence versioning | docs/plans/2026-08-01-open-issue-resolution-program-plan.md |
+| res-e7q2vk-v5-15-release-evidence | EV-007: v5.15.0 Release Evidence | 2026-08-01 | 2026-08-04 | active | high | release evidence | docs/plans/2026-08-01-open-issue-resolution-program-plan.md |
 | research-pe7k2m-plan-execution-efficiency | Plan-Execution Efficiency: Measured Costs and Ranked Remedies | 2026-08-07 | 2026-08-07 | active | high | plan-execution process-efficiency verification-gate worktree-bootstrap | docs/reference/session-export-gh-workflows-implementation.md |
 | research-by2ect-self-dogfooding-version-skew-producer-mode | Self-Dogfooding Version Skew: Producer-Mode Exemptions For A Consumer Lineage Guard | 2026-08-04 | 2026-08-04 | active | medium | dogfooding version-skew bootstrapping lineage-guard producer-consumer | docs/TODO.md |
 | research-g8t3vx-release-gate-wall-clock-spike | Release-Gate Wall-Clock Spike | 2026-07-31 | 2026-07-31 | active | high | release-gate pytest-xdist coverage sysmon performance | docs/handoff/conventions.md |
