@@ -9,7 +9,7 @@ This directory is the durable home for Project Specification Standard documents 
 | [SPEC-MT01 — Meta-Repository MCP Readiness](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) | approved and locked rev 1.4; Opus spec review converged; complete historical contract | Historical Step 07 contract plus current 5.9.0 successor-state reconciliation |
 | [SPEC-RD01 — MCP Enablement Roadmap](2026-07-07-project-standards-mcp-enablement-roadmap-spec.md) | approved and locked rev 1.7; read-only server delivered in 5.12.0 | Completed Step 08-through-14 read-only delivery; controlled-write and remote phases remain separately approved future work |
 | [SPEC-MS01 — MCP Server Implementation](2026-07-07-project-standards-mcp-server-implementation-spec.md) | approved and locked rev 1.5; T1 decision gate closed 2026-07-28; `OQ-005` resolved 2026-07-30 at the T11 client/documentation gate; §9 field names and §10.3 `EC-005` wording reconciled to the implemented contract 2026-07-31 at the T12 final gate | SDK-independent services plus thin local read-only stdio adapter; boundary and transport decisions recorded in ADR 0025 and ADR 0026 |
-| [SPEC-DPEY — Agent Handoff Standard Package](2026-07-09-agent-handoff-standard-package.md) | approved rev 1.0; released package `1.7`; verified `1.8` candidate pending release preparation; retirement tracked by T32 | V1 baseline plus Catalog 5 precedence, the adaptive SessionStart launcher successor, and the bounded T32 operational closeout |
+| [SPEC-DPEY — Agent Handoff Standard Package](2026-07-09-agent-handoff-standard-package.md) | approved rev 1.2; released package version is whatever Catalog 5 currently marks `role = "default"` for `agent-handoff` — see [`docs/handoff/deployed.md`](../handoff/deployed.md); T32 retirement closeout completed 2026-08-04 | V1 baseline plus Catalog 5 precedence, the adaptive SessionStart launcher successor, and the completed T32 operational closeout |
 | [SPEC-CP01 — Consumer Standards Control Plane](2026-07-10-consumer-standards-control-plane-spec.md) | approved rev 0.15; implemented | Catalog/config/lock/reconciliation control plane; declared-path provider correction, root dogfood, and FR-037/FR-038 evidence pass |
 | [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.15; implemented | Immutable family/payload authoring contract including bounded direct package-config transforms |
 | [SPEC-VAIC — V5 Adoption Integrity Correction Train](2026-07-26-v5-adoption-integrity-correction-train-spec.md) | approved rev 0.12; implemented and released in 5.9.0 | Issues #32 and #35-#49, immutable successors, exact-candidate qualification, and closed-issue regression preservation |
@@ -19,7 +19,7 @@ This directory is the durable home for Project Specification Standard documents 
 
 | Specification set | Status | Release relationship |
 | --- | --- | --- |
-| [Usage Documentation Site](future/usage-documentation-site/README.md) | draft seven-spec set plus index; formal review pending | Dedicated post-v5 package program |
+| [Usage Documentation Site](usage-documentation-site/README.md) | draft seven-spec set plus index; formal review pending | Dedicated post-v5 package program |
 
 ## Archive
 
