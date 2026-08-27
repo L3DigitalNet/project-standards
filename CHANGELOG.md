@@ -37,9 +37,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Changed
+
+- Recorded the usage-documentation-site bundle's profile selection as design decision `D-003` in `05-open-items-and-decision-log.md`, preserving the Standard-profile rationale, its upgrade trigger, and the index's Light-profile rule that the canonical Appendix D surface cannot carry.
+
 ### Fixed
 
 - `spec lint --strict` no longer reports HTML comments as unfilled `<angle-bracket>` placeholders, so release-consistency markers in linted specifications stop failing the Validate Specs gate.
+- Payload-tree test enumerations now ignore interpreter bytecode. Importing a provider writes `providers/__pycache__/*.pyc` beside the payload source, and the workspace-reusing self-hosted runner carried those caches into the next run, so suites comparing a payload's source tree against its declared, projected, or wheel content failed on a file no payload declares — hosted `Check` was red on `main` for four consecutive runs. A shared `tests/payload_tree.py` walker now applies the same exclusion `validate_payload_integrity` uses, and `scripts/verify.sh` exports `PYTHONDONTWRITEBYTECODE=1`.
+- Restored Project Specification 1.9 conformance across the eight top-level `docs/specs/usage-documentation-site/` draft documents: the Lifecycle, Quality-rule, Appendix A, Appendix B, and Appendix D surfaces now match their declared profile template exactly, and every mandatory requirement row opens with `The system shall`. `spec lint --strict` had reported 90 warnings across the bundle after the include-pattern correction brought it into scope, failing the hosted "Validate Specs" job.
 
 ## [5.24.0] — 2026-08-27
 
