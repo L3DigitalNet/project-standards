@@ -3,14 +3,14 @@ plan_format: 3
 title: 'v5.19 ADR Corpus Corrections Implementation Plan'
 slug: 'v519-adr-corpus-corrections'
 status: active
-revision: 3
-revises_revision: 2
-revision_reason: 'keep former ADR paths only in bridge-required plan identity metadata'
+revision: 4
+revises_revision: 3
+revision_reason: 'repoint the section 7 preflight to the successor plan-authoring helper (issue 178)'
 pause_reason: ''
 source: 'issues L3DigitalNet/project-standards#161, #160, #159, and #162; owner decisions recorded 2026-08-10'
 spec_ref: ''
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-08-27
 owners:
   - 'Project Standards maintainers'
 ---
@@ -217,7 +217,7 @@ T4 owns the shared final corpus so the first three checkpoints remain independen
 
 ## 7. Verification and Evidence Strategy
 
-- **Bridge and execution preflight:** run `uv run --no-project scripts/plan.py --version` and require `3.5.0`; run `uv run --no-project scripts/plan.py validate docs/plans/2026-08-10-v519-adr-corpus-corrections-plan.md --no-scratch`; in each new execution worktree run `scripts/bootstrap-worktree.sh` before candidate-wheel-backed checks.
+- **Bridge and execution preflight:** the deployed `scripts/plan.py` bridge was retired by `agent-configs` ADR-0023, so the executor reaches the engine only through the `bin/plan-authoring` helper inside its own installed `plan-authoring` skill root; run that helper with `--version` and require `plan.py bridge 3.5.0`; run it again as `validate docs/plans/2026-08-10-v519-adr-corpus-corrections-plan.md --no-scratch`; in each new execution worktree run `scripts/bootstrap-worktree.sh` before candidate-wheel-backed checks.
 - **ADR/frontmatter oracle:** with `PYTHONPATH="$PWD/build/wheel-runtime"`, run `uv run project-standards validate`. The selected ADR 1.5 configuration has `require_sections = true`, and the selected Markdown Frontmatter provider validates canonical fields, IDs, dates, and references.
 - **Frontmatter formatting:** with the same candidate runtime, run `uv run format-frontmatter --check` and require no ordering/quoting/list findings in the managed corpus.
 - **Git-tracked changed-surface formatting:** after reviewing and staging only task-owned paths, run `git diff --cached --name-only -z --diff-filter=ACMR -- '*.md' '*.json' '*.jsonc' '*.yml' '*.yaml' | xargs -0 -r npx prettier --check --` and `git diff --cached --name-only -z --diff-filter=ACMR -- '*.md' | sed -z 's|^|:|' | xargs -0 -r npx markdownlint-cli2 --no-globs`. This is the documentation-only scoped form of the repository's Git-authoritative Markdown gate and excludes unrelated tracked symlink projections.
