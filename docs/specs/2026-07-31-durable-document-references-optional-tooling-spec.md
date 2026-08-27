@@ -6,7 +6,7 @@ profile: standard
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-31'
-last_reviewed: '2026-07-31'
+last_reviewed: '2026-08-27'
 supersedes: null
 superseded_by: null
 related:
@@ -26,6 +26,7 @@ related:
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
 | 0.1 | 2026-07-31 | Codex with owner-directed design decisions | Initial draft defining optional meta-repository tooling for canonical specification and ADR references, validation, graph generation, and guarded reconciliation. |
+| 0.2 | 2026-08-27 | Claude, owner-directed currency audit (#178) | Currency audit against the repository at HEAD; no scope change. `project-toolbox` now exists as an active Catalog 5 package, so WH-004 and §2.4 record the real remaining gate instead of a planned family. §3.1 marks the 2026-07-31 corpus counts as a dated measurement that was not re-taken. IR-005 and new OQ-001 surface the previously unstated consumer-config `schema_version` obligation for a new top-level `[tools]` table. §References repins the Standards entries to the versions this repository currently resolves. |
 
 **Spec lifecycle:** This draft formalizes the owner-approved design discussion but remains under review until the owner accepts this written specification. After approval, scope-affecting changes require a new revision and renewed approval. Implementation deviations belong in the [Deviations Log](#deviations-log), not silent requirement edits.
 
@@ -74,7 +75,7 @@ This project adds optional tooling owned directly by the `project-standards` met
 | WH-001 | Namespace adapters beyond Project Specifications and ADRs. | The first release must prove the policy against formal identifiers before generalizing to every frontmatter ID. | A concrete repository requires another stable identifier family and supplies its canonical declaration and reference grammar. |
 | WH-002 | Persistent or incremental scan caching. | On-demand scanning is simpler and avoids a second artifact lifecycle before performance evidence exists. | A recorded cold-run benchmark demonstrates a material performance need in a supported corpus. |
 | WH-003 | MCP resources or tools for reference reports and graphs. | CLI-only delivery avoids adding protocol, response-size, security, and compatibility obligations to version one. | The CLI contracts are stable and an approved MCP use case requires remote exposure. |
-| WH-004 | Relocation into the planned `project-toolbox` standard. | Direct meta-repository ownership is the approved initial boundary; relocation would be a separate compatibility decision. | `project-toolbox` exists and the owner approves a migration preserving public contracts. |
+| WH-004 | Relocation into the `project-toolbox` standard. | Direct meta-repository ownership is the approved initial boundary; relocation would be a separate compatibility decision. `project-toolbox` now exists as an active Catalog 5 package (1.1, enabled in this repository), but its delivered inventory is managed workflow checklists plus a routing skill, not wheel-distributed Python subsystems, so it does not yet own a surface of this shape. | The owner approves a migration preserving public contracts and `project-toolbox` gains a delivery form for wheel-distributed tooling. |
 | WH-005 | Full cross-file transactional rollback for reconciliation. | Version one can preflight all edits and replace each file atomically without claiming a transaction the executor does not provide. | The mutation platform gains and proves an all-or-nothing multi-file transaction contract. |
 
 ### 2.4 Boundaries
@@ -83,7 +84,7 @@ This project adds optional tooling owned directly by the `project-standards` met
 | --- | --- |
 | System owns | Tool configuration, corpus scanning, namespace composition, canonical registry, policy findings, graph schemas, reconciliation plans, CLI behavior, and wheel distribution. |
 | System depends on | Authored Markdown, the Project Specification and ADR identity contracts shipped in the wheel, Markdown parsing helpers, repository configuration, and the existing guarded mutation executor. |
-| System does not own | The content or lifecycle of consumer documents, package selection, standards adoption, external URL availability, editorial `related:` decisions, CI enablement in unconfigured repositories, or a future `project-toolbox` migration. |
+| System does not own | The content or lifecycle of consumer documents, package selection, standards adoption, external URL availability, editorial `related:` decisions, CI enablement in unconfigured repositories, or a `project-toolbox` relocation. |
 
 ---
 
@@ -95,7 +96,7 @@ Project Specifications declare `spec_id` and use a dedicated nested `related` sc
 
 The current `validate-references` implementation is an opt-in Markdown Frontmatter pass. It checks ID uniqueness, date ordering, relationship resolution, supersession reciprocity, and ADR sequence uniqueness over its configured managed corpus. Unresolved references are advisory, body references are outside its scope, and well-formed nonlocal ADR IDs are assumed external. The standards graph separately models standard-package contracts, not document navigation.
 
-The maintained specification index links canonical documents, but it is authored navigation rather than the identity authority. A 2026-07-31 audit found 355 Markdown lines containing `SPEC-` tokens and 22 containing linked `SPEC-` tokens; `SPEC-MT01` appeared on 140 lines and was linked on 14. These counts include contexts that the target policy will exempt, so they demonstrate inconsistent convention rather than a defect total.
+The maintained specification index links canonical documents, but it is authored navigation rather than the identity authority. A 2026-07-31 audit found 355 Markdown lines containing `SPEC-` tokens and 22 containing linked `SPEC-` tokens; `SPEC-MT01` appeared on 140 lines and was linked on 14. These counts include contexts that the target policy will exempt, so they demonstrate inconsistent convention rather than a defect total. They are a dated one-off measurement and were deliberately not re-taken at revision 0.2; NFR-005 and MS-2 forbid deriving behavior from corpus counts, so their current values are not a requirement input.
 
 ### 3.2 Target State
 
@@ -207,7 +208,7 @@ The subsystem derives a unique canonical ID-to-document registry from authored d
 | IR-002 | Command status and check output | Every subcommand shall use exit `0` only when the operation succeeds with no blocking findings, including advisory-only output; exit `1` for policy, drift, identity, publication, precondition, apply, or unexpected internal failure; and exit `2` for invocation or configuration error. Reconciliation preview and successful apply still exit `1` when blocking findings remain. `check` shall support human output and `--json`. | Versioned finding-report envelope and one stable group-wide exit contract. Unsafe corpus scope or an invalid output target, including a symlink, non-regular object, or path in either reference scope, is error `2`; an otherwise valid guarded output target that cannot be published is error `1`. | A status-matrix test covers every subcommand and ERR-001–ERR-008, including preview/apply with remaining findings; check modes have equivalent normalized content. |
 | IR-003 | Graph output | `graph` shall emit JSON by default and DOT with `--format dot`; output is stdout unless an explicit guarded path outside both identity and policy scopes is supplied. | Versioned graph envelope or deterministic DOT; existing regular-file target requires explicit overwrite; symlinked, non-regular, and reference-scope targets are invalid. | Output-path tests cover stdout, new file, overwrite refusal, symlink/directory/identity-scope/policy-scope refusal, and no truncation. |
 | IR-004 | Reconciliation output | `reconcile` shall emit a versioned typed plan by default. `reconcile --apply` shall rescan and recompute a new current plan, emit that plan in the selected output mode, and preflight its hashes immediately before writes; it shall not accept a prior plan as input in v1. | Plan carries repository identity, source paths, edits, and content-hash preconditions; a preview from another invocation is informative, not an apply token. | Preview/apply and intra-invocation stale-precondition tests pass in human and JSON modes. |
-| IR-005 | Tool configuration | `.standards/config.toml` shall accept an optional `[tools.references]` namespace separate from `[standards.*]`. | Closed schema with `enabled`, `include`, `exclude`, `historical`, `indexes`, `namespaces`, and `external_ids`. At least one effective authored or index path must resolve; an explicit or enabled aggregate run with no effective corpus is configuration error `2`. | Schema tests accept the documented configuration, reject unknown keys, preserve configs without the namespace, and reject absent or empty effective scope without a vacuous green result. |
+| IR-005 | Tool configuration | `.standards/config.toml` shall accept an optional `[tools.references]` namespace separate from `[standards.*]`, and every existing config that omits it shall keep its current parse, resolution, rendering, and digest behavior unchanged. | Closed schema with `enabled`, `include`, `exclude`, `historical`, `indexes`, `namespaces`, and `external_ids`. At least one effective authored or index path must resolve; an explicit or enabled aggregate run with no effective corpus is configuration error `2`. The consumer-config document is a versioned contract whose top level is closed (`additionalProperties: false` over `project_standards` and `standards`), so introducing a sibling `[tools]` table is a config-schema change governed by OQ-001. | Schema tests accept the documented configuration, reject unknown keys, preserve configs without the namespace, and reject absent or empty effective scope without a vacuous green result. A compatibility test proves a config that omits `[tools]` produces byte-identical rendering and an unchanged `config_digest`. |
 | IR-006 | Aggregate validation | `project-standards validate` shall include reference findings only when `[tools.references].enabled = true`. | Existing aggregate report conventions; no selected package implied. | Enabled and disabled integration fixtures produce the expected aggregate result. |
 
 ### 7.4 Data Requirements
@@ -641,7 +642,11 @@ Complete source/candidate/installed-wheel parity, full repository gates, objecti
 
 ## 21. Open Questions and Decisions
 
-No blocking product or architecture decisions remain.
+No blocking product or architecture decisions remain. One non-blocking compatibility question is recorded.
+
+| ID | Question | Blocking? | Current Assumption | Owner | Decide By |
+| --- | --- | --- | --- | --- | --- |
+| OQ-001 | Does introducing the sibling top-level `[tools]` table require the consumer-config header to advance to `schema_version = "1.2"`, or is `[tools.references]` version-neutral for `1.0` and `1.1` headers? | No | Follow the repository's own precedent for `role`, which was introduced at header `schema_version = "1.1"` and is rejected under `1.0` while leaving unmodified `1.0` configs valid and digest-stable: gate writing `[tools.references]` behind a new header version, keep every prior header valid, and exclude the absent namespace from the digest basis. The alternative — treating a sibling table as outside the header's version contract — is cheaper but leaves no declared signal that a consumer config uses a key an older tool would reject. | Owner | Before MS-0 freezes the configuration contract. |
 
 ---
 
@@ -655,10 +660,12 @@ No implementation deviations have been recorded.
 
 ### Standards
 
-- [Project Specification Standard 1.5](../../standards/project-spec/versions/1.5/README.md)
-- [ADR Standard 1.3](../../standards/adr/versions/1.3/README.md)
-- [Markdown Frontmatter Standard 1.7](../../standards/markdown-frontmatter/versions/1.7/README.md)
-- [Markdown Frontmatter relationship policy](../../standards/markdown-frontmatter/versions/1.7/field-values.md#relationships-and-sources)
+Repinned at revision 0.2 to the versions this repository currently resolves in `.standards/lock.toml`. The identity grammars this subsystem composes are unchanged from the 0.1 pins: the Project Specification `spec_id` pattern is byte-identical between 1.5 and 1.9, and the ADR canonical `adr-NNNN-repo-name-short-title` form is unchanged through 1.6.
+
+- [Project Specification Standard 1.9](../../standards/project-spec/versions/1.9/README.md)
+- [ADR Standard 1.6](../../standards/adr/versions/1.6/README.md)
+- [Markdown Frontmatter Standard 1.13](../../standards/markdown-frontmatter/versions/1.13/README.md)
+- [Markdown Frontmatter relationship policy](../../standards/markdown-frontmatter/versions/1.13/field-values.md#relationships-and-sources)
 - [Repository versioning policy](../../meta/versioning.md)
 
 ### Project References
