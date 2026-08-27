@@ -157,14 +157,14 @@ The "standard for standards" — the V2 family/payload/catalog contract every pa
 
 ## Consuming the standards
 
-Project Standards 5.23.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
+Project Standards 5.24.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
 
 ```bash
-uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.23.0"
+uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.24.0"
 project-standards --version || project-standards --version
 ```
 
-The version command must report `project-standards 5.23.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.24.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
@@ -260,7 +260,7 @@ For private standards repos called by private consumers, enable cross-repository
 ```yaml
 repos:
   - repo: https://github.com/L3DigitalNet/project-standards
-    rev: v5.23.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
+    rev: v5.24.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
     hooks:
       - id: format-frontmatter-check
       - id: validate-id-check
@@ -296,7 +296,7 @@ npm ci                                                       # Prettier and mark
 uv run project-standards standards sync-payload-projection --root . --check --json # must pass before the build
 uv build --clear --wheel --out-dir build/release-wheel
 rm -rf -- build/wheel-runtime
-uv run python -m zipfile -e build/release-wheel/project_standards-5.23.0-py3-none-any.whl build/wheel-runtime
+uv run python -m zipfile -e build/release-wheel/project_standards-5.24.0-py3-none-any.whl build/wheel-runtime
 scripts/wheel-runtime-stamp.sh write         # records what the extraction was built from
 ```
 

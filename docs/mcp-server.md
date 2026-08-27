@@ -57,7 +57,7 @@ Working from a checkout, the candidate-wheel procedure is the repository's own, 
 uv sync --all-groups
 uv run project-standards standards sync-payload-projection --root .
 uv build --wheel --out-dir dist
-sha256sum dist/project_standards-5.23.0-py3-none-any.whl
+sha256sum dist/project_standards-5.24.0-py3-none-any.whl
 uv tool install ./dist/project_standards-5.23.0-py3-none-any.whl
 ```
 
@@ -72,7 +72,7 @@ project-standards --version
 project-standards mcp --help
 ```
 
-The version command reports `project-standards 5.23.0`. A candidate built from a checkout reports the same number as the release it is being prepared for, so two candidates built from different commits are told apart only by the wheel digest above. The `mcp` subcommand accepts exactly one launch-time option:
+The version command reports `project-standards 5.24.0`. A candidate built from a checkout reports the same number as the release it is being prepared for, so two candidates built from different commits are told apart only by the wheel digest above. The `mcp` subcommand accepts exactly one launch-time option:
 
 ```bash
 project-standards mcp --root-boundary /home/chris/projects

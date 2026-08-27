@@ -30,14 +30,14 @@ The v5 tool keeps a warned fallback for a repository that still has only `.proje
 
 - Upgrade on a branch with a clean, reviewed working tree.
 - Use Python 3.14 or newer.
-- Install or invoke the exact v5 release you intend to pin. For 5.23.0:
+- Install or invoke the exact v5 release you intend to pin. For 5.24.0:
 
   ```bash
-  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.23.0"
+  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.24.0"
   project-standards --version || project-standards --version
   ```
 
-  Confirm that the command reports `project-standards 5.23.0` before continuing. The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real.
+  Confirm that the command reports `project-standards 5.24.0` before continuing. The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real.
 
 - Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
 - Review the current package-specific [adoption guide](standards/README.md) for option and output changes.
@@ -294,6 +294,12 @@ Refreshing onto the 5.18.0 catalog rewrites nothing by default. All four package
 **Python Tooling 1.13** adds `ruff.extend_per_file_ignores`, a typed glob-to-rules table that exempts named rules for one path without disabling them repository-wide. Entries compose into the package-owned `[tool.ruff.lint.per-file-ignores]` table rather than replacing it, and the empty default renders the 1.12 bytes. Ruff's own `[tool.ruff.lint.extend-per-file-ignores]` table stays consumer-owned, so the documented pre-1.13 workaround keeps working and does not become `CP-MODIFIED-MANAGED` drift.
 
 **Agent Handoff 1.11** and **GitHub Workflow 1.1** change no option, artifact, contribution, or provider byte; the Agent Handoff launcher is 1.10's exact executable. GitHub Workflow 1.1 rebuilds `gh-workflow`, whose `ledger` subcommand no longer stamps a read timestamp into `docs/GH-WORKFLOWS.md` — the first regeneration after the refresh therefore drops that line, and every later one against unchanged work state produces no diff at all.
+
+### What the 5.24.0 defaults rewrite on refresh: Markdown Frontmatter 1.14 adds agent-instruction blocks
+
+**Markdown Frontmatter 1.13 → 1.14** adds a managed `markdown-frontmatter` block to `AGENTS.md` (when `harnesses` contains `codex`) and to `CLAUDE.md` (when `harnesses` contains `claude-code`); a `reconcile --apply` onto this catalog writes the block where it is missing and nothing is removed.
+
+Installed skill and template copies also switch their placeholder token from `xxxxxx` to `XXXXXX`. A copy carried over from before the switch keeps the old token and now fails `validate-id`; run `validate-id --fix` to bring it current.
 
 ### What the 5.23.0 defaults rewrite on refresh: GitHub Workflow 1.5 removes the ledger
 
