@@ -1273,10 +1273,31 @@ class ImportError(NewError):
     """A stable public refusal from preservation-first specification import."""
 
 
+# Reported when no payload was resolved at all, so there is no version to name. Both
+# users are refusal paths whose own message says a selection is required.
+_UNSELECTED_IMPORT_PROVIDER = "project-spec/fix"
+
+
+def _import_provider_id(runtime: _SpecRuntime) -> str:
+    """Name the provider a `spec import` invocation routes to.
+
+    Derived from the resolved payload rather than written as a literal: the string is
+    a claim about which payload actually ran, so pinning it to one version made every
+    later cut in the family report a provider that was never invoked (issue #199). An
+    unselected runtime has no payload to name and reports the family-qualified id
+    alone; that value only ever reaches output through the refusal in `_run_import`,
+    whose message states the requirement.
+    """
+    if runtime.payload is None:
+        return _UNSELECTED_IMPORT_PROVIDER
+    return f"project-spec@{runtime.payload.manifest.payload.version.value}/fix"
+
+
 def _import_payload(
     *,
     ok: bool,
     written: bool,
+    provider: str,
     source: str | None,
     target: str | None,
     spec_id: str | None,
@@ -1292,7 +1313,7 @@ def _import_payload(
         "written": written,
         "source": source,
         "target": target,
-        "provider": "project-spec@1.9/fix",
+        "provider": provider,
         "spec_id": spec_id,
         "plan_digest": plan_digest,
         "mappings": mappings,
@@ -1306,6 +1327,7 @@ def _emit_import_failure(
     json_mode: bool,
     error: ImportError,
     *,
+    provider: str,
     source: str | None = None,
     target: str | None = None,
     spec_id: str | None = None,
@@ -1317,6 +1339,7 @@ def _emit_import_failure(
                 _import_payload(
                     ok=False,
                     written=False,
+                    provider=provider,
                     source=source,
                     target=target,
                     spec_id=spec_id,
@@ -1337,6 +1360,7 @@ def _emit_import_failure(
 def _import_report_payload(
     plan: MutationPlanSchema,
     *,
+    provider: str,
     written: bool,
 ) -> dict[str, object]:
     report = getattr(plan, "import_report", None)
@@ -1369,6 +1393,7 @@ def _import_report_payload(
     return _import_payload(
         ok=True,
         written=written,
+        provider=provider,
         source=report.source_snapshot.path.original,
         target=report.target_snapshot.path.original,
         spec_id=report.spec_id,
@@ -1380,8 +1405,10 @@ def _import_report_payload(
     )
 
 
-def _emit_import_success(plan: MutationPlanSchema, *, json_mode: bool, written: bool) -> None:
-    payload = _import_report_payload(plan, written=written)
+def _emit_import_success(
+    plan: MutationPlanSchema, *, provider: str, json_mode: bool, written: bool
+) -> None:
+    payload = _import_report_payload(plan, provider=provider, written=written)
     if json_mode:
         print(json.dumps(payload, separators=(",", ":")))
         return
@@ -1410,6 +1437,9 @@ def _import_document_snapshot(entry: SnapshotEntry) -> JsonObject:
 def _run_import(argv: list[str], runtime: _SpecRuntime) -> int:
     parser = _import_argument_parser()
     json_mode = _parser_flag_present(parser, argv, dest="json")
+    # Resolved before the try block because the failure emitter in its `except` needs
+    # it, including for refusals raised before the payload is ever consulted.
+    import_provider = _import_provider_id(runtime)
     args: argparse.Namespace | None = None
     current_plan_digest: str | None = None
     try:
@@ -1428,9 +1458,19 @@ def _run_import(argv: list[str], runtime: _SpecRuntime) -> int:
             raise ImportError(
                 "flag_conflict", "--expected-plan-digest has meaning only with --apply"
             )
-        if runtime.payload is None or runtime.payload.manifest.payload.version.value != "1.9":
+        # Gate on the declared provider, not on a version literal: `fix` is what this
+        # command invokes, 1.9 is only the version that first shipped it, and a literal
+        # locked the whole command to that one payload — 1.10 would have refused every
+        # import (issue #199). A payload without the provider still refuses, which is
+        # the behavior the literal was reaching for.
+        if runtime.payload is None or not any(
+            declared.id == "fix" and declared.operation is ProviderOperation.FIX
+            for declared in runtime.payload.manifest.providers
+        ):
             raise ImportError(
-                "config_error", "spec import requires selected Project Specification 1.9"
+                "config_error",
+                "spec import requires a selected Project Specification payload "
+                "that declares the import provider",
             )
 
         try:
@@ -1495,14 +1535,15 @@ def _run_import(argv: list[str], runtime: _SpecRuntime) -> int:
                 raise ImportError(
                     "write_failed", f"cannot write {args.output}: {applied.error_code}"
                 )
-            _emit_import_success(plan, json_mode=args.json, written=True)
+            _emit_import_success(plan, provider=import_provider, json_mode=args.json, written=True)
             return 0
-        _emit_import_success(plan, json_mode=args.json, written=False)
+        _emit_import_success(plan, provider=import_provider, json_mode=args.json, written=False)
         return 0
     except ImportError as error:
         return _emit_import_failure(
             json_mode,
             error,
+            provider=import_provider,
             source=str(args.source) if args is not None else None,
             target=str(args.output) if args is not None else None,
             spec_id=args.spec_id if args is not None else None,
@@ -1638,7 +1679,11 @@ def run(
         if verb in {"new", "upgrade"} and "--json" in rest:
             return _emit_new_failure(True, NewError("config_error", message))
         if verb == "import" and "--json" in rest:
-            return _emit_import_failure(True, ImportError("config_error", message))
+            return _emit_import_failure(
+                True,
+                ImportError("config_error", message),
+                provider=_UNSELECTED_IMPORT_PROVIDER,
+            )
         print(f"error: {message}", file=sys.stderr)
         return 2
     except ConfigError as exc:

@@ -430,7 +430,7 @@ role = "retained"
 [[packages]]
 id = "project-spec"
 version = "1.10"
-digest = "sha256:cf190ce8f54e6499ac410be2eacfe737932ab86a922860f9f1ecc57ff5fb75db"
+digest = "sha256:6797253d6982f041bc65d007cf023285a0aaff2fac21640ebfdc95e1c420706e"
 role = "default"
 
 [[packages]]

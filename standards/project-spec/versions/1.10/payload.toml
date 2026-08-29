@@ -22,14 +22,14 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:a20589eeddba427f40647c66c30405c55310f371c8a269e92c0d4ad4b8c6b029"
+digest = "sha256:57b2aa7233a934d9c80696cbaddae31feddc3cd3727061327d4912a157923550"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:ca868b3f30018b0669865daa1093c6394a31f362f2be9dedafab73c0d3bfb9c5"
+digest = "sha256:5dbba0f745e5c5cf50f947047d814593cb343fdfeb9420c12d2927431b5c18d3"
 
 [[resources]]
 id = "agent-summary"
@@ -78,7 +78,7 @@ id = "template-full"
 role = "template"
 path = "templates/spec-full-template.md"
 media_type = "text/markdown"
-digest = "sha256:1706abdacad70670337cea14cf99c4278d144d620e45ab4defeed9ddb32295b2"
+digest = "sha256:14d80c056c8a6639b27c1d6c246019851a1d635b56f6e47f8685b2f36a705276"
 
 [[resources]]
 id = "workflow-source"

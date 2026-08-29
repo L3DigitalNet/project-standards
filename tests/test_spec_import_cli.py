@@ -370,3 +370,26 @@ def test_import_apply__executor_fault__preserves_target_and_cleans_staging(
     assert result["error"]["code"] == "write_failed"
     assert target.read_bytes() == b"prior target\n"
     assert list(target.parent.glob(".project-standards-authoring-*")) == []
+
+
+def test_import_preview__successor_payload__names_the_payload_that_actually_ran(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The reported provider follows the selected version, and 1.10 is not refused.
+
+    Both halves regressed together at issue #199: `spec import` gated on the literal
+    `"1.9"` and reported that literal, so the first successor cut would have refused
+    every import while the JSON contract kept naming a payload nobody invoked. The
+    sibling cases above stay pinned to 1.9 precisely so this pair proves derivation
+    rather than a second hardcoding.
+    """
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    distribution = _installed_distribution(tmp_path, version="1.10")
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _enable_selected(repo, distribution)
+    _source(repo)
+
+    assert _invoke(repo, distribution, "--json") == 0
+    assert json.loads(capsys.readouterr().out)["provider"] == "project-spec@1.10/fix"

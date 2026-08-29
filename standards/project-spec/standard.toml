@@ -54,4 +54,4 @@ digest = "sha256:980f922a3980de82e1302db6d2d22ec88ca2457b2affd64876ada4dc09ab669
 [[versions]]
 version = "1.10"
 payload = "versions/1.10/payload.toml"
-digest = "sha256:cf190ce8f54e6499ac410be2eacfe737932ab86a922860f9f1ecc57ff5fb75db"
+digest = "sha256:6797253d6982f041bc65d007cf023285a0aaff2fac21640ebfdc95e1c420706e"
