@@ -172,7 +172,10 @@ def test_conformance__tailoring_and_fenced_lookalikes__remain_clean(profile: str
         ),
         pytest.param(
             "full",
-            Counter({"SL-PLACEHOLDER": 99, "SL-STRUCTURE": 1, "SL-GUIDANCE": 1}),
+            # 98, not 99: the canonical Full template's Appendix D reword
+            # ("where the target profile is `standard` or `full`") removed
+            # one `<profile>` placeholder from the baseline count.
+            Counter({"SL-PLACEHOLDER": 98, "SL-STRUCTURE": 1, "SL-GUIDANCE": 1}),
             id="full",
         ),
     ],
