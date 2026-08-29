@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# Refuse development commits on `main` (ledger 20).
+#
+# Branch contract this enforces: development lands on `testing`; `main` receives
+# only fast-forward merges from `testing` plus the single release-prep commit
+# that scripts/release_prep.py must create on `main` (RELEASE_BRANCH = "main",
+# message `release: prepare vX.Y.Z`). The GitHub ruleset on refs/heads/main
+# cannot express this — it sees pushed commits, not their provenance — so the
+# rule has to hold locally, at commit time.
+#
+# Usage (invoked only by the adapters scripts/install-githooks.sh writes):
+#   main-branch-guard pre-commit
+#   main-branch-guard commit-msg <message-file>
+#
+# Requirements: bash and git only. It runs inside every commit on this
+# workstation, so a dependency on the project virtualenv or on uv would make
+# committing depend on a bootstrapped environment.
+#
+# Why two roles instead of one hook:
+#
+#   commit-msg is the semantically correct hook — it is the first hook that can
+#   read the message and therefore the only one that can tell `release: prepare
+#   v5.25.0` from a development commit. It is authoritative here.
+#
+#   pre-commit is the only hook that actually fires on this workstation: the
+#   user's global core.hooksPath (~/.config/git/hooks) replaces .git/hooks as
+#   Git's lookup root, and its pre-commit is the sole hook there that chains to
+#   $(git rev-parse --git-common-dir)/hooks/. A repo-local commit-msg is never
+#   reached under that configuration. Installing pre-commit alone would leave
+#   the message unchecked; installing commit-msg alone would leave this
+#   workstation — the machine the directive is about — unguarded. Both are
+#   installed, and the pair degrades correctly in either environment.
+#
+#   Because pre-commit cannot see the message, its release escape is the
+#   environment variable PROJECT_STANDARDS_RELEASE_COMMIT=1 that the release
+#   operator exports around the release-prep commit. That variable is
+#   deliberately NOT honoured by commit-msg: where commit-msg runs, the real
+#   message is available and is checked, so exporting the release variable
+#   cannot launder an ordinary commit onto `main`.
+set -euo pipefail
+
+readonly RELEASE_MESSAGE_PREFIX='release:'
+readonly OVERRIDE_VARIABLE='PROJECT_STANDARDS_MAIN_COMMIT_OVERRIDE'
+readonly RELEASE_VARIABLE='PROJECT_STANDARDS_RELEASE_COMMIT'
+
+role="${1:-}"
+[[ -n "$role" ]] || {
+    printf 'main-branch-guard: internal error: no hook role argument\n' >&2
+    exit 1
+}
+shift
+
+# Detached HEAD (rebase, bisect, `git checkout <sha>`) is not a commit *on*
+# main even when the commit sits on main's history, and symbolic-ref exits
+# non-zero there. Nothing to enforce, and `|| true` keeps errexit out of it.
+branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+[[ "$branch" == "main" ]] || exit 0
+
+if [[ "${!OVERRIDE_VARIABLE:-}" == "1" ]]; then
+    printf '\n*** %s=1: main-branch guard bypassed for this commit on main. ***\n' \
+        "$OVERRIDE_VARIABLE" >&2
+    printf '*** Development belongs on `testing`; `main` takes ff merges and `release:` commits. ***\n\n' >&2
+    exit 0
+fi
+
+case "$role" in
+    commit-msg)
+        message_file="${1:-}"
+        [[ -n "$message_file" && -f "$message_file" ]] || {
+            printf 'main-branch-guard: commit-msg role requires a readable message file\n' >&2
+            exit 1
+        }
+        # The subject is the first line that is neither blank nor a Git comment:
+        # commit templates and `git commit -v` put comment lines above it, and
+        # the comment character is configurable, so read it rather than assume #.
+        comment_char="$(git config --get core.commentChar 2>/dev/null || true)"
+        [[ -n "$comment_char" && "$comment_char" != "auto" ]] || comment_char='#'
+        subject=''
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -n "${line//[[:space:]]/}" ]] || continue
+            [[ "${line:0:1}" != "$comment_char" ]] || continue
+            subject="$line"
+            break
+        done <"$message_file"
+        [[ "$subject" != "$RELEASE_MESSAGE_PREFIX"* ]] || exit 0
+        ;;
+    pre-commit)
+        [[ "${!RELEASE_VARIABLE:-}" != "1" ]] || exit 0
+        ;;
+    *)
+        printf 'main-branch-guard: unknown hook role: %s\n' "$role" >&2
+        exit 1
+        ;;
+esac
+
+cat >&2 <<EOF
+
+main-branch-guard: refusing to commit on \`main\` ($role).
+
+  Rule: development lands on \`testing\`. \`main\` receives only fast-forward
+  merges from \`testing\` and the release-prep commit whose message starts with
+  "$RELEASE_MESSAGE_PREFIX" (scripts/release_prep.py). A fast-forward merge creates no
+  commit, so it is unaffected by this hook.
+
+  Do this instead: commit on \`testing\` (or a leg worktree branch), then
+  fast-forward \`main\` from \`testing\`.
+
+  Release prep: export $RELEASE_VARIABLE=1 for that one commit.
+
+  Deliberate exception: export $OVERRIDE_VARIABLE=1.
+EOF
+exit 1

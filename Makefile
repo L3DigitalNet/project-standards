@@ -3,7 +3,7 @@ GO_PACKAGES := $(shell go list ./... 2>/dev/null)
 GOLANGCI_LINT := .tools/bin/golangci-lint
 GOLANGCI_LINT_VERSION := v2.12.2
 
-.PHONY: go-tools go-format go-format-check go-vet go-lint go-test go-build go-audit go-mod-check go-binary go-verify-binary go-check handoff-validate handoff-drift-check
+.PHONY: go-tools go-format go-format-check go-vet go-lint go-test go-build go-audit go-mod-check go-binary go-verify-binary go-check handoff-validate handoff-drift-check githooks
 
 go-tools:
 	mkdir -p .tools/bin
@@ -73,3 +73,11 @@ handoff-validate:
 handoff-drift-check:
 	@test -d build/wheel-runtime || { echo "build/wheel-runtime missing: see README 'Developing this repository'"; exit 1; }
 	PYTHONPATH=$(CURDIR)/build/wheel-runtime uv run project-standards agent-handoff drift-check --repo .
+
+# The tracked `main` commit guard, installed into the common .git/hooks. Also run
+# by scripts/bootstrap-worktree.sh; this target exists for a checkout that was
+# never bootstrapped. Deliberately not a scripts/verify.sh dependency: a gate that
+# rewrites the developer's hooks as a side effect of running tests is a surprise,
+# and verify.sh must stay runnable on the rexec worker, which has no hooks to own.
+githooks:
+	scripts/install-githooks.sh

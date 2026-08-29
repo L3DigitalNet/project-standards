@@ -28,6 +28,8 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 20 | A green gate cannot see an unstaged executable | Adding an executable file to the repository |
 | 21 | Renaming a managed artifact is a cross-cutting change | Moving or renaming an installed managed artifact |
 | 22 | rexec v0.2 is a remote-only, root-configured execution path | Selecting or diagnosing remote CPU-intensive work |
+| 23 | Plan-authoring writes need a Prettier pass and completed plans retire via harvest | Writing or retiring a plan file |
+| 24 | `main` is a publication branch, enforced by a tracked commit hook | Committing here, or changing hook installation |
 
 ## 1. Dogfood the standards
 
@@ -471,3 +473,17 @@ then `git rm` the plan file; never leave a completed plan under `docs/plans/` as
 add new payload-tree test coverage there rather than re-deriving file enumeration ad hoc.
 
 **Sources:** v5.24.0 closeout session, 2026-08-27.
+
+## 24. `main` is a publication branch, enforced by a tracked commit hook
+
+**Applies when:** committing in this repository, or changing how the hooks are installed.
+
+**Rule:** develop on `testing` (leg worktrees cherry-pick onto it). `main` takes only fast-forward merges from `testing` and the `release: prepare vX.Y.Z` commit `scripts/release_prep.py` requires there. `scripts/githooks/main-branch-guard` refuses every other commit on `main`; `scripts/install-githooks.sh` writes the adapters and `scripts/bootstrap-worktree.sh` runs it, so the guard survives a fresh clone or worktree even though `.git/hooks` is untracked.
+
+**Why:** the remote ruleset on `refs/heads/main` blocks deletion, non-fast-forward and unsigned commits, but it sees pushed commits and cannot tell a release push from a development push. The rule can only be expressed where the commit is made.
+
+**Gotcha:** the user-global `core.hooksPath` replaces `.git/hooks` as Git's lookup root and only its `pre-commit` chains to `$(git rev-parse --git-common-dir)/hooks/`, so `pre-commit` is the sole hook that fires here — and it cannot read the commit message. Hence two roles of one guard: `commit-msg` checks the message, and `pre-commit` requires `PROJECT_STANDARDS_RELEASE_COMMIT=1` for the release commit. The deliberate escape is `PROJECT_STANDARDS_MAIN_COMMIT_OVERRIDE=1`, which prints a loud notice.
+
+**Sources:** ledger 20, owner directive 2026-08-29; `tests/test_main_branch_guard.py`.
+
+**Related:** 20, 22.

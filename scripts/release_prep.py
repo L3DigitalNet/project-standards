@@ -795,7 +795,7 @@ def print_summary(
     print("  # step 0 — review and commit the prepared release on main before building it")
     print("  git diff --check")
     print("  git status --short")
-    print(f'  git commit -am "release: prepare v{target}"')
+    print(f'  PROJECT_STANDARDS_RELEASE_COMMIT=1 git commit -am "release: prepare v{target}"')
     print("  # mandatory pre-tag verification — run on that release commit before either tag")
     print("  uv sync --all-groups --locked")
     print("  npm ci")

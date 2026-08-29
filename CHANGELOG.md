@@ -37,8 +37,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.25.0] — 2026-08-29
+
 ### Added
 
+- Added a tracked `main`-branch commit guard (`scripts/githooks/main-branch-guard`), installed into `.git/hooks` by `scripts/bootstrap-worktree.sh` and `make githooks`: a commit on `main` is refused unless it is the `release:` preparation commit (`PROJECT_STANDARDS_RELEASE_COMMIT=1` for the pre-commit role), with `PROJECT_STANDARDS_MAIN_COMMIT_OVERRIDE=1` as the loud, deliberate escape; fast-forward merges and every other branch are unaffected. `scripts/release_prep.py` prints the prefixed commit command.
+- Documented the `testing` → `main` branch workflow in `CLAUDE.md` and `docs/handoff/conventions.md` entry 24.
 - **`GitHub Workflow 1.6` replaces the standing invariant that made discovered durable work an issue before the session ends.** A related finding a session can address now gets no issue: it is fixed in place when the repository being worked in owns it, filed against the owning repository when an upstream dependency in the organization owns it, and put to the operator only when it warrants a full separate session. The rule ships in the packaged `SKILL.md`, in the managed `AGENTS.md`/`CLAUDE.md` block (so a delegated worker that loads no skill still gets it), and `references/pr-standard.md` and `references/summary-format.md` are aligned to it; the block bytes change on the first reconcile after the refresh. Owner directive 2026-08-29; spec revision 1.13 records it as D-016 / DEV-004.
 - Catalog 5 promotes `github-workflow@1.6` and retains 1.5; the family landing pages, family index, payload projection, and generated catalog follow. Nothing else in the package moves — the delivered tree, the eight `gh-workflow` subcommands, and the configuration contract are 1.5's, so no consumer configuration changes.
 - The `gh-workflow` binary is rebuilt for 1.6 from unchanged Go source; only the `-X main.version` stamp differs, and `make go-check` verifies the committed bytes against a reproducible rebuild.

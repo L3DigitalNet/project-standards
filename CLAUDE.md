@@ -29,6 +29,7 @@ Run CPU-heavy commands through `rexec -- <command>`: `make go-check` and the ful
 - Never add frontmatter to `CLAUDE.md`, `AGENTS.md`, or `.claude/**`.
 - Keep the `AGENTS.md` toolchain gate green; coherence tests require `npm ci`.
 - The schema is a versioned contract — see `docs/handoff/conventions.md`.
+- Develop on `testing`, never on `main`: leg worktrees cherry-pick onto `testing`, `main` receives only fast-forward merges from `testing` plus the `release: prepare vX.Y.Z` commit, and `testing` is fast-forwarded from `main` after tagging. The tracked hook `scripts/githooks/main-branch-guard` (installed into `.git/hooks` by `scripts/bootstrap-worktree.sh` or `make githooks`) refuses anything else on `main`; the release commit needs `PROJECT_STANDARDS_RELEASE_COMMIT=1` and a deliberate exception needs `PROJECT_STANDARDS_MAIN_COMMIT_OVERRIDE=1`.
 
 <!-- prettier-ignore-start -->
 
@@ -120,7 +121,7 @@ uv run ruff check src tests --fix
 <!-- markdownlint-disable MD025 -->
 # GitHub Workflow
 
-This repository's work belongs to the `L3DigitalNet` organization. Route every GitHub work-state action through the row below — this table is complete, so a delegated worker needs nothing else to route correctly. Load the repo-local `github-workflow` skill (`SKILL.md`, one read, ~69 lines) before triage, an organization-schema audit, or any judgment call the table leaves to you.
+This repository's work belongs to the `L3DigitalNet` organization. Route every GitHub work-state action through the row below — this table is complete, so a delegated worker needs nothing else to route correctly. Load the repo-local `github-workflow` skill (`SKILL.md`, one read, ~70 lines) before triage, an organization-schema audit, or any judgment call the table leaves to you.
 
 | Action | Command |
 | --- | --- |
@@ -141,7 +142,7 @@ The binary is at `.agents/skills/github-workflow/bin/gh-workflow` (and the `.cla
 - Never create, rename, or retire an organization issue type, field, or value — that schema is human-applied.
 - A nontrivial pull request links the issue that governs it.
 - Keep terminal state synchronized: `Done` closes as completed, `Dropped` closes as not planned, and a reopened issue returns to a nonterminal `Workflow` value in the same action. Merging a PR does not make its issue `Done`.
-- Durable follow-up work discovered while implementing becomes an issue before the session ends.
+- A related finding you can address this session needs no issue: fix it in place when this repository owns it, file it against the owning upstream repository in the organization, and ask the operator whether to file or tackle it now only when it warrants a full separate session.
 
 <!-- markdownlint-enable MD025 -->
 <!-- END project-standards:github-workflow -->

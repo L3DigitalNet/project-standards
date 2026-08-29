@@ -42,7 +42,8 @@ usage() {
 Usage: scripts/bootstrap-worktree.sh [--no-go] [--help]
 
   Prepares .venv, node_modules, build/release-wheel, build/wheel-runtime,
-  its staleness stamp, and .tools — everything scripts/verify.sh checks for.
+  its staleness stamp, and .tools — everything scripts/verify.sh checks for —
+  and installs the tracked Git hooks.
 
   --no-go   skip `make go-tools` (Python/Markdown work only)
 EOF
@@ -73,6 +74,12 @@ step() {
     printf '\n── %s ──\n' "$STEP"
     "$@" || die "step exited $?"
 }
+
+# First, and before anything that can fail: .git/hooks is untracked, so the
+# `main` commit guard exists only where this ran. A checkout that dies in
+# `npm ci` still has to be a checkout an agent cannot develop on `main` in.
+step "install git hooks" \
+    "$SCRIPT_DIR/install-githooks.sh"
 
 step "uv sync --all-groups --locked" \
     uv sync --all-groups --locked
