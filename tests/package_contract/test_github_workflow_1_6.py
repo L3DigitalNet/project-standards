@@ -262,6 +262,11 @@ def test_github_workflow_1_6__managed_block__still_routes_without_a_skill_load()
     body = _block_body()
 
     assert len(body.encode("utf-8")) <= _BLOCK_MAX_BYTES
+    # The measured surface must cover the longest login the package is known to serve,
+    # not just the short synthetic name used elsewhere in this test.
+    module = _load_provider("gh_workflow_1_6")
+    twelve_char_body = cast("str", module._block_body("TwelveCharOrg"[:12]))  # pyright: ignore[reportPrivateUsage]
+    assert len(twelve_char_body.encode("utf-8")) <= _BLOCK_MAX_BYTES
     assert "`ExampleOrg`" in body, "the organization must stay config-rendered (NFR-001)"
     for subcommand in _SUBCOMMANDS:
         assert subcommand in body, subcommand
