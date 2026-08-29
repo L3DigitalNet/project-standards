@@ -37,6 +37,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added
+
+- **`GitHub Workflow 1.6` replaces the standing invariant that made discovered durable work an issue before the session ends.** A related finding a session can address now gets no issue: it is fixed in place when the repository being worked in owns it, filed against the owning repository when an upstream dependency in the organization owns it, and put to the operator only when it warrants a full separate session. The rule ships in the packaged `SKILL.md`, in the managed `AGENTS.md`/`CLAUDE.md` block (so a delegated worker that loads no skill still gets it), and `references/pr-standard.md` and `references/summary-format.md` are aligned to it; the block bytes change on the first reconcile after the refresh. Owner directive 2026-08-29; spec revision 1.13 records it as D-016 / DEV-004.
+- Catalog 5 promotes `github-workflow@1.6` and retains 1.5; the family landing pages, family index, payload projection, and generated catalog follow. Nothing else in the package moves — the delivered tree, the eight `gh-workflow` subcommands, and the configuration contract are 1.5's, so no consumer configuration changes.
+- The `gh-workflow` binary is rebuilt for 1.6 from unchanged Go source; only the `-X main.version` stamp differs, and `make go-check` verifies the committed bytes against a reproducible rebuild.
+- The GitHub Workflow provider's managed-target cross-file-contract comment now cites `tests/package_contract/test_provider_registry.py`, the catalog-wide proof that replaced this family's per-version assertion ([#196](https://github.com/L3DigitalNet/project-standards/issues/196); github-workflow half — the agent-handoff half waits for that family's next cut).
+
 ### Changed
 
 - Recorded the usage-documentation-site bundle's profile selection as design decision `D-003` in `05-open-items-and-decision-log.md`, preserving the Standard-profile rationale, its upgrade trigger, and the index's Light-profile rule that the canonical Appendix D surface cannot carry.

@@ -315,7 +315,7 @@ Installed skill and template copies also switch their placeholder token from `xx
 
 **GitHub Workflow 1.5 → 1.6 replaces one standing invariant** and nothing else. The rule that discovered durable follow-up work becomes an issue before the session ends is withdrawn. In its place: a related finding a session can address gets no issue — it is fixed in place when the repository being worked in owns it, and filed against the owning repository when an upstream dependency inside the organization owns it. Only a finding large enough to warrant a full separate session goes to the operator as a question, to file or to take on now.
 
-The rule is stated in the packaged `SKILL.md` and in the managed `AGENTS.md` / `CLAUDE.md` block, so those bytes change on the first reconcile after the refresh. Nothing else moves: the delivered tree, the `gh-workflow` binary's eight subcommands, the configuration contract, and every other invariant are 1.5's. No configuration option changed, so a repository that sets nothing keeps its `.standards/config.toml` as it is.
+The rule is stated in the packaged `SKILL.md` and in the managed `AGENTS.md` / `CLAUDE.md` block, and `references/pr-standard.md` and `references/summary-format.md` are aligned with it, so those bytes change on the first reconcile after the refresh. Nothing else moves: the delivered tree, the `gh-workflow` binary's eight subcommands, the configuration contract, and every other invariant are 1.5's. No configuration option changed, so a repository that sets nothing keeps its `.standards/config.toml` as it is.
 
 ### Comments inside managed TOML regions
 
