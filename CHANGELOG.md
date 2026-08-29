@@ -43,10 +43,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - Catalog 5 promotes `github-workflow@1.6` and retains 1.5; the family landing pages, family index, payload projection, and generated catalog follow. Nothing else in the package moves — the delivered tree, the eight `gh-workflow` subcommands, and the configuration contract are 1.5's, so no consumer configuration changes.
 - The `gh-workflow` binary is rebuilt for 1.6 from unchanged Go source; only the `-X main.version` stamp differs, and `make go-check` verifies the committed bytes against a reproducible rebuild.
 - The GitHub Workflow provider's managed-target cross-file-contract comment now cites `tests/package_contract/test_provider_registry.py`, the catalog-wide proof that replaced this family's per-version assertion ([#196](https://github.com/L3DigitalNet/project-standards/issues/196); github-workflow half — the agent-handoff half waits for that family's next cut).
+- Project Specification 1.10 promoted templates byte-identical to `src/project_standards/specs/templates/` to the Catalog 5 default, retaining 1.9; no option, provider, schema, artifact, or lint-rule changed ([#199](https://github.com/L3DigitalNet/project-standards/issues/199)).
+- `tests/package_contract/test_project_spec_1_10.py` pins shipped-template equal to canonical-source equality against whichever project-spec payload the catalog marks default ([#199](https://github.com/L3DigitalNet/project-standards/issues/199)).
+- Agent Handoff 1.16 promoted to default, retaining 1.15; the sole change is that the provider's cross-file-contract comment cites `tests/package_contract/test_provider_registry.py` ([#196](https://github.com/L3DigitalNet/project-standards/issues/196); both halves of #196 now closed by github-workflow 1.6 and agent-handoff 1.16).
 
 ### Changed
 
 - Recorded the usage-documentation-site bundle's profile selection as design decision `D-003` in `05-open-items-and-decision-log.md`, preserving the Standard-profile rationale, its upgrade trigger, and the index's Light-profile rule that the canonical Appendix D surface cannot carry.
+- `docs/reference/control-plane-diagnostics.md` records the whole-file `created_container = false` preservation rule and the owner decision that relinquishment never removes a container project-standards did not create; the planner branch carries the invariant and a test pins both sides ([#198](https://github.com/L3DigitalNet/project-standards/issues/198)).
 
 ### Fixed
 
@@ -55,6 +59,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - Restored Project Specification 1.9 conformance across the eight top-level `docs/specs/usage-documentation-site/` draft documents: the Lifecycle, Quality-rule, Appendix A, Appendix B, and Appendix D surfaces now match their declared profile template exactly, and every mandatory requirement row opens with `The system shall`. `spec lint --strict` had reported 90 warnings across the bundle after the include-pattern correction brought it into scope, failing the hosted "Validate Specs" job.
 - Amended the issue-regression ledger for the `c128fc55` payload_tree sweep: GH-8 and GH-37 each record an owner-approved amendment chaining their committed proof digests to the observed values after the enumeration helper substitution; proof semantics are unchanged.
 - The 100-order compatibility-sweep performance ceiling is recalibrated from 40 s to 60 s for the self-hosted runner (44.7 s observed; 43.6–43.9 s on the workstation at both the release commit and HEAD), following the 2026-08-12 hosted-ceiling calibration precedent; the sweep's byte-determinism assertions are unchanged.
+- Reworded the canonical Full template's Appendix D so no code span holding only an angle placeholder sits in a checked SL-BOILERPLATE surface — previously a filled Full spec reported either SL-BOILERPLATE or SL-PLACEHOLDER with no way to satisfy both, the root cause behind the pre-existing red Validate Specs job ([#199](https://github.com/L3DigitalNet/project-standards/issues/199)).
+- Updated six Full specifications under `docs/specs/` to the post-fix Appendix D text; the 18-document linted corpus is clean under the 1.10 registry ([#199](https://github.com/L3DigitalNet/project-standards/issues/199)).
+- `spec import` no longer refuses payloads other than 1.9 and no longer reports a hardcoded provider id: the gate requires the declared `fix` provider, and the reported `project-spec@<version>/fix` follows the payload that ran ([#199](https://github.com/L3DigitalNet/project-standards/issues/199)).
+- The selected-conformance suite's template fill now uses the linter's own inline-code masking ([#199](https://github.com/L3DigitalNet/project-standards/issues/199)).
+- Removed the dead `_CHARACTERIZED_SPEC_PLAN_DIGESTS` exemption from the release-consistency scan — both pins were stale, and the two train specs are carried by inline `<!-- release-consistency: historical … -->` markers — and pinned that marker exemption with a regression test ([#200](https://github.com/L3DigitalNet/project-standards/issues/200)).
+- The pre-package v4 `markdown-frontmatter` adopt bundle ships the `XXXXXX` id placeholder, tracking `markdown-frontmatter@1.14` ([#197](https://github.com/L3DigitalNet/project-standards/issues/197)).
 
 ## [5.24.0] — 2026-08-27
 
