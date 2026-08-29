@@ -1650,6 +1650,15 @@ def _classify_removed(
             version=versions[0][1],
             message="managed semantic value differs from the central lock",
         )
+    # Relinquishment never deletes a container project-standards did not create.
+    # `created_container = false` is the lock's record that the file was already the
+    # consumer's when ownership was taken — an ADOPT of pre-existing bytes
+    # (adapters/whole_file.py) or a residual V4-migration record (migration.py). Owner
+    # decision (issue #198, docs/reference/control-plane-diagnostics.md): such a file is
+    # preserved indefinitely once its declaration is withdrawn, and removing it is the
+    # operator's manual act. The preservation is deliberately silent — no finding —
+    # because nothing is wrong: the bytes predate us. Do not "improve" this into a
+    # warning or a conditional delete keyed on the digest still matching.
     if previous.adapter is AdapterKind.WHOLE_FILE and not previous.created_container:
         return replace(unit, kind=ActionKind.PRESERVE), None
     return unit, None

@@ -6,7 +6,7 @@ description: 'Reference for every CP- diagnostic code the reconcile, init, rende
 doc_type: 'reference'
 status: 'active'
 created: '2026-08-26'
-updated: '2026-08-27'
+updated: '2026-08-29'
 reviewed: '2026-08-26'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -30,6 +30,8 @@ Every control-plane finding, refusal, and apply failure carries a stable `CP-` c
 The tables below cover the codes emitted by `src/project_standards/control_plane/**` — the vocabulary of `project-standards reconcile`, `init`, `render`, and `standards`, including managed restore and sanctioned recovery. [`tests/test_control_plane_diagnostic_docs.py`](../../tests/test_control_plane_diagnostic_docs.py) derives the code set from that source and fails if this reference and the code disagree in either direction, so a code added upstream cannot ship undocumented.
 
 Severity is not part of the code. Most codes are emitted as errors; `CP-DRIFT` and `CP-MIGRATION-BOUNDED-TAKEOVER` are the warnings an otherwise clean run can carry. Exit status follows the command's own convention documented in [`docs/usage.md`](../usage.md): `1` for drift, findings, an authorization refusal, or a recoverable apply failure, and `2` for an invalid invocation or invalid control authority.
+
+Some deliberate control-plane outcomes carry no code at all. The one an operator is most likely to go looking for is [silent whole-file preservation](#silent-whole-file-preservation-created_container--false), documented at the end of this page.
 
 Legacy-migration codes also appear in [`UPGRADING.md`](../../UPGRADING.md) with migration-specific guidance; that section stays the deeper treatment for a V4 preview, and this page is the complete vocabulary.
 
@@ -154,3 +156,23 @@ Emitted by `init --migrate` while previewing a V4 repository. [`UPGRADING.md`](.
 | `CP-MIGRATION-HISTORICAL-UNIT` | A declared historical semantic unit cannot be bound. | The unit is absent or malformed, or historical units lack the exact whole-file signature they require. | Correct the adapter and scope the migration provider declares, or bind the units to known whole-file history. |
 | `CP-MIGRATION-OWNER-RESOLUTION` | A consumer-owned preservation claim is incomplete. | Owner-resolution evidence is used for recognized package history, or the relinquishment is not fully authorized. | Supply the literal `consumer-owned` value through the documented option, and omit owner intent from claims for recognized history. |
 | `CP-MIGRATION-VALIDATE` | Selected-package validation could not run during migration. | A provider input needed for validation is missing or invalid. | Resolve the reported provider input, then rerun the preview. |
+
+## Silent whole-file preservation (`created_container = false`)
+
+Not every deliberate control-plane behavior has a code, and the most consequential silent one is whole-file relinquishment. When a package stops declaring a whole-file target it previously owned — the contribution is withdrawn, gated off, or the whole package is disabled — reconciliation either removes the file or leaves it in place, and the choice is made entirely by the `created_container` bit the central lock recorded for that unit. Neither outcome emits a finding.
+
+`created_container = true` records that project-standards brought the file into existence, so the un-declared unit is planned as `remove`: the tool deletes only what it created.
+
+`created_container = false` records that the file was already the consumer's when ownership was taken. Two code paths write it:
+
+- **Adoption.** The whole-file adapter (`src/project_standards/control_plane/adapters/whole_file.py`) plans an `adopt` action when the target already exists on disk and its bytes match the desired content exactly. Nothing was created; a consumer file was recognized. The same adapter also records `created_container = false` when a `create-only` artifact is preserved at a pre-existing path.
+- **V4 migration.** The legacy migration builder (`src/project_standards/control_plane/migration.py`) records claimed whole-file targets and their historical units with `created_container = false`, because those files predate the unified control plane by definition. Migration _recovery_ separately normalizes the bit to `false` on both sides of a lock comparison; that normalization is a comparison device only and never reaches a published lock.
+
+**Owner decision (issue [#198](https://github.com/L3DigitalNet/project-standards/issues/198)): relinquishment never removes a whole-file container the lock recorded as `created_container = false`.** Adopted pre-existing content and residual V4-migration containers stay on disk and are preserved silently when their declaration is withdrawn; removing such a file is the operator's manual act. This is permanent intended behavior, not a deferred gap. Preservation is silent by design — no finding, no warning — because the file was the consumer's before project-standards touched it, so there is nothing to report. The alternative of removing the file when the consumer's bytes still match the last-applied digest was considered and rejected: matching bytes prove only that the consumer never edited an adopted file, not that they consented to its deletion.
+
+Two neighboring rules are easy to confuse with this one:
+
+- A `create-only` unit is preserved on relinquishment regardless of `created_container`; that check runs first.
+- If the target's bytes no longer match the central lock when the declaration is withdrawn, `CP-MODIFIED-MANAGED` fires before this rule is reached, and the plan is not applicable. Silent preservation applies to a file that still matches what was last applied.
+
+What an operator sees is a `preserve` action for the target and a next lock that no longer carries the unit. A checklist expecting the file to disappear should be corrected against this rule rather than searched for in the tables above — there is no code to look up. The branch lives in `planner._classify_removed`, and `tests/control_plane/test_planner.py::test_undeclared_whole_file_relinquishment_follows_created_container` pins both sides of it.

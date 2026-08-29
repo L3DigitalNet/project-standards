@@ -2108,3 +2108,57 @@ def test_deleted_create_only_target_converges_when_policy_turns_managed(
         action.kind not in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
         for action in settled.actions
     )
+
+
+@pytest.mark.parametrize(
+    ("created_container", "expected"),
+    [(False, ActionKind.PRESERVE), (True, ActionKind.REMOVE)],
+)
+def test_undeclared_whole_file_relinquishment_follows_created_container(
+    tmp_path: Path,
+    created_container: bool,
+    expected: ActionKind,
+) -> None:
+    """Pin the owner decision recorded in docs/reference/control-plane-diagnostics.md.
+
+    An enabled package that stops declaring a whole-file target must never
+    delete a container it did not create: `created_container = false` marks
+    bytes that were the consumer's before project-standards touched them
+    (adoption, or a residual V4-migration record), so withdrawing the
+    declaration relinquishes ownership and leaves the file. Preservation is
+    silent by design, which is why the no-findings assertion is part of the
+    contract rather than incidental (issue #198).
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    content = b"adopted\n"
+    target = repo / "notes.md"
+    target.write_bytes(content)
+    target.chmod(0o644)
+    # The package stays enabled and keeps declaring something else: this is the
+    # un-declared-contribution route, distinct from the whole-package
+    # disablement covered above, and it must reach the same classification.
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[{"id": "tool", "target": "tools/demo.py", "content": b"demo\n"}],
+    )
+    lock = previous_lock(
+        locked_unit(
+            path="notes.md",
+            adapter="whole-file",
+            scope="$file",
+            owners=["demo"],
+            semantic_digest=digest(content),
+            content_digest=digest(content),
+            created_container=created_container,
+        )
+    )
+
+    plan = plan_reconciliation(_request(repo, (payload,), lock=lock))
+
+    assert plan.applicable
+    assert plan.findings == ()
+    assert _action(plan, "notes.md").kind is expected
+    assert target.read_bytes() == content
+    assert all(artifact.path.original != "notes.md" for artifact in plan.next_lock.artifacts)
