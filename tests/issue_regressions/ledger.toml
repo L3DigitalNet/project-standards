@@ -322,11 +322,11 @@ rationale = "The legacy-authority note is factual and emitted through real confi
 introduced_release = "5.8.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/test_frontmatter_unified_config.py::test_emit_legacy_config_warning__real_call__emits_the_legacy_authority_note"]
-amendments = []
+amendments = [{ approved_by = "v5.25.0 fixture-sharing review (owner directive 2026-08-29)", date = "2026-08-29", new_digest = "sha256:4333287bc229ccb993613bd305e5ad55808a4a80105405093bedb379bc4725db", new_symbol = "tests/test_frontmatter_unified_config.py::test_emit_legacy_config_warning__real_call__emits_the_legacy_authority_note", old_digest = "sha256:afd872a05afeef8d1a82ae749b8d9f2e46a1ac491d56a8172e4d30b804b93370", old_symbol = "tests/test_frontmatter_unified_config.py::test_emit_legacy_config_warning__real_call__emits_the_legacy_authority_note", reason = "fixture closure changed because copied-tree fixtures now share one dereferenced payload projection (tests/installed_package.py); proof semantics and produced trees are byte-identical", requirement = "REQ-900" }]
 
 [[issues.proofs]]
 symbol = "tests/test_frontmatter_unified_config.py::test_emit_legacy_config_warning__real_call__emits_the_legacy_authority_note"
-digest = "sha256:afd872a05afeef8d1a82ae749b8d9f2e46a1ac491d56a8172e4d30b804b93370"
+digest = "sha256:4333287bc229ccb993613bd305e5ad55808a4a80105405093bedb379bc4725db"
 
 [[issues]]
 id = "GH-31"
@@ -351,15 +351,15 @@ references = [
     "tests/test_frontmatter_unified_config.py::test_selected_explicit_directory_reports_originating_config_driven_invocation",
     "tests/test_frontmatter_unified_config.py::test_adr_only_explicit_directory_reports_top_level_config_driven_invocation",
 ]
-amendments = []
+amendments = [{ approved_by = "v5.25.0 fixture-sharing review (owner directive 2026-08-29)", date = "2026-08-29", new_digest = "sha256:7bf3a4e722e89ebeacdb5f6f23094f8da745bf631bafc3f3ec0134f5b1c5d2f3", new_symbol = "tests/test_frontmatter_unified_config.py::test_selected_explicit_directory_reports_originating_config_driven_invocation", old_digest = "sha256:bd048b2fa26761668af4b5235a421bb6e9f3645140809d6ceadba8fd2a69beba", old_symbol = "tests/test_frontmatter_unified_config.py::test_selected_explicit_directory_reports_originating_config_driven_invocation", reason = "fixture closure changed because copied-tree fixtures now share one dereferenced payload projection (tests/installed_package.py); proof semantics and produced trees are byte-identical", requirement = "REQ-900" }, { approved_by = "v5.25.0 fixture-sharing review (owner directive 2026-08-29)", date = "2026-08-29", new_digest = "sha256:41e326d3f575f4de183f1414768d60e284d84e4e1ca91481a4e63e528889dead", new_symbol = "tests/test_frontmatter_unified_config.py::test_adr_only_explicit_directory_reports_top_level_config_driven_invocation", old_digest = "sha256:5f29ba49ee32760b7acc6b48ebaaf2ce66af1a358871613d9670b923c99346f1", old_symbol = "tests/test_frontmatter_unified_config.py::test_adr_only_explicit_directory_reports_top_level_config_driven_invocation", reason = "fixture closure changed because copied-tree fixtures now share one dereferenced payload projection (tests/installed_package.py); proof semantics and produced trees are byte-identical", requirement = "REQ-900" }]
 
 [[issues.proofs]]
 symbol = "tests/test_frontmatter_unified_config.py::test_selected_explicit_directory_reports_originating_config_driven_invocation"
-digest = "sha256:bd048b2fa26761668af4b5235a421bb6e9f3645140809d6ceadba8fd2a69beba"
+digest = "sha256:7bf3a4e722e89ebeacdb5f6f23094f8da745bf631bafc3f3ec0134f5b1c5d2f3"
 
 [[issues.proofs]]
 symbol = "tests/test_frontmatter_unified_config.py::test_adr_only_explicit_directory_reports_top_level_config_driven_invocation"
-digest = "sha256:5f29ba49ee32760b7acc6b48ebaaf2ce66af1a358871613d9670b923c99346f1"
+digest = "sha256:41e326d3f575f4de183f1414768d60e284d84e4e1ca91481a4e63e528889dead"
 
 [[issues]]
 id = "GH-35"
@@ -567,15 +567,15 @@ references = [
     "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_redacts_and_locates_missing_link",
     "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_enriches_size_measure_and_limit",
 ]
-amendments = []
+amendments = [{ approved_by = "v5.25.0 fixture-sharing review (owner directive 2026-08-29)", date = "2026-08-29", new_digest = "sha256:3ccbed816f66e67986e3f348bf017df0498b31409e79261abf77612bfbbb7e84", new_symbol = "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_redacts_and_locates_missing_link", old_digest = "sha256:48951040a322971ae696a5bbd479adf568514c91a9264023027b21895c7baa88", old_symbol = "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_redacts_and_locates_missing_link", reason = "fixture closure changed because copied-tree fixtures now share one dereferenced payload projection (tests/installed_package.py); proof semantics and produced trees are byte-identical", requirement = "REQ-900" }, { approved_by = "v5.25.0 fixture-sharing review (owner directive 2026-08-29)", date = "2026-08-29", new_digest = "sha256:9dd30b3a2e566d9cb4885ba130215f0b083fc40bc0bb4e78eaac7a0428638e80", new_symbol = "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_enriches_size_measure_and_limit", old_digest = "sha256:7cd373782975544a948a22c388a30c92847b447895c9aa48173a90cfa789db49", old_symbol = "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_enriches_size_measure_and_limit", reason = "fixture closure changed because copied-tree fixtures now share one dereferenced payload projection (tests/installed_package.py); proof semantics and produced trees are byte-identical", requirement = "REQ-900" }]
 
 [[issues.proofs]]
 symbol = "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_redacts_and_locates_missing_link"
-digest = "sha256:48951040a322971ae696a5bbd479adf568514c91a9264023027b21895c7baa88"
+digest = "sha256:3ccbed816f66e67986e3f348bf017df0498b31409e79261abf77612bfbbb7e84"
 
 [[issues.proofs]]
 symbol = "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_enriches_size_measure_and_limit"
-digest = "sha256:7cd373782975544a948a22c388a30c92847b447895c9aa48173a90cfa789db49"
+digest = "sha256:9dd30b3a2e566d9cb4885ba130215f0b083fc40bc0bb4e78eaac7a0428638e80"
 
 [[issues]]
 id = "GH-46"
