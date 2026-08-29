@@ -311,6 +311,12 @@ The rest of 1.5 is guidance: `SKILL.md` is now one bounded read carrying a singl
 
 Installed skill and template copies also switch their placeholder token from `xxxxxx` to `XXXXXX`. A copy carried over from before the switch keeps the old token and now fails `validate-id`; run `validate-id --fix` to bring it current.
 
+### What the 5.25.0 defaults rewrite on refresh: GitHub Workflow 1.6 changes the follow-up rule
+
+**GitHub Workflow 1.5 → 1.6 replaces one standing invariant** and nothing else. The rule that discovered durable follow-up work becomes an issue before the session ends is withdrawn. In its place: a related finding a session can address gets no issue — it is fixed in place when the repository being worked in owns it, and filed against the owning repository when an upstream dependency inside the organization owns it. Only a finding large enough to warrant a full separate session goes to the operator as a question, to file or to take on now.
+
+The rule is stated in the packaged `SKILL.md` and in the managed `AGENTS.md` / `CLAUDE.md` block, so those bytes change on the first reconcile after the refresh. Nothing else moves: the delivered tree, the `gh-workflow` binary's eight subcommands, the configuration contract, and every other invariant are 1.5's. No configuration option changed, so a repository that sets nothing keeps its `.standards/config.toml` as it is.
+
 ### Comments inside managed TOML regions
 
 Consumer comments attached to a managed `pyproject.toml` unit survive a rewrite. When an apply re-renders a managed table, keyed-set entry, or key, comments found in the rewritten region — inside a multi-line array, trailing an owned line, or on their own line between owned lines — are re-emitted directly above the statement with the same key or table in the new rendering; a comment whose key no longer exists moves above the rewritten unit. Rewrites consume the old region completely, so they leave no stray blank lines, and a follow-up `reconcile --check` stays a no-op. The rendered layout of the managed unit itself (line breaks, indentation, entry order) belongs to the package, so annotate managed regions with comment lines rather than relying on a specific array layout.

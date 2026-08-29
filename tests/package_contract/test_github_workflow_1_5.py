@@ -109,7 +109,8 @@ def test_github_workflow_1_5__predecessor__keeps_its_released_bytes() -> None:
     assert predecessor_integrity.aggregate_digest.value == _PREDECESSOR_DIGEST
 
 
-def test_github_workflow_1_5__identity__is_complete_and_current() -> None:
+def test_github_workflow_1_5__identity__is_complete_and_indexed() -> None:
+    """1.5's own rows, which stay exact after 1.6 took the family default."""
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     integrity = validate_payload_integrity(_SUCCESSOR, manifest)
     family = load_family_manifest(_FAMILY / "standard.toml")
@@ -127,8 +128,10 @@ def test_github_workflow_1_5__identity__is_complete_and_current() -> None:
         if package["id"] == "github-workflow"
     }
     assert roles["1.4"] == "retained"
-    assert roles["1.5"] == "default"
-    assert "| [`github-workflow`](github-workflow/README.md) | active | 1.5 | default |" in (
+    # 1.6 succeeded 1.5 as the family default; a published version's row only ever
+    # moves from `default` to `retained`, never back and never off the catalog.
+    assert roles["1.5"] == "retained"
+    assert "| [`github-workflow`](github-workflow/README.md) | active | 1.5 | retained |" in (
         _ROOT / "standards/catalog.md"
     ).read_text(encoding="utf-8")
 
@@ -146,8 +149,14 @@ def test_github_workflow_1_5__schemas__carry_no_predecessor_version_reference() 
     assert stale == set(), "1.5 payload files still reference the 1.4 predecessor"
 
 
-def test_github_workflow_1_5__tool_binary__is_declared_and_built_for_this_version() -> None:
-    """Pin the three-way contract between the committed bytes, the payload, and the build."""
+def test_github_workflow_1_5__tool_binary__is_declared_for_this_version() -> None:
+    """Pin the payload's declaration of the committed bytes.
+
+    The build-script half of the original three-way contract moved to the 1.6 proof
+    when that cut retargeted `scripts/build-gh-workflow.sh`: the script can only
+    reproduce the current version, by design (see its own header), so 1.5's bytes are
+    held by the declared digest here and by the release baseline comparison.
+    """
     committed = _SUCCESSOR / _TOOL_BINARY_SOURCE
     digest = f"sha256:{hashlib.sha256(committed.read_bytes()).hexdigest()}"
 
@@ -161,13 +170,6 @@ def test_github_workflow_1_5__tool_binary__is_declared_and_built_for_this_versio
     # A cut that advertised a removed subcommand while shipping the predecessor's
     # executable would pass every prose assertion below.
     assert committed.read_bytes() != (_PREDECESSOR / _TOOL_BINARY_SOURCE).read_bytes()
-
-    build_script = _BUILD_SCRIPT.read_text(encoding="utf-8")
-    assert (
-        f'ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.5/{_TOOL_BINARY_SOURCE}"'
-        in build_script
-    )
-    assert 'ARTIFACT_LDFLAGS="-buildid= -X main.version=1.5"' in build_script
 
 
 def test_github_workflow_1_5__payload_prose__describes_eight_subcommands_and_no_ledger() -> None:

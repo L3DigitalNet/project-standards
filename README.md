@@ -130,9 +130,9 @@ Repository-local project knowledge and bounded session continuity for coding age
 
 GitHub work discipline for organization-owned repositories: typed issue contracts, field vocabulary, pull-request evidence, review expectations, and an attention-first operator summary. The package installs a mandatory repo-local `github-workflow` skill that keeps judgment with the agent, plus `gh-workflow` — a committed, reproducibly built static `linux/amd64` Go binary whose eight subcommands audit the organization schema, render operator summaries and creation receipts, and apply validated issue mutations. Every subcommand reads the consumer's repository and writes none of it: 1.5 removed the `ledger` subcommand that generated `docs/GH-WORKFLOWS.md`, and a repository upgrading from 1.4 or earlier deletes that now-unowned file itself. The organization schema itself is skill-audited and human-applied; the tool never creates or retires an issue type, field, or value.
 
-- **Standard:** [`standards/github-workflow/versions/1.5/README.md`](standards/github-workflow/versions/1.5/README.md)
-- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.5/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
-- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.5/adopt.md)
+- **Standard:** [`standards/github-workflow/versions/1.6/README.md`](standards/github-workflow/versions/1.6/README.md)
+- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.6/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
+- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.6/adopt.md)
 
 ### Project Toolbox Standard
 
@@ -197,7 +197,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | Project Specification | `1.9` | [`standards/project-spec/versions/1.9/adopt.md`](standards/project-spec/versions/1.9/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
 | Agent Handoff | `1.15` | [`standards/agent-handoff/versions/1.15/adopt.md`](standards/agent-handoff/versions/1.15/adopt.md) |
-| GitHub Workflow | `1.5` | [`standards/github-workflow/versions/1.5/adopt.md`](standards/github-workflow/versions/1.5/adopt.md) |
+| GitHub Workflow | `1.6` | [`standards/github-workflow/versions/1.6/adopt.md`](standards/github-workflow/versions/1.6/adopt.md) |
 | Project Toolbox | `1.1` | [`standards/project-toolbox/versions/1.1/adopt.md`](standards/project-toolbox/versions/1.1/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
