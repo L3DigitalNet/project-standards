@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-import project_standards.package_contract.release_consistency as release_consistency
 from project_standards.package_contract import (
     PackageFinding,
     PackageRepository,
@@ -990,45 +989,52 @@ def test_release_consistency__document_metadata__cannot_classify_current_asserti
     assert "PC-RELEASE-PATH-UNCLASSIFIED" in {finding.code for finding in findings}
 
 
-def test_release_consistency__characterized_document_digest__uses_raw_bytes(
+_HISTORICALLY_MARKERED_SPECS = (
+    "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md",
+    "docs/specs/2026-07-26-v5-adoption-integrity-correction-train-spec.md",
+)
+
+
+@pytest.mark.parametrize("path", _HISTORICALLY_MARKERED_SPECS)
+def test_release_consistency__historically_markered_spec__passes_scan(
     release_fixture: ReleaseConsistencyFixture,
+    path: str,
 ) -> None:
-    # The characterization exemption keys on a path *and* its exact raw bytes, so a
-    # line-ending-only rewrite must fall through to the ordinary fail-closed scan.
-    # Anchor that on a maintained `docs/specs/` document: `docs/plans/` entries are
-    # deleted once complete (AGENTS.md § Structure), so a plan path silently becomes
-    # a FileNotFoundError the next time a train closes — which is exactly what the
-    # original anchor did when the 5.9 close removed it.
-    #
-    # The anchor document's own stale references are now all release-consistency
-    # markered (every pre-2.7 mention was classified historical), so the rewrite
-    # appends one deliberately unmarked stale reference: the assertion needs the
-    # ordinary fail-closed scan to fire, not a coincidence of the anchor's current
-    # prose still containing an unclassified line.
-    path = "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md"
-    content = (_ROOT / path).read_bytes()
+    """Pin the inline-marker exemption for the two long-lived train specs."""
+    # These two documents were once exempted twice over: by inline
+    # `<!-- release-consistency: historical ... -->` markers and by a digest pin
+    # (`_CHARACTERIZED_SPEC_PLAN_DIGESTS`) that had gone stale and therefore
+    # exempted nothing (#200). The pin is gone, so the markers are now the only
+    # thing keeping these documents clean -- assert that directly against the
+    # real files rather than a synthesized stand-in, because the regression this
+    # guards is a marker being dropped or displaced by an ordinary prose edit.
     target = release_fixture.root / path
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(content)
+    target.write_bytes((_ROOT / path).read_bytes())
     release_fixture.commit()
+
+    assert path not in _finding_paths(release_fixture)
+
+
+def test_release_consistency__markered_spec_with_unmarked_reference__reports_finding(
+    release_fixture: ReleaseConsistencyFixture,
+) -> None:
+    # Positive control for the test above: a document whose existing references
+    # are all markered must still fail closed on a newly appended stale
+    # reference, so "passes the scan" above cannot be satisfied by the scan
+    # skipping the path outright.
+    path = _HISTORICALLY_MARKERED_SPECS[0]
+    target = release_fixture.root / path
+    target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(
-        content.replace(b"\n", b"\r\n") + b"\r\nStandard Bundle Authoring 2.4 is current.\r\n"
+        (_ROOT / path).read_bytes() + b"\nStandard Bundle Authoring 2.4 is current.\n"
     )
+    release_fixture.commit()
 
     findings = release_fixture.validate()
 
     assert path in {finding.path for finding in findings}
     assert "PC-RELEASE-PATH-UNCLASSIFIED" in {finding.code for finding in findings}
-
-
-def test_release_consistency__characterized_digests_name_existing_documents() -> None:
-    """Keep exemption records aligned when completed plans are pruned."""
-    # The registry intentionally exempts exact historical bytes. A deleted path
-    # cannot be characterized, and would silently become unmaintained dead state.
-    paths = release_consistency._CHARACTERIZED_SPEC_PLAN_DIGESTS  # pyright: ignore[reportPrivateUsage]
-    missing = sorted(path for path in paths if not (_ROOT / path).is_file())
-
-    assert not missing, f"characterized documents no longer exist: {missing}"
 
 
 @pytest.mark.parametrize(

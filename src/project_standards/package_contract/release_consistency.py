@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import os
 import re
 import subprocess
@@ -114,16 +113,6 @@ _NATURAL_HISTORY_PHRASES = (
     "prior internal",
     "superseded package",
 )
-# These exact documents were characterized at T14.0. Any byte change removes the
-# exemption so newly edited body prose must pass the ordinary fail-closed scan.
-_CHARACTERIZED_SPEC_PLAN_DIGESTS = {
-    "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md": (
-        "b36e2e68130f3b4ac61f87d073aba703b47b0b3940493b8bb1c7c8f264d54413"
-    ),
-    "docs/specs/2026-07-26-v5-adoption-integrity-correction-train-spec.md": (
-        "9fe629b29f2d86078798ab8e9f01feec9cba324dd53f6a7759be10e6ceb4f64d"
-    ),
-}
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,11 +283,20 @@ def _git_markdown_paths(root: Path, option: str) -> tuple[str, ...] | None:
     return tuple(sorted(path for path in paths if path))
 
 
-def _read_regular_utf8_bytes(
+def _read_regular_utf8(
     root: Path,
     relative: str,
     findings: list[PackageFinding],
-) -> tuple[str, bytes] | None:
+) -> str | None:
+    """Return the decoded text of ``relative`` under ``root``, or ``None``.
+
+    Never raises: an escaping path, a symlinked component, a non-regular file,
+    an unreadable file, or non-UTF-8 bytes all degrade to ``None`` after
+    appending a ``PC-RELEASE-CORPUS`` finding, so one bad corpus entry cannot
+    abort the whole scan. Refusing symlinked components is load-bearing rather
+    than defensive: the scan reads a Git-tracked corpus, and following a link
+    out of ``root`` would let an out-of-corpus file decide a release verdict.
+    """
     try:
         relative_path = PurePosixPath(relative)
         if relative_path.is_absolute() or ".." in relative_path.parts:
@@ -311,8 +309,7 @@ def _read_regular_utf8_bytes(
                 raise OSError
         if not path.resolve(strict=False).is_relative_to(root) or not path.is_file():
             raise OSError
-        raw = path.read_bytes()
-        return raw.decode("utf-8"), raw
+        return path.read_bytes().decode("utf-8")
     except OSError, UnicodeDecodeError, ValueError:
         findings.append(
             _finding(
@@ -322,15 +319,6 @@ def _read_regular_utf8_bytes(
             )
         )
         return None
-
-
-def _read_regular_utf8(
-    root: Path,
-    relative: str,
-    findings: list[PackageFinding],
-) -> str | None:
-    result = _read_regular_utf8_bytes(root, relative, findings)
-    return None if result is None else result[0]
 
 
 def _shallow_family(path: str, facts: dict[str, FamilyReleaseFacts]) -> str | None:
@@ -747,14 +735,8 @@ def _scan_unclassified_paths(
             or path.startswith("docs/specs/archive/")
         ):
             continue
-        document = _read_regular_utf8_bytes(root, path, findings)
-        if document is None:
-            continue
-        text, raw = document
-        characterized_digest = _CHARACTERIZED_SPEC_PLAN_DIGESTS.get(path)
-        if characterized_digest is not None and (
-            hashlib.sha256(raw).hexdigest() == characterized_digest
-        ):
+        text = _read_regular_utf8(root, path, findings)
+        if text is None:
             continue
         lines = text.splitlines()
         for index, line in enumerate(lines):
