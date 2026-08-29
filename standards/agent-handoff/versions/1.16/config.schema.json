@@ -1,0 +1,25 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"contract_version": { "enum": ["1.0", "1.1"], "default": "1.1" },
+		"startup": { "enum": ["automatic", "manual"], "default": "automatic" },
+		"harnesses": {
+			"type": "array",
+			"items": { "enum": ["claude-code", "codex"] },
+			"uniqueItems": true,
+			"default": ["claude-code", "codex"]
+		}
+	},
+	"allOf": [
+		{
+			"if": {
+				"properties": { "startup": { "const": "manual" } },
+				"required": ["startup"]
+			},
+			"then": { "properties": { "harnesses": { "maxItems": 0 } } },
+			"else": { "properties": { "harnesses": { "minItems": 1 } } }
+		}
+	]
+}

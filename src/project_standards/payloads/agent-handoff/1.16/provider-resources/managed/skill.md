@@ -1,0 +1,1 @@
+../../../../../../../standards/agent-handoff/versions/1.16/provider-resources/managed/skill.md

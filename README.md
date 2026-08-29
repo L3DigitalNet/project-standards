@@ -122,9 +122,9 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 
 Repository-local project knowledge and bounded session continuity for coding agents. Agent Handoff creates consumer-owned status, task, and lifetime-routed knowledge under `docs/`; installs a repo-local `agent-handoff` skill; optionally registers one shared SessionStart hook for Claude Code and Codex; and validates layout, drift, provenance, document budgets, and credential references without owning workstation-global state.
 
-- **Standard:** [`standards/agent-handoff/versions/1.15/README.md`](standards/agent-handoff/versions/1.15/README.md)
-- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.15/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/` and `.claude/skills/agent-handoff/`.
-- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.15/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.15/resources/legacy-migration.md)
+- **Standard:** [`standards/agent-handoff/versions/1.16/README.md`](standards/agent-handoff/versions/1.16/README.md)
+- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.16/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/` and `.claude/skills/agent-handoff/`.
+- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.16/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.16/resources/legacy-migration.md)
 
 ### GitHub Workflow Standard
 
@@ -196,7 +196,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | Markdown Tooling | `1.15` | [`standards/markdown-tooling/versions/1.15/adopt.md`](standards/markdown-tooling/versions/1.15/adopt.md) |
 | Project Specification | `1.9` | [`standards/project-spec/versions/1.9/adopt.md`](standards/project-spec/versions/1.9/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
-| Agent Handoff | `1.15` | [`standards/agent-handoff/versions/1.15/adopt.md`](standards/agent-handoff/versions/1.15/adopt.md) |
+| Agent Handoff | `1.16` | [`standards/agent-handoff/versions/1.16/adopt.md`](standards/agent-handoff/versions/1.16/adopt.md) |
 | GitHub Workflow | `1.6` | [`standards/github-workflow/versions/1.6/adopt.md`](standards/github-workflow/versions/1.6/adopt.md) |
 | Project Toolbox | `1.1` | [`standards/project-toolbox/versions/1.1/adopt.md`](standards/project-toolbox/versions/1.1/adopt.md) |
 
