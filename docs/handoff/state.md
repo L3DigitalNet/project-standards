@@ -2,10 +2,10 @@
 
 ## Current focus
 
-- v5.24.0 published on `main` (release `3a387543`); markdown-frontmatter 1.14 default; full evidence in `deployed.md`.
-- Post-tag fixes on `main` at `c7757b49`: spec-lint, payload-tree tests, doc-site conformance, ledger amendments, perf ceiling 40s→60s.
-- Next: owner decisions on #197 (v4 bundle skill), #198 (preserve semantics), SPEC-GSF3 OQ-001 (blocks T1).
-- Also Ready: #199 (project-spec 1.10 cut), #200 (stale characterization digests), #196; #191 waits for its window.
+- v5.25.0 published (commit `b2f73d9d`, tags `v5.25.0`+`v5`); full evidence in `deployed.md`.
+- Defaults: github-workflow 1.6 (finding-disposition rule replaces invariant 15), agent-handoff 1.16, project-spec 1.10.
+- Issues closed Done: #196 #197 #198 #199 #200. Next: owner decisions on #191 (re-measure ≥ 2026-09-06), #129.
+- New rule: develop on `testing`; `main` takes only ff merges + `release:` commits (`scripts/githooks/main-branch-guard`).
 
 ## Active incidents
 

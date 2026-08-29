@@ -2,27 +2,20 @@
 
 ## Current snapshot
 
-- Project Standards 5.24.0 is published from release commit `3a387543`; signed `v5.24.0` and moving `v5` tags are
+- Project Standards 5.25.0 is published from release commit `b2f73d9d`; signed `v5.25.0` and moving `v5` tags are
   live.
-- The release assets are byte-verified: wheel `d78af85c…` and source distribution `5902cd91…`. Full evidence is in
-  `docs/handoff/deployed.md`.
-- Catalog 5 this release: markdown-frontmatter 1.14 default (1.13 retained), landing review findings
-  F1/F2/F4/F5/F7/F11, #194 (generic provider-registry test), #195 (`CP-VERIFY` path+kind).
-- #178 resolved: v519 plan repointed then retired; GSF3 plan re-authored as format 3 + spec 0.2. A repo-wide docs
-  drift audit (partitions A–F) retired ten completed plans; `docs/plans/` now holds only the GSF3 master.
-- Post-tag fixes landed directly on `main` at `c7757b49` (pushed; `testing` fast-forwarded): spec-lint
-  HTML-comment false positive, payload-tree tests ignoring `__pycache__`, usage-doc-site conformance (90→0) + D-003,
-  issue-regression ledger amendments for the payload_tree sweep (`482de306`/`afffa83e`), and the 100-order
-  compatibility-sweep ceiling recalibrated 40s→60s (`2e62d576`/`c7757b49`; self-hosted 44.7s, not a regression).
-- Hosted CI on `c7757b49`: Validate Specs, Format, Coherence, Lint Markdown, graph, and project-standards checks are
-  green; Check was still in_progress when this session closed (only the recalibrated perf lane remained).
-- Issues closed Done/completed: #194 #195 #178. Deferred: #129 (feature-scale), #191 (window ≥2026-09-06).
-- Filed this session: #196 (frozen provider comments, Ready), #197 (v4 bundle + family-root skill, Needs
-  definition), #198 (preserve semantics, Needs definition), #199 (project-spec 1.10 cut, Ready), #200 (stale
-  characterization digests, Ready); `agent-configs#69` and `agent-configs#70`.
-- Owner inputs pending: SPEC-GSF3 OQ-001 (blocks that plan's T1), #197, #198.
-- `verify.sh --full` ran remote ~100 min with 7 reds, all classified (worker `__pycache__`, test pins, skill
-  mirror); file reruns green. The `rexec` worker went unreachable twice (ssh timeout) but recovered on retry.
-- Consumer-pin rollout is deferred to owner scheduling; `@v5` trackers inherit 5.24.0 automatically.
+- The release assets are byte-verified: wheel `1dbc0b4ecf3d…` and source distribution `b67baaa1d9a7…`. Full evidence
+  is in `docs/handoff/deployed.md`.
+- Catalog 5 this release: github-workflow 1.6 default (finding-disposition rule replaces invariant 15; spec rev
+  1.13 D-016/DEV-004), agent-handoff 1.16 default, project-spec 1.10 default; all predecessors retained.
+- Added the tracked `main`-branch commit guard (`scripts/githooks/main-branch-guard`): only ff merges and
+  `release:` commits land on `main`; override `PROJECT_STANDARDS_MAIN_COMMIT_OVERRIDE=1`.
+- Fixed worker tmpfs ENOSPC via a shared payload-projection test fixture (`tests/installed_package.py`); five
+  issue-ledger proof digests amended for the fixture-closure change only.
+- Battery: `verify.sh --full` on the rexec worker ran 117 min (ordinary lane 58 min under full trace core).
+- Issues closed Done/completed: #196 #197 #198 #199 #200. Deferred: #191 (window ≥2026-09-06), #129
+  (feature-scale). DEV-004 remains open in the github-workflow spec (archived design input still carries
+  invariant 15); SPEC-GSF3 OQ-001 still blocks that plan's T1.
+- Consumer-pin rollout is deferred to owner scheduling; `@v5` trackers inherit 5.25.0 automatically.
 - Consumer repos still on `.agents`-only skill trees (`agent-ventures`, `llm-wiki`) per the session-corpus review's
   F2.
