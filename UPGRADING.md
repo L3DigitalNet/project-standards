@@ -318,6 +318,11 @@ Installed skill and template copies also switch their placeholder token from `xx
 The rule is stated in the packaged `SKILL.md` and in the managed `AGENTS.md` / `CLAUDE.md` block, and `references/pr-standard.md` and `references/summary-format.md` are aligned with it, so those bytes change on the first reconcile after the refresh. Nothing else moves: the delivered tree, the `gh-workflow` binary's eight subcommands, the configuration contract, and every other invariant are 1.5's. No configuration option changed, so a repository that sets nothing keeps its `.standards/config.toml` as it is.
 
 **Agent Handoff 1.15 → 1.16 re-cites one internal comment.** The provider's cross-file contract comment above `_SKILL_TARGETS` named a per-family registry test as the place that pins the skill-target/`payload.toml` agreement; it now names the catalog-wide `tests/package_contract/test_provider_registry.py` (#196). No option, policy value, template, hook, provider behavior, contribution, or artifact target changes, so `reconcile --apply` onto this catalog rewrites nothing for an already-conforming repository.
+### What the 5.25.0 defaults rewrite on refresh: Project Specification 1.10 resyncs the templates
+
+**Project Specification 1.9 → 1.10 replaces the three shipped templates** with byte-identical copies of this repository's canonical template source and changes nothing else — no option, provider, schema, artifact, or lint rule moves. `spec new` and `spec upgrade` therefore scaffold the same text the selected package's conformance check measures against, which they had stopped doing after two source edits landed without a payload cut (project-standards issue #199).
+
+Existing specifications are not rewritten by reconciliation. A specification whose Lifecycle, Quality, or Appendix A/B/D block was copied from a 1.9 template reports `SL-BOILERPLATE` naming that surface once 1.10 is selected; restore the named block from the 1.10 template of the same profile. `project-standards spec lint` names the surface, and `--strict` is what turns it into a CI failure.
 
 ### Comments inside managed TOML regions
 

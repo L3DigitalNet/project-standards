@@ -1,0 +1,163 @@
+# Adopt Project Specification 1.10
+
+Use this package for tiered project specifications with stable section numbers, typed IDs, deterministic validation, and provider-backed authoring. The common V5 control-plane lifecycle—initialization, preview, apply, update, disable, removal, and catalog refresh—is documented by `project-standards`. This guide covers Project Specification choices and verification.
+
+## Enable and configure
+
+Initialize the consumer control plane when the repository does not already have one, then enable the package and apply the reviewed reconciliation plan:
+
+```bash
+project-standards init --catalog 5
+project-standards standards enable project-spec --version 1.10
+project-standards reconcile
+project-standards reconcile --apply
+```
+
+The package has seven closed options in `.standards/config.toml`:
+
+```toml
+[standards.project-spec]
+enabled = true
+version = "1.10"
+
+[standards.project-spec.config]
+contract_version = "1.1"
+workflow_mode = "caller"
+workflow_ownership = "managed"
+include_patterns = ["docs/specs/**/*.md"]
+reference_prefixes = ["RQ", "GAP"]
+default_profile = "standard"
+ci = true
+```
+
+- `contract_version` selects the document contract independently of package version `1.10`.
+- `workflow_mode` selects a reusable `v5` caller or an immutable `self-hosted` workflow.
+- `workflow_ownership` defaults to `managed`; select `consumer-owned` during migration to preserve a customized legacy validation workflow and keep that path outside reconciliation and lock state.
+- `include_patterns` is the nonempty set of consumer-root-relative specification globs used by `validate` and `lint` discovery.
+- `reference_prefixes` lists uppercase external ID namespaces that may be cited but not defined by a specification. Canonical spec-local prefixes such as `FR` are rejected.
+- `default_profile` is `light`, `standard`, or `full` and is used when a provider request does not select a profile explicitly.
+- `ci` controls the package-managed validation caller. When false, the stable caller remains present with its job disabled; changing the option does not transfer ownership.
+- `runner_labels` is the runner selection the managed caller passes to the reusable workflow, for example `["self-hosted", "linux", "x64"]`. The default is empty, which omits the input entirely and leaves the GitHub-hosted runner in use. Labels are limited to letters, digits, `.`, `_`, and `-`. It applies to `caller` mode; a `self-hosted` repository exposes `runner-labels` as its own installed workflow's `workflow_call` input instead.
+
+Project specifications have their own `spec_id`, status, profile, and relationship frontmatter. If Markdown Frontmatter is also enabled, keep the two packages' `include_patterns` disjoint so one document is not governed by two metadata schemas.
+
+## Author and inspect specifications
+
+All selected-mode paths are relative to the consumer root. Absolute paths, traversal, and symlinked parents or leaves are refused.
+
+```bash
+project-standards spec new docs/specs/my-feature.md \
+  --profile standard \
+  --title "My Feature"
+project-standards spec validate
+project-standards spec lint --strict
+project-standards spec extract docs/specs/my-feature.md §7
+project-standards spec next docs/specs/my-feature.md FR
+project-standards spec upgrade docs/specs/my-feature.md --to full --stdout
+```
+
+`new --stdout` and `upgrade --stdout` use the read-only preview provider and write nothing. File-producing `new` and `upgrade` requests return typed mutation plans that the platform executor applies with containment, symlink, precondition, and mode checks. Tier upgrades are additive: they insert missing canonical sections without renumbering existing sections or rewriting authored prose.
+
+### Import a house-format specification
+
+Import is explicit and preservation-first. It never runs during adoption, infers no destination, and never changes the source. Preview into a distinct target with an explicit specification ID:
+
+```bash
+project-standards spec import docs/legacy/design.md \
+  --output docs/specs/design.md \
+  --id SPEC-7F3Q
+```
+
+The default preview holds the read lock, writes nothing, and reports the selected `project-spec@1.10/fix` provider, exact mappings, review items, content-safe diagnostics, `written: false`, and a deterministic `plan digest`. Exact canonical section titles map after only an approved leading decimal number is removed. Preamble, duplicate destinations, near matches, and unmapped headings remain byte-exact inside adaptive fences in `Legacy Import Review`; their diagnostics identify the block and required owner decision without echoing its prose.
+
+After reviewing the preview, regenerate and apply the current plan by supplying its digest:
+
+```bash
+project-standards spec import docs/legacy/design.md \
+  --output docs/specs/design.md \
+  --id SPEC-7F3Q \
+  --apply \
+  --expected-plan-digest sha256:<64-hex-digits>
+```
+
+Apply holds the write lock, generates one current in-memory plan, and compares its digest before calling the executor. A missing, malformed, wrong, or stale digest exits `2` without invoking the executor. Path aliases, traversal, symlinks, structural refusal, precondition changes, and staging failures likewise preserve both source and prior target. A matching plan is passed once to the existing staged whole-file executor; no plan handle or conversion state is stored.
+
+Add `--json` to either command for the stable `project-standards-spec-import-v1` object. It always carries `ok`, `written`, `source`, `target`, `provider`, `spec_id`, `plan_digest`, `mappings`, `review`, `diagnostics`, and `error`. Preview and successful apply exit `0`; invocation, path, provider, digest, and executor refusals exit `2`.
+
+Repositories with no matching specification files and repositories adopting only new canonical specs remain successful no-ops. Import is never required by enablement or reconciliation.
+
+## Repair conformance warnings
+
+Package 1.10 runs two profile-aware lint checks:
+
+- `SL-BOILERPLATE` identifies Lifecycle, Quality, or the selected Light, Standard, or Full template's complete Appendix A, B, or D block. Restore the named surface exactly from that profile's immutable 1.10 template.
+- `SL-REQUIREMENT-PHRASING` identifies an `FR-`, `NFR-`, `IR-`, or `DR-` row whose Requirement cell does not start with the exact phrase `The system shall`. Restore the phrase while preserving the requirement's intent, rationale, acceptance criteria, and priority.
+
+Ordinary `spec lint` emits these warnings and exits `0`; `spec lint --strict` exits `1` until every warning is repaired. A clean human result names the executed `shared-boilerplate` and `mandatory-phrasing` checks. JSON adds `checks: ["shared-boilerplate", "mandatory-phrasing"]` to each selected 1.10 document result. This field is additive, so consumers that require an exact JSON key set must update before selecting 1.10.
+
+Upgrading from 1.9 closes one source of unrepairable warnings. The 1.9 payload's `spec-full-template.md` had fallen behind this repository's canonical template source in its Appendix D closing paragraph — a block `spec lint` checks as `SL-BOILERPLATE`. Selecting 1.9 lints against 1.9's own templates and is self-consistent on its own, but a specification scaffolded outside that selection — an unselected `spec new`, or a copy taken from the repository's template source — and then linted under it reported an Appendix D finding whose canonical wording the 1.9 payload did not contain. 1.10's three templates are byte-identical to that source. An existing specification keeps its old Appendix D text until the named surface is restored from the 1.10 template; `project-standards spec lint` names the surface to restore.
+
+Exact conformance does not replace semantic review. A human or agent must still verify requirement meaning, testability, rationale, acceptance criteria, priority, and cross-document coherence.
+
+## Managed output and CI
+
+Reconciliation manages `.github/workflows/validate-specs.yml`. The caller invokes the reusable workflow at `v5` and requests strict linting. Both caller and self-hosted modes run bare `spec validate` and `spec lint --strict` commands; the CLI resolves `.standards/` authority and the selected package without an explicit legacy `--config` override.
+
+The workflow accepts an optional `runner-labels` reusable-workflow input carrying a JSON array of runner labels; the empty default keeps the GitHub-hosted runner. The runner is allocated from the calling repository's context, so this input serves private same-organization callers selecting their own runner pool and never attaches a runner to the standards repository.
+
+Package 1.8 makes that selection reachable from `caller` mode through the `runner_labels` option. When it is non-empty the managed caller gains a `runner-labels` entry in its `with:` block, carrying the labels as a JSON-array string because a reusable-workflow input cannot be typed as a sequence. When it is empty — the default — the entry is omitted entirely and the caller renders byte-for-byte the workflow 1.7 produced, so a repository that sets nothing sees no reconciliation change. Opting in rewrites `.github/workflows/validate-specs.yml`.
+
+The input reaches the job only over `workflow_call`. The self-hosted workflow also triggers directly on `push` and `pull_request`, and on those events `inputs` is empty, so `runs-on` falls through to `ubuntu-latest` and the job runs on the GitHub-hosted runner. A repository that must keep every run off hosted minutes cannot rely on the input alone; take `workflow_ownership = "consumer-owned"` and pin `runs-on` directly.
+
+Reconciliation emits the non-fatal `PS-RUNNER-LABELS-UNREACHABLE` warning when non-empty labels are inert. For `workflow_ownership = "consumer-owned"`, pass `runner-labels` from the owned caller or return it to managed ownership. For `workflow_mode = "self-hosted"`, use the managed caller path or own the workflow and pin its `runs-on` selection directly. Empty labels and non-empty labels on the managed caller path produce no reachability warning.
+
+Verify the selected state and the reconciled caller:
+
+```bash
+project-standards reconcile --check
+project-standards spec validate
+project-standards spec lint --strict
+```
+
+Validation findings exit `1`. Usage, selected-package, configuration, containment, and authoring refusals exit `2`. `lint` exits `1` only with `--strict` and at least one warning.
+
+## Migration and disable behavior
+
+Automatic migration maps the legacy specification settings semantically into the seven closed package options and recognizes only the exact released validation caller bytes. A customized legacy caller blocks by default; setting `workflow_ownership: "consumer-owned"` in the legacy configuration preserves it without claiming the path. Settings owned by other selected packages are migrated by those packages; other modified or unclaimed state blocks apply without changing the repository.
+
+Preview and apply a repository migration through the generic boundary:
+
+```bash
+project-standards init --catalog 5 --migrate
+project-standards init --catalog 5 --migrate --apply
+```
+
+Disabling the package and reconciling removes its managed workflow and lock ownership. Consumer-authored specification documents remain untouched:
+
+```bash
+project-standards standards disable project-spec
+project-standards reconcile
+project-standards reconcile --apply
+```
+
+## Package resources
+
+- [Canonical standard](README.md)
+- [Agent summary](agent-summary.md)
+- [Worked example](examples/spec.example.md)
+- [Light, Standard, and Full templates](templates/)
+- [Tooling notes](resources/tooling-notes.md)
+
+## Troubleshooting
+
+| Finding | Resolution |
+| --- | --- |
+| No specification files match configured `include_patterns` | Package 1.4 and later compatible 1.x versions report an informational success without invoking validation providers. Add the first specification when ready. |
+| `SL-STRUCTURE` — not a valid specification; run spec validate | `lint --strict` gates on structural recognizability, so a file that is not a recognizable specification warns here instead of passing silently. Run `spec validate` first and resolve its structural findings; lint reports only the single gating fact. |
+| `SL-BOILERPLATE` | Restore the named Lifecycle, Quality, or Appendix A, B, or D surface exactly from the selected 1.10 profile template. |
+| `SL-REQUIREMENT-PHRASING` | Begin the identified Requirement cell with `The system shall` without changing its meaning, acceptance criteria, or priority. |
+| Markdown Frontmatter also selects a spec | Make the two package corpora disjoint; project specs use their own metadata schema. |
+| Authoring path is unsafe or already changed | Re-preview and resolve the path/precondition; do not bypass the executor. |
+| Import plan digest does not match | The source or target snapshot changed, or the supplied digest is not from the current preview. Preview again and apply that new digest; do not reuse a stored value. |
+| Import reports review blocks | Make the owner placement decisions in the generated target. The importer deliberately preserves ambiguous bytes instead of guessing. |
+| Managed workflow drift | Restore the selected caller/self-hosted bytes or change `workflow_mode` and reconcile. |

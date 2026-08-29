@@ -108,8 +108,8 @@ The recommended linting/formatting tools and settings for Markdown and the struc
 
 Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and provider-backed `validate`/`lint`/`extract`/`next`/`new`/`upgrade` commands. The selected package manages a reusable or self-hosted validation workflow; authoring writes are applied only from typed plans through the unified executor.
 
-- **Standard:** [`standards/project-spec/versions/1.9/README.md`](standards/project-spec/versions/1.9/README.md)
-- **Templates:** [`templates/`](standards/project-spec/versions/1.9/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.9/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.9/adopt.md)
+- **Standard:** [`standards/project-spec/versions/1.10/README.md`](standards/project-spec/versions/1.10/README.md)
+- **Templates:** [`templates/`](standards/project-spec/versions/1.10/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.10/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.10/adopt.md)
 
 ### CLI Documentation Standard
 
@@ -194,7 +194,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | ADR | `1.6` | [`standards/adr/versions/1.6/adopt.md`](standards/adr/versions/1.6/adopt.md) |
 | Python Tooling | `1.16` | [`standards/python-tooling/versions/1.16/adopt.md`](standards/python-tooling/versions/1.16/adopt.md) |
 | Markdown Tooling | `1.15` | [`standards/markdown-tooling/versions/1.15/adopt.md`](standards/markdown-tooling/versions/1.15/adopt.md) |
-| Project Specification | `1.9` | [`standards/project-spec/versions/1.9/adopt.md`](standards/project-spec/versions/1.9/adopt.md) |
+| Project Specification | `1.10` | [`standards/project-spec/versions/1.10/adopt.md`](standards/project-spec/versions/1.10/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
 | Agent Handoff | `1.16` | [`standards/agent-handoff/versions/1.16/adopt.md`](standards/agent-handoff/versions/1.16/adopt.md) |
 | GitHub Workflow | `1.6` | [`standards/github-workflow/versions/1.6/adopt.md`](standards/github-workflow/versions/1.6/adopt.md) |

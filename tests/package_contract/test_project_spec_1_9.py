@@ -1,4 +1,4 @@
-"""Package contract for the unadvertised Project Specification 1.9 candidate."""
+"""Package contract for the released Project Specification 1.9 payload."""
 
 from __future__ import annotations
 
@@ -241,7 +241,7 @@ def test_project_spec_1_9__identity_and_conformance_guidance_are_complete() -> N
     assert "Shared **boilerplate is identical** (spec-lifecycle paragraph" not in tooling
 
 
-def test_project_spec_1_9__projection_and_unadvertised_catalog_role_are_exact() -> None:
+def test_project_spec_1_9__projection_and_retained_catalog_role_are_exact() -> None:
     source_files = {
         path.relative_to(_SUCCESSOR).as_posix(): path.read_bytes()
         for path in payload_tree(_SUCCESSOR)
@@ -264,13 +264,12 @@ def test_project_spec_1_9__projection_and_unadvertised_catalog_role_are_exact() 
         if package["id"] == "project-spec"
     }
     assert roles["1.8"] == "retained"
-    assert roles["1.9"] == "default"
+    # 1.10 succeeded 1.9 as the family default; a published version's row only ever
+    # moves from `default` to `retained`, never back and never off the catalog.
+    assert roles["1.9"] == "retained"
 
     generated = (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
-    assert "| [`project-spec`](project-spec/README.md) | active | 1.9 | default |" in generated
-
-    selected = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
-    assert selected["standards"]["project-spec"]["resolved"] == "1.9"
+    assert "| [`project-spec`](project-spec/README.md) | active | 1.9 | retained |" in generated
 
 
 def test_project_spec_1_9__manifest_declares_one_config_only_verify_provider() -> None:

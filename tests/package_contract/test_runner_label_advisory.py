@@ -46,13 +46,13 @@ _LABELS: list[JsonValue] = ["self-hosted", "linux", "x64", "l3digital-private"]
 _VERSIONS = {
     "markdown-frontmatter": "1.14",
     "markdown-tooling": "1.15",
-    "project-spec": "1.9",
+    "project-spec": "1.10",
 }
 _VERIFICATION_REQUESTS = (
     VerificationRequest("markdown-frontmatter", "1.14", "verify-runner-labels"),
     VerificationRequest("markdown-tooling", "1.15", "verify-format"),
     VerificationRequest("markdown-tooling", "1.15", "verify-lint"),
-    VerificationRequest("project-spec", "1.9", "verify-runner-labels"),
+    VerificationRequest("project-spec", "1.10", "verify-runner-labels"),
 )
 _WARNING_IDENTITIES = (
     (
@@ -79,7 +79,7 @@ _WARNING_IDENTITIES = (
     (
         "PS-RUNNER-LABELS-UNREACHABLE",
         "project-spec",
-        "1.9",
+        "1.10",
         ".github/workflows/validate-specs.yml",
         "$file",
     ),
@@ -296,14 +296,15 @@ def test_runner_label_advisory__release_and_self_host_selections__stay_unchanged
     assert advertised[("markdown-tooling", "1.14")] == "retained"
     assert advertised[("markdown-tooling", "1.15")] == "default"
     assert advertised[("project-spec", "1.8")] == "retained"
-    assert advertised[("project-spec", "1.9")] == "default"
+    assert advertised[("project-spec", "1.9")] == "retained"
+    assert advertised[("project-spec", "1.10")] == "default"
 
     lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
     standards = cast("dict[str, dict[str, object]]", lock["standards"])
     assert {standard_id: standards[standard_id]["resolved"] for standard_id in _VERSIONS} == {
         "markdown-frontmatter": "1.14",
         "markdown-tooling": "1.15",
-        "project-spec": "1.9",
+        "project-spec": "1.10",
     }
     artifacts = cast("list[dict[str, object]]", lock["artifacts"])
     workflow_versions = {
@@ -321,7 +322,7 @@ def test_runner_label_advisory__release_and_self_host_selections__stay_unchanged
         ".github/workflows/format.yml": {"markdown-tooling": "1.15"},
         ".github/workflows/lint-markdown.yml": {"markdown-tooling": "1.15"},
         ".github/workflows/validate-markdown-frontmatter.yml": {"markdown-frontmatter": "1.14"},
-        ".github/workflows/validate-specs.yml": {"project-spec": "1.9"},
+        ".github/workflows/validate-specs.yml": {"project-spec": "1.10"},
     }
 
     rendered = (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")

@@ -12,7 +12,7 @@ Consumer packages are enabled through `.standards/config.toml` and reconciled as
 | ADR | Architecture Decision Records (MADR on the frontmatter profile) | 1.6 | default | [adr/](adr/) | [adopt](adr/adopt.md) |
 | Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | 1.16 | default | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
 | Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | 1.15 | default | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
-| Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | 1.9 | default | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
+| Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | 1.10 | default | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
 | CLI Documentation | Language-neutral CLI usage docs: help text, usage references, man pages, shell completion, CI drift checks | 1.6 | default | [cli-documentation/](cli-documentation/) | [adopt](cli-documentation/adopt.md) |
 | Agent Handoff | Repository-local project knowledge, bounded session continuity, repo-local skill and hooks, and conformance tooling | 1.16 | default | [agent-handoff/](agent-handoff/) | [adopt](agent-handoff/adopt.md) |
 | GitHub Workflow | GitHub work discipline for organization-owned repositories: typed issue contracts, PR evidence, an agent skill, and the `gh-workflow` tool | 1.6 | default | [github-workflow/](github-workflow/) | [adopt](github-workflow/adopt.md) |
