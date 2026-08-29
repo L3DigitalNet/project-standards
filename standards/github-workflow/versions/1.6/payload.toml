@@ -22,7 +22,7 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:0d4a090aee1864de3148ca5db68ad79de09ff9b2deadb43cd073959cacb144eb"
+digest = "sha256:8fceb8b57e21f5b6814a899c2a05172f214af677e9fe3ae297fb97caeccac72d"
 
 [[resources]]
 id = "agent-summary"
@@ -57,7 +57,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/gh_workflow.py"
 media_type = "text/x-python"
-digest = "sha256:0653ed15ea0021f4f475bb13dce514056c28cef506ed09be6128603362125fba"
+digest = "sha256:66e8e442c0be54258dbf225059d118a2b61dbf689edde2b3058c6719cf42c414"
 
 [[resources]]
 id = "provider-input"
@@ -135,7 +135,7 @@ policy = "managed"
 id = "reference-pr-standard"
 target = ".agents/skills/github-workflow/references/pr-standard.md"
 source = "skills/github-workflow/references/pr-standard.md"
-digest = "sha256:3989533c45c428f2063c80caeda9cd05b343d222eccf3c39e9a3e6a2db8435c8"
+digest = "sha256:f662c8af7d1c95288a4e86b57bd3b0e252a05ddb180e4ad4583a01dab1c52d6b"
 policy = "managed"
 
 [[artifacts]]
@@ -149,7 +149,7 @@ policy = "managed"
 id = "reference-summary-format"
 target = ".agents/skills/github-workflow/references/summary-format.md"
 source = "skills/github-workflow/references/summary-format.md"
-digest = "sha256:20fcc966d222774c05001dfccde4fbcd8155c974ca575aab4178aed94e6140a6"
+digest = "sha256:6899089a396898f685f8d3358a07579587678a61c8f9d37f5081a87579a2243f"
 policy = "managed"
 
 # Claude Code discovers project skills only under `.claude/skills/`; it has never
@@ -205,7 +205,7 @@ policy = "managed"
 id = "reference-pr-standard-claude"
 target = ".claude/skills/github-workflow/references/pr-standard.md"
 source = "skills/github-workflow/references/pr-standard.md"
-digest = "sha256:3989533c45c428f2063c80caeda9cd05b343d222eccf3c39e9a3e6a2db8435c8"
+digest = "sha256:f662c8af7d1c95288a4e86b57bd3b0e252a05ddb180e4ad4583a01dab1c52d6b"
 policy = "managed"
 
 [[artifacts]]
@@ -219,7 +219,7 @@ policy = "managed"
 id = "reference-summary-format-claude"
 target = ".claude/skills/github-workflow/references/summary-format.md"
 source = "skills/github-workflow/references/summary-format.md"
-digest = "sha256:20fcc966d222774c05001dfccde4fbcd8155c974ca575aab4178aed94e6140a6"
+digest = "sha256:6899089a396898f685f8d3358a07579587678a61c8f9d37f5081a87579a2243f"
 policy = "managed"
 
 [[contributions]]

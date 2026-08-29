@@ -53,7 +53,7 @@ Follow-up work that will survive the PR should become Issues. Do not leave signi
 - prose TODOs in the PR
 - agent-session notes
 
-Durable work discovered during implementation gets a real work contract before the session ends, or it is lost.
+Durable work discovered during implementation is disposed of before the session ends, never silently lost: fixed in place when this repository owns it and the session can take it, filed against the owning repository when an upstream dependency in the organization owns it, or put to the operator when it warrants its own session.
 
 ## Draft PRs
 

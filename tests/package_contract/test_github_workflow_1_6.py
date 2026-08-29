@@ -48,9 +48,11 @@ _SUBCOMMANDS = ("audit", "check", "close", "new", "receipt", "reopen", "set", "s
 
 # Budgets inherited from 1.5 (NFR-006 1.11, NFR-003). They are ceilings, not targets,
 # and 1.6 spends most of the remaining headroom: the rule it adds is longer than the
-# one it removes. Measured at this cut: SKILL.md 70 lines / 11,711 B, and the rendered
-# block 2,397 B for `ExampleOrg`. A successor that adds prose to either without moving
-# a ceiling deliberately will fail here rather than ship an over-budget read.
+# one it removes. Measured at this cut: SKILL.md 70 lines / 11,711 B — at the line
+# ceiling exactly — and the rendered block 2,370 B for `ExampleOrg`, 2,372 B for a
+# twelve-character login. The block's first draft measured 2,399 B and the bullet was
+# shortened rather than the ceiling raised, because the ceiling is what keeps the
+# always-injected block from growing into every session's context.
 _SKILL_MAX_LINES = 70
 _SKILL_MAX_BYTES = 12000
 _BLOCK_MAX_BYTES = 2400
@@ -177,15 +179,48 @@ def test_github_workflow_1_6__finding_disposition__replaces_the_follow_up_invari
     skill = _text(_SKILL_SOURCE)
     body = _block_body()
 
-    for name, text in (("SKILL.md", skill), ("managed block", body)):
+    # All three dispositions, in each home's own wording — the two homes are written
+    # to different budgets, so a shared substring would either be vacuous or would
+    # pin one home's phrasing onto the other.
+    homes: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+        (
+            "SKILL.md",
+            skill,
+            (
+                "is fixed in place, with no issue created",
+                "file an issue in that dependency's repository",
+                "ask the operator whether to create an issue for it",
+            ),
+        ),
+        (
+            "managed block",
+            body,
+            (
+                "fix it in place when this repository owns it",
+                "file it against the owning upstream repository in the organization",
+                "ask the operator whether to file or tackle it now",
+            ),
+        ),
+    )
+    for name, text, dispositions in homes:
         assert _WITHDRAWN not in text, f"{name} still carries the withdrawn invariant"
-        # The three dispositions, each in the wording its home ships.
-        assert "no issue" in text, name
-        assert "owning repository" in text or "in that codebase" in text, name
-        assert "separate session" in text, name
+        for disposition in dispositions:
+            assert disposition in text, f"{name} omits: {disposition}"
 
     assert "**Not every finding needs an issue.**" in skill
-    assert "A related finding you can address this session gets no issue" in body
+    assert "A related finding you can address this session needs no issue" in body
+
+    # Two reference files restated the withdrawn invariant in their own words. A cut
+    # that replaced the rule in its two headline homes and left these behind would
+    # contradict itself depending on which file a session happened to open.
+    pr_standard = _text("skills/github-workflow/references/pr-standard.md")
+    assert "gets a real work contract" not in pr_standard
+    assert "is disposed of before the session ends, never silently lost" in pr_standard
+    # `summary` has to be able to render a correctly disposed finding; before 1.6 its
+    # disposition vocabulary offered only "filed" and "proposed".
+    assert "fixed in place (commit reference)" in _text(
+        "skills/github-workflow/references/summary-format.md"
+    )
 
     # NFR-001: no packaged guidance names an organization — the consumer's own login
     # reaches the block only through configuration. The rule's upstream-filing clause
