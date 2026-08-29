@@ -18,7 +18,6 @@ all three stay finding-free under exactly the same shim.
 from __future__ import annotations
 
 import json
-import shutil
 import stat
 import sys
 from pathlib import Path
@@ -31,6 +30,7 @@ from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.planner import plan_reconciliation
+from tests.installed_package import copy_installed_package
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FINDING = "AH-LAUNCHER-INTERPRETER"
@@ -49,7 +49,7 @@ exit 1
 @pytest.fixture(scope="module")
 def distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribution:
     installed = tmp_path_factory.mktemp("launcher-interpreter") / "project_standards"
-    shutil.copytree(_ROOT / "src/project_standards", installed, symlinks=False)
+    copy_installed_package(installed)
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 

@@ -1,6 +1,5 @@
 import io
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -19,6 +18,7 @@ from project_standards.format_frontmatter import (
     tokenize,
 )
 from project_standards.validate_frontmatter import ConfigError
+from tests.installed_package import copy_installed_package
 
 CLEAN = (
     "---\n"
@@ -51,7 +51,7 @@ def test_help__broken_schema__remains_available(
 ) -> None:
     isolated_src = tmp_path / "src"
     package = isolated_src / "project_standards"
-    shutil.copytree(Path(__file__).parents[1] / "src" / "project_standards", package)
+    copy_installed_package(package)
     schema = package / "schemas" / "markdown-frontmatter.schema.json"
     if schema_state == "missing":
         schema.unlink()

@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.installed_package import copy_installed_package
+
 _ROOT = Path(__file__).resolve().parents[1]
 _BUILD_SCRIPT = _ROOT / "scripts/build-validate-id-pyz.sh"
 _SOURCE_PACKAGE = _ROOT / "src/project_standards"
@@ -82,7 +84,7 @@ def _run_zipapp(zipapp: Path, *arguments: str, cwd: Path) -> subprocess.Complete
 def validate_id_zipapp(tmp_path_factory: pytest.TempPathFactory) -> Path:
     checkout = tmp_path_factory.mktemp("validate-id-zipapp")
     materialized_source = checkout / "materialized/project_standards"
-    shutil.copytree(_SOURCE_PACKAGE, materialized_source)
+    copy_installed_package(materialized_source)
     environment_source = _source_package(checkout / "environment/project_standards", "environment")
     zipapp, completed = _build_zipapp(
         checkout,

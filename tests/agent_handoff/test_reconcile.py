@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import base64
 import json
-import shutil
 from pathlib import Path
 from typing import cast
 
@@ -26,6 +25,7 @@ from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.providers import ProviderResult
 from project_standards.package_contract.payload import ProviderEffect
 from project_standards.package_contract.payload import ProviderOperation as V2ProviderOperation
+from tests.installed_package import copy_installed_package
 
 _DUPLICATE = "AH-LEGACY-DUPLICATE-HOOK"
 
@@ -41,9 +41,8 @@ timeout = 30
 
 @pytest.fixture(scope="module")
 def distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribution:
-    root = Path(__file__).resolve().parents[2]
     installed = tmp_path_factory.mktemp("reconcile-dist") / "project_standards"
-    shutil.copytree(root / "src/project_standards", installed, symlinks=False)
+    copy_installed_package(installed)
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 

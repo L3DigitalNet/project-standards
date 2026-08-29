@@ -399,7 +399,17 @@ serial_lane coverage-report lane_coverage_report
 GATE_SECONDS="$(($(date +%s) - GATE_START))"
 
 # ── Report ────────────────────────────────────────────────────────────────
+# A lane's result file is written only after its command returns, so a run that
+# died mid-lane — the gate exhausting its tmpfs is the observed case — leaves the
+# file missing, empty, or truncated to the status field. Arithmetic on the blank
+# elapsed value used to abort the summary loop with
+# "verify.sh: line N: / 60: syntax error: operand expected", swallowing the lane
+# table at exactly the run where it was needed to say which lane died.
 format_duration() {
+    [[ "$1" =~ ^[0-9]+$ ]] || {
+        printf '%s' '—'
+        return
+    }
     printf '%d:%02d' "$(($1 / 60))" "$(($1 % 60))"
 }
 
@@ -412,9 +422,21 @@ done
 
 printf '\n════ summary ════\n'
 for lane in "${LANE_ORDER[@]}"; do
-    IFS=$'\t' read -r lane_status lane_seconds <"$RESULT_DIR/$lane"
+    lane_status=""
+    lane_seconds=""
+    # A missing result file must not abort the loop either: redirecting from one
+    # is a hard error under `set -e`, and `read` reports EOF on an empty file.
+    if [[ -r "$RESULT_DIR/$lane" ]]; then
+        IFS=$'\t' read -r lane_status lane_seconds <"$RESULT_DIR/$lane" || true
+    fi
     if [[ "$lane_status" == "0" ]]; then
         verdict="ok"
+    elif [[ -z "$lane_status" ]]; then
+        # Unrecorded is failed: the lane never reached the line that writes its
+        # result, so treating it as anything else would report a green gate for
+        # a run that died partway.
+        verdict="FAILED (no result recorded)"
+        exit_status=1
     else
         verdict="FAILED (exit $lane_status)"
         exit_status=1

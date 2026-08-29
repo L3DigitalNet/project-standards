@@ -5,7 +5,6 @@ import hashlib
 import json
 import os
 import posixpath
-import shutil
 from collections.abc import Callable, Generator, Sequence
 from contextlib import contextmanager
 from dataclasses import replace
@@ -50,6 +49,7 @@ from project_standards.package_contract.payload import (
     ProviderOperation,
 )
 from tests.control_plane.helpers import installed_distribution
+from tests.installed_package import copy_installed_package
 
 
 def _selected_alpha(tmp_path: Path) -> SelectedCommandPackage:
@@ -851,7 +851,7 @@ def _custom_schema_consumer(
     two independent construction branches — had no equivalence oracle (F4).
     """
     installed = tmp_path / "schema-installed/project_standards"
-    shutil.copytree(_REPOSITORY_ROOT / "src/project_standards", installed, symlinks=False)
+    copy_installed_package(installed)
     distribution = InstalledDistribution(installed, tool_release="5.11.0")
     repo = tmp_path / "schema-consumer"
     repo.mkdir()

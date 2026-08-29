@@ -59,6 +59,26 @@ _WHEEL_SOURCE_IGNORE = shutil.ignore_patterns(
 )
 
 
+# `migration_venv` replaces the real `standards/` with the synthetic fixture and
+# re-projects, so copying the live ones first is ~194 MiB of bytes deleted before
+# anything reads them — `copytree` dereferences the `payloads` symlink farm, and
+# the seven github-workflow plus six agent-handoff `bin/` binaries dominate it.
+# Skipping them at the copy is what keeps this fixture inside the gate's tmpfs.
+#
+# Scoped to `migration_venv` alone: `selected_command_venv` builds a wheel from the
+# REAL catalog and needs every one of these trees present.
+_MIGRATION_PRUNED = {
+    _ROOT: {"standards"},
+    _ROOT / "src/project_standards": {"catalogs", "families", "payloads"},
+}
+
+
+def _migration_source_ignore(directory: str, names: list[str]) -> set[str]:
+    return _WHEEL_SOURCE_IGNORE(directory, names) | _MIGRATION_PRUNED.get(
+        Path(directory).resolve(), set()
+    )
+
+
 def _venv_environment(**extra: str) -> dict[str, str]:
     return {**os.environ, "PYTHONPATH": "", **extra}
 
@@ -92,15 +112,12 @@ def migration_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     shutil.copytree(
         _ROOT,
         source,
-        ignore=_WHEEL_SOURCE_IGNORE,
+        ignore=_migration_source_ignore,
     )
     fixture = source / "tests/fixtures/package_contract/valid/full"
-    shutil.rmtree(source / "standards")
     shutil.copytree(fixture / "standards", source / "standards")
     shutil.rmtree(source / "catalogs")
     shutil.copytree(fixture / "catalogs", source / "catalogs")
-    for projection in ("catalogs", "families", "payloads"):
-        shutil.rmtree(source / "src/project_standards" / projection)
 
     provider = source / "standards/alpha/versions/2.0/provider.py"
     original_provider = provider.read_bytes()

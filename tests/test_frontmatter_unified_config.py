@@ -4,7 +4,6 @@ import base64
 import hashlib
 import io
 import json
-import shutil
 from pathlib import Path
 from typing import cast
 
@@ -44,6 +43,7 @@ from project_standards.validate_frontmatter import (
     load_cli_config,
     load_cli_config_or_exit,
 )
+from tests.installed_package import copy_installed_package
 
 _ROOT = Path(__file__).resolve().parents[1]
 _CATALOG_DEFAULT_FRONTMATTER_VERSION = next(
@@ -60,7 +60,7 @@ def installed_v5_distribution(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> InstalledDistribution:
     installed = tmp_path / "installed/project_standards"
-    shutil.copytree(_ROOT / "src/project_standards", installed, symlinks=False)
+    copy_installed_package(installed)
     distribution = InstalledDistribution(installed, tool_release="5.2.0")
     monkeypatch.setattr(
         InstalledDistribution,

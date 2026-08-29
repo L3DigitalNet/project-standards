@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 import re
-import shutil
 import stat
 import subprocess
 from hashlib import sha256
@@ -28,6 +27,7 @@ from project_standards.adopt.manifest import available_standards, load_manifest
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.planner import plan_reconciliation
+from tests.installed_package import copy_installed_package
 
 _REPO = Path(__file__).resolve().parent.parent
 _BUNDLES = _REPO / "src" / "project_standards" / "bundles"
@@ -96,11 +96,7 @@ def test_frozen_v1_python_check_bundle_digest() -> None:
 
 def test_root_check_script_matches_current_v2_rendering(tmp_path: Path) -> None:
     installed = tmp_path / "project_standards"
-    shutil.copytree(
-        _REPO / "src/project_standards",
-        installed,
-        symlinks=False,
-    )
+    copy_installed_package(installed)
     distribution = InstalledDistribution(
         installed,
         tool_release=package_version(),

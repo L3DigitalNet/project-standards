@@ -11,6 +11,7 @@ from project_standards.agent_handoff.paths import RepositoryRoot
 from project_standards.agent_handoff.planning import apply_adoption, plan_adoption
 from project_standards.cli import main
 from project_standards.control_plane.distribution import InstalledDistribution
+from tests.installed_package import copy_installed_package
 from tests.payload_tree import payload_tree
 
 
@@ -182,11 +183,8 @@ def test_packaged_legacy_provider_emits_structured_report(
 
 @pytest.fixture(scope="module")
 def distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribution:
-    import shutil
-
-    root = Path(__file__).resolve().parents[2]
     installed = tmp_path_factory.mktemp("legacy-lock-dist") / "project_standards"
-    shutil.copytree(root / "src/project_standards", installed, symlinks=False)
+    copy_installed_package(installed)
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 

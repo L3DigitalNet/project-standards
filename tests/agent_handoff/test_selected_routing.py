@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import shutil
 import tomllib
 from pathlib import Path
 from typing import cast
@@ -36,6 +35,7 @@ from project_standards.control_plane.planner import plan_reconciliation
 from project_standards.control_plane.providers import ProviderResult
 from project_standards.control_plane.schemas import MutationPlanSchema
 from project_standards.package_contract.payload import JsonObject, ProviderEffect
+from tests.installed_package import copy_installed_package
 
 _ROOT = Path(__file__).resolve().parents[2]
 
@@ -67,7 +67,7 @@ def test_managed_markdown_snapshot_spans_all_packages_while_local_units_stay_loc
 @pytest.fixture(scope="module")
 def distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribution:
     installed = tmp_path_factory.mktemp("agent-handoff-v2") / "project_standards"
-    shutil.copytree(_ROOT / "src/project_standards", installed, symlinks=False)
+    copy_installed_package(installed)
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 
@@ -136,7 +136,7 @@ def _predecessor_catalog(text: str, standard_id: str, ceiling: str) -> str:
 def predecessor_distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribution:
     """Install the tool as it stood while Agent Handoff 1.4 was the default."""
     installed = tmp_path_factory.mktemp("agent-handoff-predecessor") / "project_standards"
-    shutil.copytree(_ROOT / "src/project_standards", installed, symlinks=False)
+    copy_installed_package(installed)
     catalog = installed / "catalogs/5.toml"
     catalog.write_text(
         _predecessor_catalog(catalog.read_text(encoding="utf-8"), "agent-handoff", "1.4"),

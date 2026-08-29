@@ -24,7 +24,6 @@ and `ApplyResult.verification_findings` carries its verdict.
 from __future__ import annotations
 
 import hashlib
-import shutil
 import socket
 import tomllib
 from collections.abc import Iterator, Mapping
@@ -51,6 +50,7 @@ from project_standards.package_contract.payload import (
     ProviderOperation,
     load_payload_manifest,
 )
+from tests.installed_package import copy_installed_package
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -142,13 +142,15 @@ def distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribut
     catalog row because the family was still unadvertised; keeping that would now
     declare the package twice.
 
-    `symlinks=False` matters: the projection under `src/project_standards/payloads`
-    is a symlink farm into `standards/`, and the distribution must contain real
-    bytes — including the committed binary at its tracked 0755 — for reconcile to
-    deliver anything.
+    Dereferencing matters: the projection under `src/project_standards/payloads` is
+    a symlink farm into `standards/`, and the distribution must contain real bytes —
+    including the committed binary at its tracked 0755 — for reconcile to deliver
+    anything. `copy_installed_package` guarantees exactly that while sharing the
+    dereferenced bytes across fixtures; see its module docstring for the no-write
+    contract that sharing imposes on `payloads/`.
     """
     installed = tmp_path_factory.mktemp("github-workflow-distribution") / "project_standards"
-    shutil.copytree(_ROOT / "src/project_standards", installed, symlinks=False)
+    copy_installed_package(installed)
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 

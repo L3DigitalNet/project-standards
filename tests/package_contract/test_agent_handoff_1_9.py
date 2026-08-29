@@ -29,6 +29,7 @@ from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
+from tests.installed_package import copy_installed_package
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -231,7 +232,7 @@ def test_agent_handoff_1_9__exec_form__is_the_reproduced_1_8_failure(tmp_path: P
 @pytest.fixture(scope="module")
 def distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribution:
     installed = tmp_path_factory.mktemp("agent-handoff-1-9-dist") / "project_standards"
-    shutil.copytree(_ROOT / "src/project_standards", installed, symlinks=False)
+    copy_installed_package(installed)
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 

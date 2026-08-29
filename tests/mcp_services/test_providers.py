@@ -99,6 +99,7 @@ from tests.control_plane.test_command_provider_end_to_end import (
     reconcile_command_provider_repo,
 )
 from tests.control_plane.test_command_providers import command_payload
+from tests.installed_package import copy_installed_package
 from tests.mcp_services.helpers import FULL_FIXTURE, import_mcp_services
 from tests.mcp_services.test_consumer import TOOL_RELEASE, dumped, field_names, model_config_of
 from tests.payload_tree import payload_tree
@@ -3123,7 +3124,7 @@ def build_unconstructible_family_consumer(tmp_path: Path) -> tuple[InstalledDist
     from project_standards.control_plane.bootstrap import initialize_control_plane
 
     installed = tmp_path / "unconstructible-installed/project_standards"
-    shutil.copytree(REAL_CONSUMER_ROOT / "src/project_standards", installed, symlinks=False)
+    copy_installed_package(installed)
     distribution = InstalledDistribution(installed, tool_release=TOOL_RELEASE)
     repo = tmp_path / "unconstructible-consumer"
     repo.mkdir()
