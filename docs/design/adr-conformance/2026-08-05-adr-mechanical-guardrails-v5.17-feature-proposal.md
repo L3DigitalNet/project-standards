@@ -6,7 +6,7 @@ description: 'Formal v5.17.0 feature proposal for declarative provider inputs, g
 doc_type: 'concept'
 status: 'draft'
 created: '2026-08-05'
-updated: '2026-08-05'
+updated: '2026-08-29'
 tags:
   - 'adr'
   - 'conformance'
@@ -792,6 +792,9 @@ Each item should preserve the explicit exclusions in this proposal and append ne
 - [Independent Standard Packages and Relationship Taxonomy](../../adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md)
 - [MCP Service and SDK Boundary](../../adr/adr-0025-mcp-service-and-sdk-boundary.md)
 - [MCP Local Read-Only Transport](../../adr/adr-0026-mcp-local-read-only-transport.md)
+
+<!-- release-consistency: historical standard-bundle-authoring -->
+
 - [Standard Bundle Authoring 2.6](../../../standards/standard-bundle-authoring/versions/2.6/README.md)
 - [`provider_inputs.py`](../../../src/project_standards/control_plane/provider_inputs.py)
 - [Provider payload contract](../../../src/project_standards/package_contract/payload.py)
