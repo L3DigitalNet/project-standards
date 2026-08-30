@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/policy"
 )
 
@@ -52,7 +53,7 @@ func (t *target) resolve(env *cli.Env) (Repository, error) {
 	if *t.repo == "" {
 		repo, err := OriginRepository(env.WorkDir)
 		if err != nil {
-			return Repository{}, fmt.Errorf("%w; pass --repo owner/name", err)
+			return Repository{}, asIdentityRefusal(fmt.Errorf("%w; pass --repo owner/name", err))
 		}
 		return repo, nil
 	}
@@ -67,9 +68,24 @@ func (t *target) resolve(env *cli.Env) (Repository, error) {
 
 	organization, err := policyOrganization(env, *t.policy)
 	if err != nil {
-		return Repository{}, err
+		return Repository{}, asIdentityRefusal(err)
 	}
 	return Repository{Owner: organization, Name: *t.repo}, nil
+}
+
+// asIdentityRefusal reclassifies an identity refusal as a usage error.
+//
+// IR-005 separates a local refusal (exit 2) from a failure that completed a read and
+// found something wrong (exit 1), and a value that is not a GitHub identity is always
+// the former — whatever supplied it. Every refusal in ghapi's identity boundary wraps
+// ErrInvalidIdentity, so this one test covers the explicit flag, the origin remote, and
+// the rendered policy's organization alike; a missing origin remote or an unreadable
+// policy file is a genuine precondition failure and passes through untouched.
+func asIdentityRefusal(err error) error {
+	if errors.Is(err, ghapi.ErrInvalidIdentity) {
+		return cli.Usagef("%v", err)
+	}
+	return err
 }
 
 // policyOrganization reads the organization from the rendered consumer policy, which is

@@ -12,7 +12,6 @@ const (
 	sectionAttention = "Needs attention"
 	sectionIssues    = "Issues"
 	sectionPulls     = "Pull requests"
-	sectionFollowUps = "Discovered follow-ups"
 )
 
 // The empty-section lines. A section with nothing in it says so in one line rather than
@@ -21,9 +20,6 @@ const (
 	noAttention = "Nothing needs attention: no blocked, underspecified, out-of-sync, or overdue work."
 	noIssues    = "No open issues."
 	noPulls     = "No open pull requests."
-	// The tool reports live GitHub state; noticing durable follow-up work while
-	// summarizing is the agent's job, and this tail is where the agent adds it.
-	noFollowUps = "No follow-ups recorded: the tool reports live GitHub state and does not discover work."
 )
 
 var (
@@ -36,8 +32,14 @@ type section struct {
 	body    string
 }
 
-// Summary renders the operator summary: attention first, then the inventories, then the
-// follow-ups tail. It is a read and prints to stdout for the agent to relay verbatim.
+// Summary renders the operator summary: attention first, then the inventories. It is a
+// read and prints to stdout for the agent to relay verbatim.
+//
+// The 1.6 layout ended with a "Discovered follow-ups" tail that the tool could never
+// populate — it reports live GitHub state and discovers nothing — so every summary
+// carried a section whose only content was a sentence explaining its own emptiness.
+// 1.7 removes it (FR-017): creation and follow-up ceremony is not observed state, and a
+// fixed section that is always empty trains readers to skip the tail of the report.
 func Summary(s *Snapshot) string {
 	return document(s, []string{"Read " + s.scopeLine()})
 }
@@ -60,7 +62,6 @@ func document(s *Snapshot, header []string) string {
 		{sectionAttention, attentionBody(s)},
 		{sectionIssues, issuesBody(s)},
 		{sectionPulls, pullsBody(s)},
-		{sectionFollowUps, noFollowUps + "\n"},
 	}
 
 	var b strings.Builder

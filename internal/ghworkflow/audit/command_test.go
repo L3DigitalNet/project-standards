@@ -221,6 +221,13 @@ func TestAuditFailOnDrift(t *testing.T) {
 
 // FR-016: unmet preconditions exit nonzero and emit no partial report. Each case below
 // is a distinct precondition, and stdout must stay empty in every one of them.
+//
+// The exit code splits by IR-005 result class, not by precondition: local refusals
+// (absent or malformed schema and policy files) stay ExitFailure, while a precondition
+// that failed because authentication, transport, or the API prevented completion is an
+// operational failure and exits ExitOperational. The classification itself is unchanged
+// — these cases were always environmental — so wantExit records where each case lands
+// rather than moving any case between classes.
 func TestAuditPreconditionFailures(t *testing.T) {
 	t.Parallel()
 
@@ -229,6 +236,8 @@ func TestAuditPreconditionFailures(t *testing.T) {
 		setup   func(t *testing.T) *harness
 		args    []string
 		wantSub string
+		// wantExit is ExitFailure when unset, which is the local-refusal majority.
+		wantExit int
 	}{
 		{
 			name: "gh is unauthenticated",
@@ -246,7 +255,8 @@ func TestAuditPreconditionFailures(t *testing.T) {
 				h.transport.Err = errors.New("dial tcp: no such host")
 				return h
 			},
-			wantSub: "unreachable",
+			wantSub:  "unreachable",
+			wantExit: cli.ExitOperational,
 		},
 		{
 			name: "api rejects the credentials",
@@ -257,7 +267,8 @@ func TestAuditPreconditionFailures(t *testing.T) {
 				}
 				return h
 			},
-			wantSub: "401",
+			wantSub:  "401",
+			wantExit: cli.ExitOperational,
 		},
 		{
 			name:    "schema file is absent",
@@ -288,8 +299,12 @@ func TestAuditPreconditionFailures(t *testing.T) {
 			t.Parallel()
 			h := tc.setup(t)
 
-			if got := h.run(tc.args...); got != cli.ExitFailure {
-				t.Fatalf("audit = %d, want %d (stderr: %s)", got, cli.ExitFailure, h.stderr)
+			wantExit := tc.wantExit
+			if wantExit == 0 {
+				wantExit = cli.ExitFailure
+			}
+			if got := h.run(tc.args...); got != wantExit {
+				t.Fatalf("audit = %d, want %d (stderr: %s)", got, wantExit, h.stderr)
 			}
 			if h.stdout.Len() != 0 {
 				t.Errorf("stdout = %q, want no partial report on a precondition failure", h.stdout)

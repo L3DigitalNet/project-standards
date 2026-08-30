@@ -26,7 +26,3 @@ Read 2026-08-06T12:00:00Z · 4 open issues · 3 open PRs
 | #21 | Add the render engine      | #12             | Open  | passing | R3 — High  |
 | #22 | Tidy the fixture corpus    | —               | Draft | failing | —          |
 | #23 | ✔ ⚠️ ©︎ ©️ 👨‍👩‍👧‍👦 1️⃣ 🇺🇸 漢字 אַ | #14             | Open  | passing | —          |
-
-## Discovered follow-ups
-
-No follow-ups recorded: the tool reports live GitHub state and does not discover work.

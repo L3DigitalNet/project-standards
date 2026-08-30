@@ -36,8 +36,6 @@ func TestSummaryWithNoOpenWorkStillRendersEverySection(t *testing.T) {
 		{"issues empty line", "No open issues."},
 		{"pull requests heading", "## Pull requests"},
 		{"pull requests empty line", "No open pull requests."},
-		{"follow-ups heading", "## Discovered follow-ups"},
-		{"follow-ups empty line", "No follow-ups recorded"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

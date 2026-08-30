@@ -32,7 +32,12 @@ func (r Repository) String() string { return r.Owner + "/" + r.Name }
 func ParseRepository(value string) (Repository, error) {
 	owner, name, ok := strings.Cut(strings.TrimSpace(value), "/")
 	if !ok || owner == "" || name == "" || strings.Contains(name, "/") {
-		return Repository{}, fmt.Errorf("repository %q must be in owner/name form", value)
+		// Wrapped in ErrInvalidIdentity like every other refusal in this file, so
+		// resolve's errors.Is test classifies a malformed shape and a malformed
+		// component identically. Without the wrap the shape error would be the one
+		// identity refusal that exits 1 instead of 2.
+		return Repository{}, fmt.Errorf("%w: repository %q must be in owner/name form",
+			ghapi.ErrInvalidIdentity, value)
 	}
 	if err := ghapi.ValidateRepository(owner, name); err != nil {
 		return Repository{}, fmt.Errorf("repository %q: %w", value, err)
@@ -186,7 +191,11 @@ func repositoryFromURL(remote string) (Repository, error) {
 	}
 	repo, err := ParseRepository(strings.Trim(path, "/"))
 	if err != nil {
-		return Repository{}, fmt.Errorf("origin remote %q does not name a GitHub repository", remote)
+		// The cause is wrapped rather than flattened into prose: resolve classifies an
+		// identity refusal by errors.Is(ErrInvalidIdentity), and a message-only error
+		// here would make an origin remote the one path where a refused identity exits
+		// as a failure instead of a usage error.
+		return Repository{}, fmt.Errorf("origin remote %q does not name a GitHub repository: %w", remote, err)
 	}
 	return repo, nil
 }

@@ -63,18 +63,25 @@ func FetchPullRequest(ctx context.Context, client *ghapi.Client, repo Repository
 	return pullItem(ctx, client, repo, *pull)
 }
 
+// issueItem projects one API issue onto the render model.
+//
+// Every string that originates with a GitHub author — title, Issue Type name, and each
+// Issue Field name and value — is passed through SanitizeText here, at the single point
+// where untrusted text enters the model. Sanitizing on ingestion rather than in each
+// renderer is what makes the human view and the JSON envelope carry identical bytes;
+// see safetext.go for what the encoding removes and why.
 func issueItem(issue ghapi.Issue) WorkItem {
 	item := WorkItem{
 		Kind:                  KindIssue,
 		Number:                issue.Number,
-		Title:                 issue.Title,
+		Title:                 SanitizeText(issue.Title),
 		URL:                   issue.HTMLURL,
 		State:                 issue.State,
 		StateReason:           issue.StateReason,
 		HasAcceptanceCriteria: hasAcceptanceCriteria(issue.Body),
 	}
 	if issue.Type != nil {
-		item.Type = issue.Type.Name
+		item.Type = SanitizeText(issue.Type.Name)
 	}
 	for _, value := range issue.FieldValues {
 		display := value.Display()
@@ -84,7 +91,7 @@ func issueItem(issue ghapi.Issue) WorkItem {
 		if item.Fields == nil {
 			item.Fields = map[string]string{}
 		}
-		item.Fields[value.Name] = display
+		item.Fields[SanitizeText(value.Name)] = SanitizeText(display)
 	}
 	return item
 }
@@ -97,7 +104,7 @@ func pullItem(ctx context.Context, client *ghapi.Client, repo Repository, pull g
 	return WorkItem{
 		Kind:           KindPullRequest,
 		Number:         pull.Number,
-		Title:          pull.Title,
+		Title:          SanitizeText(pull.Title),
 		URL:            pull.HTMLURL,
 		State:          pull.State,
 		Draft:          pull.Draft,
