@@ -201,3 +201,135 @@ func TestLoadMissingFile(t *testing.T) {
 		t.Fatal("Load() error = nil, want a failure for a missing schema file")
 	}
 }
+
+// DEV-027: duplicate `values` detection used to ride on the parser's positional
+// inValues flag, which `type` clears, so `values` → `type` → `values` was accepted and
+// the two sequences were merged into one field — a baseline the audit would then
+// compare against a value list no file ever declared. Every legal ordering of a repeated
+// per-field key must be refused, not just an immediately repeated one.
+func TestParseRejectsDuplicateFieldKeysInEveryOrdering(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "values immediately repeated",
+			input: "issue_types:\n  - Bug\nissue_fields:\n  Workflow:\n    type: single_select\n    values:\n      - Inbox\n    values:\n      - Ready\n",
+		},
+		{
+			name:  "values separated by type",
+			input: "issue_types:\n  - Bug\nissue_fields:\n  Workflow:\n    values:\n      - Inbox\n    type: single_select\n    values:\n      - Ready\n",
+		},
+		{
+			name:  "values before and after type with no items between",
+			input: "issue_types:\n  - Bug\nissue_fields:\n  Workflow:\n    values:\n    type: single_select\n    values:\n      - Inbox\n",
+		},
+		{
+			name:  "values repeated after a type-first block",
+			input: "issue_types:\n  - Bug\nissue_fields:\n  Workflow:\n    type: single_select\n    values:\n      - Inbox\n      - Ready\n    values:\n      - Done\n",
+		},
+		{
+			name:  "type separated by values",
+			input: "issue_types:\n  - Bug\nissue_fields:\n  Workflow:\n    type: single_select\n    values:\n      - Inbox\n    type: date\n",
+		},
+		{
+			name:  "type immediately repeated",
+			input: "issue_types:\n  - Bug\nissue_fields:\n  Workflow:\n    type: date\n    type: date\n",
+		},
+		{
+			name:  "values repeated on the second field only",
+			input: "issue_types:\n  - Bug\nissue_fields:\n  Target date:\n    type: date\n  Workflow:\n    values:\n      - Inbox\n    type: single_select\n    values:\n      - Ready\n",
+		},
+		{
+			name:  "values repeated across intervening comments and blank lines",
+			input: "issue_types:\n  - Bug\nissue_fields:\n  Workflow:\n    values:\n      - Inbox\n\n    # regrouped\n    type: single_select\n\n    values:\n      - Ready\n",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := orgschema.Parse([]byte(tc.input))
+			if err == nil {
+				t.Fatalf("Parse() = %+v, want a duplicate-key error", got)
+			}
+			if !strings.Contains(err.Error(), "duplicate") {
+				t.Errorf("Parse() error = %q, want it to mention %q", err, "duplicate")
+			}
+		})
+	}
+}
+
+// The DEV-027 fix tightens duplicate detection, so this corpus pins the other side of
+// that boundary: every shape the bounded subset legitimately admits — either key order,
+// comments and blank lines inside a field block, quoted scalars, and types with no
+// values — must still load, and `values` before `type` must still attach its items to
+// the field rather than being rejected as out-of-order.
+func TestParseAcceptsSubsetVariations(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name       string
+		input      string
+		wantField  string
+		wantType   string
+		wantValues []string
+	}{
+		{
+			name:       "type before values",
+			input:      "issue_types:\n  - Bug\nissue_fields:\n  Workflow:\n    type: single_select\n    values:\n      - Inbox\n      - Ready\n",
+			wantField:  "Workflow",
+			wantType:   orgschema.TypeSingleSelect,
+			wantValues: []string{"Inbox", "Ready"},
+		},
+		{
+			name:       "values before type",
+			input:      "issue_types:\n  - Bug\nissue_fields:\n  Workflow:\n    values:\n      - Inbox\n      - Ready\n    type: single_select\n",
+			wantField:  "Workflow",
+			wantType:   orgschema.TypeSingleSelect,
+			wantValues: []string{"Inbox", "Ready"},
+		},
+		{
+			name:       "comments and blank lines inside the field block",
+			input:      "# header\nissue_types:\n  - Bug\n\nissue_fields:\n  Workflow:\n    # the states\n    type: single_select\n\n    values:\n      - Inbox\n",
+			wantField:  "Workflow",
+			wantType:   orgschema.TypeSingleSelect,
+			wantValues: []string{"Inbox"},
+		},
+		{
+			name:       "quoted scalars",
+			input:      "issue_types:\n  - \"Bug\"\nissue_fields:\n  Change risk:\n    type: 'single_select'\n    values:\n      - \"R1 Low\"\n",
+			wantField:  "Change risk",
+			wantType:   orgschema.TypeSingleSelect,
+			wantValues: []string{"R1 Low"},
+		},
+		{
+			name:      "non-select field carrying no values",
+			input:     "issue_types:\n  - Bug\nissue_fields:\n  Target date:\n    type: date\n  Estimate:\n    type: number\n",
+			wantField: "Target date",
+			wantType:  orgschema.TypeDate,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			schema, err := orgschema.Parse([]byte(tc.input))
+			if err != nil {
+				t.Fatalf("Parse() error = %v, want nil", err)
+			}
+			field, ok := schema.Field(tc.wantField)
+			if !ok {
+				t.Fatalf("Field(%q) not found in %+v", tc.wantField, schema.IssueFields)
+			}
+			if field.Type != tc.wantType {
+				t.Errorf("%s.Type = %q, want %q", tc.wantField, field.Type, tc.wantType)
+			}
+			if !reflect.DeepEqual(field.Values, tc.wantValues) {
+				t.Errorf("%s.Values = %q, want %q", tc.wantField, field.Values, tc.wantValues)
+			}
+		})
+	}
+}

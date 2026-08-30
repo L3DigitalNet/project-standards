@@ -59,6 +59,15 @@ func Parse(data []byte) (*Policy, error) {
 			if table == "" {
 				return nil, fmt.Errorf("line %d: empty table header", n)
 			}
+			// The interior must be one table name, so it carries no further brackets.
+			// Stripping only the outer delimiters used to accept `[package][extra]` as
+			// the unknown table name `package][extra`, and unknown tables are ignored
+			// by design — so a malformed header silently discarded every assignment
+			// beneath it instead of failing the load (DEV-028). `[[a]` is caught above
+			// by the array-of-table guard and `[a] trailing` by the missing suffix.
+			if strings.ContainsAny(table, "[]") {
+				return nil, fmt.Errorf("line %d: malformed table header %q", n, line)
+			}
 			continue
 		}
 

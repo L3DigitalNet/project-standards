@@ -100,8 +100,16 @@ type parser struct {
 	schema       Schema
 	section      string
 	currentField int
-	inValues     bool
-	seenTop      map[string]bool
+	// inValues is positional state: it says whether indentation level 6 is currently
+	// legal, and `type` clears it because a `values` block ends where the next key
+	// begins. It is deliberately NOT the duplicate-key guard — seenFieldKeys is.
+	inValues bool
+	seenTop  map[string]bool
+	// seenFieldKeys records which keys the current issue field has already declared,
+	// independently of parse position. Duplicate detection used to ride on inValues,
+	// so `values` → `type` → `values` cleared the flag and merged both sequences into
+	// one field (DEV-027). A per-field seen set rejects every ordering instead.
+	seenFieldKeys map[string]bool
 }
 
 func (p *parser) line(n int, raw string) error {
@@ -203,6 +211,7 @@ func (p *parser) section2(n int, body string) error {
 		p.schema.IssueFields = append(p.schema.IssueFields, Field{Name: name})
 		p.currentField = len(p.schema.IssueFields) - 1
 		p.inValues = false
+		p.seenFieldKeys = map[string]bool{}
 		return nil
 
 	default:
@@ -223,27 +232,30 @@ func (p *parser) section4(n int, body string) error {
 	if !ok {
 		return fmt.Errorf("line %d: expected %q or %q under issue field %q, got %q", n, keyType, keyValues, field.Name, body)
 	}
+	// Checked before the per-key handling so it holds for every legal key order: a
+	// repeat is a duplicate wherever it appears, not only where the parser still
+	// happens to be inside the block the first declaration opened (DEV-027).
+	if p.seenFieldKeys[key] {
+		return fmt.Errorf("line %d: duplicate %q for issue field %q", n, key, field.Name)
+	}
+
 	switch key {
 	case keyType:
-		if field.Type != "" {
-			return fmt.Errorf("line %d: duplicate %q for issue field %q", n, keyType, field.Name)
-		}
 		value, err := scalar(n, rest)
 		if err != nil {
 			return err
 		}
 		field.Type = value
 		p.inValues = false
+		p.seenFieldKeys[keyType] = true
 		return nil
 
 	case keyValues:
 		if rest != "" {
 			return fmt.Errorf("line %d: %q for issue field %q must introduce an indented sequence", n, keyValues, field.Name)
 		}
-		if p.inValues {
-			return fmt.Errorf("line %d: duplicate %q for issue field %q", n, keyValues, field.Name)
-		}
 		p.inValues = true
+		p.seenFieldKeys[keyValues] = true
 		return nil
 
 	default:
