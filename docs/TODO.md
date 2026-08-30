@@ -59,8 +59,6 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Owner: resolve SPEC-GSF3 OQ-001, which blocks that plan's T1.
 
-- [ ] Owner: resolve DEV-004 in the github-workflow spec (archived design input still carries invariant 15).
-
 - [ ] Migrate `agent-ventures` and `llm-wiki` off `.agents`-only skill trees onto the dual-tree layout, per the
   2026-08-26 session-corpus review's F2 finding.
 

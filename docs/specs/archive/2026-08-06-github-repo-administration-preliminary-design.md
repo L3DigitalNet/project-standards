@@ -1454,6 +1454,10 @@ They are boundaries around responsibilities.
 
 > **Amended 2026-08-26 (`docs/specs/2026-08-06-github-workflow-package-spec.md` revision 1.9, DEV-002).** The `github-workflow` package version 1.5 wording of invariants 5 (`INV-005`) and 6 (`INV-006`) below diverges from this preserved document: invariant 5 becomes "the agent authors the acceptance criteria, sets `Workflow`, and admits work to `Ready` itself; an issue whose acceptance criteria the agent could not write is `Needs definition`, and open state alone never implies `Ready`", and invariant 6 splits into "`Unattended agent` is the owner's grant, never a mode an agent asserts" plus the unchanged human-applied org-schema rule. This also affects the "Ready semantics" prose above (section 6) and the "Execution mode" self-promotion prose above (section 10), both of which predate the 1.5 wording. See that spec's Glossary "Standing invariants" row and FR-009 for the current, authoritative text. `INV-005` and `INV-006` below are preserved as originally written and are no longer current.
 
+<!-- Keep historical amendments as separate additive records. -->
+
+> **Amended 2026-08-30 (`docs/specs/2026-08-06-github-workflow-package-spec.md` revision 1.35, DEV-004).** The `github-workflow` package version 1.6 wording of invariant 15 (`INV-015`) below is replaced by the finding-disposition rule: a related repository-owned finding that can be addressed in the current session is fixed in place without a new Issue; a finding owned by an upstream dependency hosted in the configured organization is filed with that repository; and only work large enough to warrant a separate session is returned to the operator for a file-now or tackle-now decision. See that spec's Glossary "Standing invariants" row, FR-006, FR-007, and D-016 for the authoritative rule. `INV-015` below is preserved as originally written and is no longer current.
+
 The following invariants are suitable candidates for later deterministic enforcement.
 
 ```text

@@ -2,11 +2,11 @@
 schema_version: '1.1'
 id: 'decision-q3w8fn-github-workflow-package-design'
 title: 'github-workflow standard package design'
-description: 'Approved design for the github-workflow Catalog 5 consumer package: the GitHub Repository Administration Standard delivered with a mandatory skill.'
+description: 'Approved design for github-workflow 1.7: uniform low-friction PR admission, governing-work relationships, lifecycle coherence, and efficient paired operations.'
 doc_type: 'decision'
 status: 'active'
 created: '2026-08-06'
-updated: '2026-08-26'
+updated: '2026-08-30'
 tags:
   - 'standard'
 aliases: []
@@ -18,321 +18,368 @@ related: []
 ## Status and provenance
 
 - Status: `approved`
-- Operation: `create`
+- Operation: `revise`
 - Decision owner: repository owner
-- Created and approved: `2026-08-06`
-- Revision: 1.7 — 2026-08-26 owner-approved amendment for package version 1.5: D10's ledger half is withdrawn and D13 records the removal, the guidance restructure, and the relaxed issue self-definition rules; D10's binary-consolidation half and every other decision stand. Prior: 1.6 — 2026-08-06 owner-approved amendment: PR existence is repository-local policy; the package binds PR obligations only once a PR exists (D12). Prior same-day: 1.5 tool plumbing subcommands (D11). Earlier same-day: 1.4 ledger and tool consolidation (D10), 1.3 creation receipts (D9), 1.2 operator summary layout (D8), 1.1 Go skill tooling (D7); initial approval 2026-08-06.
-- Prior design brief: none
-- Working-state source: `.project-pipeline/github-workflow-package/design-discovery/` (removed after promotion)
+- Created and initially approved: `2026-08-06`
+- Revision: 1.8 — 2026-08-30 owner-approved `github-workflow` 1.7 design. Adds T0 editorial-only direct admission, canonical Final/Supporting/Standalone PR relationships, Issue/PR lifecycle coherence, and paired Ready/Merge/Final-disposition operations. Incorporates the owner-directed simplification pass: one operator instruction is sufficient authority, consumers receive uniform sane defaults, and recurring context and tool-call cost are design criteria. Supersedes D9's mandatory immediate PR receipt and D12's repository-defined semantic threshold while preserving repository ownership of branch topology and live enforcement. Prior revision: 1.7 — 2026-08-26 package-version-1.5 efficiency amendment (D13). Earlier history is retained in [Prior package decisions](#prior-package-decisions).
+- Current implementation baseline: `github-workflow` 1.6, reconciled in [SPEC-GHW1](2026-08-06-github-workflow-package-spec.md) revision 1.34 and independently confirmed against the shipped implementation by a native verifier and headless Opus before this design revision was promoted.
 - Design input: [GitHub Repository Administration Standard (preliminary)](archive/2026-08-06-github-repo-administration-preliminary-design.md)
+- Revision input: owner-supplied `PR Versus Direct Commits.md` memo plus the approved design-discovery record.
 
-This brief settles the package contract only. The GitHub operating model itself — object model, Issue Types, Issue Fields, lifecycle, invariants, adoption phases — is governed by the preliminary design input and is consumed here as settled.
+This brief owns the package's target operating contract. Version 1.6 remains immutable. The 1.7 revision deliberately changes the package's PR-admission and Issue/PR relationship model; where it conflicts with the preliminary design or earlier package decisions, this revision is authoritative for `github-workflow` 1.7.
 
 ## Problem and intended outcome
 
-The GitHub Repository Administration Standard defines how organization-owned GitHub repositories function as the durable control plane for local-agent development: Issues as authorized work contracts, seven organization-level Issue Fields as typed metadata, PRs as execution evidence, and deterministic mechanisms rather than model judgment for policy. That standard currently exists only as an advice-style document. The outcome of this design is a Catalog 5 consumer package, `github-workflow`, that delivers the standard's adoption phases 1–2 to consumer repositories with a mandatory skill as the behavioral core, so that any agent session in a consuming repository operates the model consistently.
+`github-workflow` 1.6 leaves PR existence to repository-local prose and infers a governing Issue only from GitHub closing keywords. That permits inconsistent admission, makes Supporting work indistinguishable from Final work, and cannot mechanically determine which object owns acceptance, risk, lifecycle, or terminal reconciliation.
+
+The 1.7 outcome is one portable workflow that gives agents a useful PR admission boundary without turning a solo operator's instruction into approval ceremony. Every consumer receives the same semantics. Repository-owned branch topology and GitHub enforcement may narrow what is possible, but repositories do not configure parallel workflow dialects. Routine agent work should proceed from the operator's instruction to completion without a second permission artifact, repeated phase commands, empty boilerplate, or unnecessary receipts.
 
 ## Current context
 
-- Governing authoring contract: Standard Bundle Authoring 2.6 (SPEC-BA02); payload schema 1.0; immutable digest-pinned versions under `standards/github-workflow/versions/X.Y/`.
-- Direct structural precedent: `agent-handoff` 1.9 — managed skill artifacts under `.agents/skills/<name>/`, `agents/openai.yaml` companion, markdown-block contributions gated on a `harnesses` option, rendered `policy.toml` under `.standards/packages/<id>/`, Python providers.
-- Bug 006: create-only artifacts cannot reach existing consumers and are invisible to drift-check; a resolution decision is owed under issue #128.
-- Packages are independent by default; relationships are declared, never hidden dependencies.
-- GitHub organization-level Issue Fields became generally available to organizations on GitHub Free in July 2026, exposed through the API and GitHub MCP.
+- `github-workflow` 1.6 shipped in Project Standards v5.25.0 and is the Catalog 5 default before this revision.
+- Version 1.7 will ship in a Project Standards release. Every locally cloned Project Standards consumer will then be updated, and consumers already using `github-workflow` will migrate to 1.7.
+- Branch names, development branches, integration targets, promotion topology, merge method, and required-check identities belong to each repository or to live GitHub configuration.
+- The package already owns Issue vocabulary, work-state mutations, summaries, receipts, Ready checks, and terminal Issue synchronization through one Go tool.
+- The owner rejected a 2.0 cut for this coordinated rollout and authorized the same-major 1.7 migration.
 
 ## Scope
 
 ### In scope
 
-- The v1.0 package contract: payload artifact set, contributions, config schema, skill boundary and structure, providers, capabilities, relations.
-- The org-schema audit shape: a versioned in-package schema resource plus a skill-driven audit procedure over live organization state.
+- Topology-neutral direct and PR admission semantics.
+- A narrow autonomous `T0 — Editorial-only` direct-admission class.
+- Canonical Final, Supporting, and Standalone PR relationships.
+- PR contract ownership, authoritative Change risk, review treatment, and Issue/PR lifecycle coherence.
+- Structural, Ready, Merge, and Post-merge/disposition validation in one shared engine.
+- Action-oriented summaries and explanatory receipts over the shared findings.
+- Efficient commands that pair validation, mutation, reconciliation, and one resulting receipt.
+- Coordinated 1.7 migration and repair of active work when touched.
 
 ### Non-goals
 
-- Redesigning the GitHub operating model settled by the design input.
-- Adoption phases 3–6: Actions-based invariant enforcement, coordinator and claiming machinery, unattended dispatch, GitHub-hosted micro-agents.
-- Personal-account repository support. The package targets organization-owned repositories only; all repositories are being migrated to the organization.
-- GitHub Issue Forms delivery under `.github/ISSUE_TEMPLATE/`.
-- Merge gating or any review automation.
+- Prescribing branch names, branch topology, integration-target names, merge method, or required-check names.
+- Requiring an Issue for every PR or every task.
+- Requiring repository-specific semantic permission switches.
+- Requiring the operator to repeat an instruction in an Issue, comment, approval record, or break-glass token.
+- Persisting another lifecycle or validation-phase state.
+- Building an event-driven enforcement service, watcher registry, or lease protocol.
+- Rewriting terminal PR history or existing Git history automatically.
 
-### Deferred considerations
+## Design principles
 
-- Issue Forms as managed artifacts — reconsider when human web-UI issue capture becomes routine.
-- Phase-3 deterministic invariant enforcement — reconsider after operating experience under phases 1–2.
-- A `migrate` provider — add in a minor version if legacy label-based approximations are discovered in consumer repositories.
-
-## Constraints, assumptions, and agent-applied defaults
-
-Constraints:
-
-- The skill mutates repository-scoped work state via `gh`; organization-level schema (Issue Types, Issue Fields) is audit-only for agents, with changes applied by humans.
-- Providers must remain offline-deterministic within the reconcile model; no provider may perform network calls.
-- The published payload must be organization-agnostic; the organization login is consumer configuration.
-
-Assumptions:
-
-- The Issue Fields GA API/MCP surface is stable enough to pin an audit procedure against. If false, the skill's audit procedure needs a version note, not a package redesign.
-
-Agent-applied defaults (low consequence, reversible):
-
-- The org-schema resource stays YAML, matching the design input's §35 rendering; it is a read-only reference the skill parses, and source fidelity aids the human audit conversation.
-- Capability naming mirrors the `agent-handoff` convention.
+1. The operator's task instruction authorizes autonomous completion through the normal workflow.
+2. An explicit operator instruction selecting a specific workflow exception is sufficient authority for that action; it creates no standing or broader permission.
+3. Validation is autonomous plumbing, not another operator approval gate.
+4. Preserve controls when they protect high-consequence shared state or materially reduce error.
+5. Prefer package-wide behavior over repository options; repository instructions and live enforcement may narrow behavior.
+6. Prefer one invariant-pairing command over repeated read/check/mutate recipes.
+7. Keep routine context small and move rare audit/recovery procedure into on-demand references.
+8. Evaluate design by correctness, operator friction, configuration burden, duplicated authority, failure consequence, maintenance cost, recurring tokens, and tool-call round trips.
 
 ## Selected design
 
-Package `github-workflow` 1.0 delivers everything as `managed` artifacts — zero create-only artifacts, hence zero bug-006 exposure, and every delivered file is upgradeable and drift-visible.
+### Admission model
 
-### Skill
+Admission occurs when new content first enters a repository-declared integration target. Topic and PR branches are construction state; a later content-preserving promotion does not repeat admission classification.
 
-One mandatory skill, `github-workflow`. Trigger boundary: agents must load it before creating or mutating GitHub work state — issues, issue fields, PRs, lifecycle transitions, milestones — performing triage or an org-schema audit, or presenting an operator-requested issue/PR summary. Plain read-only queries (`gh issue view`, `gh pr list`) remain exempt. `SKILL.md` carries the decision procedures: Issue Type selection, field discipline, refusal rules, and when to consult each reference. Reference files provide progressive disclosure:
+There are two ordinary autonomous outcomes:
 
-| Artifact | Consumer target | Content |
-| --- | --- | --- |
-| `SKILL.md` | `.agents/skills/github-workflow/SKILL.md` | Decision procedures, refusals, trigger boundary |
-| `openai.yaml` | `.agents/skills/github-workflow/agents/openai.yaml` | Codex skill companion |
-| `field-vocabulary.md` | `.agents/skills/github-workflow/references/` | Seven fields, values, pinning matrix, fields-not-to-create list. From package version 1.5 (D13): `Workflow` value semantics, the pinning matrix, and the independence rule only — the tool's refusals are the authoritative vocabulary surface |
-| `org-schema.yaml` | `.agents/skills/github-workflow/references/` | Machine-readable baseline schema the audit compares against |
-| `issue-structure.md` | `.agents/skills/github-workflow/references/` | Canonical issue body headings and the five Issue Type definitions |
-| `pr-standard.md` | `.agents/skills/github-workflow/references/` | PR content standard and draft-PR policy |
-| `review-checklist.md` | `.agents/skills/github-workflow/references/` | Layered PR-review checklist — discipline only, no gating |
-| `summary-format.md` | `.agents/skills/github-workflow/references/` | Attention-first layout for operator-requested issue/PR summaries plus the single-item creation receipt |
-| `policy.toml` | `.standards/packages/github-workflow/policy.toml` | Rendered consumer configuration for the skill to read |
-| `gh-workflow` | `.agents/skills/github-workflow/bin/gh-workflow` | Compiled Go tool (linux/amd64), mode 0755; subcommands `audit`, `ledger`, `new`, `set`, `close`, `reopen`, `summary`, `receipt`, `check`. From package version 1.5 (D13): eight subcommands, `ledger` removed |
+1. A complete change satisfying T0 may be admitted directly when repository instructions and GitHub enforcement permit.
+2. Every other new-content change uses PR admission.
 
-### Contributions
+`T0 — Editorial-only` is a conjunctive semantic predicate. Every changed hunk must be an unambiguous spelling, grammar, punctuation, or prose-reflow correction in ordinary human-facing explanatory text. The complete change must preserve all propositions, obligations, instructions, identifiers, references, and machine interpretation; touch no protected surface; be outside active governed work; contain no other change; affect at most three files and thirty added-plus-deleted lines; and pass applicable validation. Uncertainty requires a PR.
 
-A compact (~12-line) markdown-block contribution into `AGENTS.md` (Codex) and `CLAUDE.md` (Claude Code), gated on the `harnesses` option. It carries the skill mandate plus the standing invariants that must bind even when the skill was never loaded, because violating them is expensive before anyone notices. From package version 1.5 (D13) the block also carries the complete action-routing table and its budget becomes a byte ceiling rather than a line count:
+A direct T0 commit carries exactly one trailer:
 
-- An Issue is the unit of authorized work; a nontrivial PR links its governing Issue (INV-008).
-- Never infer readiness — `Workflow = Ready` plus `Execution mode` authorization, never "the issue is open" (INV-005). _From package version 1.5 (D13): the agent authors the acceptance criteria, sets `Workflow`, and admits work to `Ready` itself; an issue whose criteria the agent could not write is `Needs definition`. Open state alone still never implies `Ready`._
-- Never self-promote `Execution mode`; never mutate organization-level Issue Fields or Types — org schema changes are human-applied (INV-006). _From package version 1.5 (D13): the mode restriction narrows to `Unattended agent`, which stays the owner's grant; the org-schema half is unchanged._
-- Terminal-state sync: `Done` → closed as completed; `Dropped` → closed as not planned (INV-010/011).
-- Durable follow-up work discovered during implementation becomes an Issue, not prose (INV-015).
+```text
+Workflow-Admission: T0
+```
 
-The organization name renders into the block from configuration.
+The trailer never appears on topic-branch commits or PR-mediated commits. It records the admission assertion for auditability; it does not prove that classification was correct.
 
-### Configuration
+A specific operator instruction may select another admission path without a secondary approval artifact or special break-glass grammar. The agent may not infer a wider exception. Repository instructions and live GitHub enforcement may prevent an action, and the agent does not weaken enforcement unless that distinct action is itself explicitly in scope.
 
-Exactly two options:
+### Governing work
+
+Every PR contains exactly one canonical declaration under `## Governing work`:
+
+```text
+Final: #123
+Supporting: #123
+Standalone
+```
+
+The alternatives are mutually exclusive; the body contains exactly one of them.
+
+- Final and Supporting resolve exactly one same-repository Issue. Cross-repository and additional Issue mentions are informational only.
+- Final claims to satisfy all remaining acceptance criteria and authorizes `Done` only after successful admission and terminal reconciliation.
+- Supporting contributes without claiming completion or implying an Issue lifecycle transition.
+- Standalone makes the PR its own authoritative work contract, risk record, implementation evidence, and native lifecycle record.
+- One Issue may have any number of Supporting PRs and at most one open Final PR.
+- An open PR may change relationship only while draft and with auto-merge disabled. The relationship-specific contract and ordinary Ready gate then apply again.
+- A merged or closed PR's relationship is immutable historical evidence. A historical error receives additive correction or explicit human handling rather than silent mutation.
+
+### PR body and authoritative risk
+
+At Ready, every PR has four required sections:
+
+```text
+## Summary
+## Governing work
+## Acceptance coverage
+## Verification
+```
+
+Risk/compatibility notes and known limitations/follow-up appear only when material. Empty `None` sections are not required.
+
+For Final and Supporting PRs, the Issue owns the intended outcome, acceptance criteria, Change risk, and `Workflow`. The PR's Acceptance coverage maps implementation and evidence to that contract without copying it.
+
+For Standalone PRs, the PR owns its intended outcome and explicit criteria and declares authoritative `Change risk: R1 Low|R2 Moderate|R3 High|R4 Critical`. R4 is permitted without manufacturing an Issue or seeking a second operator approval. Before merge, R4 still requires a documented plan, recovery or rollback approach, negative testing, and independent verification. These are execution controls, not permission ceremony.
+
+### GitHub-native closing
+
+Canonical Final/Supporting/Standalone declarations alone establish package semantics. Agents omit GitHub closing keywords by default.
+
+If deliberately present, the only accepted native closing form is exactly `Closes #N`. It is permitted only in the PR body of a Final PR and N must match the canonical governing Issue. Supporting and Standalone PRs, informational references, and constituent commits introduce no closing relationship. Legacy synonyms are removed or normalized when an active PR is repaired. Package correctness never depends on GitHub auto-close; Final reconciliation remains authoritative.
+
+### Lifecycle semantics
+
+- The governing Issue is the sole authoritative `Workflow` owner. Standalone uses native PR state and carries no Issue lifecycle.
+- An open governed PR requires `In progress`, `In review`, or `Blocked`.
+- A ready Final requires `In review` or `Blocked`. Final merge is prohibited while the Issue is `Blocked`.
+- A Supporting PR may merge while the Issue is `Blocked` when its own evidence is sufficient and admission neither falsely resolves nor conceals the blocker.
+- Supporting merge or closure is lifecycle-neutral and never authorizes `Done`.
+- A merged Final authorizes convergence to `Workflow = Done` plus native Issue closed/completed.
+- A closed-unmerged Final requires explicit disposition. PR closure alone never implies `In progress`, `In review`, `Blocked`, or `Dropped`.
+
+PR events constrain which Issue states are coherent but do not independently become another `Workflow` writer. Paired package commands perform deterministic lifecycle mutations where the desired result is known.
+
+### Validation and findings
+
+One shared engine derives four predicate groups without persisting phase:
+
+1. **Structural** — canonical relationship, same-repository Issue resolution, one-open-Final cardinality, closing-keyword discipline, and evidence integrity.
+2. **Ready** — Structural plus relationship-specific contract completeness, authoritative risk, acceptance coverage, Verification, and lifecycle coherence.
+3. **Merge** — Ready plus risk-proportionate review/verification, live required-check evidence, no blocking Final state, and no relevant state drift.
+4. **Post-merge/disposition** — structural facts still meaningful after the event plus terminal synchronization or explicit disposition. Temporal pre-merge predicates are not rerun against post-event state.
+
+Each finding has a stable code, phase, action category, effect, and message. Domain findings are distinct from invalid invocation and operational/API failure.
+
+`gh-workflow check --pr N` infers the applicable next gate from observed state: draft → Ready, ready/open → Merge, terminal → Post-merge/disposition. Explicit phase selection remains optional for diagnostics and automation; ordinary workflow does not require it.
+
+`receipt` describes one observed item and succeeds when reading and rendering succeed. `summary` aggregates attention and likewise does not become a gate. `check` alone returns an admission/reconciliation verdict.
+
+Needs attention has six action-oriented categories, in order:
+
+1. Blocked
+2. Needs definition
+3. PR admission blocked
+4. Synchronization required
+5. Disposition required
+6. Target date passed
+
+Draft PRs surface Structural defects but not ordinary incomplete Ready content. Ready PRs surface applicable Structural, Ready, and Merge findings. Terminal PRs surface Post-merge/disposition findings. Human output compresses one line per work item per category; JSON retains every stable finding.
+
+### Efficient mutation commands
+
+Agent-created PRs begin draft. Creation is not followed by a mandatory receipt/check sequence.
+
+`gh-workflow ready --pr N` validates Structural and Ready predicates, moves a Final Issue from `In progress` to `In review` when deterministic, marks the PR ready, and returns one resulting receipt. Supporting and Standalone do not mutate Issue lifecycle merely by becoming ready. The operation is ordered, retryable, and reports coherent partial state.
+
+`gh-workflow merge --pr N` revalidates Merge predicates, uses the repository-selected merge method, observes the terminal outcome, synchronizes a successfully merged Final Issue to `Done`, validates Post-merge convergence, and returns one result. Exact merge-method flags and GitHub mechanics belong to specification design; the package does not create a competing merge-method policy.
+
+Auto-merge may defer the event but never orphan responsibility. The active merge operation retains observation until a known terminal outcome or safely disables/transfers responsibility before stopping. Routine guidance states that obligation in one line; it does not define watcher identities, leases, or a static ownership registry.
+
+`gh-workflow close --pr N --as in-progress|in-review|blocked|dropped --reason S` pairs the judgment record, Final closure, governing-Issue mutation, and verification for an unmerged Final. It writes one immutable canonical disposition record, resumes idempotently after partial failure, and refuses conflicting history.
+
+Ready and Merge validation are point-in-time. Combined operations keep validation adjacent to mutation; a relevant intervening change requires reevaluation. Raw GitHub or Git commands remain available when an explicit operator instruction selects a specific exception the package command does not represent.
+
+### T0 audit
+
+T0 classification remains semantic agent judgment; no CLI success certifies it. On explicit operator request, a bounded retrospective review locates exact T0 trailers and evaluates each complete diff against the immutable contract applicable at admission. Results are `Conforming`, `Suspected misclassification`, or `Unable to establish`. The review never rewrites history automatically. Audit guidance stays in an on-demand T0 reference, not routine context; a future helper may collect mechanical facts but never return semantic eligibility.
+
+### Configuration and authority
+
+The consumer configuration remains exactly:
 
 | Option | Type | Purpose |
 | --- | --- | --- |
-| `organization` | string, required | GitHub organization login; renders into the managed block and `policy.toml`; the audit target |
-| `harnesses` | array of `claude-code` \| `codex`, required | Gates the AGENTS.md and CLAUDE.md contributions and the `openai.yaml` artifact |
+| `organization` | string, required | GitHub organization login; block/policy rendering, audit target, and bare-repository completion |
+| `harnesses` | array of `claude-code` \| `codex`, required | Harness-specific contributions and the Codex companion |
 
-### Relations and capabilities
+Version 1.7 adds no `admission_mode`, `native_closing`, branch-name, required-check, merge-method, or watcher-identity options. The package defines one semantic maximum. Repository instructions and live GitHub enforcement may narrow it and can never widen a package prohibition.
 
-- `companions = ["agent-handoff"]` — advisory affinity: handoff closeout and Issue/PR closeout interleave in the same session tail. No dependency.
-- `extends = []`, `conflicts = []`.
-- Capabilities: `github-workflow.audit`, `github-workflow.validate`, `github-workflow.drift-check`.
+### Migration and rollout
 
-### Providers
-
-`render-semantic` (block and `policy.toml` from configuration), `validate`, `verify`, `drift-check`, `upgrade`. No `scaffold` (no create-only artifacts, no scaffolding need) and no `migrate` (no legacy predecessor). The org audit is skill-driven and is never a provider: providers run offline against files inside the reconcile transaction, and a network-dependent provider would break that model. Under D7 the audit is executed by a packaged Go binary the skill invokes; it runs only in agent sessions under the operator's `gh` authentication, never during reconcile.
-
-### Trust boundaries
-
-- Repository-scoped work-state mutation: agent-performed through the skill.
-- Organization-level schema: agent-audited, human-applied.
-- Reconcile/providers: offline and deterministic; the online audit lives only in the skill.
+- Version 1.6 remains immutable; all behavior changes ship as 1.7 payload and tool bytes.
+- Existing open PRs receive no legacy validator mode. They are evaluated from observed state and repaired when touched or surfaced by normal summary/check.
+- Installation does not create a per-repository PR migration ledger and does not rewrite terminal PR bodies or Git history.
+- The rollout verifies that every selected local consumer resolves 1.7. Package reconciliation and remote active-work correction are separate checkpoints.
+- Repositories already using `github-workflow` migrate to 1.7 during the post-release local-consumer update.
 
 ## Consequential decisions
 
-### D0: Pre-discovery scoping
+### Prior package decisions
 
-- Status: `approved` (user, 2026-08-06)
-- Decisions: design-discovery before specification; v1.0 delivers adoption phases 1–2 only; org schema ships as a versioned package resource audited by the skill with human-applied changes; package and skill name `github-workflow`; organization-owned repositories only, no personal-account fallback.
-- Rationale: phases 1–2 keep v1.0 free of enforcement machinery the design input itself defers; org-only keeps the skill single-surface (Issue Fields do not exist on personal accounts); human-applied org changes keep the package from owning un-drift-checkable external state.
-- Reopen when: personal-account support only if the org migration is abandoned; phase 3+ after operating experience.
+| Decision | Current disposition |
+| --- | --- |
+| D0 phases 1–2, org-owned repositories, audit-only org schema | Retained; 1.7 adds repository-scoped PR mechanics, not organization-schema mutation or event services. |
+| D1 one mandatory skill with progressive references | Retained; rare T0 audit/recovery detail remains on demand. |
+| D2 all-managed delivery | Retained. |
+| D3 compact managed block | Retained in principle; 1.7 content prioritizes routing and load-bearing invariants within the context budget. |
+| D4 config = organization + harnesses | Retained; new semantic switches are rejected. |
+| D5 companions/capabilities | Retained; exact new capability names are specification detail. |
+| D6 offline deterministic providers | Retained. |
+| D7 one reproducibly built Go tool | Retained and extended with PR validation and paired mutations. |
+| D8 attention-first summaries | Retained with six action-oriented categories. |
+| D9 mandatory creation receipts | Superseded for PRs; combined operations return one useful resulting receipt without immediate ceremony. |
+| D10 ledger | Ledger remains superseded by D13; single-tool consolidation remains. |
+| D11 deterministic plumbing in the tool | Retained and extended to Ready, Merge, and Final disposition. |
+| D12 PR existence is repository-local | Superseded semantically: T0 is the sole autonomous direct-admission class; topology and enforcement remain repository-owned. |
+| D13 budgeted guidance, no ledger, agent self-definition | Retained. |
 
-### D1: Skill boundary and structure
+### D14: T0 or PR admission
 
-- Status: `approved` (user, 2026-08-06; agent recommendation accepted)
-- Decision: one skill with the mutation-boundary trigger and thin on-demand references; the layered PR-review checklist is included as reference discipline with no automation.
-- Alternatives rejected: two skills (workflow + admin audit) — fuzzy triage/admin boundary, double versioning, blurred mandatory-skill story; narrow skill with a fat managed block — inverts the repository's compact-block pattern and taxes every session's context.
-- Reversibility: high — splitting into two skills later is an additive minor.
-- Reopen when: the org-audit procedure grows to multi-org or multi-schema scale.
+- Status: `approved` (owner, 2026-08-30)
+- Decision: the complete T0 predicate and exact audit trailer define the sole autonomous direct-admission exception; every other new-content change uses PR admission unless the owner explicitly directs a specific exception.
+- Rationale: semantic impact, not size or provenance, is the only portable boundary. A narrow allowlist avoids editorial PR ceremony without turning “small” or “obvious” into loopholes.
+- Reopen when: observed false classifications show the protected-surface or scope boundaries are unusable.
 
-### D2: Payload artifact set
+### D15: One governing-work relationship
 
-- Status: `approved` (user, 2026-08-06; agent recommendation accepted)
-- Decision: the all-managed artifact set in Selected design; GitHub Issue Forms deferred entirely.
-- Alternatives rejected: managed `.github/ISSUE_TEMPLATE` forms now — forms cannot populate Issue Fields, `.github/` is consumer-owned, per-repo `area/*` customization fights managed ownership, and agents author most issues here; a create-only seed form — bug 006 makes it unreachable for existing consumers and drift-invisible.
-- Reopen when: human web-UI capture becomes routine.
+- Status: `approved` (owner, 2026-08-30)
+- Decision: every PR is exactly Final, Supporting, or Standalone; Final/Supporting bind one same-repository Issue; an Issue has at most one open Final; canonical declarations alone establish package authority.
+- Rationale: one authoritative parent keeps acceptance, risk, lifecycle, and completion deterministic while Supporting PRs permit cross-cutting execution.
+- Reopen when: real work repeatedly requires multi-parent authority rather than informational references and Issue disposition.
 
-### D3: Managed-block content
+### D16: Compact PR contract and risk authority
 
-- Status: `approved` (user, 2026-08-06; agent recommendation accepted)
-- Decision: skill mandate plus the five standing invariants listed in Selected design; organization name rendered from configuration.
-- Alternatives rejected: pointer-only block — no invariant survives a skipped skill load; full inline rule summary — duplicates references and breaks the compact-block pattern.
-- Reopen when: operating experience shows an invariant routinely violated despite the block — the response is phase-3 deterministic enforcement, not a bigger block.
+- Status: `approved` (owner, 2026-08-30)
+- Decision: four required Ready sections, optional material risk/follow-up prose, Issue-owned contracts for governed PRs, and PR-owned contracts for Standalone R1–R4. R4 retains technical controls but requires no ceremonial Issue or second approval.
+- Rationale: durable evidence remains complete while empty boilerplate and duplicate authority are removed.
+- Reopen when: Standalone R4 cannot demonstrate pre-merge planning and independent verification without a separate object.
 
-### D4: Configuration schema
+### D17: Asymmetric lifecycle and derived validation
 
-- Status: `approved` (user, 2026-08-06; agent recommendation accepted)
-- Decision: exactly `organization` and `harnesses`.
-- Alternatives rejected: `area_labels` (live GitHub labels are the source of truth; a config copy duplicates state), enabled Issue Type subsets (the vocabulary is fixed and org-scoped), project numbers (Projects are derived views), field-vocabulary customization (would fork the org-wide schema).
-- Reversibility: additions are additive minors; `organization` may become a list if a second organization appears.
+- Status: `approved` (owner, 2026-08-30)
+- Decision: Issue `Workflow` remains authoritative; PR state imposes coherence constraints; Supporting is lifecycle-neutral; Final merge authorizes convergence; closed-unmerged Final requires disposition. Four predicate groups are derived, with an event boundary after Merge.
+- Rationale: preserves one lifecycle owner while mechanically detecting contradictions and recovery needs.
+- Reopen when: observed topologies require another lifecycle owner or make phase derivation ambiguous.
 
-### D5: Relations and capabilities
+### D18: Paired Ready, Merge, and Final disposition
 
-- Status: `approved` (user, 2026-08-06)
-- Decision: `companions = ["agent-handoff"]`; capabilities `github-workflow.audit`, `.validate`, `.drift-check`.
+- Status: `approved` (owner, 2026-08-30)
+- Decision: invariant-pairing commands combine validation, deterministic cross-object mutation, terminal observation, reconciliation, and one receipt. Auto-merge retains responsibility without a watcher taxonomy.
+- Rationale: reduces tool calls, context, partial-failure recipes, and operator-visible bureaucracy while increasing validation/mutation adjacency.
+- Residual risk: commands own more recovery logic and require rigorous idempotency and partial-state tests.
+- Reopen when: coherent recovery cannot be implemented or routine use still requires repeated manual sequences.
 
-### D6: Provider set
+### D19: Uniform zero-friction authority
 
-- Status: `approved` (user, 2026-08-06; agent-applied default confirmed)
-- Decision: `render-semantic`, `validate`, `verify`, `drift-check`, `upgrade`; no `scaffold`, no `migrate`; the org audit is never a provider.
-- Reopen when: legacy label-based approximations are found needing migration signatures, or reconcile gains a sanctioned online phase.
+- Status: `approved` (owner, 2026-08-30)
+- Decision: one package-wide workflow replaces repository semantic options; the user's instruction is sufficient authority for normal completion and any explicitly selected specific exception. Internal checks do not ask the user to reconfirm permission.
+- Rationale: permission restatement, per-repository policy selection, and static watcher ownership add friction and duplicated state without protecting another authority boundary.
+- Residual risk: explicit exceptions have less independent retrospective authorization evidence, intentionally favoring direct owner authority and zero friction.
+- Reopen when: uniform defaults cannot work across consumers without weakening repository-owned enforcement.
 
-### D7: Skill tooling in Go; audit ships as a per-platform binary
+### D20: Coordinated repair-on-touch migration
 
-- Status: `approved` (user, 2026-08-06; owner directive)
-- Decision: any executable shipped with the skill is implemented in Go (ADR 0027 lane). v1.0 ships the org audit as a compiled Go tool, `gh-workflow-audit`, delivered as a committed, digest-pinned managed artifact for `linux/amd64` only, reproducibly built (`CGO_ENABLED=0`, `-trimpath`, toolchain pinned by `go.mod`). The skill invokes the tool instead of prose `gh` command sequences.
-- Agent recommendation differed: source-shipped, locally-built delivery was recommended to keep the payload platform-agnostic and text-diffable; the user selected committed binaries for zero consumer toolchain requirements.
-- Agent-applied scoping default: single platform `linux/amd64`, justified by the all-Linux consumer fleet; additional platforms are an additive deferral.
-- Residual risk: binary bytes enter the digest-pinned payload lineage (repo growth per payload version; artifacts not reviewable by diff). Mitigation: the reproducible-build requirement makes the binary independently rebuildable and verifiable from the repository Go source.
-- Reopen when: a non-linux/amd64 consumer appears (add platforms), or payload growth becomes operationally painful (revisit source-built delivery).
+- Status: `approved` (owner, 2026-08-30)
+- Decision: ship 1.7, update every local Project Standards consumer, migrate existing adopters, validate active PRs from observed state, and repair incompatible open work when touched. No legacy mode or migration ledger.
+- Rationale: the owner is coordinating the fleet; a second migration state system would add state and calls without changing authoritative objects.
+- Reopen when: active-work volume proves too large for bounded repair-on-touch.
 
-### D8: Standardized attention-first operator summaries
+## Complexity and efficiency disposition
 
-- Status: `approved` (user, 2026-08-06; owner directive)
-- Decision: operator-requested issue/PR summaries follow one packaged layout, shipped as a sixth reference (`summary-format.md`): scope header (target, timestamp, counts) → Needs-attention section (Blocked, Needs definition, terminal-sync mismatches, passed target dates) → Issues table (number, Type, title, Workflow, Priority, Size or Severity, Execution mode) → PRs table (number, title, governing Issue, state, CI, risk notes) → discovered-follow-ups tail. Presenting such a summary becomes an explicit skill trigger even though gathering is read-only.
-- Alternative rejected: queue-first layout (table-led, attention as a flag column) — weaker at surfacing stuck work; the owner selected attention-first as recommended.
-- Rationale: summaries exist to drive operator decisions; leading with what needs the human matches the control-plane philosophy, and a packaged layout makes reports comparable across sessions and agents.
-- Reopen when: recurring summary needs appear that the fixed sections cannot express (e.g., milestone burn-down), warranting layout variants in a minor version.
+Every proposed rule was reevaluated through correctness value, operator friction, repository configuration burden, duplicated authority/state, failure consequence, maintenance cost, recurring context cost, and tool-call cost.
 
-### D9: Creation receipts
+### Retained as required complexity
 
-- Status: `approved` (user, 2026-08-06; owner directive)
-- Decision: after creating an issue or PR, the agent presents a consistent single-item creation receipt, defined in `summary-format.md` alongside the D8 layout: a header line (kind, number, link, title), the field values actually set (Type, Workflow, Priority, Size or Severity, Change risk, Execution mode, Target date; for PRs the governing Issue, draft/ready state, CI status), and a gaps line naming anything still unset or missing (pinned fields without values, absent acceptance criteria, missing governing-Issue link).
-- Rationale: creation is the moment metadata gaps are cheapest to fix; a fixed receipt makes agent output comparable across sessions and lets the operator verify the work contract at a glance instead of opening GitHub.
-- Scope note: bound to creation only; receipts after ordinary edits were not requested and would add noise. Reopen if material mutations (reprioritization sweeps, bulk triage) prove to need the same treatment.
+- T0 semantic judgment and protected surfaces prevent behavioral changes from bypassing review.
+- One governing authority and one-open-Final cardinality prevent ambiguous acceptance, risk, and completion.
+- Cross-object lifecycle validation prevents false `Done`, stale review state, and orphaned Final disposition.
+- Risk-proportionate review preserves evidence where failure consequence justifies it.
+- Paired terminal mutations own convergence where GitHub and Issue Field writes cannot be atomic.
 
-### D10: Maintained work-state ledger and tool consolidation
+### Simplified
 
-- Status: `approved` (user, 2026-08-06; owner directive)
-- Decision: the package maintains a human-facing ledger of open issues and PRs at `docs/GH-WORKFLOWS.md` in each consumer repository, generated and updated entirely by the Go tool — no model in the loop, saving tokens and context. The D7 binary is consolidated and renamed to `gh-workflow` with `audit` and `ledger` subcommands (one artifact to pin and rebuild; shared `gh` plumbing). The ledger reuses the D8 attention-first layout, opens with a table of contents of markdown anchor links for navigation, carries a generated-file header with timestamp and tool version, is owned whole-file by the tool (manual edits are overwritten), is written atomically (a failed refresh leaves the prior file intact), and must render clean under consumer Prettier/markdownlint gates. Refresh policy: agents run `gh-workflow ledger` once after completing the work-state mutations in a task, plus on operator request; agents may orient from the ledger but verify live state before mutating decisions.
-- Alternatives rejected: a second separate binary (duplicate plumbing, two artifacts to pin); on-demand-only refresh (silent staleness); scheduled CI/cron refresh (automation committing to consumer repos — phase-3 territory, deferred with the other enforcement automation).
-- Rationale: a persisted, tool-maintained ledger gives durable work-state visibility at near-zero token cost and keeps context clean; consolidation keeps the D7 contract at one reproducible artifact.
-- Reopen when: the fixed ledger location or sections prove insufficient (consider a config option or layout variants), or scheduled refresh is wanted (phase-3 discussion).
-- **Superseded in part, 2026-08-26 (D13):** the ledger half of this decision is withdrawn at package version 1.5. The reopen clause above is what fired — measured session evidence showed the persisted file duplicating what `summary` renders on demand while still requiring a write into the consumer repository. The consolidation half (one binary, one artifact to pin and rebuild) is unchanged, and the shared layout engine survives for `summary` and `receipt`.
+- Four required PR sections instead of six.
+- Inferred routine check target instead of mandatory `--through` calls.
+- Combined Ready/Merge operations instead of repeated receipt/check/mutate/check recipes.
+- One-line auto-merge responsibility instead of watcher leases or configured ownership.
+- On-demand T0 audit guidance instead of another routine command surface.
+- Repair-on-touch migration instead of a repository-local active-PR ledger.
 
-### D11: Tool absorbs deterministic skill plumbing
+### Removed or rejected
 
-- Status: `approved` (user, 2026-08-06; all three groups selected as recommended)
-- Decision: the routine actions the skill prescribes split into judgment (stays with the agent: type selection, Priority/Size/Risk values, acceptance-criteria authoring, dedup, review) and plumbing (deterministic given the judgment), and the plumbing moves into `gh-workflow` subcommands to cut token usage and keep GitHub management mechanics out of context. Three groups: **mutation plumbing** — `set` (field updates validated against `org-schema.yaml`, invalid values refused by the tool), `new` (typed issue scaffold with canonical body headings, initial fields, and the creation receipt printed on success), `close`/`reopen` (atomic terminal-state synchronization per invariants 10/11, reopen returning `Workflow` to a nonterminal state); **render commands** — `summary` and `receipt` reusing the ledger layout engine, with agents relaying tool output verbatim; **readiness check** — `check`, read-only validation of Ready preconditions (pinned fields set, acceptance criteria present, no open blockers, not XL), seeding the phase-3 eligibility validator session-locally. The skill routes these actions through the subcommands instead of raw `gh` calls.
-- Boundary preserved: the tool gains repository-scoped mutation ability under the operator's existing `gh` authentication — the same authority agents already exercised via raw `gh` — while organization-schema access stays read-only (NG-001 untouched).
-- Rationale: field mutations are the worst API surface in the model (GraphQL field/option ID plumbing); terminal sync is the most invariant-critical two-step; rendering was already deterministic. Tool validation converts vocabulary and sync discipline from model memory into mechanical refusal.
-- Reopen when: a subcommand's scope starts absorbing judgment (value selection, content authoring) — that is the boundary violation signal.
+- `admission_mode` and `native_closing` repository options.
+- Mandatory explicit upgrade choices and per-repository semantic defaults.
+- Issue/comment/object-bound break-glass approval.
+- R4 mandatory governing Issue and second plan approval.
+- Empty risk/follow-up boilerplate.
+- Mandatory immediate PR receipt and explicit Structural/Ready call sequence.
+- Persisted validation phase, watcher identity, event service, and migration ledger.
 
-### D13: Ledger withdrawn, guidance budgeted, issue self-definition relaxed (package version 1.5)
+### Efficiency effect
 
-- Status: `approved` (owner, 2026-08-26; three owner decisions taken together on the session-corpus efficiency review)
-- Decision: (a) the `ledger` feature — the subcommand, the generated `docs/GH-WORKFLOWS.md`, and their guidance — is removed outright at package version 1.5 with no deprecation stub, superseding D10's ledger half; the removal ships as a MINOR by explicit owner designation. (b) The guidance surface is budgeted: `SKILL.md` merges its routing map and command surface into one two-column table naming both `gh-workflow` subcommands and the documented raw-`gh` forms, drops the per-session preflight mandate and the common-mistakes section, and declares its own length; `field-vocabulary.md` shrinks to the vocabulary the tool's refusals cannot supply; the routing table is duplicated into the managed `AGENTS.md`/`CLAUDE.md` block, which is the only package-owned text a delegated worker is guaranteed to read. (c) Issue self-definition is relaxed: agents author acceptance criteria, set `Workflow` including `Ready`, and set `Execution mode` by judgment, with `Unattended agent` reserved to the owner and the owner asked only where the definition itself depends on owner intent — direction, spend, or an irreversible action. Organization schema stays human-applied (D0/NG-001, untouched).
-- Boundary preserved: no new subcommand. An action earns one only when it has a vocabulary to validate or an invariant to pair (D11's boundary), and none of the uncovered actions — comment, retitle, PR create, PR merge, CI wait, issue read — does. `merge` is barred outright by the enforcement non-goal, not on cost.
-- Alternatives rejected: retaining `ledger` as a stub exiting nonzero for one payload version (a clean deprecation window, but the owner's decision is a deliberate contract break and a stub preserves a name nothing implements); cutting 2.0 on the argument that the enumerated subcommand list is consumer-facing contract (the stricter reading, overridden by the owner's MINOR designation); splitting `SKILL.md` into a stub plus a procedures reference (converts one whole-file read into two when agents already re-read); leaving the block invariant-only to protect its size (invariants alone did not stop raw-`gh` reinvention, and routing is what delegated workers demonstrably act on).
-- Rationale: the measured session corpus showed guidance read whole-file and repeatedly, calls spent on `help` for flags the same file printed, a documented retype route missed inside a 157-line file, CI waiting reinvented as poll loops, and roughly half of all mutations performed by delegated workers that loaded no guidance at all. The self-definition relaxation resolves a contradiction inside the package rather than loosening a coherent rule: `check` has always returned queue admission to the agent while the guidance forbade it.
-- Reopen when: a post-1.5 corpus window comparable to the review's still shows the `help` calls, the whole-file re-reads, the hand-rolled wait loops, or the delegated-worker bypass; or a consumer reports breakage from the removed subcommand, which would confirm the enumerated CLI surface is consumer-facing in practice.
+- Routine PR flow becomes one draft creation, one paired Ready call, and one paired Merge call instead of separate receipt, checks, lifecycle mutations, ready mutation, merge, Issue close, and post-merge reconciliation calls.
+- The skill carries routing and ordinary invariants; detailed T0 audit, relationship repair, and recovery procedures load only when invoked.
+- Uniform behavior removes config inspection and repository-by-repository semantic-policy interpretation from ordinary context.
+- JSON preserves machine detail without forcing human output to repeat every finding.
 
-### D12: PR existence is repository-local policy
-
-- Status: `approved` (user, 2026-08-06; owner directive)
-- Decision: the package owns PR _content_ semantics (governing-Issue linkage, content sections, draft policy, review discipline) but never PR _existence_. Whether a change requires a PR — the direct-push versus PR threshold — is repository-local branch policy that legitimately varies per repository with project scope and importance. `pr-standard.md` states this deference explicitly, and package obligations bind only once a PR exists. Default when the consuming repository is silent: nontrivial or consequential changes go through a PR; minor or inconsequential changes may be pushed directly rather than polluting history with ceremony.
-- Context: the owner is moving toward a more PR-based workflow overall, but does not want PRs forced for minor changes, and expects the threshold to sit differently in each repository.
-- Rationale: the portable/local boundary test — "does the rule survive being moved to a different repository unchanged?" PR content rules do; PR-requirement thresholds do not. Enforcement of any repo's threshold belongs to its rulesets, never to the skill (NG-006 unchanged).
-- Reopen when: a consumer wants the threshold expressed as package configuration rather than repo-local instructions — resist unless several repositories converge on identical thresholds worth centralizing.
-
-## Complexity disposition
-
-### Retained
-
-- Packaged Go audit binary (D7) — deterministic, testable audit output in place of fragile prose command sequences; committed per-platform delivery is the owner-selected distribution.
-- Reference-file split (six files) — guards `SKILL.md` size; progressive disclosure is an established repository pattern.
-- Configuration-rendered `organization` — keeps the published payload org-agnostic; a hardcoded organization would force a payload version per org change.
-- Full provider set minus `scaffold`/`migrate` — required by the Standard Bundle Authoring managed-artifact integrity contract.
-
-### Deferred
-
-- Issue Forms delivery — trigger: routine human web-UI capture.
-- Phase-3 deterministic invariant enforcement — trigger: phases 1–2 operating experience.
-- `migrate` provider — trigger: discovered legacy approximations needing signatures.
-
-### Rejected
-
-- Source-shipped, locally-built skill tooling — owner-rejected in favor of committed binaries; zero consumer toolchain requirement won.
-- `go install` distribution for skill tooling — network dependency and a second version channel outside the payload digest contract.
-- Two-skill split — fuzzy boundary, double versioning burden.
-- Fat managed block — context tax on every session; pattern inversion.
-- Configuration for area labels, Issue Type subsets, project numbers, or field customization — duplicated or forked state.
-- Create-only seed templates — bug 006.
-- Network-dependent audit provider — breaks the offline reconcile model.
-
-### Preserved extension seams
-
-- `organization` may become a list additively.
-- Forms and `migrate` arrive as additive minors without contract breaks.
-- Phase-3 enforcement can consume the same invariants the managed block names.
-
-## Unresolved decisions
+## Unresolved matters
 
 Blocking: none.
 
-Non-blocking:
+Specification-level details:
 
-- Release-train placement (after the v5.17.0 ADR train) — owner decision at specification/plan stage.
-- Exact `SKILL.md` prose, `gh`/GraphQL audit commands, and block wording — owned by spec-authoring and implementation.
+- Exact `ready` and `merge` flags, merge-method selection, JSON fields, stable finding codes, and retry messages.
+- Exact placement of Standalone Change risk and R4 plan/recovery evidence within the four-section body.
+- Exact managed-block and reference partition that preserves the context budget.
+
+These may be selected during specification authoring only when they do not reopen the approved authority, lifecycle, admission, or efficiency model.
 
 ## Downstream impact
 
-- A new Project Specification (spec-authoring) formalizing this contract.
-- Package implementation under `standards/github-workflow/`, catalog and index wiring, and `docs/handoff/architecture.md` updates at implementation time.
-- No existing specification or plan becomes stale; this is a new package family.
+- Revise [SPEC-GHW1](2026-08-06-github-workflow-package-spec.md) from its verified 1.6 baseline to the approved 1.7 target.
+- Implement a new immutable 1.7 payload, Go behavior, tests, references, adoption/upgrade guidance, and managed blocks.
+- Publish 1.7 in a Project Standards release.
+- Update all locally cloned Project Standards consumers and migrate repositories already using `github-workflow`.
+- Normalize incompatible active PRs when touched; do not rewrite terminal evidence.
 
 ## Sources
 
 | Source | Classification | Material finding |
 | --- | --- | --- |
-| [`docs/specs/archive/2026-08-06-github-repo-administration-preliminary-design.md`](archive/2026-08-06-github-repo-administration-preliminary-design.md) | design input (user-approved) | The settled operating model: five Issue Types, seven org Issue Fields, lifecycle, invariants INV-001–016, six adoption phases, permission model |
-| `standards/agent-handoff/versions/1.9/payload.toml` | current state | Payload vocabulary precedent: managed skill artifacts, harness-gated contributions, rendered policy, provider set |
-| `docs/handoff/architecture.md` | repository decision | Bug 006 constraint on create-only artifacts; package independence; SBA 2.6 authority |
-| `docs/handoff/specs-plans.md` | repository decision | Spec-first precedent (SPEC-DPEY) for the agent-handoff package |
+| [SPEC-GHW1](2026-08-06-github-workflow-package-spec.md) revision 1.34 | verified current state | Exact shipped 1.6 behavior and deviations; independent native and Opus baseline verification completed before this revision. |
+| [GitHub Repository Administration Standard (preliminary)](archive/2026-08-06-github-repo-administration-preliminary-design.md) | prior approved design | Issue Types, fields, lifecycle, risk ladder, and earlier Issue/PR model. |
+| Owner-supplied `PR Versus Direct Commits.md` memo | design input | PR admission rationale, Final/Supporting/Standalone relationships, and cross-object consistency proposal. |
+| `standards/github-workflow/versions/1.6/**` | current implementation | Existing skill, references, provider, schema, and immutable payload boundary. |
+| GitHub PR-linking, ruleset, and automatic-closing documentation verified 2026-08-30 | external facts | Native closing is target/config dependent; package semantics cannot depend on auto-close. |
 
 ## Spec-authoring handoff
 
 - Design brief: `docs/specs/2026-08-06-github-workflow-package-design.md`
-- Operation: `create`
+- Operation: `revise`
 - Status: `approved`
-- Problem and outcome: package the GitHub Repository Administration Standard (phases 1–2) as Catalog 5 consumer package `github-workflow` with a mandatory skill.
-- Scope boundary: package contract only; org-owned repositories; no enforcement automation, coordinator, Issue Forms, or personal-account support.
-- Selected design: all-managed delivery — one skill with six reference files, compact invariant-bearing managed block, two-option config (`organization`, `harnesses`), `companions = ["agent-handoff"]`, offline provider set with the org audit skill-driven via `gh`.
-- Approved consequential decisions:
-  - D0 scoping (phases 1–2, org-only, audit-only org schema, name)
-  - D1 single skill, mutation-boundary trigger, references incl. review checklist
-  - D2 all-managed artifacts; Issue Forms deferred
-  - D3 block = skill mandate + INV-005/006/008/010/011/015; config-rendered org
-  - D4 config = `organization` + `harnesses` only
-  - D5 companions agent-handoff; audit/validate/drift-check capabilities
-  - D6 providers render-semantic/validate/verify/drift-check/upgrade; no scaffold/migrate
-  - D7 skill tooling in Go; audit ships as committed linux/amd64 binary, reproducibly built
-  - D8 operator summaries follow the packaged attention-first layout (summary-format.md); summary presentation is a skill trigger
-  - D9 agents present a consistent creation receipt (header, fields set, gaps) after creating an issue or PR
-  - D10 tool consolidated as `gh-workflow` (audit + ledger subcommands); maintained human-readable ledger at docs/GH-WORKFLOWS.md with TOC, refreshed after mutating tasks — ledger half superseded by D13 at package version 1.5
-  - D11 tool absorbs deterministic plumbing: new/set/close/reopen (validated mutations, atomic terminal sync), summary/receipt (rendering), check (Ready preconditions); judgment stays with the agent
-  - D12 PR existence is repo-local policy (per-repo direct-push threshold); package binds PR obligations only once a PR exists; silent-repo default: PRs for consequential changes, direct push for minor ones
-  - D13 (2026-08-26, package version 1.5) ledger removed outright as a MINOR by owner designation; guidance budgeted into one routing table carried in both SKILL.md and the managed block; issue self-definition relaxed with `Unattended agent` reserved to the owner; no new subcommand
-- Agent-applied defaults:
-  - org-schema resource in YAML (design-input §35 fidelity)
-  - capability naming mirrors agent-handoff
-- Assumptions:
-  - Issue Fields GA API/MCP surface stable enough to pin the audit procedure
-- Blocking decisions: none
-- Non-blocking matters:
-  - release-train placement — decide at spec/plan stage
-  - SKILL.md prose, audit commands, block wording — spec-authoring/implementation
-- Downstream impact:
-  - new specification and new package family; no existing artifact staleness
-- Material source artifacts:
-  - `docs/specs/archive/2026-08-06-github-repo-administration-preliminary-design.md`
-  - `standards/agent-handoff/versions/1.9/payload.toml`
-  - `docs/handoff/architecture.md`
+- Target: `github-workflow` 1.7, based on the independently verified 1.6 master-spec baseline.
+- Outcome: one uniform, low-friction workflow that treats the owner's instruction as sufficient authority, permits only T0 editorial direct admission autonomously, and uses canonical PR relationships plus paired commands for everything else.
+- Preserve:
+  - repository ownership of branch topology, integration-target names, merge method, and live required checks;
+  - T0's full conjunctive predicate and exact trailer;
+  - exactly one Final/Supporting/Standalone declaration, same-repository governed Issues, and one-open-Final cardinality;
+  - Issue-owned lifecycle for governed PRs and PR-owned contract/lifecycle for Standalone;
+  - R1–R4 Standalone, with R4 technical controls but no mandatory Issue or second approval;
+  - four derived predicate groups and six action categories;
+  - draft-first agent creation, paired Ready/Merge/Final-disposition operations, and retained auto-merge responsibility;
+  - package-wide defaults with no new semantic config options;
+  - repair-on-touch migration and fleet-wide 1.7 reconciliation.
+- Do not introduce:
+  - per-repository admission/native-closing switches;
+  - mandatory Issue creation for Standalone or R4;
+  - secondary permission artifacts;
+  - persisted validation phase or watcher ownership;
+  - mandatory empty sections, immediate receipts, or repeated phase commands;
+  - branch-name conventions or duplicated required-check lists.
+- Specification may decide exact flags, result schemas, finding codes, retry messages, section placement, and reference partition without reopening the approved model.
+- Blocking decisions: none.
