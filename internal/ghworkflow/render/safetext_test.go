@@ -27,9 +27,13 @@ func TestSanitizeTextNeutralizesTerminalControl(t *testing.T) {
 		{"embedded newline splits a row", "line one\nline two", "line one�line two"},
 		{"tab breaks column measurement", "a\tb", "a�b"},
 		{"one marker per run", "a\x1b\x1b\x1bb", "a�b"},
-		{"bidi override reorders", "fix ‮gnitset‬", "fix �gnitset�"},
-		{"zero-width space", "he​llo", "he�llo"},
-		{"c1 control", "xAm", "x�Am"},
+		// The three literals below spell their control characters as escapes: a raw
+		// U+202E, U+200B, or U+0081 in source is invisible to a reviewer, reorders the
+		// line in some editors, and is exactly the class of byte this test asserts is
+		// neutralized (staticcheck ST1018 refuses them for the same reason).
+		{"bidi override reorders", "fix \u202egnitset\u202c", "fix \ufffdgnitset\ufffd"},
+		{"zero-width space", "he\u200bllo", "he\ufffdllo"},
+		{"c1 control", "x\u009bAm", "x\ufffdAm"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -47,7 +51,7 @@ func TestSanitizeTextNeutralizesTerminalControl(t *testing.T) {
 func TestSanitizeTextIsIdempotent(t *testing.T) {
 	t.Parallel()
 
-	once := render.SanitizeText("a\x1b[31mb\rc‮d")
+	once := render.SanitizeText("a\x1b[31mb\rc\u202ed")
 	if twice := render.SanitizeText(once); twice != once {
 		t.Errorf("second pass = %q, want %q", twice, once)
 	}

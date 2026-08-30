@@ -95,36 +95,36 @@ func closePullRequest(ctx context.Context, env *cli.Env, tgt *target, mode cli.O
 	if err != nil {
 		return err
 	}
-	if gate.decl.Relationship != relation.RelationshipFinal {
+	if gate.Decl.Relationship != relation.RelationshipFinal {
 		return cli.Usagef("%s#%d declares %s, and this route closes only a Final PR; "+
 			"Supporting and Standalone closure is lifecycle-neutral and needs no disposition record",
-			repo, number, relationshipLabel(gate.decl.Relationship))
+			repo, number, relationshipLabel(gate.Decl.Relationship))
 	}
-	if gate.pr.IsMerged() {
+	if gate.PR.IsMerged() {
 		return cli.Usagef("%s#%d is merged, so it has no unmerged disposition to record", repo, number)
 	}
-	if enabled, _ := gate.pr.AutoMergeEnabled(); enabled {
+	if enabled, _ := gate.PR.AutoMergeEnabled(); enabled {
 		return cli.Usagef("%s#%d has auto-merge armed; disable it before recording a disposition, "+
 			"or the pull request may merge while the record says it was abandoned", repo, number)
 	}
 
 	rec := newSteps(stepRecordDisposition, stepClosePR, stepConvergeWorkflow)
-	envelope := cli.NewEnvelope("close", cli.ResultClear, prTarget(repo, number, gate.pr.HTMLURL))
+	envelope := cli.NewEnvelope("close", cli.ResultClear, prTarget(repo, number, gate.PR.HTMLURL))
 	envelope.Gate = cli.Gate(relation.PhaseStructural)
 
 	// An open PR must be structurally resolvable before its closure is recorded (FR-034).
 	// A closed one is not re-gated: its structural findings are immutable terminal evidence
 	// (EC-014), and refusing to record the disposition of an already-closed Final would
 	// leave exactly the unrecorded terminal state this command exists to prevent.
-	if gate.pr.State == stateOpen && !gate.result.Clear() {
-		envelope.Findings = gate.result.Findings
+	if gate.PR.State == stateOpen && !gate.Result.Clear() {
+		envelope.Findings = gate.Result.Findings
 		envelope.Result = cli.ResultDomainFinding
 		envelope.Steps = rec.list()
 		if writeErr := cli.WriteEnvelope(envelope, mode, env); writeErr != nil {
 			return writeErr
 		}
 		return domainf("%s#%d is not a structurally resolvable Final: %d finding(s), and nothing was written",
-			repo, number, len(gate.result.Findings))
+			repo, number, len(gate.Result.Findings))
 	}
 
 	stepErr := dispositionSteps(ctx, client, gate, outcome, workflow, trimmed, rec, &envelope)
@@ -152,8 +152,8 @@ func closePullRequest(ctx context.Context, env *cli.Env, tgt *target, mode cli.O
 func dispositionSteps(ctx context.Context, client *ghapi.Client, gate *prGate,
 	outcome, workflow, reason string, rec *steps, envelope *cli.Envelope,
 ) error {
-	repo := gate.repo
-	number := gate.pr.Number
+	repo := render.Repository{Owner: gate.Owner, Name: gate.Name}
+	number := gate.PR.Number
 
 	comments, err := client.ListIssueComments(ctx, repo.Owner, repo.Name, number)
 	if err != nil {
@@ -186,7 +186,7 @@ func dispositionSteps(ctx context.Context, client *ghapi.Client, gate *prGate,
 		return nil
 	}
 
-	if gate.pr.State == stateClosed {
+	if gate.PR.State == stateClosed {
 		rec.skip(stepClosePR, "the pull request is already closed")
 	} else {
 		// A pull request is closed through the issues endpoint, which is the same object:
@@ -206,7 +206,7 @@ func dispositionSteps(ctx context.Context, client *ghapi.Client, gate *prGate,
 		rec.complete(stepClosePR, "the pull request is closed unmerged")
 	}
 
-	if gate.governedIssue() == 0 {
+	if gate.GoverningIssue() == 0 {
 		rec.skip(stepConvergeWorkflow, "no governing issue resolved")
 		return nil
 	}
@@ -223,8 +223,8 @@ func dispositionSteps(ctx context.Context, client *ghapi.Client, gate *prGate,
 func convergeDisposition(ctx context.Context, client *ghapi.Client, gate *prGate,
 	outcome, workflow string, rec *steps,
 ) error {
-	repo := gate.repo
-	issueNumber := gate.governedIssue()
+	repo := render.Repository{Owner: gate.Owner, Name: gate.Name}
+	issueNumber := gate.GoverningIssue()
 
 	if outcome == relation.DispositionDropped {
 		move := transition{
@@ -242,7 +242,7 @@ func convergeDisposition(ctx context.Context, client *ghapi.Client, gate *prGate
 		return nil
 	}
 
-	if gate.issue != nil && gate.issue.State == stateClosed {
+	if gate.Issue != nil && gate.Issue.State == stateClosed {
 		move := transition{
 			state: stateOpen, reason: reasonReopened, workflow: workflow,
 			rerun: fmt.Sprintf("reopen --issue %d --workflow %q", issueNumber, workflow),
@@ -257,7 +257,7 @@ func convergeDisposition(ctx context.Context, client *ghapi.Client, gate *prGate
 		return nil
 	}
 
-	if gate.workflow() == workflow {
+	if gate.Workflow() == workflow {
 		rec.skip(stepConvergeWorkflow, fmt.Sprintf("issue #%d is already %q", issueNumber, workflow))
 		return nil
 	}
@@ -270,7 +270,7 @@ func convergeDisposition(ctx context.Context, client *ghapi.Client, gate *prGate
 	if err := client.AddIssueFieldValues(ctx, repo.Owner, repo.Name, issueNumber, values); err != nil {
 		rec.fail(stepConvergeWorkflow, fmt.Sprintf(
 			"the disposition stands; issue #%d is still %s and rerunning retries it",
-			issueNumber, quotedOrUnset(gate.workflow())))
+			issueNumber, quotedOrUnset(gate.Workflow())))
 		return err
 	}
 	rec.complete(stepConvergeWorkflow, fmt.Sprintf("issue #%d Workflow = %s", issueNumber, workflow))

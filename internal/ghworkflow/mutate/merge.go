@@ -19,6 +19,7 @@ import (
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 )
 
 // The ordered boundaries of the Merge operation. Admission and auto-merge arming are
@@ -85,21 +86,21 @@ func runMerge(ctx context.Context, env *cli.Env, args []string) error {
 		return err
 	}
 	rec := newSteps(stepMerge, stepEnableAutoMerge, stepObserveTerminal, stepConvergeIssue)
-	envelope := cli.NewEnvelope("merge", cli.ResultClear, prTarget(repo, *number, gate.pr.HTMLURL))
+	envelope := cli.NewEnvelope("merge", cli.ResultClear, prTarget(repo, *number, gate.PR.HTMLURL))
 	envelope.Gate = cli.Gate(relation.PhaseMerge)
-	envelope.Findings = gate.result.Findings
+	envelope.Findings = gate.Result.Findings
 
-	if !gate.result.Clear() {
+	if !gate.Result.Clear() {
 		envelope.Result = cli.ResultDomainFinding
 		envelope.Steps = rec.list()
 		if writeErr := cli.WriteEnvelope(envelope, mode, env); writeErr != nil {
 			return writeErr
 		}
 		return domainf("%s#%d does not pass the Merge gate: %d finding(s), and nothing was written",
-			repo, *number, len(gate.result.Findings))
+			repo, *number, len(gate.Result.Findings))
 	}
 
-	selected, findings := selectMergeMethod(*method, gate.topology.MergeSettings, *number)
+	selected, findings := selectMergeMethod(*method, gate.Topology.MergeSettings, *number)
 	if len(findings) > 0 {
 		envelope.Findings = append(envelope.Findings, findings...)
 		envelope.Result = cli.ResultDomainFinding
@@ -183,11 +184,11 @@ func selectMergeMethod(explicit string, settings relation.RepositoryMergeSetting
 func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method string,
 	auto bool, rec *steps, envelope *cli.Envelope,
 ) error {
-	repo := gate.repo
-	number := gate.pr.Number
+	repo := render.Repository{Owner: gate.Owner, Name: gate.Name}
+	number := gate.PR.Number
 
 	switch {
-	case gate.pr.IsMerged():
+	case gate.PR.IsMerged():
 		// A rerun after a convergence failure re-enters here: the merge is history and the
 		// remaining work is the Issue. Re-issuing the merge would answer 405 and tell the
 		// operator the command failed when in fact it had already succeeded.
@@ -195,14 +196,14 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 		rec.skip(stepEnableAutoMerge, "the pull request is already merged")
 	case auto:
 		rec.skip(stepMerge, "--auto arms GitHub's auto-merge instead of merging now")
-		if err := client.EnableAutoMerge(ctx, gate.nodeID, method); err != nil {
+		if err := client.EnableAutoMerge(ctx, gate.NodeID, method); err != nil {
 			rec.fail(stepEnableAutoMerge, "auto-merge was not armed; the pull request is unchanged")
 			return err
 		}
 		rec.complete(stepEnableAutoMerge, "auto-merge armed with the "+method+" method")
 	default:
 		rec.skip(stepEnableAutoMerge, "--auto was not requested")
-		result, err := client.MergePullRequest(ctx, repo.Owner, repo.Name, number, method, gate.pr.Head.SHA)
+		result, err := client.MergePullRequest(ctx, repo.Owner, repo.Name, number, method, gate.PR.Head.SHA)
 		if err != nil {
 			rec.fail(stepMerge, "the pull request was not merged; the governing issue is untouched")
 			return err
@@ -229,28 +230,28 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 	}
 	rec.complete(stepObserveTerminal, "GitHub reports the pull request merged")
 
-	if gate.decl.Relationship != relation.RelationshipFinal {
+	if gate.Decl.Relationship != relation.RelationshipFinal {
 		// FR-029: Supporting and Standalone admission is lifecycle-neutral and never
 		// authorizes Done, so this route must not touch an Issue it merely references.
 		rec.skip(stepConvergeIssue, "only a Final PR authorizes issue completion")
 		return nil
 	}
-	if gate.governedIssue() == 0 {
+	if gate.GoverningIssue() == 0 {
 		rec.skip(stepConvergeIssue, "no governing issue resolved")
 		return nil
 	}
 	move := transition{
 		state: stateClosed, reason: "completed", workflow: relation.WorkflowDone,
-		rerun: fmt.Sprintf("close --issue %d --as done", gate.governedIssue()),
+		rerun: fmt.Sprintf("close --issue %d --as done", gate.GoverningIssue()),
 	}
 	// The convergence runs the identical sequence `close --issue N --as done` runs, as one
 	// recorded step: FR-033 names those semantics, and a second implementation of the
 	// terminal pairing would be free to diverge from the one FR-021 governs.
-	outcome, err := converge(ctx, client, repo, gate.governedIssue(), move, nil)
+	outcome, err := converge(ctx, client, repo, gate.GoverningIssue(), move, nil)
 	if err != nil {
 		rec.fail(stepConvergeIssue, fmt.Sprintf(
 			"the merge stands; issue #%d did not converge to %s and rerunning this command retries it",
-			gate.governedIssue(), relation.WorkflowDone))
+			gate.GoverningIssue(), relation.WorkflowDone))
 		return err
 	}
 	rec.complete(stepConvergeIssue, outcome.Message)

@@ -117,10 +117,10 @@ func checkPullRequest(ctx context.Context, env *cli.Env, client *ghapi.Client,
 	if err != nil {
 		return err
 	}
-	envelope := cli.NewEnvelope("check", cli.ResultClear, prTarget(repo, number, gate.pr.HTMLURL))
-	envelope.Gate = cli.Gate(gate.result.Gate)
-	envelope.Findings = gate.result.Findings
-	if !gate.result.Clear() {
+	envelope := cli.NewEnvelope("check", cli.ResultClear, prTarget(repo, number, gate.PR.HTMLURL))
+	envelope.Gate = cli.Gate(gate.Result.Gate)
+	envelope.Findings = gate.Result.Findings
+	if !gate.Result.Clear() {
 		envelope.Result = cli.ResultDomainFinding
 	}
 	if err := cli.WriteEnvelope(envelope, mode, env); err != nil {
@@ -130,7 +130,7 @@ func checkPullRequest(ctx context.Context, env *cli.Env, client *ghapi.Client,
 		// The gate ran and produced a verdict, so the report is owed and already written;
 		// the nonzero exit is that verdict rather than a failure to reach one.
 		return domainf("%s#%d does not pass the %s gate: %d finding(s)",
-			repo, number, gate.result.Gate, len(gate.result.Findings))
+			repo, number, gate.Result.Gate, len(gate.Result.Findings))
 	}
 	return nil
 }

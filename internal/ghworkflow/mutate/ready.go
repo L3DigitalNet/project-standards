@@ -71,20 +71,20 @@ func runReady(ctx context.Context, env *cli.Env, args []string) error {
 		return err
 	}
 	rec := newSteps(stepSyncIssue, stepMarkReady, stepVerifyReady)
-	envelope := cli.NewEnvelope("ready", cli.ResultClear, prTarget(repo, *number, gate.pr.HTMLURL))
+	envelope := cli.NewEnvelope("ready", cli.ResultClear, prTarget(repo, *number, gate.PR.HTMLURL))
 	envelope.Gate = cli.Gate(relation.PhaseReady)
-	envelope.Findings = gate.result.Findings
+	envelope.Findings = gate.Result.Findings
 
 	// Findings stop the operation before its first write, with every step recorded pending:
 	// the envelope must show that the gate refused rather than that the writes were skipped.
-	if !gate.result.Clear() {
+	if !gate.Result.Clear() {
 		envelope.Result = cli.ResultDomainFinding
 		envelope.Steps = rec.list()
 		if writeErr := cli.WriteEnvelope(envelope, mode, env); writeErr != nil {
 			return writeErr
 		}
 		return domainf("%s#%d does not pass the Ready gate: %d finding(s), and nothing was written",
-			repo, *number, len(gate.result.Findings))
+			repo, *number, len(gate.Result.Findings))
 	}
 
 	if stepErr := readySteps(ctx, client, gate, rec, &envelope); stepErr != nil {
@@ -115,22 +115,22 @@ func runReady(ctx context.Context, env *cli.Env, args []string) error {
 func readySteps(ctx context.Context, client *ghapi.Client, gate *prGate, rec *steps,
 	envelope *cli.Envelope,
 ) error {
-	repo := gate.repo
-	number := gate.pr.Number
+	repo := render.Repository{Owner: gate.Owner, Name: gate.Name}
+	number := gate.PR.Number
 
 	switch {
-	case gate.decl.Relationship != relation.RelationshipFinal:
+	case gate.Decl.Relationship != relation.RelationshipFinal:
 		rec.skip(stepSyncIssue, "only a Final PR synchronizes issue lifecycle")
-	case gate.topology.GoverningIssue == nil:
+	case gate.Topology.GoverningIssue == nil:
 		rec.skip(stepSyncIssue, "no governing issue resolved")
-	case gate.workflow() != relation.WorkflowInProgress:
+	case gate.Workflow() != relation.WorkflowInProgress:
 		rec.skip(stepSyncIssue, fmt.Sprintf("issue #%d is already %s",
-			gate.governedIssue(), quotedOrUnset(gate.workflow())))
+			gate.GoverningIssue(), quotedOrUnset(gate.Workflow())))
 	default:
 		values, err := resolveFieldIDs(ctx, client, repo.Owner,
 			[]assignment{{Name: render.FieldWorkflow, Value: relation.WorkflowInReview}})
 		if err != nil {
-			if finding, drift := driftFinding(err, relation.KindIssue, gate.governedIssue()); drift {
+			if finding, drift := driftFinding(err, relation.KindIssue, gate.GoverningIssue()); drift {
 				envelope.Findings = append(envelope.Findings, finding)
 				rec.fail(stepSyncIssue, "the live organization schema has drifted from the baseline")
 				return domainf("%s: %v", repo, err)
@@ -138,16 +138,16 @@ func readySteps(ctx context.Context, client *ghapi.Client, gate *prGate, rec *st
 			rec.fail(stepSyncIssue, err.Error())
 			return err
 		}
-		if err := client.AddIssueFieldValues(ctx, repo.Owner, repo.Name, gate.governedIssue(), values); err != nil {
+		if err := client.AddIssueFieldValues(ctx, repo.Owner, repo.Name, gate.GoverningIssue(), values); err != nil {
 			rec.fail(stepSyncIssue, fmt.Sprintf("issue #%d is still %s and the pull request is untouched",
-				gate.governedIssue(), quotedOrUnset(gate.workflow())))
+				gate.GoverningIssue(), quotedOrUnset(gate.Workflow())))
 			return err
 		}
 		rec.complete(stepSyncIssue, fmt.Sprintf("issue #%d Workflow = %s",
-			gate.governedIssue(), relation.WorkflowInReview))
+			gate.GoverningIssue(), relation.WorkflowInReview))
 	}
 
-	if !gate.pr.Draft {
+	if !gate.PR.Draft {
 		// An externally created or already-ready PR is the idempotent case FR-032 requires
 		// to converge rather than refuse. The verification read is skipped with it: there
 		// is no transition to verify, and spending a round trip to re-observe a fact this
@@ -156,7 +156,7 @@ func readySteps(ctx context.Context, client *ghapi.Client, gate *prGate, rec *st
 		rec.skip(stepVerifyReady, "no transition to verify")
 		return nil
 	}
-	if err := client.MarkPullRequestReady(ctx, gate.nodeID); err != nil {
+	if err := client.MarkPullRequestReady(ctx, gate.NodeID); err != nil {
 		rec.fail(stepMarkReady, "the pull request is still a draft")
 		return err
 	}

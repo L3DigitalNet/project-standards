@@ -283,7 +283,15 @@ type checkRunsPage struct {
 	CheckRuns  []CheckRun `json:"check_runs"`
 }
 
-func (p checkRunsPage) total() int        { return p.TotalCount }
+// total and items satisfy getPagedEnvelope's type constraint; the generic instantiation
+// at ListCheckRunsForRef is their only "call site", which golangci-lint's `unused` pass
+// does not follow — hence the suppression. Deleting them does not remove dead code, it
+// breaks the build.
+//
+//nolint:unused // satisfies the getPagedEnvelope[CheckRun, checkRunsPage] constraint.
+func (p checkRunsPage) total() int { return p.TotalCount }
+
+//nolint:unused // satisfies the getPagedEnvelope[CheckRun, checkRunsPage] constraint.
 func (p checkRunsPage) items() []CheckRun { return p.CheckRuns }
 
 // CombinedStatus is the commit-status surface external CI services write.
