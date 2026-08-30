@@ -37,6 +37,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added
+
+- **`GitHub Workflow 1.7` makes pull-request admission part of the package.** A change is either a T0 direct commit — an unambiguous prose repair that touches no protected surface, stays outside active governed work, fits three files and thirty changed lines, and carries exactly one `Workflow-Admission: T0` trailer — or it goes through a pull request. Every PR declares `Final: #N`, `Supporting: #N`, or `Standalone` under an exact `## Governing work` heading; a ready PR carries exactly four contract sections (`Summary`, `Governing work`, `Acceptance coverage`, `Verification`), and a Standalone additionally declares `Change risk: R1`–`R4`. Agent-created PRs start as drafts: `gh-workflow ready --pr N` revalidates, synchronizes a Final's Issue from `In progress` to `In review`, marks the PR ready, and emits one receipt; `gh-workflow merge --pr N` revalidates, admits by the repository's permitted method, observes the outcome, and converges a merged Final's Issue to `Done`. `gh-workflow close --pr N --as OUTCOME --reason S` is the only route for abandoning an open Final. `check` and `receipt` both gain a `--pr N` mode alongside their existing `--issue N` mode. `check`, `receipt`, and `summary` now project one shared finding model across six categories — Blocked, Needs definition, PR admission blocked, Synchronization required, Disposition required, Target date passed — and `--output json` returns one envelope (`schema_version`, `command`, `result`, `target`, `gate`, `findings`, `steps`) for every subcommand. Exit code `3` now distinguishes an authentication, API, transport, or other operational failure from exit `1`'s domain findings. Catalog 5 promotes `github-workflow@1.7` and retains 1.6; the package's two configuration options and the rendered `policy.toml` are unchanged, so the upgrade is a version bump.
+- `gh-workflow check` now paginates every read to completion at the largest safe page size and compares the advertised total against the decoded count, reporting an unexplained truncation as evidence-unknown rather than a silently short result (closes DEV-024).
+- The GitHub-login identity boundary used by policy, `audit --org`, explicit repositories, and origin-derived owners is now one validation path applied consistently everywhere (closes DEV-021).
+- `org-schema.yaml` and `policy.toml` readers reject a duplicate `values` key in every legal ordering and an embedded or unbalanced table bracket instead of silently discarding the malformed input (closes DEV-027, DEV-028).
+- The `gh-workflow` binary is rebuilt for 1.7 from changed Go source; `make go-check` verifies the committed bytes against a reproducible rebuild.
+
 ## [5.25.0] — 2026-08-29
 
 ### Added
