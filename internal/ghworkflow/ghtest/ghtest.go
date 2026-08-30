@@ -39,6 +39,11 @@ func (s TokenSource) Token(context.Context) (string, error) {
 // Transport is an http.RoundTripper serving canned responses and recording every
 // request, so tests can assert both what came back and what went out — the latter is how
 // the read-only invariant is proved rather than asserted.
+//
+// The recorder is also the measuring instrument for spec NFR-008: command tests assert a
+// bounded number of API calls for a successful Ready, Merge, summary, or receipt run, and
+// Count is that number. Request bodies are captured too, because a GraphQL test cannot
+// distinguish two mutations by URL — every one of them is POST /graphql.
 type Transport struct {
 	// Routes maps "METHOD /path" (query ignored) to a canned response.
 	Routes map[string]Response
@@ -50,12 +55,27 @@ type Transport struct {
 
 	mu       sync.Mutex
 	requests []*http.Request
+	bodies   []string
 }
 
 // RoundTrip implements http.RoundTripper.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// The body is read here and replaced, not consumed: an http.Request body is a
+	// one-shot reader, so recording it without putting it back would hand the route
+	// handlers an empty body and make every RouteFunc that inspects a GraphQL query fail.
+	body := ""
+	if req.Body != nil {
+		if raw, err := io.ReadAll(req.Body); err == nil {
+			body = string(raw)
+			req.Body = io.NopCloser(strings.NewReader(body))
+		}
+	}
+
 	t.mu.Lock()
-	t.requests = append(t.requests, req.Clone(req.Context()))
+	clone := req.Clone(req.Context())
+	clone.Body = io.NopCloser(strings.NewReader(body))
+	t.requests = append(t.requests, clone)
+	t.bodies = append(t.bodies, body)
 	t.mu.Unlock()
 
 	if t.Err != nil {
@@ -105,6 +125,32 @@ func (t *Transport) LastRequest() *http.Request {
 		return nil
 	}
 	return t.requests[len(t.requests)-1]
+}
+
+// Count returns how many requests were made. It is the NFR-008 call-count assertion's
+// instrument; assert on it directly rather than on len(Requests()) so the intent survives.
+func (t *Transport) Count() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.requests)
+}
+
+// Bodies returns the request body of every recorded request, in order, with an empty
+// string for a request that carried none.
+func (t *Transport) Bodies() []string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return append([]string(nil), t.bodies...)
+}
+
+// LastBody returns the most recent recorded request body, or "".
+func (t *Transport) LastBody() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if len(t.bodies) == 0 {
+		return ""
+	}
+	return t.bodies[len(t.bodies)-1]
 }
 
 // Methods returns the HTTP method of every recorded request, in order.

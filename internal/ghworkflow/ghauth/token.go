@@ -11,7 +11,6 @@ package ghauth
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -19,7 +18,22 @@ import (
 
 // ErrUnauthenticated marks every failure to obtain a token, so callers can classify the
 // condition as a precondition failure without inspecting the message.
-var ErrUnauthenticated = errors.New("gh is not authenticated")
+var ErrUnauthenticated error = &unauthenticatedError{}
+
+// unauthenticatedError carries the operational marker package cli classifies as exit 3.
+//
+// The marker is a structural interface — `interface{ Operational() bool }` — rather than a
+// shared type, because this package cannot import cli (cli imports the packages that build
+// on this one) and cli cannot import a marker package without the same cycle. Package
+// ghapi carries the identical four lines in its operational.go for the same reason; the two
+// are ends of one contract, so a change to either needs the other checked in the same edit.
+type unauthenticatedError struct{}
+
+func (e *unauthenticatedError) Error() string { return "gh is not authenticated" }
+
+// Operational reports that no token means the tool could not run at all, which is an
+// operational failure rather than anything the operator mistyped.
+func (e *unauthenticatedError) Operational() bool { return true }
 
 // TokenSource yields a GitHub API token. It is an interface so every test can supply a
 // token without depending on the operator's `gh` state or reaching the network.

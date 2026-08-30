@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -49,12 +50,8 @@ const (
 	requestTimeout = 30 * time.Second
 )
 
-var (
-	// ErrUnreachable marks a transport-level failure: DNS, dial, TLS, timeout.
-	ErrUnreachable = errors.New("github api is unreachable")
-	// ErrUnauthorized marks a credential rejection (401/403).
-	ErrUnauthorized = errors.New("github rejected the credentials")
-)
+// The operational-failure sentinels this package returns live in operational.go, where
+// their exit-3 contract with package cli is documented.
 
 // IssueType is one organization Issue Type. A type that exists but is disabled cannot be
 // applied to an issue, so IsEnabled is part of the audited state, not decoration.
@@ -125,44 +122,59 @@ func NewClient(baseURL, token string, transport http.RoundTripper) (*Client, err
 
 // ListIssueTypes returns every Issue Type defined for org.
 func (c *Client) ListIssueTypes(ctx context.Context, org string) ([]IssueType, error) {
-	return getList[IssueType](ctx, c, "/orgs/"+url.PathEscape(org)+"/issue-types")
+	path, err := orgPath(org, "issue-types")
+	if err != nil {
+		return nil, err
+	}
+	return getList[IssueType](ctx, c, path)
 }
 
 // ListIssueFields returns every Issue Field defined for org.
 func (c *Client) ListIssueFields(ctx context.Context, org string) ([]IssueField, error) {
-	return getList[IssueField](ctx, c, "/orgs/"+url.PathEscape(org)+"/issue-fields")
+	path, err := orgPath(org, "issue-fields")
+	if err != nil {
+		return nil, err
+	}
+	return getList[IssueField](ctx, c, path)
+}
+
+// orgPath builds an organization-scoped request path, validating the login first.
+//
+// Validation happens here rather than at each caller because this is the last point every
+// organization read passes through: `audit --org`, the rendered policy organization, and
+// the mutation path's resolved repository owner all converge on it, which is what makes
+// IR-001's "one boundary" claim mechanical instead of a convention (closes DEV-021).
+// PathEscape is retained behind the validator as defense in depth, not as the boundary.
+func orgPath(org string, resource string) (string, error) {
+	if err := ValidateLogin(org); err != nil {
+		return "", err
+	}
+	return "/orgs/" + url.PathEscape(org) + "/" + resource, nil
 }
 
 // getList reads every page of a JSON array endpoint. Pagination is followed rather than
 // assumed away: a truncated first page would present real organization elements as
 // "missing" drift, which is the audit failing while looking like it succeeded.
 func getList[T any](ctx context.Context, c *Client, path string) ([]T, error) {
-	next := fmt.Sprintf("%s%s?per_page=%d", c.baseURL, path, pageSize)
-	var all []T
-
-	for page := 1; next != ""; page++ {
-		if page > maxPages {
-			return nil, fmt.Errorf("%s: pagination exceeded %d pages", path, maxPages)
-		}
-		body, following, err := c.get(ctx, next)
-		if err != nil {
-			return nil, err
-		}
-		var chunk []T
-		if err := json.Unmarshal(body, &chunk); err != nil {
-			return nil, fmt.Errorf("decoding the response for %s: %w", path, err)
-		}
-		all = append(all, chunk...)
-		next = following
-	}
-	return all, nil
+	return getPaged[T](ctx, c, path, url.Values{})
 }
 
-// get performs the one and only request shape this package can build.
-func (c *Client) get(ctx context.Context, endpoint string) (body []byte, nextURL string, err error) {
+// pageMeta is what one response says about the collection it is a page of: where the next
+// page is, and how large the server claims the whole collection to be.
+type pageMeta struct {
+	next string
+	// total is the collection size advertised by `X-Total-Count`, and hasTotal says
+	// whether the header was present at all. Zero is a legitimate advertised total, so
+	// the two cannot be collapsed into one field.
+	total    int
+	hasTotal bool
+}
+
+// get performs the one and only GET request shape this package can build.
+func (c *Client) get(ctx context.Context, endpoint string) (body []byte, meta pageMeta, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return nil, "", fmt.Errorf("building the request for %s: %w", endpoint, err)
+		return nil, pageMeta{}, fmt.Errorf("building the request for %s: %w", endpoint, err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Accept", acceptJSON)
@@ -171,22 +183,32 @@ func (c *Client) get(ctx context.Context, endpoint string) (body []byte, nextURL
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: GET %s: %w", ErrUnreachable, endpoint, err)
+		return nil, pageMeta{}, fmt.Errorf("%w: GET %s: %w", ErrUnreachable, endpoint, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err = io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: reading the response for GET %s: %w", ErrUnreachable, endpoint, err)
+		return nil, pageMeta{}, fmt.Errorf("%w: reading the response for GET %s: %w", ErrUnreachable, endpoint, err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, "", &APIError{Status: resp.StatusCode, URL: endpoint, Message: apiMessage(body)}
+		return nil, pageMeta{}, &APIError{Status: resp.StatusCode, URL: endpoint, Message: apiMessage(body)}
 	}
 	next, err := c.nextPageURL(resp.Header.Get("Link"))
 	if err != nil {
-		return nil, "", err
+		return nil, pageMeta{}, err
 	}
-	return body, next, nil
+	meta = pageMeta{next: next}
+	if raw := resp.Header.Get("X-Total-Count"); raw != "" {
+		if total, convErr := strconv.Atoi(strings.TrimSpace(raw)); convErr == nil {
+			meta.total, meta.hasTotal = total, true
+		}
+		// A malformed X-Total-Count is ignored rather than failed on: the header is an
+		// optional hint, and refusing the read because a proxy wrote nonsense into it
+		// would turn a working page into an operational failure. The truncation guard
+		// still holds wherever the endpoint carries a `total_count` member in its body.
+	}
+	return body, meta, nil
 }
 
 // nextPageURL returns the rel="next" URL to follow, refusing one that leaves the API
@@ -219,8 +241,8 @@ func (c *Client) nextPageURL(header string) (string, error) {
 	}
 	resolved := base.ResolveReference(next)
 	if !strings.EqualFold(resolved.Scheme, base.Scheme) || originHost(resolved) != originHost(base) {
-		return "", fmt.Errorf("refusing the pagination link %q: it leaves the API origin %s://%s, "+
-			"where the request's credentials belong", target, base.Scheme, base.Host)
+		return "", fmt.Errorf("%w: refusing the pagination link %q: it leaves the API origin %s://%s, "+
+			"where the request's credentials belong", ErrPaginationRefused, target, base.Scheme, base.Host)
 	}
 	return resolved.String(), nil
 }

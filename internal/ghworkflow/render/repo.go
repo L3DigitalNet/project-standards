@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 )
 
 // Repository is the owner and name of a GitHub repository.
@@ -17,11 +19,23 @@ type Repository struct {
 // String renders the repository as `owner/name`, the form every message and report uses.
 func (r Repository) String() string { return r.Owner + "/" + r.Name }
 
-// ParseRepository reads an `owner/name` value.
+// ParseRepository reads an `owner/name` value and validates both halves as GitHub
+// identities.
+//
+// This is one of the four entry points spec IR-001 requires to share a single identity
+// boundary (closing DEV-021): an explicit `--repo owner/name` reaching here, an
+// origin-derived owner reaching it through OriginRepository, the rendered policy
+// organization, and `audit --org`. The grammar itself lives in ghapi.ValidateRepository,
+// which the client also enforces when it builds a request path — validating here as well
+// is not redundant, because it is what lets the operator be refused by the flag they typed
+// instead of by a URL they never saw.
 func ParseRepository(value string) (Repository, error) {
 	owner, name, ok := strings.Cut(strings.TrimSpace(value), "/")
 	if !ok || owner == "" || name == "" || strings.Contains(name, "/") {
 		return Repository{}, fmt.Errorf("repository %q must be in owner/name form", value)
+	}
+	if err := ghapi.ValidateRepository(owner, name); err != nil {
+		return Repository{}, fmt.Errorf("repository %q: %w", value, err)
 	}
 	return Repository{Owner: owner, Name: name}, nil
 }
@@ -139,18 +153,36 @@ func originURL(config string) (string, error) {
 
 // repositoryFromURL accepts the remote URL forms Git writes: scp-like SSH, ssh://, and
 // https://.
+//
+// The host is validated as well as the owner and name, because this is the one path where
+// the identity is not typed by the operator: whatever `origin` happens to say becomes the
+// repository every subsequent request addresses. A malformed host is refused here rather
+// than being silently dropped on the way to building an `owner/name` pair.
 func repositoryFromURL(remote string) (Repository, error) {
 	trimmed := strings.TrimSuffix(strings.TrimSpace(remote), ".git")
-	path := trimmed
+	path, host := trimmed, ""
 	switch {
 	case strings.Contains(trimmed, "://"):
 		_, rest, _ := strings.Cut(trimmed, "://")
-		if _, after, ok := strings.Cut(rest, "/"); ok {
-			path = after
+		if before, after, ok := strings.Cut(rest, "/"); ok {
+			host, path = before, after
 		}
 	case strings.Contains(trimmed, ":"):
-		_, after, _ := strings.Cut(trimmed, ":")
-		path = after
+		before, after, _ := strings.Cut(trimmed, ":")
+		host, path = before, after
+	}
+	// An scp-like remote carries `user@host`, and an ssh:// URL may carry a port; both are
+	// ordinary and neither is part of the hostname the validator judges.
+	if _, after, ok := strings.Cut(host, "@"); ok {
+		host = after
+	}
+	if before, _, ok := strings.Cut(host, ":"); ok {
+		host = before
+	}
+	if host != "" {
+		if err := ghapi.ValidateHost(host); err != nil {
+			return Repository{}, fmt.Errorf("origin remote %q does not name a GitHub repository: %w", remote, err)
+		}
 	}
 	repo, err := ParseRepository(strings.Trim(path, "/"))
 	if err != nil {

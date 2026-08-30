@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 )
 
 // IssueFieldIdentity pairs an organization Issue Field's API id with its name. It is the
@@ -75,20 +74,32 @@ func (e *RequestError) Unwrap() error {
 // ListIssueFieldIdentities returns every organization Issue Field with its API id. This
 // is a GET: the organization surface stays read-only.
 func (c *Client) ListIssueFieldIdentities(ctx context.Context, org string) ([]IssueFieldIdentity, error) {
-	return getList[IssueFieldIdentity](ctx, c, "/orgs/"+url.PathEscape(org)+"/issue-fields")
+	path, err := orgPath(org, "issue-fields")
+	if err != nil {
+		return nil, err
+	}
+	return getList[IssueFieldIdentity](ctx, c, path)
 }
 
 // ListBlockingDependencies returns the issues this issue is blocked by, which is one of
 // the Ready preconditions `check` verifies (spec FR-023).
 func (c *Client) ListBlockingDependencies(ctx context.Context, owner, repo string, number int) ([]Issue, error) {
+	base, err := repoPath(owner, repo)
+	if err != nil {
+		return nil, err
+	}
 	return getList[Issue](ctx, c,
-		fmt.Sprintf("%s/issues/%d/dependencies/blocked_by", repoPath(owner, repo), number))
+		fmt.Sprintf("%s/issues/%d/dependencies/blocked_by", base, number))
 }
 
 // CreateIssue creates a typed issue with its body and initial field values in one call.
 func (c *Client) CreateIssue(ctx context.Context, owner, repo string, req CreateIssueRequest) (*Issue, error) {
+	base, err := repoPath(owner, repo)
+	if err != nil {
+		return nil, err
+	}
 	var created Issue
-	if err := c.send(ctx, http.MethodPost, repoPath(owner, repo)+"/issues", req, &created); err != nil {
+	if err := c.send(ctx, http.MethodPost, base+"/issues", req, &created); err != nil {
 		return nil, err
 	}
 	return &created, nil
@@ -109,11 +120,15 @@ func (c *Client) AddIssueFieldValues(ctx context.Context, owner, repo string, nu
 	if len(values) == 0 {
 		return fmt.Errorf("no field values to write for %s/%s#%d", owner, repo, number)
 	}
+	base, err := repoPath(owner, repo)
+	if err != nil {
+		return err
+	}
 	payload := struct {
 		Values []IssueFieldAssignment `json:"issue_field_values"`
 	}{Values: values}
 	return c.send(ctx, http.MethodPost,
-		fmt.Sprintf("%s/issues/%d/issue-field-values", repoPath(owner, repo), number), payload, nil)
+		fmt.Sprintf("%s/issues/%d/issue-field-values", base, number), payload, nil)
 }
 
 // SetIssueState applies the native open/closed state and its reason. GitHub ignores
@@ -122,6 +137,10 @@ func (c *Client) AddIssueFieldValues(ctx context.Context, owner, repo string, nu
 func (c *Client) SetIssueState(ctx context.Context, owner, repo string, number int,
 	state, reason string,
 ) (*Issue, error) {
+	base, err := repoPath(owner, repo)
+	if err != nil {
+		return nil, err
+	}
 	payload := struct {
 		State  string `json:"state"`
 		Reason string `json:"state_reason,omitempty"`
@@ -129,7 +148,7 @@ func (c *Client) SetIssueState(ctx context.Context, owner, repo string, number i
 
 	var updated Issue
 	if err := c.send(ctx, http.MethodPatch,
-		fmt.Sprintf("%s/issues/%d", repoPath(owner, repo), number), payload, &updated); err != nil {
+		fmt.Sprintf("%s/issues/%d", base, number), payload, &updated); err != nil {
 		return nil, err
 	}
 	return &updated, nil
@@ -157,13 +176,17 @@ func (c *Client) SetIssueType(ctx context.Context, owner, repo string, number in
 	if issueType == "" {
 		return nil, fmt.Errorf("no Issue Type to set for %s/%s#%d", owner, repo, number)
 	}
+	base, err := repoPath(owner, repo)
+	if err != nil {
+		return nil, err
+	}
 	payload := struct {
 		Type string `json:"type"`
 	}{Type: issueType}
 
 	var updated Issue
 	if err := c.send(ctx, http.MethodPatch,
-		fmt.Sprintf("%s/issues/%d", repoPath(owner, repo), number), payload, &updated); err != nil {
+		fmt.Sprintf("%s/issues/%d", base, number), payload, &updated); err != nil {
 		return nil, err
 	}
 	return &updated, nil
