@@ -117,7 +117,8 @@ func runNew(ctx context.Context, env *cli.Env, args []string) error {
 		return fmt.Errorf("created %s#%d (%s) but could not read it back for the receipt: %w",
 			repo, created.Number, created.HTMLURL, err)
 	}
-	return emit(env, mode, func() string { return render.Receipt(item) }, render.NewReceiptReport(item))
+	return emit(env, mode, func() string { return render.CreationReceipt(item) }, render.NewCreationReceipt("new",
+		cli.Target{Kind: cli.TargetIssue, Number: item.Number, Repository: repo.String(), URL: item.URL}, item))
 }
 
 func issueBody(path string) (string, error) {

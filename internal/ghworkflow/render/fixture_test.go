@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 )
 
@@ -121,23 +122,25 @@ func fixtureSnapshot(t *testing.T) *render.Snapshot {
 			Kind: render.KindPullRequest, Number: 21,
 			Title: "Add the render engine",
 			URL:   "https://github.com/L3DigitalNet/example-repo/pull/21",
-			State: "open", CI: "passing", GoverningIssue: 12,
+			State: "open", CI: "passing", Relationship: "Final", GoverningIssue: 12,
 		},
 		{
 			Kind: render.KindPullRequest, Number: 22,
 			Title: "Tidy the fixture corpus",
 			URL:   "https://github.com/L3DigitalNet/example-repo/pull/22",
-			State: "open", Draft: true, CI: "failing",
+			State: "open", Draft: true, CI: "failing", Relationship: "Supporting", GoverningIssue: 14,
 		},
 		{
 			Kind: render.KindPullRequest, Number: 23,
 			Title: emojiWidthTitle,
 			URL:   "https://github.com/L3DigitalNet/example-repo/pull/23",
-			State: "open", CI: "passing", GoverningIssue: 14,
+			State: "open", CI: "passing", Relationship: "Standalone",
 		},
 	}
 
-	return render.NewSnapshot(fixtureTarget, fixtureReadAt(t), issues, pulls)
+	snapshot := render.NewSnapshot(fixtureTarget, fixtureReadAt(t), issues, pulls)
+	snapshot.AddFindings(fixturePullRequestFindings(t)...)
+	return snapshot
 }
 
 func golden(t *testing.T, name string) string {
@@ -148,4 +151,93 @@ func golden(t *testing.T, name string) string {
 		t.Fatalf("reading golden %s: %v", name, err)
 	}
 	return string(data)
+}
+
+// fixtureSchema is the Issue Type and Workflow vocabulary the rendering surfaces resolve
+// a live Issue Type against from 1.7. Only the two sections these surfaces consult are
+// reproduced: the full delivered schema is `audit`'s oracle, not this package's.
+const fixtureSchema = `issue_types:
+  - Bug
+  - Feature
+  - Task
+  - Initiative
+  - Research
+
+issue_fields:
+  Workflow:
+    type: single_select
+    values:
+      - Inbox
+      - Needs definition
+      - Ready
+      - In progress
+      - Blocked
+      - In review
+      - Done
+      - Dropped
+`
+
+// The three fixture pull-request bodies, as Go strings.
+//
+// command_test.go carries the same three inside its JSON wire payloads, escaped. The two
+// copies are pinned against each other by the summary golden: both tests render it, so a
+// body that drifts on one side produces a different finding set and fails one of them.
+const (
+	pull21Body = "## Governing work\n\nFinal: #12\n\nCloses #12\n"
+	pull22Body = "## Governing work\n\nSupporting: #14\n"
+	pull23Body = "## Governing work\n\nStandalone\n\n## Change risk\n\nR2 — Moderate\n"
+)
+
+// fixturePullRequestFindings reproduces, from the model side, the per-PR engine findings
+// the command derives from a live topology.
+//
+// This is the model half of the same agreement fixtureSnapshot and command_test.go's wire
+// payloads already have: one golden, reached twice. The topologies below therefore state
+// the evidence the harness serves — squash-only merge settings, branch protection that
+// resolves but enforces nothing, and mergeability GitHub has not computed — because a
+// model fixture that assumed friendlier evidence would render a golden the command can
+// never produce.
+func fixturePullRequestFindings(t *testing.T) []relation.Finding {
+	t.Helper()
+
+	targetDate := func(value string) *time.Time {
+		parsed, err := time.Parse(render.DateLayout, value)
+		if err != nil {
+			t.Fatalf("time.Parse(%q) error = %v", value, err)
+		}
+		return &parsed
+	}
+	issue12 := &relation.Issue{
+		Number: 12, State: "open", IssueType: "Bug",
+		Workflow: "Blocked", TargetDate: targetDate("2026-08-01"),
+	}
+	issue14 := &relation.Issue{Number: 14, State: "open", IssueType: "Feature", Workflow: "Needs definition"}
+	evidence := relation.EnforcementEvidence{Known: true, Source: "none"}
+	settings := relation.RepositoryMergeSettings{AllowSquash: true, Known: true}
+
+	topologies := []relation.Topology{
+		{
+			PullRequest: relation.PullRequest{Number: 21, State: "open", Body: pull21Body,
+				BaseRef: "main", HeadSHA: "aaa111", MergeStateStatus: "CLEAN"},
+			GoverningIssue: issue12, MergeSettings: settings, Enforcement: evidence,
+			Now: fixtureReadAt(t),
+		},
+		{
+			PullRequest: relation.PullRequest{Number: 22, State: "open", Draft: true, Body: pull22Body,
+				BaseRef: "main", HeadSHA: "bbb222", MergeStateStatus: "CLEAN"},
+			GoverningIssue: issue14, Now: fixtureReadAt(t),
+		},
+		{
+			PullRequest: relation.PullRequest{Number: 23, State: "open", Body: pull23Body,
+				BaseRef: "main", HeadSHA: "ccc333", MergeStateStatus: "CLEAN"},
+			MergeSettings: settings, Enforcement: evidence, Now: fixtureReadAt(t),
+		},
+	}
+
+	var findings []relation.Finding
+	for _, topology := range topologies {
+		result := relation.Evaluate(topology, "")
+		findings = append(findings, render.FilterByObservedState(topology.PullRequest, result.Findings)...)
+	}
+	return findings
 }

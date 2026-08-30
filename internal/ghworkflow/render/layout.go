@@ -3,6 +3,8 @@ package render
 import (
 	"fmt"
 	"strings"
+
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
 )
 
 // Section headings, fixed and in this order. summary-format.md (spec FR-017) declares
@@ -75,17 +77,66 @@ func document(s *Snapshot, header []string) string {
 	return b.String()
 }
 
+// attentionBody renders the needs-attention section: one line per work item per
+// category, in relation.CategoryOrder (FR-030).
+//
+// The compression is the contract, not a formatting preference. An operator scanning the
+// section acts once per work item per required action, so three findings on one PR that
+// all resolve the same way are one line; the JSON envelope still carries every finding
+// separately. The messages are joined in the order the engine produced them, which is
+// evaluation order.
 func attentionBody(s *Snapshot) string {
-	findings := s.Attention()
-	if len(findings) == 0 {
+	if len(s.Findings) == 0 {
 		return noAttention + "\n"
 	}
-	var b strings.Builder
-	for _, finding := range findings {
-		fmt.Fprintf(&b, "- **%s** — #%d %s: %s\n",
-			finding.Category, finding.Number, EscapeText(finding.Title), EscapeText(finding.Detail))
+	titles := map[itemKey]string{}
+	for _, item := range append(append([]WorkItem{}, s.Issues...), s.PullRequests...) {
+		titles[keyOf(item)] = item.Title
 	}
+
+	var b strings.Builder
+	var current itemKey
+	var messages []string
+	flush := func() {
+		if len(messages) == 0 {
+			return
+		}
+		fmt.Fprintf(&b, "- **%s** — %s #%d %s: %s\n", current.category, current.kind,
+			current.number, EscapeText(titles[itemKey{kind: current.kind, number: current.number}]), EscapeText(strings.Join(messages, "; ")))
+		messages = nil
+	}
+	for _, finding := range s.Findings {
+		if key := findingKey(finding); key != current {
+			flush()
+			current = key
+		}
+		messages = append(messages, finding.Message)
+	}
+	flush()
 	return b.String()
+}
+
+// itemKey is one compressed line's identity: the work item and the action category. The
+// title is looked up separately because a finding carries no title — the engine reports
+// on numbers, and only the snapshot knows what they are called.
+type itemKey struct {
+	category relation.Category
+	kind     relation.Kind
+	number   int
+}
+
+func findingKey(f relation.Finding) itemKey {
+	return itemKey{category: f.Category, kind: f.Kind, number: f.Number}
+}
+
+// keyOf is the title-lookup key for a work item, with the category left zero: a title
+// belongs to the item, not to the category it is reported under.
+func keyOf(item WorkItem) itemKey {
+	kind := relation.KindIssue
+	if item.Kind == KindPullRequest {
+		kind = relation.KindPullRequest
+	}
+	return itemKey{kind: kind, number: item.Number}
 }
 
 func issuesBody(s *Snapshot) string {

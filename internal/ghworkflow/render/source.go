@@ -3,11 +3,11 @@ package render
 import (
 	"context"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
 )
 
 // Fetch reads one repository's open work.
@@ -101,39 +101,44 @@ func pullItem(ctx context.Context, client *ghapi.Client, repo Repository, pull g
 	if err != nil {
 		return WorkItem{}, err
 	}
-	return WorkItem{
-		Kind:           KindPullRequest,
-		Number:         pull.Number,
-		Title:          SanitizeText(pull.Title),
-		URL:            pull.HTMLURL,
-		State:          pull.State,
-		Draft:          pull.Draft,
-		CI:             ci,
-		GoverningIssue: GoverningIssue(pull.Body),
-	}, nil
+	// relation.ParseBody is the only authority on the governing relationship (D15).
+	// Payload 1.6 read GitHub's own `Closes #N` syntax here instead; that heuristic is
+	// gone, so a PR whose body carries a closing keyword but no `## Governing work`
+	// declaration now reads as declaring nothing — which is what it does.
+	decl, _ := relation.ParseBody(pull.Body)
+	item := WorkItem{
+		Kind:   KindPullRequest,
+		Number: pull.Number,
+		Title:  SanitizeText(pull.Title),
+		URL:    pull.HTMLURL,
+		State:  pull.State,
+		Draft:  pull.Draft,
+		Merged: pull.IsMerged(),
+		CI:     ci,
+	}
+	item.Relationship = relationshipName(decl.Relationship)
+	if decl.Relationship.Governed() {
+		item.GoverningIssue = decl.IssueNumber
+	}
+	return item, nil
 }
 
-// closingKeyword matches GitHub's own issue-closing syntax, which is the link the
-// platform acts on. Reading the same syntax means the tool reports the link GitHub will
-// honor rather than a second, private notion of "governing issue".
-var closingKeyword = regexp.MustCompile(`(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b[:\s]+#(\d+)`)
-
-// GoverningIssue returns the issue a pull request body declares it closes, or zero.
-//
-// The pattern bounds nothing, and the body is arbitrary authored text: a reference wider
-// than an int is an unusable number, not a large one, and it lands in a committed summary.
-// An unparsable reference therefore reads as "no governing issue" rather than as whatever
-// value the digits happened to produce.
-func GoverningIssue(body string) int {
-	match := closingKeyword.FindStringSubmatch(body)
-	if match == nil {
-		return 0
+// relationshipName renders a parsed relationship in the spelling the declaration itself
+// uses, which is the spelling every reference document and operator message uses. The
+// engine's own constants are lowercase because they are identifiers, not display text;
+// printing them raw would put `final: #12` in a receipt whose remediation says to write
+// `Final: #N`.
+func relationshipName(r relation.Relationship) string {
+	switch r {
+	case relation.RelationshipFinal:
+		return "Final"
+	case relation.RelationshipSupporting:
+		return "Supporting"
+	case relation.RelationshipStandalone:
+		return "Standalone"
+	default:
+		return ""
 	}
-	number, err := strconv.Atoi(match[1])
-	if err != nil {
-		return 0
-	}
-	return number
 }
 
 var acceptanceHeading = regexp.MustCompile(`(?im)^#{1,6}[ \t]+acceptance criteria[ \t]*$`)

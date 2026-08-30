@@ -1,8 +1,9 @@
-Created issue #14 — Add ledger TOC anchors
+issue #14 — Add ledger TOC anchors
 https://github.com/L3DigitalNet/example-repo/issues/14
-
-Type: Feature | Workflow: Needs definition | Priority: P2 — Planned
+State: open | Type: Feature | Workflow: Needs definition | Priority: P2 — Planned
 Size / Severity: M | Change risk: —
 Execution mode: Unattended agent | Target date: —
-
 Gaps: missing Change risk, Target date, and acceptance criteria
+
+receipt L3DigitalNet/example-repo#14: domain-finding
+  Needs definition — issue #14: the issue is Needs definition: missing Change risk, Target date, and acceptance criteria

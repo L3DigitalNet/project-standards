@@ -1,6 +1,9 @@
-Created PR #21 — Add the render engine
+PR #21 — Add the render engine
 https://github.com/L3DigitalNet/example-repo/pull/21
+State: ready | Relationship: Final: #12 | CI: passing
 
-Governing issue: #12 | Draft: no | CI: passing
-
-Gaps: none
+receipt L3DigitalNet/example-repo#21: domain-finding
+  Blocked — pull_request #21: issue #12 is Blocked, and a Final claims every remaining acceptance criterion
+  Needs definition — pull_request #21: the body has no "## Summary" section; the body has no "## Acceptance coverage" section; the body has no "## Verification" section
+  PR admission blocked — pull_request #21: GitHub has not finished computing mergeability
+  Target date passed — issue #12: the target date 2026-08-01 has passed

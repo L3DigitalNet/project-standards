@@ -6,10 +6,13 @@ import (
 	"flag"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/orgschema"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/policy"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/topology"
 )
 
 // The two rendering subcommands register themselves, so wiring them into the binary is
@@ -22,7 +25,7 @@ func init() {
 	})
 	cli.Register(&cli.Command{
 		Name:    "receipt",
-		Summary: "print the creation receipt for one issue or pull request (read-only)",
+		Summary: "print the observed state and findings of one issue or pull request (read-only)",
 		Run:     runReceipt,
 	})
 }
@@ -32,6 +35,7 @@ func init() {
 type target struct {
 	repo   *string
 	policy *string
+	schema *string
 }
 
 func addTargetFlags(fs *flag.FlagSet) *target {
@@ -39,7 +43,26 @@ func addTargetFlags(fs *flag.FlagSet) *target {
 		repo: fs.String("repo", "", "repository as owner/name, or a bare name to complete "+
 			"from policy.toml (default: this checkout's origin remote)"),
 		policy: fs.String("policy", "", "path to policy.toml (default: "+cli.DefaultPolicyPath+" in this checkout)"),
+		// Both surfaces became schema-dependent at 1.7: an Issue's live type is only
+		// "recognized ordinary work" relative to org-schema.yaml, and the engine reads an
+		// unrecognized type as none at all. Resolution matches `check` exactly, so the
+		// three surfaces cannot be pointed at different vocabularies by accident.
+		schema: fs.String("schema", "", "path to org-schema.yaml (default: "+cli.DefaultSchemaPath+" in this checkout)"),
 	}
+}
+
+// loadSchema reads the baseline vocabulary the Issue-type normalization is resolved
+// against.
+func (t *target) loadSchema(env *cli.Env) (*orgschema.Schema, error) {
+	path := *t.schema
+	if path == "" {
+		resolved, err := cli.ResolveRepoFile(env.WorkDir, cli.DefaultSchemaPath)
+		if err != nil {
+			return nil, err
+		}
+		path = resolved
+	}
+	return orgschema.Load(path)
 }
 
 // resolve determines the repository to read.
@@ -106,20 +129,6 @@ func policyOrganization(env *cli.Env, explicit string) (string, error) {
 	return consumerPolicy.Organization, nil
 }
 
-// snapshot performs the whole read. Every fallible step finishes before a caller writes
-// anything, so a failed read produces no partial report at all.
-func snapshot(ctx context.Context, env *cli.Env, t *target) (*Snapshot, error) {
-	repo, err := t.resolve(env)
-	if err != nil {
-		return nil, err
-	}
-	client, err := env.Client(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return Fetch(ctx, client, repo)
-}
-
 func parse(fs *flag.FlagSet, env *cli.Env, args []string, usage string) error {
 	fs.SetOutput(env.Stderr)
 	fs.Usage = func() {
@@ -138,6 +147,8 @@ func parse(fs *flag.FlagSet, env *cli.Env, args []string, usage string) error {
 	return nil
 }
 
+// runSummary aggregates: every open work item, each contributing the findings its own
+// observed state admits (FR-017).
 func runSummary(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("summary", flag.ContinueOnError)
 	tgt := addTargetFlags(fs)
@@ -152,13 +163,34 @@ func runSummary(ctx context.Context, env *cli.Env, args []string) error {
 		return cli.Usagef("%v", err)
 	}
 
-	read, err := snapshot(ctx, env, tgt)
+	repo, schema, client, err := tgt.open(ctx, env)
 	if err != nil {
 		return err
 	}
-	return emit(env, mode, Summary(read), NewSummaryReport(read))
+	read, err := Fetch(ctx, client, repo)
+	if err != nil {
+		return err
+	}
+	// Each open pull request costs its own bounded topology load. Deriving PR findings
+	// from the list read alone is not an option: mergeability, live enforcement, and the
+	// review decision are simply absent from it, and the Merge predicates would report
+	// every open PR as "evidence unknown" — a summary that cries wolf on every row.
+	for _, pull := range read.PullRequests {
+		gate, err := topology.Load(ctx, client, repo.Owner, repo.Name, schema, pull.Number, "")
+		if err != nil {
+			return err
+		}
+		read.AddFindings(FilterByObservedState(gate.Topology.PullRequest, gate.Result.Findings)...)
+	}
+
+	envelope := cli.NewEnvelope("summary", reportResult(read.Findings),
+		cli.Target{Kind: cli.TargetRepository, Repository: repo.String()})
+	envelope.Findings = read.Findings
+	return emit(env, mode, Summary(read), NewSummaryDocument(envelope, read))
 }
 
+// runReceipt describes one work item: the state it is in, and the findings that state
+// admits (FR-018).
 func runReceipt(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("receipt", flag.ContinueOnError)
 	tgt := addTargetFlags(fs)
@@ -166,8 +198,8 @@ func runReceipt(ctx context.Context, env *cli.Env, args []string) error {
 	pull := fs.Int("pr", 0, "pull request number to render a receipt for")
 	output := fs.String("output", string(cli.OutputHuman), "output format: human or json")
 	if err := parse(fs, env, args, "Usage: gh-workflow receipt --issue N | --pr N [flags]\n\n"+
-		"Prints the creation receipt for one issue or pull request: the fields actually\n"+
-		"set and a line naming what is still missing. Read-only.\n"); err != nil {
+		"Prints the observed state of one issue or pull request and the findings that\n"+
+		"state admits. Read-only; exits 0 whenever it renders.\n"); err != nil {
 		return err
 	}
 	mode, err := cli.ParseOutputMode(*output)
@@ -181,25 +213,93 @@ func runReceipt(ctx context.Context, env *cli.Env, args []string) error {
 		return cli.Usagef("issue and pull request numbers are positive")
 	}
 
-	repo, err := tgt.resolve(env)
+	repo, schema, client, err := tgt.open(ctx, env)
 	if err != nil {
 		return err
+	}
+	if *issue != 0 {
+		return issueReceipt(ctx, env, client, repo, mode, *issue)
+	}
+	return pullRequestReceipt(ctx, env, client, repo, schema, mode, *pull)
+}
+
+// issueReceipt projects one issue read on its own.
+func issueReceipt(ctx context.Context, env *cli.Env, client *ghapi.Client,
+	repo Repository, mode cli.OutputMode, number int,
+) error {
+	item, err := FetchIssue(ctx, client, repo, number)
+	if err != nil {
+		return err
+	}
+	findings := IssueFindings(item, time.Now().UTC())
+	envelope := cli.NewEnvelope("receipt", reportResult(findings),
+		cli.Target{Kind: cli.TargetIssue, Number: number, Repository: repo.String(), URL: item.URL})
+	envelope.Findings = findings
+	return emitReceipt(env, mode, item, envelope)
+}
+
+// pullRequestReceipt projects one pull request through the shared engine.
+//
+// The gate is inferred from observed state and the findings are then filtered to the
+// phases that state admits, so a receipt and a bare `check --pr` on the same PR reach the
+// same verdict from the same snapshot — that equivalence is what FR-022 buys.
+func pullRequestReceipt(ctx context.Context, env *cli.Env, client *ghapi.Client,
+	repo Repository, schema *orgschema.Schema, mode cli.OutputMode, number int,
+) error {
+	gate, err := topology.Load(ctx, client, repo.Owner, repo.Name, schema, number, "")
+	if err != nil {
+		return err
+	}
+	item, err := FetchPullRequest(ctx, client, repo, number)
+	if err != nil {
+		return err
+	}
+	// Not reordered: the envelope's `findings` stays in the engine's evaluation order, so
+	// a receipt and a `check --pr` on the same PR emit the same list in the same order and
+	// the cross-surface equivalence is byte-comparable. Display order is applied by the
+	// human renderer, which is where it belongs.
+	findings := FilterByObservedState(gate.Topology.PullRequest, gate.Result.Findings)
+	envelope := cli.NewEnvelope("receipt", reportResult(findings),
+		cli.Target{Kind: cli.TargetPullRequest, Number: number, Repository: repo.String(), URL: item.URL})
+	envelope.Findings = findings
+	return emitReceipt(env, mode, item, envelope)
+}
+
+// open resolves the three things both surfaces need before any read: which repository,
+// which schema vocabulary, and an authenticated client.
+func (t *target) open(ctx context.Context, env *cli.Env) (Repository, *orgschema.Schema, *ghapi.Client, error) {
+	repo, err := t.resolve(env)
+	if err != nil {
+		return Repository{}, nil, nil, err
+	}
+	schema, err := t.loadSchema(env)
+	if err != nil {
+		return Repository{}, nil, nil, err
 	}
 	client, err := env.Client(ctx)
 	if err != nil {
-		return err
+		return Repository{}, nil, nil, err
 	}
+	return repo, schema, client, nil
+}
 
-	var item WorkItem
-	if *issue != 0 {
-		item, err = FetchIssue(ctx, client, repo, *issue)
-	} else {
-		item, err = FetchPullRequest(ctx, client, repo, *pull)
+// emitReceipt writes the header and then the shared envelope rendering.
+//
+// In human mode the two are written as one buffer, so a failed write leaves no header
+// stranded without its findings. In JSON mode the header has no place: the envelope's
+// `item` projection carries the same state as structured data.
+func emitReceipt(env *cli.Env, mode cli.OutputMode, item WorkItem, envelope cli.Envelope) error {
+	if mode == cli.OutputJSON {
+		return emit(env, mode, "", newReceiptDocument(envelope, item))
 	}
-	if err != nil {
+	var b strings.Builder
+	b.WriteString(Receipt(item))
+	b.WriteString("\n")
+	if err := cli.WriteEnvelope(envelope, mode, &cli.Env{Stdout: &b}); err != nil {
 		return err
 	}
-	return emit(env, mode, Receipt(item), NewReceiptReport(item))
+	_, err := env.Stdout.Write([]byte(b.String()))
+	return err
 }
 
 // emit renders in the requested mode and writes once, after every fallible step has

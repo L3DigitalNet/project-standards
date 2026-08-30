@@ -90,13 +90,19 @@ const (
 		"html_url":"https://github.com/L3DigitalNet/example-repo/pull/21",
 		"state":"open","body":"Closes #12","pull_request":{"url":"https://api.github.test/repos/L3DigitalNet/example-repo/pulls/21"}}`
 
+	// The three PR bodies are the 1.7 declaration matrix the summary has to tell apart:
+	// an open Final, a draft Supporting, and an open Standalone. Every one of them is
+	// deliberately incomplete against FR-028's four canonical sections, because a summary
+	// whose fixtures all pass would never prove that findings reach the report at all.
 	pull21 = `{"number":21,"title":"Add the render engine",
 		"html_url":"https://github.com/L3DigitalNet/example-repo/pull/21",
-		"state":"open","draft":false,"body":"Closes #12","head":{"sha":"aaa111"}}`
+		"state":"open","draft":false,"body":"## Governing work\n\nFinal: #12\n\nCloses #12\n",
+		"base":{"ref":"main"},"head":{"sha":"aaa111"}}`
 
 	pull22 = `{"number":22,"title":"Tidy the fixture corpus",
 		"html_url":"https://github.com/L3DigitalNet/example-repo/pull/22",
-		"state":"open","draft":true,"body":"Housekeeping only.","head":{"sha":"bbb222"}}`
+		"state":"open","draft":true,"body":"## Governing work\n\nSupporting: #14\n",
+		"base":{"ref":"main"},"head":{"sha":"bbb222"}}`
 )
 
 // pull23 is the emoji-width row (#185). Its title is spliced from emojiWidthTitle rather
@@ -105,7 +111,8 @@ const (
 // in it is JSON-safe, so no escaping step stands between the constant and the payload.
 const pull23 = `{"number":23,"title":"` + emojiWidthTitle + `",
 		"html_url":"https://github.com/L3DigitalNet/example-repo/pull/23",
-		"state":"open","draft":false,"body":"Closes #14","head":{"sha":"ccc333"}}`
+		"state":"open","draft":false,"body":"## Governing work\n\nStandalone\n\n## Change risk\n\nR2 — Moderate\n",
+		"base":{"ref":"main"},"head":{"sha":"ccc333"}}`
 
 type harness struct {
 	env       *cli.Env
@@ -132,6 +139,7 @@ func newHarness(t *testing.T) *harness {
 		}
 	}
 	write(cli.DefaultPolicyPath, fixturePolicy)
+	write(cli.DefaultSchemaPath, fixtureSchema)
 	write(".git/config", fixtureGit)
 
 	workDir := filepath.Join(root, "docs", "nested")
@@ -158,6 +166,10 @@ func newHarness(t *testing.T) *harness {
 		repo + "/pulls/21":  {Status: http.StatusOK, Body: pull21},
 		repo + "/pulls/22":  {Status: http.StatusOK, Body: pull22},
 		repo + "/pulls/23":  {Status: http.StatusOK, Body: pull23},
+		// The repository's merge settings are one read for the whole run; branch
+		// enforcement is deliberately left unrouted, so the 404 exercises the
+		// "protection exists but names nothing" path rather than an unknown-evidence one.
+		repo: {Status: http.StatusOK, Body: `{"allow_squash_merge":true,"allow_rebase_merge":false,"allow_merge_commit":false}`},
 	}}
 	// Routes are keyed by "METHOD /path"; building them from the path alone above keeps
 	// the table readable, so they are re-keyed here.
@@ -165,6 +177,11 @@ func newHarness(t *testing.T) *harness {
 	for path, response := range transport.Routes {
 		routes[http.MethodGet+" "+path] = response
 	}
+	// The merge-state read is the one GraphQL call these surfaces make, and it is a
+	// query: POST is the transport GitHub requires for a read here, which is why the
+	// read-only assertion below tests the operation rather than the HTTP method.
+	routes[http.MethodPost+" /graphql"] = ghtest.Response{Status: http.StatusOK, Body: `{"data":{"repository":
+		{"pullRequest":{"id":"PR_node","mergeStateStatus":"CLEAN","reviewDecision":""}}}}`}
 	transport.Routes = routes
 
 	stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}
@@ -212,9 +229,16 @@ func (h *harness) files(t *testing.T) []string {
 
 func (h *harness) assertReadOnly(t *testing.T) {
 	t.Helper()
-	for _, method := range h.transport.Methods() {
-		if method != http.MethodGet {
-			t.Errorf("a rendering subcommand issued a %s request; these surfaces are reads", method)
+	// GraphQL queries are POSTs by protocol, so the invariant is "no mutation", proved
+	// from the request body rather than from the method: a `mutation` keyword reaching
+	// the transport is a write, and nothing else that is not a GET may.
+	for i, method := range h.transport.Methods() {
+		if method == http.MethodGet {
+			continue
+		}
+		body := h.transport.Bodies()[i]
+		if method != http.MethodPost || strings.Contains(body, "mutation") {
+			t.Errorf("a rendering subcommand issued a %s request (%s); these surfaces are reads", method, body)
 		}
 	}
 }
@@ -266,6 +290,10 @@ func TestSummaryZeroArgumentRunMatchesGolden(t *testing.T) {
 	h.assertReadOnly(t)
 }
 
+// The JSON summary is the DR-004 envelope with an additive `items` projection: the
+// envelope members sit at the top level exactly as every other command emits them, and
+// `findings` retains every finding the compressed human view merged into one line per
+// work item per category.
 func TestSummaryJSONOutput(t *testing.T) {
 	t.Parallel()
 
@@ -275,47 +303,80 @@ func TestSummaryJSONOutput(t *testing.T) {
 	}
 
 	var decoded struct {
-		Target string `json:"target"`
+		SchemaVersion string  `json:"schema_version"`
+		Command       string  `json:"command"`
+		Result        string  `json:"result"`
+		Gate          *string `json:"gate"`
+		Target        struct {
+			Kind       string `json:"kind"`
+			Repository string `json:"repository"`
+		} `json:"target"`
+		Findings []struct {
+			Code     string `json:"code"`
+			Category string `json:"category"`
+			Kind     string `json:"kind"`
+			Number   int    `json:"number"`
+		} `json:"findings"`
+		Steps  []any  `json:"steps"`
 		ReadAt string `json:"read_at"`
 		Counts struct {
 			OpenIssues       int `json:"open_issues"`
 			OpenPullRequests int `json:"open_pull_requests"`
-			NeedsAttention   int `json:"needs_attention"`
+			Findings         int `json:"findings"`
 		} `json:"counts"`
-		NeedsAttention []struct {
-			Category string `json:"category"`
-			Number   int    `json:"number"`
-		} `json:"needs_attention"`
-		Issues []struct {
-			Number int               `json:"number"`
-			Type   string            `json:"type"`
-			Fields map[string]string `json:"fields"`
-		} `json:"issues"`
-		PullRequests []struct {
-			Number         int    `json:"number"`
-			GoverningIssue int    `json:"governing_issue"`
-			CI             string `json:"ci"`
-		} `json:"pull_requests"`
+		Items struct {
+			Issues []struct {
+				Number int               `json:"number"`
+				Type   string            `json:"type"`
+				Fields map[string]string `json:"fields"`
+			} `json:"issues"`
+			PullRequests []struct {
+				Number         int    `json:"number"`
+				Relationship   string `json:"relationship"`
+				GoverningIssue int    `json:"governing_issue"`
+				CI             string `json:"ci"`
+			} `json:"pull_requests"`
+		} `json:"items"`
 	}
 	if err := json.Unmarshal(h.stdout.Bytes(), &decoded); err != nil {
 		t.Fatalf("json.Unmarshal() error = %v, output:\n%s", err, h.stdout)
 	}
-	if decoded.Target != fixtureTarget {
-		t.Errorf("target = %q, want %q", decoded.Target, fixtureTarget)
+	if decoded.SchemaVersion != cli.EnvelopeSchemaVersion || decoded.Command != "summary" {
+		t.Errorf("schema_version/command = %q/%q", decoded.SchemaVersion, decoded.Command)
+	}
+	// summary is a report, not a gate: it evaluates no single phase, so `gate` is null.
+	if decoded.Gate != nil {
+		t.Errorf("gate = %q, want null", *decoded.Gate)
+	}
+	if decoded.Target.Kind != string(cli.TargetRepository) || decoded.Target.Repository != fixtureTarget {
+		t.Errorf("target = %+v", decoded.Target)
+	}
+	if decoded.Steps == nil {
+		t.Error("steps is null; the envelope's collections are always arrays")
 	}
 	if decoded.Counts.OpenIssues != 4 || decoded.Counts.OpenPullRequests != 3 {
 		t.Errorf("counts = %+v, want 4 issues and 3 pull requests", decoded.Counts)
 	}
-	if decoded.Counts.NeedsAttention != len(decoded.NeedsAttention) || len(decoded.NeedsAttention) != 5 {
-		t.Errorf("needs_attention = %d entries, count field %d, want 5",
-			len(decoded.NeedsAttention), decoded.Counts.NeedsAttention)
+	// The human view compresses; JSON does not. Every finding is present individually,
+	// which is why the count exceeds the number of lines the summary printed.
+	if len(decoded.Findings) != decoded.Counts.Findings || len(decoded.Findings) < 9 {
+		t.Errorf("findings = %d entries, count field %d, want every finding",
+			len(decoded.Findings), decoded.Counts.Findings)
 	}
-	if len(decoded.Issues) != 4 || decoded.Issues[0].Fields["Workflow"] != "Blocked" {
-		t.Errorf("issues = %+v", decoded.Issues)
+	if decoded.Result != string(cli.ResultDomainFinding) {
+		t.Errorf("result = %q, want %q with findings present", decoded.Result, cli.ResultDomainFinding)
 	}
-	if len(decoded.PullRequests) != 3 || decoded.PullRequests[0].GoverningIssue != 12 ||
-		decoded.PullRequests[0].CI != "passing" {
-		t.Errorf("pull_requests = %+v", decoded.PullRequests)
+	if len(decoded.Items.Issues) != 4 || decoded.Items.Issues[0].Fields["Workflow"] != "Blocked" {
+		t.Errorf("issues = %+v", decoded.Items.Issues)
+	}
+	if len(decoded.Items.PullRequests) != 3 ||
+		decoded.Items.PullRequests[0].Relationship != "Final" ||
+		decoded.Items.PullRequests[0].GoverningIssue != 12 ||
+		decoded.Items.PullRequests[0].CI != "passing" {
+		t.Errorf("pull_requests = %+v", decoded.Items.PullRequests)
+	}
+	if got := decoded.Items.PullRequests[2].GoverningIssue; got != 0 {
+		t.Errorf("the Standalone PR reports governing issue #%d; a declaration is the only authority", got)
 	}
 }
 

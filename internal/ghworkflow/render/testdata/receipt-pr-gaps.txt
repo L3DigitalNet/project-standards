@@ -1,6 +1,5 @@
-Created PR #22 — Tidy the fixture corpus
+PR #22 — Tidy the fixture corpus
 https://github.com/L3DigitalNet/example-repo/pull/22
+State: draft | Relationship: Supporting: #14 | CI: failing
 
-Governing issue: — | Draft: yes | CI: failing
-
-Gaps: missing a governing issue link
+receipt L3DigitalNet/example-repo#22: clear

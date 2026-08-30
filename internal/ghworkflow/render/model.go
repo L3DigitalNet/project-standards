@@ -25,6 +25,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
 )
 
 // Kind distinguishes the two work-item shapes. They share the model because they share
@@ -88,8 +90,18 @@ type WorkItem struct {
 	HasAcceptanceCriteria bool `json:"has_acceptance_criteria"`
 
 	// Pull-request-only state.
-	Draft          bool   `json:"draft,omitempty"`
-	CI             string `json:"ci,omitempty"`
+	Draft bool `json:"draft,omitempty"`
+	// Merged separates a merged pull request from an abandoned one; State closes both,
+	// so the receipt header cannot tell them apart without it (FR-018).
+	Merged bool   `json:"merged,omitempty"`
+	CI     string `json:"ci,omitempty"`
+	// Relationship is the declared governing-work relationship ("Final", "Supporting",
+	// "Standalone", or "" when the body declares none) and GoverningIssue the Issue it
+	// names. Both come from relation.ParseBody, which is the sole authority (D15): the
+	// 1.6 closing-keyword heuristic that inferred a governing issue from `Closes #N` is
+	// gone, because a closing keyword is evidence about a declaration, never a
+	// substitute for one.
+	Relationship   string `json:"relationship,omitempty"`
 	GoverningIssue int    `json:"governing_issue,omitempty"`
 	RiskNotes      string `json:"risk_notes,omitempty"`
 }
@@ -128,6 +140,34 @@ type Snapshot struct {
 	ReadAt       time.Time  `json:"read_at"`
 	Issues       []WorkItem `json:"issues"`
 	PullRequests []WorkItem `json:"pull_requests"`
+	// Findings is the observed-state finding set the summary presents, in
+	// OrderFindings order. NewSnapshot fills in the independent Issue findings, which
+	// are derivable from the snapshot alone; the command appends each pull request's
+	// engine findings, which are not — they need the per-PR topology.
+	Findings []relation.Finding `json:"-"`
+}
+
+// AddFindings merges more findings into the snapshot and restores the display order.
+//
+// It is additive rather than a setter because the two halves arrive from different
+// places: dropping the Issue half by assigning over it is exactly the regression FR-017's
+// "independent Issue findings remain visible" rules out.
+func (s *Snapshot) AddFindings(findings ...relation.Finding) {
+	// Deduplicated on identity, because one condition legitimately arrives twice: an
+	// Issue's passed Target date is raised by the snapshot's own Issue derivation and
+	// again by the engine for every PR that Issue governs. Reporting it once per PR would
+	// make a summary's attention count grow with the number of pull requests rather than
+	// with the number of problems.
+	seen := map[relation.Finding]bool{}
+	merged := make([]relation.Finding, 0, len(s.Findings)+len(findings))
+	for _, finding := range append(append([]relation.Finding(nil), s.Findings...), findings...) {
+		if seen[finding] {
+			continue
+		}
+		seen[finding] = true
+		merged = append(merged, finding)
+	}
+	s.Findings = OrderFindings(merged)
 }
 
 // NewSnapshot orders the items and resolves the cross-references between them.
@@ -149,6 +189,9 @@ func NewSnapshot(target string, readAt time.Time, issues, pulls []WorkItem) *Sna
 	sort.SliceStable(snapshot.PullRequests, func(i, j int) bool {
 		return snapshot.PullRequests[i].Number < snapshot.PullRequests[j].Number
 	})
+	for _, issue := range snapshot.Issues {
+		snapshot.AddFindings(IssueFindings(issue, snapshot.ReadAt)...)
+	}
 
 	// A pull request has no risk field of its own; the risk that matters is the one
 	// already assessed on the work it implements, so it is carried across from the

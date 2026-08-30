@@ -1,11 +1,13 @@
 package render_test
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 )
 
@@ -56,6 +58,7 @@ func TestSummaryCarriesTheReadTimestampAndNothingElseThatMoves(t *testing.T) {
 	first := fixtureSnapshot(t)
 	later := render.NewSnapshot(fixtureTarget, fixtureReadAt(t).Add(72*time.Hour),
 		first.Issues, first.PullRequests)
+	later.AddFindings(fixturePullRequestFindings(t)...)
 
 	if summary := render.Summary(first); !strings.Contains(summary, fixtureRead) {
 		t.Errorf("the summary lost its read timestamp:\n%s", summary)
@@ -66,53 +69,175 @@ func TestSummaryCarriesTheReadTimestampAndNothingElseThatMoves(t *testing.T) {
 	}
 }
 
-func TestReceiptsMatchGolden(t *testing.T) {
+// The receipt header states the observed state, which is the whole of what a finding
+// list cannot say: "no findings" means something different for a draft than for a merged
+// pull request, and closed-unmerged is not merged however GitHub spells the two (FR-018).
+func TestReceiptHeaderStatesTheObservedState(t *testing.T) {
 	t.Parallel()
 
-	snapshot := fixtureSnapshot(t)
-	cases := []struct {
-		name   string
-		item   render.WorkItem
-		golden string
-	}{
-		{"issue without gaps", snapshot.Issues[0], "receipt-issue.txt"},
-		{"issue with gaps", snapshot.Issues[1], "receipt-issue-gaps.txt"},
-		{"pull request without gaps", snapshot.PullRequests[0], "receipt-pr.txt"},
-		{"pull request with gaps", snapshot.PullRequests[1], "receipt-pr-gaps.txt"},
+	base := render.WorkItem{
+		Kind: render.KindPullRequest, Number: 31, Title: "Add the render engine",
+		URL: "https://github.com/L3DigitalNet/example-repo/pull/31", CI: "passing",
+		Relationship: "Final", GoverningIssue: 12,
 	}
-	for _, tc := range cases {
+	for _, tc := range []struct {
+		name  string
+		shape func(render.WorkItem) render.WorkItem
+		want  string
+	}{
+		{"draft Final", func(i render.WorkItem) render.WorkItem {
+			i.State, i.Draft = "open", true
+			return i
+		}, render.StateDraft},
+		{"ready Final", func(i render.WorkItem) render.WorkItem {
+			i.State = "open"
+			return i
+		}, render.StateReady},
+		{"merged Final", func(i render.WorkItem) render.WorkItem {
+			i.State, i.Merged = "closed", true
+			return i
+		}, render.StateMerged},
+		{"closed-unmerged Final without a disposition", func(i render.WorkItem) render.WorkItem {
+			i.State = "closed"
+			return i
+		}, render.StateClosedUnmerged},
+		{"Supporting", func(i render.WorkItem) render.WorkItem {
+			i.State, i.Relationship, i.GoverningIssue = "open", "Supporting", 14
+			return i
+		}, render.StateReady},
+		{"Standalone R4", func(i render.WorkItem) render.WorkItem {
+			i.State, i.Relationship, i.GoverningIssue = "open", "Standalone", 0
+			return i
+		}, render.StateReady},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got, want := render.Receipt(tc.item), golden(t, tc.golden); got != want {
-				t.Errorf("Receipt() mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+
+			item := tc.shape(base)
+			header := render.Receipt(item)
+			if !strings.Contains(header, "State: "+tc.want) {
+				t.Errorf("header does not state %q:\n%s", tc.want, header)
+			}
+			// The declared relationship is reported, never inferred: a Standalone PR has
+			// no governing issue and the header must show that rather than a number
+			// borrowed from a closing keyword (D15).
+			wantRelationship := item.Relationship
+			if item.GoverningIssue != 0 {
+				wantRelationship = fmt.Sprintf("%s: #%d", item.Relationship, item.GoverningIssue)
+			}
+			if !strings.Contains(header, "Relationship: "+wantRelationship) {
+				t.Errorf("header does not state relationship %q:\n%s", wantRelationship, header)
 			}
 		})
 	}
 }
 
-// The four needs-attention categories are fixed in count and order (summary-format.md).
-func TestAttentionCategoriesAreOrdered(t *testing.T) {
+// Findings are presented in relation.CategoryOrder, which is the FR-030 display order.
+// The order is an operator-visible contract, not formatting: two summaries are compared
+// at a glance only when the same class of problem sits in the same place in both.
+func TestFindingCategoriesFollowTheDisplayOrder(t *testing.T) {
 	t.Parallel()
 
-	got := []string{}
-	for _, item := range fixtureSnapshot(t).Attention() {
-		got = append(got, item.Category)
+	got := []relation.Category{}
+	for _, finding := range fixtureSnapshot(t).Findings {
+		got = append(got, finding.Category)
 	}
-	want := []string{
-		render.CategoryBlocked,
-		render.CategoryNeedsDefinition,
-		render.CategoryNeedsDefinition,
-		render.CategoryTerminalMismatch,
-		render.CategoryTargetDatePassed,
+	// The assertion is on the shape of the sequence, not its length: what FR-030 fixes is
+	// that every finding of one category is contiguous and the categories appear in
+	// display order, however many findings the fixture happens to produce.
+	seen := map[relation.Category]bool{}
+	last := relation.Category("")
+	rank := map[relation.Category]int{}
+	for i, category := range relation.CategoryOrder {
+		rank[category] = i
 	}
-	if strings.Join(got, "|") != strings.Join(want, "|") {
-		t.Errorf("attention categories = %v, want %v", got, want)
+	for _, category := range got {
+		if category == last {
+			continue
+		}
+		if seen[category] {
+			t.Fatalf("category %q reappears after %q; findings = %v", category, last, got)
+		}
+		if last != "" && rank[category] <= rank[last] {
+			t.Fatalf("category %q follows %q, which is out of display order", category, last)
+		}
+		seen[category], last = true, category
+	}
+	for _, want := range []relation.Category{
+		relation.CategoryBlocked, relation.CategoryNeedsDefinition,
+		relation.CategoryAdmissionBlocked, relation.CategorySynchronizationRequired,
+		relation.CategoryTargetDatePassed,
+	} {
+		if !seen[want] {
+			t.Errorf("the fixture produced no %q finding; categories = %v", want, got)
+		}
 	}
 }
 
-// A Workflow value that disagrees with the GitHub state is the mismatch class; agreement
-// is not reported. Both directions are checked so the rule cannot degrade into "always
-// report" or "never report".
+// OrderFindings must be a total order over the vocabulary even when a category outside
+// it arrives: an unknown category sorting by map iteration would make two renderings of
+// one snapshot differ.
+func TestOrderFindingsSortsUnknownCategoriesLast(t *testing.T) {
+	t.Parallel()
+
+	findings := []relation.Finding{
+		{Category: "Invented", Kind: relation.KindIssue, Number: 1},
+		{Category: relation.CategoryTargetDatePassed, Kind: relation.KindIssue, Number: 2},
+		{Category: relation.CategoryBlocked, Kind: relation.KindPullRequest, Number: 3},
+		{Category: relation.CategoryBlocked, Kind: relation.KindIssue, Number: 4},
+	}
+	var got []string
+	for _, finding := range render.OrderFindings(findings) {
+		got = append(got, fmt.Sprintf("%s/%s#%d", finding.Category, finding.Kind, finding.Number))
+	}
+	want := []string{"Blocked/issue#4", "Blocked/pull_request#3", "Target date passed/issue#2", "Invented/issue#1"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("order = %v, want %v", got, want)
+	}
+}
+
+// The observed-state filter is the whole of FR-017's per-state rule, so it is checked as
+// a matrix rather than through one example: a draft must not be judged on Ready content
+// it has not claimed to have finished, a terminal PR must not be re-judged on Ready and
+// Merge predicates about state that no longer exists, and a finding about the governing
+// Issue survives every one of those cuts because it describes an independent work item.
+func TestObservedStateFilterMatrix(t *testing.T) {
+	t.Parallel()
+
+	findings := []relation.Finding{
+		{Code: "S", Phase: relation.PhaseStructural, Kind: relation.KindPullRequest, Number: 1},
+		{Code: "R", Phase: relation.PhaseReady, Kind: relation.KindPullRequest, Number: 1},
+		{Code: "M", Phase: relation.PhaseMerge, Kind: relation.KindPullRequest, Number: 1},
+		{Code: "P", Phase: relation.PhasePostMerge, Kind: relation.KindPullRequest, Number: 1},
+		{Code: "I", Phase: relation.PhaseReady, Kind: relation.KindIssue, Number: 9},
+	}
+	for _, tc := range []struct {
+		name string
+		pr   relation.PullRequest
+		want string
+	}{
+		{"draft", relation.PullRequest{State: "open", Draft: true}, "S,I"},
+		{"open and ready", relation.PullRequest{State: "open"}, "S,R,M,I"},
+		{"merged", relation.PullRequest{State: "closed", Merged: true}, "S,P,I"},
+		{"closed unmerged", relation.PullRequest{State: "closed"}, "S,P,I"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var got []string
+			for _, finding := range render.FilterByObservedState(tc.pr, findings) {
+				got = append(got, finding.Code)
+			}
+			if strings.Join(got, ",") != tc.want {
+				t.Errorf("visible codes = %v, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+// A Workflow value that disagrees with the GitHub state is the synchronization class;
+// agreement is not reported. Both directions are checked so the rule cannot degrade into
+// "always report" or "never report".
 func TestTerminalMismatchDetection(t *testing.T) {
 	t.Parallel()
 
@@ -140,11 +265,9 @@ func TestTerminalMismatchDetection(t *testing.T) {
 				HasAcceptanceCriteria: true,
 				Fields:                map[string]string{render.FieldWorkflow: tc.workflow},
 			}
-			snapshot := render.NewSnapshot(fixtureTarget, fixtureReadAt(t), []render.WorkItem{item}, nil)
-
 			found := false
-			for _, attention := range snapshot.Attention() {
-				if attention.Category == render.CategoryTerminalMismatch {
+			for _, finding := range render.IssueFindings(item, fixtureReadAt(t)) {
+				if finding.Code == "GHW-ISSUE-STRUCTURAL-TERMINAL-MISMATCH" {
 					found = true
 				}
 			}
@@ -168,17 +291,16 @@ func TestTargetDatePassedUsesTheReadTimestamp(t *testing.T) {
 			render.FieldTargetDate: "2026-08-06",
 		},
 	}
-	sameDay := render.NewSnapshot(fixtureTarget, fixtureReadAt(t), []render.WorkItem{item}, nil)
-	if len(sameDay.Attention()) != 0 {
-		t.Errorf("a target date equal to the read date is not passed: %v", sameDay.Attention())
+	if got := render.IssueFindings(item, fixtureReadAt(t)); len(got) != 0 {
+		t.Errorf("a target date equal to the read date is not passed: %v", got)
 	}
 
-	later := render.NewSnapshot(fixtureTarget, fixtureReadAt(t).Add(48*time.Hour), []render.WorkItem{item}, nil)
-	if len(later.Attention()) != 1 {
-		t.Fatalf("attention = %v, want the passed target date", later.Attention())
+	later := render.IssueFindings(item, fixtureReadAt(t).Add(48*time.Hour))
+	if len(later) != 1 {
+		t.Fatalf("findings = %v, want the passed target date", later)
 	}
-	if got := later.Attention()[0].Category; got != render.CategoryTargetDatePassed {
-		t.Errorf("category = %q, want %q", got, render.CategoryTargetDatePassed)
+	if got := later[0].Category; got != relation.CategoryTargetDatePassed {
+		t.Errorf("category = %q, want %q", got, relation.CategoryTargetDatePassed)
 	}
 }
 

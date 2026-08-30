@@ -1,8 +1,10 @@
-Created issue #12 — Ledger write leaves a partial file
+issue #12 — Ledger write leaves a partial file
 https://github.com/L3DigitalNet/example-repo/issues/12
-
-Type: Bug | Workflow: Blocked | Priority: P0 — Immediate
+State: open | Type: Bug | Workflow: Blocked | Priority: P0 — Immediate
 Size / Severity: S1 — High | Change risk: R3 — High
 Execution mode: Interactive agent | Target date: 2026-08-01
-
 Gaps: none
+
+receipt L3DigitalNet/example-repo#12: domain-finding
+  Blocked — issue #12: the issue is Blocked
+  Target date passed — issue #12: the target date 2026-08-01 has passed
