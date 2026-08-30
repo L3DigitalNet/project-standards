@@ -98,7 +98,7 @@ digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57f
 id = "skill"
 target = ".agents/skills/github-workflow/SKILL.md"
 source = "skills/github-workflow/SKILL.md"
-digest = "sha256:ea58354ecd5a38293a746e4885a11a451f7d7072c19371cb2e24548513b193be"
+digest = "sha256:84366ea0f27cd5de06aa1eb6c36650998d23bb1d9e5928492c99cd13abc1267b"
 policy = "managed"
 
 [[artifacts]]
@@ -113,7 +113,7 @@ when_any = [{ option = "harnesses", contains = "codex" }]
 id = "tool-binary"
 target = ".agents/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:e75ba2242d838076b1103d4697f83b46244a8197f7b68d4b214523ac09eaf829"
+digest = "sha256:0d3898d2582537f33c1eb8afcad0f2bcc9934fbc7381e4e2442974db2f4798ad"
 policy = "managed"
 mode = "0755"
 
@@ -156,7 +156,7 @@ policy = "managed"
 id = "reference-summary-format"
 target = ".agents/skills/github-workflow/references/summary-format.md"
 source = "skills/github-workflow/references/summary-format.md"
-digest = "sha256:7d54fcc72b343580ca67f0e7ff74f5467a5c7d07506ed2f8956175db9655b118"
+digest = "sha256:6e26f8d19e37f41babb7b1da9ff5aa3779e9caf3a1636c999ec276d078dbcb65"
 policy = "managed"
 
 # Claude Code discovers project skills only under `.claude/skills/`; it has never
@@ -176,14 +176,14 @@ policy = "managed"
 id = "skill-claude"
 target = ".claude/skills/github-workflow/SKILL.md"
 source = "skills/github-workflow/SKILL.md"
-digest = "sha256:ea58354ecd5a38293a746e4885a11a451f7d7072c19371cb2e24548513b193be"
+digest = "sha256:84366ea0f27cd5de06aa1eb6c36650998d23bb1d9e5928492c99cd13abc1267b"
 policy = "managed"
 
 [[artifacts]]
 id = "tool-binary-claude"
 target = ".claude/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:e75ba2242d838076b1103d4697f83b46244a8197f7b68d4b214523ac09eaf829"
+digest = "sha256:0d3898d2582537f33c1eb8afcad0f2bcc9934fbc7381e4e2442974db2f4798ad"
 policy = "managed"
 mode = "0755"
 
@@ -226,7 +226,7 @@ policy = "managed"
 id = "reference-summary-format-claude"
 target = ".claude/skills/github-workflow/references/summary-format.md"
 source = "skills/github-workflow/references/summary-format.md"
-digest = "sha256:7d54fcc72b343580ca67f0e7ff74f5467a5c7d07506ed2f8956175db9655b118"
+digest = "sha256:6e26f8d19e37f41babb7b1da9ff5aa3779e9caf3a1636c999ec276d078dbcb65"
 policy = "managed"
 
 [[contributions]]

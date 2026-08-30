@@ -6,8 +6,8 @@ fixture that wants a real installed distribution must dereference it: reconcile
 delivers payload file *content*, and `validate_payload_integrity` digests every
 manifest-listed file, so a pruned or still-symlinked projection fails integrity
 outright rather than degrading. Dereferencing costs ~109 MiB per copy against
-~2.8 MiB of actual Python source, because the seven `github-workflow` and six
-`agent-handoff` `bin/` binaries are ~89 MiB of committed bytes and every catalog
+~2.8 MiB of actual Python source, because the eight `github-workflow` and six
+`agent-handoff` `bin/` binaries are ~99 MiB of committed bytes and every catalog
 version keeps its own.
 
 That per-copy cost overran the gate's 16 GiB tmpfs when github-workflow 1.6 added

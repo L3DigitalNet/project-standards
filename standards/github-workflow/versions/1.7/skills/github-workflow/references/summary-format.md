@@ -53,10 +53,6 @@ Read {timestamp} · {open_issue_count} open issues · {open_pr_count} open PRs
 | PR       | Title   | Governing work   | State   | CI   | Findings   |
 | -------- | ------- | ---------------- | ------- | ---- | ---------- |
 | {number} | {title} | {governing_work} | {state} | {ci} | {findings} |
-
-## Discovered follow-ups
-
-- {description} — {disposition}
 ```
 
 Section rules:
@@ -65,7 +61,6 @@ Section rules:
 - **Needs attention.** The six categories above, in that order, one line per work item per category. Categories with no members are omitted; when all six are empty, keep the section and say so in one line rather than dropping it.
 - **Issues.** `Size / Severity` carries `Severity` for Bugs and `Size` for every other Type — one column, because Severity is the value that column asks for on a Bug. A Bug pins both fields (see the pinning matrix in [field-vocabulary.md](field-vocabulary.md)); the column reports `Severity` and its `Size` simply is not surfaced here.
 - **Pull requests.** `Governing work` is the declared `Final: #N`, `Supporting: #N`, or `Standalone`, or `—` when the PR declares nothing; an undeclared relationship is also a PR admission finding.
-- **Discovered follow-ups.** Work noticed while summarizing. Each entry states its disposition: fixed in place (commit reference), filed as an Issue with its number, or proposed and awaiting the operator's decision. This tail is a handoff, not a list to act on unilaterally.
 
 A summary is a read. It never mutates anything.
 

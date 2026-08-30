@@ -107,7 +107,8 @@ def test_github_workflow_1_6__predecessor__keeps_its_released_bytes() -> None:
     assert predecessor_integrity.aggregate_digest.value == _PREDECESSOR_DIGEST
 
 
-def test_github_workflow_1_6__identity__is_complete_and_current() -> None:
+def test_github_workflow_1_6__identity__is_complete_and_indexed() -> None:
+    """1.6's own rows, which stay exact after 1.7 took the family default."""
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     integrity = validate_payload_integrity(_SUCCESSOR, manifest)
     family = load_family_manifest(_FAMILY / "standard.toml")
@@ -125,8 +126,10 @@ def test_github_workflow_1_6__identity__is_complete_and_current() -> None:
         if package["id"] == "github-workflow"
     }
     assert roles["1.5"] == "retained"
-    assert roles["1.6"] == "default"
-    assert "| [`github-workflow`](github-workflow/README.md) | active | 1.6 | default |" in (
+    # 1.7 succeeded 1.6 as the family default; a published version's row only ever
+    # moves from `default` to `retained`, never back and never off the catalog.
+    assert roles["1.6"] == "retained"
+    assert "| [`github-workflow`](github-workflow/README.md) | active | 1.6 | retained |" in (
         _ROOT / "standards/catalog.md"
     ).read_text(encoding="utf-8")
 

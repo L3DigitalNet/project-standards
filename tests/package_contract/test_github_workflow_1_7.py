@@ -58,7 +58,7 @@ _SUBCOMMANDS = (
 )
 
 # NFR-006 and NFR-003 ceilings, unchanged from 1.5 while the content inside them grew
-# again. Measured at this cut: SKILL.md 69 lines / 11,975 B, field-vocabulary.md 30
+# again. Measured at this cut: SKILL.md 69 lines / 11,978 B, field-vocabulary.md 30
 # lines / 3,111 B, and the rendered block 2,363 B for `ExampleOrg` against 2,392 B at a
 # 39-character login — GitHub's maximum, and the only measurement that proves the
 # ceiling. Eight bytes of block headroom remain, so 1.8 prose has to displace prose.

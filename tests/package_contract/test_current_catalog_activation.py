@@ -350,7 +350,7 @@ def test_catalog_activation__release_changelog__has_dated_candidate_section() ->
     )
 
 
-def test_catalog_activation__github_workflow_1_6__is_current_and_records_transport_boundary() -> (
+def test_catalog_activation__github_workflow_1_7__is_current_and_records_transport_boundary() -> (
     None
 ):
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
@@ -366,24 +366,25 @@ def test_catalog_activation__github_workflow_1_6__is_current_and_records_transpo
         ("1.3", "retained"),
         ("1.4", "retained"),
         ("1.5", "retained"),
-        ("1.6", "default"),
+        ("1.6", "retained"),
+        ("1.7", "default"),
     ]
 
     consumer_catalog = tomllib.loads(
         (_ROOT / ".standards/catalog.toml").read_text(encoding="utf-8")
     )
     selection = consumer_catalog["standards"]["github-workflow"]
-    assert selection["available"] == ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6"]
-    assert selection["default"] == "1.6"
+    assert selection["available"] == ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"]
+    assert selection["default"] == "1.7"
 
     consumer_lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
-    assert consumer_lock["standards"]["github-workflow"]["resolved"] == "1.6"
+    assert consumer_lock["standards"]["github-workflow"]["resolved"] == "1.7"
 
     current_references = {
-        "standards/github-workflow/README.md": "versions/1.6/README.md",
-        "standards/github-workflow/adopt.md": "versions/1.6/adopt.md",
-        "standards/github-workflow/agent-summary.md": "versions/1.6/agent-summary.md",
-        "standards/README.md": "| 1.6 | default | [github-workflow/]",
+        "standards/github-workflow/README.md": "versions/1.7/README.md",
+        "standards/github-workflow/adopt.md": "versions/1.7/adopt.md",
+        "standards/github-workflow/agent-summary.md": "versions/1.7/agent-summary.md",
+        "standards/README.md": "| 1.7 | default | [github-workflow/]",
     }
     for relative, expected in current_references.items():
         assert expected in (_ROOT / relative).read_text(encoding="utf-8")
