@@ -17,12 +17,17 @@ import (
 // timestamped once, up front: the snapshot describes a moment, and deriving "overdue"
 // from a clock that moved during the read would make the summary disagree with its own
 // header.
-func Fetch(ctx context.Context, client *ghapi.Client, repo Repository) (*Snapshot, error) {
+//
+// The raw open pull requests are returned beside the snapshot rather than discarded: the
+// summary's per-PR topology loads need exactly this list for the one-open-Final rule, and
+// letting each of them read it again is the repeated shared read NFR-008 forbids. The
+// slice is the complete list, so an empty one means the repository has none.
+func Fetch(ctx context.Context, client *ghapi.Client, repo Repository) (*Snapshot, []ghapi.PullRequest, error) {
 	readAt := time.Now().UTC()
 
 	rawIssues, err := client.ListOpenIssues(ctx, repo.Owner, repo.Name)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	issues := make([]WorkItem, 0, len(rawIssues))
 	for _, issue := range rawIssues {
@@ -31,18 +36,18 @@ func Fetch(ctx context.Context, client *ghapi.Client, repo Repository) (*Snapsho
 
 	rawPulls, err := client.ListOpenPullRequests(ctx, repo.Owner, repo.Name)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	pulls := make([]WorkItem, 0, len(rawPulls))
 	for _, pull := range rawPulls {
 		item, err := pullItem(ctx, client, repo, pull)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		pulls = append(pulls, item)
 	}
 
-	return NewSnapshot(repo.String(), readAt, issues, pulls), nil
+	return NewSnapshot(repo.String(), readAt, issues, pulls), rawPulls, nil
 }
 
 // FetchIssue reads one issue for a receipt.

@@ -85,13 +85,48 @@ func (g *Gate) Workflow() string {
 	return g.Topology.GoverningIssue.Workflow
 }
 
-// Load performs the phase-bounded read set and evaluates the gate.
+// Prefetched carries live reads the calling command already performed, so a command that
+// loads many gates does not re-issue one shared read per gate (NFR-008: "shared live reads
+// are reused within one command").
+//
+// A non-nil *Prefetched asserts that every read it names was performed against the same
+// repository in the same command, and its value is authoritative — an empty
+// OpenPullRequests means "the repository has no open pull requests", never "not read yet".
+// That is why the presence of the struct, and not the emptiness of a field, is the signal:
+// a caller that has only some of these reads passes nil rather than a half-filled value.
+//
+// Only `summary` supplies one today. `check`, `ready`, `merge`, and `close --pr` load a
+// single gate, so there is nothing to share and passing nil keeps their read set visible
+// at their own call site.
+type Prefetched struct {
+	// OpenPullRequests is the complete `state=open` pull-request list for this repository,
+	// bodies included — the one-open-Final cardinality rule (FR-027) is answered from it.
+	OpenPullRequests []ghapi.PullRequest
+}
+
+// Load performs the phase-bounded read set and evaluates the gate, issuing every read
+// itself. See LoadWith for the variant a multi-gate command uses.
+func Load(ctx context.Context, client *ghapi.Client, owner, name string,
+	schema *orgschema.Schema, number int, through relation.Phase,
+) (*Gate, error) {
+	return LoadWith(ctx, client, owner, name, schema, number, through, nil)
+}
+
+// LoadWith performs the phase-bounded read set and evaluates the gate, reusing whatever
+// pre already holds.
 //
 // through may be empty, in which case the gate is inferred from observed state
 // (FR-031). The clock is read once and injected, so every date-sensitive predicate in
 // one run answers from the same instant.
-func Load(ctx context.Context, client *ghapi.Client, owner, name string,
-	schema *orgschema.Schema, number int, through relation.Phase,
+//
+// pre changes which calls go out, never which phases are loaded or what the engine is
+// handed: a reused list must be the same list the unshared path would have read, so the
+// verdict is identical either way. render's summary goldens are the equivalence check —
+// they are asserted against the same expected findings on both paths, and
+// TestSummaryReusesSharedReadsWithinOneCommand pins the call count that proves the reuse
+// actually happened rather than being silently skipped.
+func LoadWith(ctx context.Context, client *ghapi.Client, owner, name string,
+	schema *orgschema.Schema, number int, through relation.Phase, pre *Prefetched,
 ) (*Gate, error) {
 	pr, err := client.GetPullRequest(ctx, owner, name, number)
 	if err != nil {
@@ -147,7 +182,7 @@ func Load(ctx context.Context, client *ghapi.Client, owner, name string,
 	// (EC-014), so competing Finals can no longer be resolved by editing it, and the read
 	// would buy a finding nobody can act on.
 	if decl.Relationship == relation.RelationshipFinal && !observed.Terminal() {
-		open, err := client.ListOpenPullRequests(ctx, owner, name)
+		open, err := openPullRequests(ctx, client, owner, name, pre)
 		if err != nil {
 			return nil, err
 		}
@@ -183,6 +218,17 @@ func Load(ctx context.Context, client *ghapi.Client, owner, name string,
 	g.Topology = topology
 	g.Result = relation.Evaluate(topology, gate)
 	return g, nil
+}
+
+// openPullRequests returns the repository's open pull requests, reading them only when the
+// caller did not already hold them.
+func openPullRequests(ctx context.Context, client *ghapi.Client, owner, name string,
+	pre *Prefetched,
+) ([]ghapi.PullRequest, error) {
+	if pre != nil {
+		return pre.OpenPullRequests, nil
+	}
+	return client.ListOpenPullRequests(ctx, owner, name)
 }
 
 // loadMergeEvidence adds the live admission evidence: what the repository permits, what

@@ -78,6 +78,10 @@ type prFixture struct {
 
 	mu    sync.Mutex
 	pulls map[int]*pullState
+	// comments is the canned `GET .../issues/N/comments` body per pull request, which is
+	// where `close --pr` reads an existing `Final-Disposition:` record from. A pull request
+	// with no entry answers with an empty list, so only the idempotence fixtures carry one.
+	comments map[int]string
 
 	// failMarkReady, failAutoMerge, and failMerge fail one boundary each. They are separate
 	// switches rather than one route override because every mutation but the merge travels
@@ -91,11 +95,20 @@ func newPRFixture(t *testing.T) *prFixture {
 	t.Helper()
 
 	h := newHarness(t)
+	// 90, 91, and 92 are the `close --pr` fixtures. 90 and 91 are already closed, which is
+	// the resume state EC-014 forbids re-gating; 92 is the open Final whose convergence
+	// reaches the field-identity read, so it is the only one that can exercise ERR-011.
 	f := &prFixture{h: h, pulls: map[int]*pullState{
 		50: {Number: 50, Body: finalBody, Draft: true},
 		60: {Number: 60, Body: readyFinalBody},
 		70: {Number: 70, Body: readyFinalBody},
 		80: {Number: 80, Body: supportingBody},
+		90: {Number: 90, Body: readyFinalBody, Closed: true},
+		91: {Number: 91, Body: readyFinalBody, Closed: true},
+		92: {Number: 92, Body: readyFinalBody},
+	}, comments: map[int]string{
+		90: `[{"body":"Final-Disposition: in-review\nReason: the first attempt was interrupted\n",
+			"created_at":"2026-08-30T00:00:00Z","user":{"login":"agent"}}]`,
 	}}
 
 	h.routes["GET "+fixtureRepo+"/issues/13"] = ghtest.Response{Status: http.StatusOK, Body: issueInReview}
@@ -136,7 +149,16 @@ func (f *prFixture) route(req *http.Request) (ghtest.Response, bool) {
 			return ghtest.Response{Status: http.StatusCreated,
 				Body: `{"body":"recorded","created_at":"2026-08-30T00:00:00Z","user":{"login":"agent"}}`}, true
 		}
-		return ghtest.Response{Status: http.StatusOK, Body: "[]"}, true
+		body := "[]"
+		if number, err := strconv.Atoi(strings.TrimSuffix(
+			strings.TrimPrefix(path, fixtureRepo+"/issues/"), "/comments")); err == nil {
+			f.mu.Lock()
+			if canned, ok := f.comments[number]; ok {
+				body = canned
+			}
+			f.mu.Unlock()
+		}
+		return ghtest.Response{Status: http.StatusOK, Body: body}, true
 	}
 	// Issue 13 is served here rather than by the shared patch model, which only knows the
 	// 1.6 fixtures: the close echoes the requested state so both terminal directions —
@@ -586,7 +608,7 @@ func TestReadyDoesNotTouchIssueLifecycleForASupportingPullRequest(t *testing.T) 
 // The successful Merge chain, with its exact call count: four topology reads, four merge
 // evidence reads (settings, rulesets, classic protection, check runs), the merge itself,
 // the terminal observation, and the four calls the shared `close --issue N --as done`
-// sequence makes — fifteen requests, of which three mutate.
+// sequence makes — fourteen requests, of which three mutate.
 func TestMergeAdmitsAFinalAndConvergesItsIssue(t *testing.T) {
 	t.Parallel()
 
@@ -946,4 +968,143 @@ func TestReadyReportsLiveSchemaDriftBeforeWriting(t *testing.T) {
 		t.Errorf("no schema-drift finding: %+v", envelope.Findings)
 	}
 	assertNoWrites(t, f)
+}
+
+// ERR-011 has a second write path: the disposition route's Workflow convergence. Through
+// 1.7-rc it reported every failure of the field-identity read as drift, so an unreachable
+// API produced a domain verdict with no finding in it — the operator was sent to
+// `gh-workflow audit` over a schema that had never been read.
+func TestClosePullRequestReportsALiveSchemaDriftAsAFinding(t *testing.T) {
+	t.Parallel()
+
+	f := newPRFixture(t)
+	// The organization no longer defines Workflow, though the baseline schema still does.
+	f.h.routes["GET /orgs/"+fixtureOrg+"/issue-fields"] = ghtest.Response{Status: http.StatusOK,
+		Body: `[{"id":102,"name":"Priority","data_type":"single_select","options":[]}]`}
+
+	if code := f.run("close", "--pr", "92", "--as", "blocked", "--reason",
+		"waiting on the upstream fix", "--output", "json"); code != cli.ExitFailure {
+		t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s",
+			code, cli.ExitFailure, f.h.stdout, f.h.stderr)
+	}
+	envelope := decodeEnvelope(t, f.h.stdout.Bytes())
+	if envelope.Result != cli.ResultDomainFinding {
+		t.Errorf("result = %q, want %q", envelope.Result, cli.ResultDomainFinding)
+	}
+	assertSteps(t, envelope, map[string]cli.StepStatus{
+		"record-disposition":      cli.StepCompleted,
+		"close-pull-request":      cli.StepCompleted,
+		"converge-issue-workflow": cli.StepFailed,
+	})
+	var found bool
+	for _, finding := range envelope.Findings {
+		if finding.Code == "GHW-ISSUE-STRUCTURAL-SCHEMA-DRIFT" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no schema-drift finding: %+v", envelope.Findings)
+	}
+}
+
+// The other half of the same branch: a 503 on the field-identity read is operational, so
+// it exits 3 with no drift finding and no message claiming the schema drifted. The
+// disposition record and the close still stand, which is what makes the rerun a resume.
+func TestClosePullRequestReportsAFailedFieldIdentityReadAsOperational(t *testing.T) {
+	t.Parallel()
+
+	f := newPRFixture(t)
+	f.h.routes["GET /orgs/"+fixtureOrg+"/issue-fields"] = ghtest.Response{
+		Status: http.StatusServiceUnavailable, Body: `{"message":"Service unavailable"}`}
+
+	if code := f.run("close", "--pr", "92", "--as", "blocked", "--reason",
+		"waiting on the upstream fix", "--output", "json"); code != cli.ExitOperational {
+		t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s",
+			code, cli.ExitOperational, f.h.stdout, f.h.stderr)
+	}
+	envelope := decodeEnvelope(t, f.h.stdout.Bytes())
+	if envelope.Result != cli.ResultOperationalFailure {
+		t.Errorf("result = %q, want %q", envelope.Result, cli.ResultOperationalFailure)
+	}
+	assertSteps(t, envelope, map[string]cli.StepStatus{
+		"record-disposition":      cli.StepCompleted,
+		"close-pull-request":      cli.StepCompleted,
+		"converge-issue-workflow": cli.StepFailed,
+	})
+	for _, finding := range envelope.Findings {
+		if finding.Code == "GHW-ISSUE-STRUCTURAL-SCHEMA-DRIFT" {
+			t.Errorf("a failed read produced a schema-drift finding: %+v", finding)
+		}
+	}
+	// "drift"/"drifted" is the wording that would send the operator to `gh-workflow audit`
+	// over a schema this run never read; the step message and the error must not use it.
+	whole := f.h.stdout.String() + f.h.stderr.String()
+	if strings.Contains(strings.ToLower(whole), "drift") {
+		t.Errorf("an operational failure was reported as drift:\n%s", whole)
+	}
+}
+
+// ---------------------------------------------------------------- close --pr idempotence
+
+// EC-014/FR-034 resume: rerunning the same disposition against an already-closed Final
+// that already carries the matching record writes nothing at all. Every step is skipped
+// and the run still succeeds, which is what makes an interrupted first attempt recoverable
+// by rerunning the identical invocation.
+func TestClosePullRequestIsIdempotentAgainstAnExistingMatchingRecord(t *testing.T) {
+	t.Parallel()
+
+	f := newPRFixture(t)
+	if code := f.run("close", "--pr", "90", "--as", "in-review", "--reason",
+		"a different sentence about the same decision", "--output", "json"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstdout: %s\nstderr: %s", code, f.h.stdout, f.h.stderr)
+	}
+	envelope := decodeEnvelope(t, f.h.stdout.Bytes())
+	assertSteps(t, envelope, map[string]cli.StepStatus{
+		"record-disposition":      cli.StepSkipped,
+		"close-pull-request":      cli.StepSkipped,
+		"converge-issue-workflow": cli.StepSkipped,
+	})
+	assertNoWrites(t, f)
+}
+
+// The same already-closed Final without a record is the state the command exists to
+// repair: the record is written, and only the close is skipped.
+func TestClosePullRequestRecordsADispositionOnAnAlreadyClosedFinal(t *testing.T) {
+	t.Parallel()
+
+	f := newPRFixture(t)
+	if code := f.run("close", "--pr", "91", "--as", "in-review", "--reason",
+		"closed by hand before the record existed", "--output", "json"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstdout: %s\nstderr: %s", code, f.h.stdout, f.h.stderr)
+	}
+	envelope := decodeEnvelope(t, f.h.stdout.Bytes())
+	assertSteps(t, envelope, map[string]cli.StepStatus{
+		"record-disposition":      cli.StepCompleted,
+		"close-pull-request":      cli.StepSkipped,
+		"converge-issue-workflow": cli.StepSkipped,
+	})
+	var recorded []call
+	for _, write := range f.h.transport.mutations() {
+		if write.Method == http.MethodPost && strings.HasSuffix(write.Path, "/issues/91/comments") {
+			recorded = append(recorded, write)
+		}
+	}
+	if len(recorded) != 1 {
+		t.Fatalf("want exactly one disposition comment, got %d:\n%+v",
+			len(recorded), f.h.transport.mutations())
+	}
+	if !strings.Contains(recorded[0].Body, "Final-Disposition: in-review") {
+		t.Errorf("the record does not carry the canonical disposition line: %s", recorded[0].Body)
+	}
+	// Nothing but the comment: no PATCH closing an already-closed pull request, and no
+	// field write against an issue that already holds the target Workflow. The GraphQL
+	// merge-state query is excluded by shape, not by method — every GraphQL call is a POST.
+	for _, write := range f.h.transport.mutations() {
+		switch {
+		case write.Path == "/graphql" && !strings.Contains(write.Body, "mutation"):
+		case write.Method == http.MethodPost && strings.HasSuffix(write.Path, "/issues/91/comments"):
+		default:
+			t.Errorf("the resume issued an unexpected mutating request: %+v", write)
+		}
+	}
 }

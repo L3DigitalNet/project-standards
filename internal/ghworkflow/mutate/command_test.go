@@ -193,6 +193,34 @@ const issueUntyped = `{"number":20,"title":"Triage the untyped backlog",
 	"issue_field_values":[
 		{"issue_field_name":"Workflow","data_type":"single_select","value":"Inbox","single_select_option":{"name":"Inbox"}}]}`
 
+// issueOpenTerminalWorkflow is the lifecycle divergence FR-021 exists to prevent, seen
+// from the Ready side: the issue is natively open, so the native-state class passes, while
+// its Workflow already says the work is finished. It carries every other Ready
+// precondition so the run isolates the one incoherent class.
+const issueOpenTerminalWorkflow = `{"number":24,"title":"Retire the shim",
+	"html_url":"https://github.com/L3DigitalNet/example-repo/issues/24",
+	"state":"open","state_reason":null,
+	"body":"## Outcome\n\nThe shim is gone.\n\n## Acceptance criteria\n\n- No caller references it.\n",
+	"type":{"name":"Task"},
+	"issue_field_values":[
+		{"issue_field_name":"Workflow","data_type":"single_select","value":"Done","single_select_option":{"name":"Done"}},
+		{"issue_field_name":"Priority","data_type":"single_select","value":"P1 — Next","single_select_option":{"name":"P1 — Next"}},
+		{"issue_field_name":"Size","data_type":"single_select","value":"M","single_select_option":{"name":"M"}},
+		{"issue_field_name":"Change risk","data_type":"single_select","value":"R2 — Moderate","single_select_option":{"name":"R2 — Moderate"}},
+		{"issue_field_name":"Execution mode","data_type":"single_select","value":"Interactive agent","single_select_option":{"name":"Interactive agent"}}]}`
+
+// pullShapedIssue is what `GET /issues/{n}` returns for a pull request: the issues
+// endpoint serves both, and only the `pull_request` member tells them apart (DEV-023).
+// Everything else here is deliberately Issue-shaped, so a route that skipped the shape
+// read would produce a plausible-looking verdict about the wrong object.
+const pullShapedIssue = `{"number":26,"title":"Add the render engine",
+	"html_url":"https://github.com/L3DigitalNet/example-repo/pull/26",
+	"state":"open","state_reason":null,
+	"body":"## Acceptance criteria\n\n- It renders.\n",
+	"type":null,
+	"pull_request":{"url":"https://api.github.test/repos/L3DigitalNet/example-repo/pulls/26"},
+	"issue_field_values":[]}`
+
 // call is one recorded HTTP request including its body, which the ghtest transport does
 // not retain: proving "validation precedes any mutating call" needs the payload, not just
 // the method and path.
@@ -409,14 +437,18 @@ func newHarness(t *testing.T) *harness {
 		"GET " + fixtureRepo + "/issues/14/dependencies/blocked_by": {Status: http.StatusOK,
 			Body: `[{"number":9,"title":"Land the transport","state":"open",
 				"html_url":"https://github.com/L3DigitalNet/example-repo/issues/9"}]`},
-		"GET " + fixtureRepo + "/issues/18":                     {Status: http.StatusOK, Body: issueDropped},
-		"GET " + fixtureRepo + "/issues/20":                     {Status: http.StatusOK, Body: issueUntyped},
-		"POST " + fixtureRepo + "/issues":                       {Status: http.StatusCreated, Body: issueCreated},
-		"POST " + fixtureRepo + "/issues/12/issue-field-values": {Status: http.StatusOK, Body: "[]"},
-		"POST " + fixtureRepo + "/issues/14/issue-field-values": {Status: http.StatusOK, Body: "[]"},
-		"POST " + fixtureRepo + "/issues/16/issue-field-values": {Status: http.StatusOK, Body: "[]"},
-		"POST " + fixtureRepo + "/issues/18/issue-field-values": {Status: http.StatusOK, Body: "[]"},
-		"POST " + fixtureRepo + "/issues/20/issue-field-values": {Status: http.StatusOK, Body: "[]"},
+		"GET " + fixtureRepo + "/issues/18":                         {Status: http.StatusOK, Body: issueDropped},
+		"GET " + fixtureRepo + "/issues/20":                         {Status: http.StatusOK, Body: issueUntyped},
+		"GET " + fixtureRepo + "/issues/20/dependencies/blocked_by": {Status: http.StatusOK, Body: "[]"},
+		"GET " + fixtureRepo + "/issues/24":                         {Status: http.StatusOK, Body: issueOpenTerminalWorkflow},
+		"GET " + fixtureRepo + "/issues/24/dependencies/blocked_by": {Status: http.StatusOK, Body: "[]"},
+		"GET " + fixtureRepo + "/issues/26":                         {Status: http.StatusOK, Body: pullShapedIssue},
+		"POST " + fixtureRepo + "/issues":                           {Status: http.StatusCreated, Body: issueCreated},
+		"POST " + fixtureRepo + "/issues/12/issue-field-values":     {Status: http.StatusOK, Body: "[]"},
+		"POST " + fixtureRepo + "/issues/14/issue-field-values":     {Status: http.StatusOK, Body: "[]"},
+		"POST " + fixtureRepo + "/issues/16/issue-field-values":     {Status: http.StatusOK, Body: "[]"},
+		"POST " + fixtureRepo + "/issues/18/issue-field-values":     {Status: http.StatusOK, Body: "[]"},
+		"POST " + fixtureRepo + "/issues/20/issue-field-values":     {Status: http.StatusOK, Body: "[]"},
 	}
 
 	// PATCH is served by the model rather than by a canned body, so a response reports the
@@ -1697,6 +1729,95 @@ func TestCheckEmitsJSON(t *testing.T) {
 		if !codes[code] {
 			t.Errorf("the envelope carries no %s finding: %+v", code, envelope.Findings)
 		}
+	}
+}
+
+// The three FR-023 classes 1.7 added to the Issue route, each isolated on a fixture that
+// fails only it. TestCheckEmitsJSON covers the four content classes an issue shares with
+// 1.6; these are the structural and lifecycle ones, which no other Issue-route case
+// reaches — a typeless issue, a natively closed one, and an open one whose Workflow
+// already claims the work is finished.
+func TestCheckReportsTheStructuralAndLifecycleIssueClasses(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		issue string
+		want  []string
+		// absent names a code the fixture must NOT raise, which is how each case proves it
+		// isolates its own class rather than tripping the whole set.
+		absent []string
+	}{
+		{
+			name: "a typeless issue has no recognized ordinary Issue Type",
+			// issueUntyped carries no acceptance criteria either, so only the type class is
+			// asserted; the incoherence being isolated is that its open, nonterminal
+			// Workflow must not raise the lifecycle finding.
+			issue:  "20",
+			want:   []string{"GHW-ISSUE-STRUCTURAL-TYPE-MISSING"},
+			absent: []string{"GHW-ISSUE-READY-NATIVE-STATE", "GHW-ISSUE-READY-WORKFLOW-INCOHERENT"},
+		},
+		{
+			name:  "a closed issue fails the native-state class",
+			issue: "16",
+			// A closed issue converged to Done fails both lifecycle classes at once, which
+			// is the coherent pairing `close` writes; reporting only one would understate it.
+			want: []string{"GHW-ISSUE-READY-NATIVE-STATE", "GHW-ISSUE-READY-WORKFLOW-INCOHERENT"},
+		},
+		{
+			name:   "an open issue carrying a terminal Workflow is lifecycle-incoherent",
+			issue:  "24",
+			want:   []string{"GHW-ISSUE-READY-WORKFLOW-INCOHERENT"},
+			absent: []string{"GHW-ISSUE-READY-NATIVE-STATE", "GHW-ISSUE-STRUCTURAL-TYPE-MISSING"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			if code := h.run("check", "--issue", tc.issue, "--output", "json"); code != cli.ExitFailure {
+				t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s",
+					code, cli.ExitFailure, h.stdout, h.stderr)
+			}
+			envelope := decodeEnvelope(t, h.stdout.Bytes())
+			codes := map[string]bool{}
+			for _, finding := range envelope.Findings {
+				codes[finding.Code] = true
+			}
+			for _, code := range tc.want {
+				if !codes[code] {
+					t.Errorf("the envelope carries no %s finding: %+v", code, envelope.Findings)
+				}
+			}
+			for _, code := range tc.absent {
+				if codes[code] {
+					t.Errorf("the envelope carries an unexpected %s finding: %+v", code, envelope.Findings)
+				}
+			}
+			h.assertNoMutations(t)
+		})
+	}
+}
+
+// FR-023/IR-005: the Issue route rejects a PR-shaped response. The issues endpoint serves
+// pull requests too, so without the shape read the gate would report on an object with no
+// Issue Type and no Issue Fields and call every content class missing (DEV-023). The
+// refusal is a local one — exit 2, not a domain verdict — because the invocation named the
+// wrong route rather than found something wrong with the work.
+func TestCheckIssueRejectsAPullRequestShapedResponse(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	if code := h.run("check", "--issue", "26"); code != cli.ExitUsage {
+		t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s", code, cli.ExitUsage, h.stdout, h.stderr)
+	}
+	wants(t, h.stderr.String(), "is a pull request, not an issue", "check --pr 26")
+	h.assertNoMutations(t)
+	// No verdict is rendered at all: a usage refusal must not leave an envelope that reads
+	// as a completed evaluation of the wrong object.
+	if h.stdout.Len() != 0 {
+		t.Errorf("the refusal rendered a report: %s", h.stdout)
 	}
 }
 

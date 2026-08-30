@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -496,4 +497,118 @@ func TestUnresolvableRepositoryFailsWithoutOutput(t *testing.T) {
 	if !strings.Contains(h.stderr.String(), "--repo") {
 		t.Errorf("the failure does not tell the operator how to proceed: %q", h.stderr)
 	}
+}
+
+// ---------------------------------------------------------------- NFR-008 call counts
+
+// nfr008Harness narrows the fixture repository to the minimum that still exercises every
+// branch of the summary read plan: one issue, one open non-draft Final (which reaches the
+// Merge gate and its evidence reads), and one draft Supporting (which stops at Ready).
+// The full fixture set would prove the same bound with a number nobody can enumerate.
+func nfr008Harness(t *testing.T) *harness {
+	t.Helper()
+
+	h := newHarness(t)
+	h.transport.Routes[http.MethodGet+" /repos/L3DigitalNet/example-repo/issues"] =
+		ghtest.Response{Status: http.StatusOK, Body: "[" + issue12 + "]"}
+	h.transport.Routes[http.MethodGet+" /repos/L3DigitalNet/example-repo/pulls"] =
+		ghtest.Response{Status: http.StatusOK, Body: "[" + pull21 + "," + pull22 + "]"}
+	return h
+}
+
+// NFR-008 ("shared live reads are reused within one command") measured on the summary.
+// The enumeration below IS the assertion — the number alone would drift into meaning
+// nothing, and a reader who cannot map it back to a call cannot tell a new read from a
+// reintroduced duplicate.
+//
+//	1  GET /issues                     the open-issue list
+//	2  GET /pulls                      the open-PR list, read ONCE for the whole command
+//	3  GET /commits/aaa111/check-runs  CI for #21
+//	4  GET /commits/bbb222/check-runs  CI for #22 — empty, so it falls back to
+//	5  GET /commits/bbb222/status      the commit-status surface
+//	6  GET /pulls/21                   #21's topology: the pull request,
+//	7  POST /graphql                   its mergeStateStatus, and
+//	8  GET /issues/12                  its governing issue
+//	9  GET /repos/{owner}/{repo}       #21 infers the Merge gate, so its evidence follows:
+//	10 GET /rules/branches/main        repository merge settings, rulesets,
+//	11 GET /branches/main/protection   classic protection, and
+//	12 GET /commits/aaa111/check-runs  the required-check runs
+//	13 GET /pulls/22                   #22's topology: draft, so it stops at Ready —
+//	14 POST /graphql                   no merge evidence is read for it
+//	15 GET /issues/14                  its governing issue
+//
+// Call 2 is the one this bound turns on. Before the prefetch, every open non-draft Final
+// re-read the same `state=open` list to answer the one-open-Final rule, so this fixture
+// cost 16 and a repository with n such Finals paid n+1 reads of one list.
+//
+// Calls 3 and 12 are the remaining duplicate: the render CI projection and the Merge
+// evidence read the same commit's check runs. Closing it needs an exported summarizer in
+// internal/ghworkflow/ghapi, which this change does not own — see the leg report.
+func TestSummaryReusesSharedReadsWithinOneCommand(t *testing.T) {
+	t.Parallel()
+
+	h := nfr008Harness(t)
+	if code := h.run("summary"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
+	}
+	if got := h.transport.Count(); got != 15 {
+		t.Errorf("summary issued %d requests, want 15:\n%s", got, requestLog(h))
+	}
+	// The list read is the invariant, not the total: one `state=open` list per command,
+	// however many pull requests it then loads.
+	if got := countPath(h, "/repos/L3DigitalNet/example-repo/pulls"); got != 1 {
+		t.Errorf("the open-PR list was read %d times, want 1:\n%s", got, requestLog(h))
+	}
+	h.assertReadOnly(t)
+}
+
+// The single-gate surface keeps loading everything itself: with one pull request there is
+// nothing to share, and a prefetch would only hide the read set from its own call site.
+//
+//	1  GET /pulls/21                   the pull request,
+//	2  POST /graphql                   its mergeStateStatus, and
+//	3  GET /issues/12                  its governing issue
+//	4  GET /pulls                      the open-PR list, for the one-open-Final rule
+//	5  GET /repos/{owner}/{repo}       Merge-gate evidence: merge settings,
+//	6  GET /rules/branches/main        rulesets,
+//	7  GET /branches/main/protection   classic protection, and
+//	8  GET /commits/aaa111/check-runs  the required-check runs
+//	9  GET /pulls/21                   the receipt's own projection of the same PR, and
+//	10 GET /commits/aaa111/check-runs  its CI state
+//
+// Calls 9 and 10 restate 1 and 8: the receipt builds its display item through the render
+// fetch path rather than from the topology it just loaded. That is a second instance of
+// the duplication above and is out of this change's scope; the count is pinned here so
+// closing it shows up as a deliberate edit to this number.
+func TestReceiptPullRequestCallCount(t *testing.T) {
+	t.Parallel()
+
+	h := nfr008Harness(t)
+	if code := h.run("receipt", "--pr", "21"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
+	}
+	if got := h.transport.Count(); got != 10 {
+		t.Errorf("receipt --pr issued %d requests, want 10:\n%s", got, requestLog(h))
+	}
+	h.assertReadOnly(t)
+}
+
+func countPath(h *harness, path string) int {
+	count := 0
+	for _, req := range h.transport.Requests() {
+		if req.URL.Path == path {
+			count++
+		}
+	}
+	return count
+}
+
+// requestLog renders the recorded calls for a failure message, because a bare count tells
+// the next reader which assertion broke but never which call was added or dropped.
+func requestLog(h *harness) string {
+	var b strings.Builder
+	for i, req := range h.transport.Requests() {
+		fmt.Fprintf(&b, "  %2d %s %s\n", i+1, req.Method, req.URL.Path)
+	}
+	return b.String()
 }

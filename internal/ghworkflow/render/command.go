@@ -167,7 +167,7 @@ func runSummary(ctx context.Context, env *cli.Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	read, err := Fetch(ctx, client, repo)
+	read, openPulls, err := Fetch(ctx, client, repo)
 	if err != nil {
 		return err
 	}
@@ -175,10 +175,18 @@ func runSummary(ctx context.Context, env *cli.Env, args []string) error {
 	// from the list read alone is not an option: mergeability, live enforcement, and the
 	// review decision are simply absent from it, and the Merge predicates would report
 	// every open PR as "evidence unknown" — a summary that cries wolf on every row.
+	//
+	// The open-PR list Fetch already read is handed to every load. Without it each Final
+	// gate re-issues the same `state=open` list to answer the one-open-Final rule, so a
+	// repository with n open Finals paid for n+1 identical reads of one list (NFR-008).
+	pre := &topology.Prefetched{OpenPullRequests: openPulls}
 	for _, pull := range read.PullRequests {
-		gate, err := topology.Load(ctx, client, repo.Owner, repo.Name, schema, pull.Number, "")
+		gate, err := topology.LoadWith(ctx, client, repo.Owner, repo.Name, schema, pull.Number, "", pre)
 		if err != nil {
-			return err
+			// The whole summary fails closed on an operational error (FR-016/IR-005):
+			// a report missing one PR's findings is indistinguishable from a report of a
+			// clean one. The number is named so the failure is attributable.
+			return fmt.Errorf("loading pull request #%d: %w", pull.Number, err)
 		}
 		read.AddFindings(FilterByObservedState(gate.Topology.PullRequest, gate.Result.Findings)...)
 	}

@@ -5,7 +5,7 @@
 // The registry is deliberately write-only from the outside. Each subcommand package
 // registers itself from an init function, and cmd/gh-workflow pulls it in with a blank
 // import, so adding a subcommand adds a file and one import line and never edits shared
-// registration code. The eight subcommands of spec IR-004 land across several tasks;
+// registration code. The ten subcommands of spec IR-005 land across several tasks;
 // this shape is what keeps them from serializing behind one dispatch table.
 package cli
 
@@ -62,7 +62,7 @@ const DefaultVersion = "1.7"
 // generated-document subcommand used to be the thing that printed it.
 var Version = DefaultVersion
 
-// Delivered locations of the package artifacts the tool reads. IR-004 requires the tool
+// Delivered locations of the package artifacts the tool reads. IR-005 requires the tool
 // to find these with no arguments, so they are constants here rather than flag defaults.
 const (
 	DefaultSchemaPath = ".agents/skills/github-workflow/references/org-schema.yaml"
@@ -260,7 +260,7 @@ func writeUsage(w io.Writer) {
 	_, _ = io.WriteString(w, b.String())
 }
 
-// OutputMode selects a read-only subcommand's rendering (IR-004).
+// OutputMode selects a read-only subcommand's rendering (IR-005).
 type OutputMode string
 
 // Supported output modes.
@@ -293,7 +293,7 @@ func MarshalJSON(v any) ([]byte, error) {
 }
 
 // ResolveRepoFile finds rel by walking up from start, which is how the tool locates its
-// delivered artifacts with no arguments (IR-004) regardless of where in a consumer
+// delivered artifacts with no arguments (IR-005) regardless of where in a consumer
 // checkout the agent happened to invoke it.
 func ResolveRepoFile(start, rel string) (string, error) {
 	dir, err := filepath.Abs(start)

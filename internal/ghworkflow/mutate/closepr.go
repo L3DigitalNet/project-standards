@@ -210,7 +210,7 @@ func dispositionSteps(ctx context.Context, client *ghapi.Client, gate *prGate,
 		rec.skip(stepConvergeWorkflow, "no governing issue resolved")
 		return nil
 	}
-	return convergeDisposition(ctx, client, gate, outcome, workflow, rec)
+	return convergeDisposition(ctx, client, gate, outcome, workflow, rec, envelope)
 }
 
 // convergeDisposition applies the recorded outcome to the governing Issue.
@@ -221,7 +221,7 @@ func dispositionSteps(ctx context.Context, client *ghapi.Client, gate *prGate,
 // reopen direction, for the same reason; against an open Issue it is a single field write,
 // because the native state already agrees.
 func convergeDisposition(ctx context.Context, client *ghapi.Client, gate *prGate,
-	outcome, workflow string, rec *steps,
+	outcome, workflow string, rec *steps, envelope *cli.Envelope,
 ) error {
 	repo := render.Repository{Owner: gate.Owner, Name: gate.Name}
 	issueNumber := gate.GoverningIssue()
@@ -264,7 +264,20 @@ func convergeDisposition(ctx context.Context, client *ghapi.Client, gate *prGate
 	values, err := resolveFieldIDs(ctx, client, repo.Owner,
 		[]assignment{{Name: render.FieldWorkflow, Value: workflow}})
 	if err != nil {
-		rec.fail(stepConvergeWorkflow, "the live organization schema has drifted from the baseline")
+		// Only a schemaDriftError is drift. Through 1.7-rc every failure of the
+		// field-identity read — a 503, an expired token, a truncated page — was reported
+		// here as "the live organization schema has drifted", which sent the operator to
+		// `gh-workflow audit` over a schema that was never read, and classified an
+		// operational failure as a domain verdict. The two now separate exactly as
+		// readySteps separates them (ready.go), so an unreachable API still exits 3.
+		if finding, drift := driftFinding(err, relation.KindIssue, issueNumber); drift {
+			envelope.Findings = append(envelope.Findings, finding)
+			rec.fail(stepConvergeWorkflow, "the live organization schema has drifted from the baseline")
+			return domainf("%s: %v", repo, err)
+		}
+		rec.fail(stepConvergeWorkflow, fmt.Sprintf(
+			"the disposition stands; issue #%d is still %s and the field identities could not be read",
+			issueNumber, quotedOrUnset(gate.Workflow())))
 		return err
 	}
 	if err := client.AddIssueFieldValues(ctx, repo.Owner, repo.Name, issueNumber, values); err != nil {
