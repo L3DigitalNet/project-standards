@@ -53,6 +53,12 @@ var (
 	// ErrPaginationRefused marks a rel="next" link the client would not follow because it
 	// leaves the API origin the bearer token belongs to (NFR-007, ERR-010).
 	ErrPaginationRefused error = &operationalError{"the github pagination link left the API origin"}
+	// ErrRedirectRefused marks an HTTP redirect the client would not follow because its
+	// scheme, host, or port differs from the configured API origin. Distinct from
+	// ErrPaginationRefused: this guards Go's own automatic redirect-following on every
+	// request (net/http.Client.CheckRedirect), not the Link-header pagination path, so the
+	// two sentinels trip at different call sites and must stay separately matchable.
+	ErrRedirectRefused error = &operationalError{"the github response redirected outside the API origin"}
 )
 
 // Operational marks every non-2xx read, matching RequestError.

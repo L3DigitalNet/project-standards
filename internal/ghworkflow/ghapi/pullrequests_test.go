@@ -232,8 +232,10 @@ func TestMergePullRequestPinsTheValidatedHead(t *testing.T) {
 	}}
 	client := newClient(t, transport)
 
+	const headSHA = "111111111111111111111111111111111111111a"
+
 	result, err := client.MergePullRequest(context.Background(), "L3DigitalNet", "example-repo", 12,
-		ghapi.MergeMethodSquash, "head1")
+		ghapi.MergeMethodSquash, headSHA)
 	if err != nil {
 		t.Fatalf("MergePullRequest() error = %v, want nil", err)
 	}
@@ -241,13 +243,57 @@ func TestMergePullRequestPinsTheValidatedHead(t *testing.T) {
 		t.Errorf("MergePullRequest() = %+v, want the merge commit reported", result)
 	}
 	// The head SHA is what makes admission conditional on the state that was validated.
-	if body := transport.LastBody(); !strings.Contains(body, `"sha":"head1"`) {
+	if body := transport.LastBody(); !strings.Contains(body, `"sha":"`+headSHA+`"`) {
 		t.Errorf("request body = %q, want the validated head SHA sent", body)
 	}
 
 	if _, err := client.MergePullRequest(context.Background(), "L3DigitalNet", "example-repo", 12,
-		"fast-forward", "head1"); err == nil {
+		"fast-forward", headSHA); err == nil {
 		t.Error("MergePullRequest() accepted a method GitHub does not define")
+	}
+
+	if _, err := client.MergePullRequest(context.Background(), "L3DigitalNet", "example-repo", 12,
+		ghapi.MergeMethodSquash, ""); err == nil {
+		t.Error("MergePullRequest() accepted an empty head SHA")
+	} else if transport.Count() != 1 {
+		t.Errorf("made %d calls after refusing an empty head SHA, want exactly the 1 from the earlier merge", transport.Count())
+	}
+
+	if _, err := client.MergePullRequest(context.Background(), "L3DigitalNet", "example-repo", 12,
+		ghapi.MergeMethodSquash, "not-hex"); err == nil {
+		t.Error("MergePullRequest() accepted a malformed head SHA")
+	}
+}
+
+// TestMergeMethodNormalizationIsSharedAcrossSurfaces pins the two merge-method acceptors
+// (MergePullRequest's REST switch and graphqlMergeMethod, exercised via EnableAutoMerge)
+// to the same closed set after case-folding and trimming — a caller-supplied "Squash"
+// must not be accepted on one surface and rejected on the other.
+func TestMergeMethodNormalizationIsSharedAcrossSurfaces(t *testing.T) {
+	t.Parallel()
+
+	const headSHA = "111111111111111111111111111111111111111a"
+
+	restTransport := &ghtest.Transport{Routes: map[string]ghtest.Response{
+		"PUT " + repoRoot + "/pulls/12/merge": {
+			Status: http.StatusOK,
+			Body:   `{"sha":"merged1","merged":true,"message":"Pull Request successfully merged"}`,
+		},
+	}}
+	if _, err := newClient(t, restTransport).MergePullRequest(context.Background(),
+		"L3DigitalNet", "example-repo", 12, "Squash", headSHA); err != nil {
+		t.Fatalf("MergePullRequest() error = %v, want nil for a mixed-case method", err)
+	}
+
+	graphqlTransport := &ghtest.Transport{Routes: map[string]ghtest.Response{
+		"POST /graphql": {Status: http.StatusOK, Body: `{"data":{}}`},
+	}}
+	if err := newClient(t, graphqlTransport).EnableAutoMerge(context.Background(),
+		"PR_kwABC", "Squash"); err != nil {
+		t.Fatalf("EnableAutoMerge() error = %v, want nil for a mixed-case method", err)
+	}
+	if body := graphqlTransport.LastBody(); !strings.Contains(body, `"SQUASH"`) {
+		t.Errorf("request body = %q, want the GraphQL enum spelling", body)
 	}
 }
 

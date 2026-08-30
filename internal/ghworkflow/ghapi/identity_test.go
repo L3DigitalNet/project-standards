@@ -211,3 +211,52 @@ func TestOperationalMarking(t *testing.T) {
 		t.Errorf("cross-origin refusal = %v, want it marked operational", err)
 	}
 }
+
+func TestValidateRef(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		ref   string
+		valid bool
+	}{
+		{"branch", "main", true},
+		{"namespaced branch", "release/v5", true},
+		{"dotted and underscored", "feature-x_1.2", true},
+		{"40-hex sha", "1111111111111111111111111111111111111a", true},
+		{"empty", "", false},
+		{"dot segment", "refs/./main", false},
+		{"parent segment", "refs/../main", false},
+		{"double dot mid-name", "release/v5..6", false},
+		{"space", "release v5", false},
+		{"control char", "release\tv5", false},
+		{"tilde", "release~1", false},
+		{"caret", "release^1", false},
+		{"colon", "release:1", false},
+		{"question mark", "release?", false},
+		{"asterisk", "release*", false},
+		{"bracket", "release[1]", false},
+		{"backslash", "release\\1", false},
+		{"at-brace", "release@{1}", false},
+		{"trailing lock", "release.lock", false},
+		{"trailing slash", "release/", false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := ghapi.ValidateRef(tc.ref)
+			if tc.valid != (err == nil) {
+				t.Fatalf("ValidateRef(%q) = %v, want valid = %v", tc.ref, err, tc.valid)
+			}
+			if !tc.valid {
+				if !errors.Is(err, ghapi.ErrInvalidIdentity) {
+					t.Errorf("ValidateRef(%q) error = %v, want ErrInvalidIdentity in the chain", tc.ref, err)
+				}
+				if ghapi.IsOperational(err) {
+					t.Errorf("ValidateRef(%q) error = %v, want a plain refusal, not operational", tc.ref, err)
+				}
+			}
+		})
+	}
+}

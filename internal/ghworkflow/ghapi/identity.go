@@ -124,6 +124,44 @@ func ValidateHost(host string) error {
 	return nil
 }
 
+// ValidateRef accepts a Git ref or commit SHA as GitHub's own API paths require it: no
+// segment `.` or `..`, no ASCII control characters or space, none of the characters Git
+// itself forbids in a ref (`~^:?*[\`), no `@{`, no `..` anywhere, and no trailing `.lock`
+// or `/`. It is applied wherever a ref is interpolated into a request path
+// (ListCheckRunsForRef, GetCombinedStatus, GetBranchEnforcement, CIState) because those
+// paths otherwise carry an operator- or caller-supplied string straight into the URL with
+// only PathEscape between it and GitHub, which — like the login and repository-name
+// grammars above — escapes cleanly without stopping a value shaped to reach an unintended
+// endpoint.
+func ValidateRef(ref string) error {
+	if ref == "" {
+		return fmt.Errorf("%w: an empty ref", ErrInvalidIdentity)
+	}
+	if strings.HasSuffix(ref, "/") {
+		return fmt.Errorf("%w: the ref %q must not end in a slash", ErrInvalidIdentity, ref)
+	}
+	if strings.HasSuffix(ref, ".lock") {
+		return fmt.Errorf("%w: the ref %q must not end in .lock", ErrInvalidIdentity, ref)
+	}
+	if strings.Contains(ref, "..") {
+		return fmt.Errorf("%w: the ref %q must not contain a .. sequence", ErrInvalidIdentity, ref)
+	}
+	if strings.Contains(ref, "@{") {
+		return fmt.Errorf("%w: the ref %q must not contain @{", ErrInvalidIdentity, ref)
+	}
+	for _, segment := range strings.Split(ref, "/") {
+		if segment == "." || segment == ".." {
+			return fmt.Errorf("%w: the ref %q has a %q path segment", ErrInvalidIdentity, ref, segment)
+		}
+	}
+	for _, r := range ref {
+		if r < 0x20 || r == 0x7f || strings.ContainsRune(" ~^:?*[\\", r) {
+			return fmt.Errorf("%w: the ref %q contains %q", ErrInvalidIdentity, ref, r)
+		}
+	}
+	return nil
+}
+
 // ValidateRepository validates both halves of an `owner/name` pair.
 func ValidateRepository(owner, name string) error {
 	if err := ValidateLogin(owner); err != nil {

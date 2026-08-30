@@ -28,6 +28,49 @@ func newClient(t *testing.T, transport http.RoundTripper) *ghapi.Client {
 	return client
 }
 
+func TestRedirectRefusedOffOrigin(t *testing.T) {
+	t.Parallel()
+
+	transport := &ghtest.Transport{Routes: map[string]ghtest.Response{
+		"GET " + typesPath: {
+			Status: http.StatusFound,
+			Header: http.Header{"Location": []string{"https://exfiltrate.test/steal"}},
+		},
+	}}
+
+	_, err := newClient(t, transport).ListIssueTypes(context.Background(), "L3DigitalNet")
+	if !errors.Is(err, ghapi.ErrRedirectRefused) {
+		t.Fatalf("ListIssueTypes() error = %v, want ErrRedirectRefused", err)
+	}
+	if !ghapi.IsOperational(err) {
+		t.Errorf("redirect refusal = %v, want it marked operational", err)
+	}
+	// The foreign host must never see the request: CheckRedirect refuses before net/http
+	// issues the second round trip, so the recorder shows only the original request.
+	if got := transport.Count(); got != 1 {
+		t.Errorf("made %d calls, want exactly 1 (the redirect must not be followed)", got)
+	}
+}
+
+func TestRedirectRefusedOnSchemeDowngrade(t *testing.T) {
+	t.Parallel()
+
+	transport := &ghtest.Transport{Routes: map[string]ghtest.Response{
+		"GET " + typesPath: {
+			Status: http.StatusFound,
+			Header: http.Header{"Location": []string{"http://api.github.test/orgs/L3DigitalNet/issue-types"}},
+		},
+	}}
+
+	_, err := newClient(t, transport).ListIssueTypes(context.Background(), "L3DigitalNet")
+	if !errors.Is(err, ghapi.ErrRedirectRefused) {
+		t.Fatalf("ListIssueTypes() error = %v, want ErrRedirectRefused", err)
+	}
+	if got := transport.Count(); got != 1 {
+		t.Errorf("made %d calls, want exactly 1 (a scheme downgrade is a different origin)", got)
+	}
+}
+
 func TestListIssueTypes(t *testing.T) {
 	t.Parallel()
 

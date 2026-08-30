@@ -237,8 +237,8 @@ func (c *Client) GetPullRequest(ctx context.Context, owner, repo string, number 
 // unexplained short read (NFR-007), so a failing run on a later page can no longer be
 // rendered as `passing` the way DEV-024 recorded through 1.6.
 func (c *Client) CIState(ctx context.Context, owner, repo, ref string) (string, error) {
-	if ref == "" {
-		return CIUnknown, nil
+	if err := ValidateRef(ref); err != nil {
+		return CIUnknown, err
 	}
 
 	runs, err := c.ListCheckRunsForRef(ctx, owner, repo, ref)
@@ -303,6 +303,9 @@ func (c *Client) ListCheckRunsForRef(ctx context.Context, owner, repo, ref strin
 	if err != nil {
 		return nil, err
 	}
+	if err := ValidateRef(ref); err != nil {
+		return nil, err
+	}
 	return getPagedEnvelope[CheckRun, checkRunsPage](ctx, c,
 		fmt.Sprintf("%s/commits/%s/check-runs", base, url.PathEscape(ref)), url.Values{})
 }
@@ -311,6 +314,9 @@ func (c *Client) ListCheckRunsForRef(ctx context.Context, owner, repo, ref strin
 func (c *Client) GetCombinedStatus(ctx context.Context, owner, repo, ref string) (*CombinedStatus, error) {
 	base, err := repoPath(owner, repo)
 	if err != nil {
+		return nil, err
+	}
+	if err := ValidateRef(ref); err != nil {
 		return nil, err
 	}
 	return getObject[CombinedStatus](ctx, c,

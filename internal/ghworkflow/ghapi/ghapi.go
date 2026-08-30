@@ -113,11 +113,45 @@ func NewClient(baseURL, token string, transport http.RoundTripper) (*Client, err
 	if transport == nil {
 		transport = http.DefaultTransport
 	}
+	trimmed := strings.TrimRight(baseURL, "/")
+	base, err := url.Parse(trimmed)
+	if err != nil {
+		return nil, fmt.Errorf("the API base URL %q is not a usable URL: %w", trimmed, err)
+	}
 	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"),
+		baseURL: trimmed,
 		token:   token,
-		http:    &http.Client{Transport: transport, Timeout: requestTimeout},
+		http: &http.Client{
+			Transport:     transport,
+			Timeout:       requestTimeout,
+			CheckRedirect: redirectPolicy(base),
+		},
 	}, nil
+}
+
+// redirectPolicy refuses any redirect Go's client would otherwise follow automatically
+// whose scheme, host, or port differs from base — the same origin comparison
+// nextPageURL applies to the Link header, applied here to ordinary 3xx responses.
+//
+// The two guards are necessary separately. nextPageURL only ever sees a URL this package
+// builds itself from a trusted Link header field before issuing a fresh request; it never
+// sees the automatic redirect net/http.Client follows mid-flight while still holding the
+// Authorization header from the original request. Without this hook, a compromised or
+// misconfigured API host redirecting to a foreign origin would carry the operator's bearer
+// token there on Go's default redirect-following, which is exactly the credential leak
+// nextPageURL's comment already documents for pagination — this closes the same hole for
+// every other request the client makes.
+func redirectPolicy(base *url.URL) func(req *http.Request, via []*http.Request) error {
+	return func(req *http.Request, via []*http.Request) error {
+		if !strings.EqualFold(req.URL.Scheme, base.Scheme) || originHost(req.URL) != originHost(base) {
+			return fmt.Errorf("%w: refusing the redirect to %q: it leaves the API origin %s://%s, "+
+				"where the request's credentials belong", ErrRedirectRefused, req.URL.String(), base.Scheme, base.Host)
+		}
+		if len(via) >= 10 {
+			return fmt.Errorf("stopped after %d redirects", len(via))
+		}
+		return nil
+	}
 }
 
 // ListIssueTypes returns every Issue Type defined for org.

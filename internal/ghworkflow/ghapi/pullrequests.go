@@ -15,8 +15,30 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
+
+// isHexObjectID reports whether s is a well-formed Git object id: 40 hex characters for
+// SHA-1 or 64 for SHA-256, either case (GitHub accepts both from callers, though it
+// currently issues only SHA-1). Used to fail closed on MergePullRequest's headSHA before
+// any request is built, rather than letting a malformed or empty value pass through and
+// be sent (or, with `omitempty`, silently dropped, defeating the conditional-merge guard).
+func isHexObjectID(s string) bool {
+	if len(s) != 40 && len(s) != 64 {
+		return false
+	}
+	for _, r := range s {
+		switch {
+		case r >= '0' && r <= '9':
+		case r >= 'a' && r <= 'f':
+		case r >= 'A' && r <= 'F':
+		default:
+			return false
+		}
+	}
+	return true
+}
 
 // Comment is one issue or pull-request conversation comment.
 type Comment struct {
@@ -178,7 +200,10 @@ type MergeResult struct {
 // on the branch head the caller validated. Without it, a push landing between validation
 // and admission would be merged as though it had passed the Merge phase — the exact race
 // the paired command exists to close. A mismatch comes back as 409, which the caller
-// resolves by revalidating rather than retrying.
+// resolves by revalidating rather than retrying. Because the guard exists to close that
+// race, this method itself refuses a headSHA that is empty or not a well-formed 40- or
+// 64-character hex object id before any request is built, rather than trusting the caller
+// to have validated it upstream.
 func (c *Client) MergePullRequest(ctx context.Context, owner, repo string, number int,
 	method, headSHA string,
 ) (*MergeResult, error) {
@@ -186,14 +211,17 @@ func (c *Client) MergePullRequest(ctx context.Context, owner, repo string, numbe
 	if err != nil {
 		return nil, err
 	}
-	switch method {
+	switch strings.ToLower(strings.TrimSpace(method)) {
 	case MergeMethodMerge, MergeMethodSquash, MergeMethodRebase:
 	default:
 		return nil, fmt.Errorf("merge method %q is not one of merge, squash, rebase", method)
 	}
+	if !isHexObjectID(headSHA) {
+		return nil, fmt.Errorf("head SHA %q is not a 40- or 64-character hex object id", headSHA)
+	}
 	payload := struct {
 		MergeMethod string `json:"merge_method"`
-		SHA         string `json:"sha,omitempty"`
+		SHA         string `json:"sha"`
 	}{MergeMethod: method, SHA: headSHA}
 
 	var result MergeResult
@@ -283,8 +311,8 @@ func (c *Client) GetBranchEnforcement(ctx context.Context, owner, repo, branch s
 	if err != nil {
 		return nil, err
 	}
-	if branch == "" {
-		return nil, fmt.Errorf("no branch to read enforcement for in %s/%s", owner, repo)
+	if err := ValidateRef(branch); err != nil {
+		return nil, err
 	}
 	escaped := url.PathEscape(branch)
 	evidence := &BranchEnforcement{Known: true}
