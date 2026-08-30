@@ -246,7 +246,7 @@ func (c *Client) CIState(ctx context.Context, owner, repo, ref string) (string, 
 	case err != nil && !isNotFound(err):
 		return CIUnknown, err
 	case err == nil && len(runs) > 0:
-		return summarizeCheckRuns(runs), nil
+		return SummarizeCheckRuns(runs), nil
 	}
 
 	status, err := c.GetCombinedStatus(ctx, owner, repo, ref)
@@ -331,9 +331,17 @@ func (c *Client) GetCombinedStatus(ctx context.Context, owner, repo, ref string)
 		fmt.Sprintf("%s/commits/%s/status", base, url.PathEscape(ref)))
 }
 
-// summarizeCheckRuns collapses many runs into one verdict, failure-dominant: a single
-// failing run is the answer the operator needs, whatever the other runs say.
-func summarizeCheckRuns(runs []CheckRun) string {
+// SummarizeCheckRuns collapses many runs into one verdict, failure-dominant: a single
+// failing run is the answer the operator needs, whatever the other runs say. An empty list
+// summarizes as passing by vacuous truth, so a caller that must distinguish "nothing ran"
+// from "everything passed" tests the length itself before calling.
+//
+// It is exported because two surfaces derive the same verdict from one read of the same
+// commit: CIState above, and internal/ghworkflow/topology.CIState, which retains the runs
+// it read so the Merge-evidence load does not fetch them again (NFR-008). Both must
+// collapse runs identically or a summary and a receipt would disagree about one pull
+// request, so this stays the single authority rather than a rule each caller restates.
+func SummarizeCheckRuns(runs []CheckRun) string {
 	verdict := CIPassing
 	for _, run := range runs {
 		if run.Status != "completed" {

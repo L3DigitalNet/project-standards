@@ -8,6 +8,7 @@ import (
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/topology"
 )
 
 // Fetch reads one repository's open work.
@@ -18,11 +19,16 @@ import (
 // from a clock that moved during the read would make the summary disagree with its own
 // header.
 //
-// The raw open pull requests are returned beside the snapshot rather than discarded: the
-// summary's per-PR topology loads need exactly this list for the one-open-Final rule, and
-// letting each of them read it again is the repeated shared read NFR-008 forbids. The
-// slice is the complete list, so an empty one means the repository has none.
-func Fetch(ctx context.Context, client *ghapi.Client, repo Repository) (*Snapshot, []ghapi.PullRequest, error) {
+// The live reads are returned beside the snapshot rather than discarded. The summary then
+// loads one topology per pull request, and every one of those loads needs the same
+// open-PR list (for the one-open-Final rule) and the same commits' check runs (for the
+// Merge gate's required-check predicate) that this function has already read; re-reading
+// them per pull request is the repeated shared read NFR-008 forbids.
+//
+// The returned Prefetched is valid only for this repository and this moment: handing it to
+// a load against another repository would answer cardinality and CI questions from the
+// wrong corpus.
+func Fetch(ctx context.Context, client *ghapi.Client, repo Repository) (*Snapshot, *topology.Prefetched, error) {
 	readAt := time.Now().UTC()
 
 	rawIssues, err := client.ListOpenIssues(ctx, repo.Owner, repo.Name)
@@ -38,16 +44,17 @@ func Fetch(ctx context.Context, client *ghapi.Client, repo Repository) (*Snapsho
 	if err != nil {
 		return nil, nil, err
 	}
+	pre := &topology.Prefetched{OpenPullRequests: rawPulls}
 	pulls := make([]WorkItem, 0, len(rawPulls))
 	for _, pull := range rawPulls {
-		item, err := pullItem(ctx, client, repo, pull)
+		item, err := pullItem(ctx, client, repo, pull, pre)
 		if err != nil {
 			return nil, nil, err
 		}
 		pulls = append(pulls, item)
 	}
 
-	return NewSnapshot(repo.String(), readAt, issues, pulls), rawPulls, nil
+	return NewSnapshot(repo.String(), readAt, issues, pulls), pre, nil
 }
 
 // FetchIssue reads one issue for a receipt.
@@ -65,7 +72,10 @@ func FetchPullRequest(ctx context.Context, client *ghapi.Client, repo Repository
 	if err != nil {
 		return WorkItem{}, err
 	}
-	return pullItem(ctx, client, repo, *pull)
+	// No prefetch: a receipt loads exactly one pull request, so there is no second consumer
+	// of this commit's check runs to share with, and passing nil keeps the read set visible
+	// at this call site.
+	return pullItem(ctx, client, repo, *pull, nil)
 }
 
 // issueItem projects one API issue onto the render model.
@@ -101,8 +111,13 @@ func issueItem(issue ghapi.Issue) WorkItem {
 	return item
 }
 
-func pullItem(ctx context.Context, client *ghapi.Client, repo Repository, pull ghapi.PullRequest) (WorkItem, error) {
-	ci, err := client.CIState(ctx, repo.Owner, repo.Name, pull.Head.SHA)
+func pullItem(ctx context.Context, client *ghapi.Client, repo Repository, pull ghapi.PullRequest,
+	pre *topology.Prefetched,
+) (WorkItem, error) {
+	// Routed through topology rather than straight to the client so the check runs this
+	// verdict consumes are retained for the Merge-evidence load that follows it in a
+	// summary. With a nil pre it is ghapi.Client.CIState verbatim.
+	ci, err := topology.CIState(ctx, client, repo.Owner, repo.Name, pull.Head.SHA, pre)
 	if err != nil {
 		return WorkItem{}, err
 	}

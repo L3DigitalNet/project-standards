@@ -523,27 +523,24 @@ func nfr008Harness(t *testing.T) *harness {
 //
 //	1  GET /issues                     the open-issue list
 //	2  GET /pulls                      the open-PR list, read ONCE for the whole command
-//	3  GET /commits/aaa111/check-runs  CI for #21
+//	3  GET /commits/aaa111/check-runs  CI for #21, retained for its Merge evidence below
 //	4  GET /commits/bbb222/check-runs  CI for #22 — empty, so it falls back to
 //	5  GET /commits/bbb222/status      the commit-status surface
 //	6  GET /pulls/21                   #21's topology: the pull request,
 //	7  POST /graphql                   its mergeStateStatus, and
 //	8  GET /issues/12                  its governing issue
 //	9  GET /repos/{owner}/{repo}       #21 infers the Merge gate, so its evidence follows:
-//	10 GET /rules/branches/main        repository merge settings, rulesets,
-//	11 GET /branches/main/protection   classic protection, and
-//	12 GET /commits/aaa111/check-runs  the required-check runs
-//	13 GET /pulls/22                   #22's topology: draft, so it stops at Ready —
-//	14 POST /graphql                   no merge evidence is read for it
-//	15 GET /issues/14                  its governing issue
+//	10 GET /rules/branches/main        repository merge settings, rulesets, and
+//	11 GET /branches/main/protection   classic protection — the required-check runs are
+//	                                   call 3 reused, not a fourth read
+//	12 GET /pulls/22                   #22's topology: draft, so it stops at Ready —
+//	13 POST /graphql                   no merge evidence is read for it
+//	14 GET /issues/14                  its governing issue
 //
-// Call 2 is the one this bound turns on. Before the prefetch, every open non-draft Final
-// re-read the same `state=open` list to answer the one-open-Final rule, so this fixture
-// cost 16 and a repository with n such Finals paid n+1 reads of one list.
-//
-// Calls 3 and 12 are the remaining duplicate: the render CI projection and the Merge
-// evidence read the same commit's check runs. Closing it needs an exported summarizer in
-// internal/ghworkflow/ghapi, which this change does not own — see the leg report.
+// Calls 2 and 3 are what this bound turns on, and each was a separate duplicate before the
+// prefetch: every open non-draft Final re-read the same `state=open` list to answer the
+// one-open-Final rule, and re-read the same commit's check runs its CI column already
+// consumed. This fixture cost 16; a repository with n such Finals paid 2n avoidable calls.
 func TestSummaryReusesSharedReadsWithinOneCommand(t *testing.T) {
 	t.Parallel()
 
@@ -551,13 +548,20 @@ func TestSummaryReusesSharedReadsWithinOneCommand(t *testing.T) {
 	if code := h.run("summary"); code != cli.ExitOK {
 		t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
 	}
-	if got := h.transport.Count(); got != 15 {
-		t.Errorf("summary issued %d requests, want 15:\n%s", got, requestLog(h))
+	if got := h.transport.Count(); got != 14 {
+		t.Errorf("summary issued %d requests, want 14:\n%s", got, requestLog(h))
 	}
 	// The list read is the invariant, not the total: one `state=open` list per command,
 	// however many pull requests it then loads.
 	if got := countPath(h, "/repos/L3DigitalNet/example-repo/pulls"); got != 1 {
 		t.Errorf("the open-PR list was read %d times, want 1:\n%s", got, requestLog(h))
+	}
+	// Each shared read is pinned on its own, not just through the total: a future call
+	// added elsewhere would move the total without telling anyone which reuse broke.
+	// aaa111 is #21's head, read for its CI column and consumed again by the Merge gate's
+	// required-check predicate.
+	if got := countPath(h, "/repos/L3DigitalNet/example-repo/commits/aaa111/check-runs"); got != 1 {
+		t.Errorf("#21's check runs were read %d times, want 1:\n%s", got, requestLog(h))
 	}
 	h.assertReadOnly(t)
 }
@@ -577,9 +581,10 @@ func TestSummaryReusesSharedReadsWithinOneCommand(t *testing.T) {
 //	10 GET /commits/aaa111/check-runs  its CI state
 //
 // Calls 9 and 10 restate 1 and 8: the receipt builds its display item through the render
-// fetch path rather than from the topology it just loaded. That is a second instance of
-// the duplication above and is out of this change's scope; the count is pinned here so
-// closing it shows up as a deliberate edit to this number.
+// fetch path rather than from the topology it just loaded, so the two halves each perform
+// their own reads. Closing that needs the receipt restructured to project the topology it
+// already holds, which is a behavior question this change does not own; the count is
+// pinned here so closing it shows up as a deliberate edit to this number.
 func TestReceiptPullRequestCallCount(t *testing.T) {
 	t.Parallel()
 

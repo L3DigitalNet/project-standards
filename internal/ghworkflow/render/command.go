@@ -167,7 +167,7 @@ func runSummary(ctx context.Context, env *cli.Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	read, openPulls, err := Fetch(ctx, client, repo)
+	read, pre, err := Fetch(ctx, client, repo)
 	if err != nil {
 		return err
 	}
@@ -176,10 +176,10 @@ func runSummary(ctx context.Context, env *cli.Env, args []string) error {
 	// review decision are simply absent from it, and the Merge predicates would report
 	// every open PR as "evidence unknown" — a summary that cries wolf on every row.
 	//
-	// The open-PR list Fetch already read is handed to every load. Without it each Final
-	// gate re-issues the same `state=open` list to answer the one-open-Final rule, so a
-	// repository with n open Finals paid for n+1 identical reads of one list (NFR-008).
-	pre := &topology.Prefetched{OpenPullRequests: openPulls}
+	// What Fetch already read is handed to every load. Without it each Final gate re-issued
+	// the same `state=open` list to answer the one-open-Final rule, and each open non-draft
+	// PR re-read the check runs its own CI column was derived from, so this loop cost two
+	// avoidable requests per pull request (NFR-008).
 	for _, pull := range read.PullRequests {
 		gate, err := topology.LoadWith(ctx, client, repo.Owner, repo.Name, schema, pull.Number, "", pre)
 		if err != nil {

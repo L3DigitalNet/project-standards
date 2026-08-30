@@ -102,6 +102,93 @@ type Prefetched struct {
 	// OpenPullRequests is the complete `state=open` pull-request list for this repository,
 	// bodies included — the one-open-Final cardinality rule (FR-027) is answered from it.
 	OpenPullRequests []ghapi.PullRequest
+	// CheckRuns holds the check runs already read, keyed by the commit SHA they were read
+	// for. Presence of a key means the read happened; a present-but-empty entry means the
+	// commit genuinely has no check runs, which is a different fact from "not read yet" and
+	// is why the map is consulted with the two-value form everywhere.
+	//
+	// Only the unexported checkRuns writes it, so a key can never claim a read that did not
+	// happen; callers construct a Prefetched without it and let the first read populate it.
+	// A nil map is legal and simply memoizes nothing.
+	CheckRuns map[string][]ghapi.CheckRun
+}
+
+// CIState summarizes the CI verdict for a commit, retaining the check runs it read in pre.
+//
+// This exists so the summary's two consumers of one commit's check runs — the rendered CI
+// column and the Merge gate's required-check predicate — cost one read instead of two
+// (NFR-008). The verdict itself is not reimplemented: ghapi.SummarizeCheckRuns is the
+// single authority, and this function only decides which reads go out.
+//
+// With no pre there is nothing to reuse, so it delegates to ghapi's own CIState rather than
+// running a second copy of the two-surface fallback. That keeps the unshared path — every
+// `receipt --pr` — on exactly the code it has always run.
+func CIState(ctx context.Context, client *ghapi.Client, owner, name, ref string,
+	pre *Prefetched,
+) (string, error) {
+	if pre == nil {
+		return client.CIState(ctx, owner, name, ref)
+	}
+	runs, err := checkRuns(ctx, client, owner, name, ref, pre)
+	if err != nil {
+		return ghapi.CIUnknown, err
+	}
+	if len(runs) > 0 {
+		return ghapi.SummarizeCheckRuns(runs), nil
+	}
+
+	// Zero check runs is not "no CI": an Actions-only repository reports no commit
+	// statuses and a repository driven by external services reports no check runs, so the
+	// other surface has to be asked before the answer is unknown. Cross-file contract:
+	// this branch mirrors the second half of ghapi.Client.CIState — change either and
+	// update both, or the summary and the receipt start disagreeing about one commit.
+	status, err := client.GetCombinedStatus(ctx, owner, name, ref)
+	switch {
+	case err != nil && notFound(err):
+		return ghapi.CIUnknown, nil
+	case err != nil:
+		return ghapi.CIUnknown, err
+	case status.TotalCount == 0:
+		return ghapi.CIUnknown, nil
+	}
+	switch status.State {
+	case "success":
+		return ghapi.CIPassing, nil
+	case "pending":
+		return ghapi.CIPending, nil
+	default:
+		return ghapi.CIFailing, nil
+	}
+}
+
+// checkRuns returns one commit's check runs, reading them at most once per Prefetched.
+//
+// A 404 is recorded as an empty result rather than propagated: no check-runs resource for
+// a commit is knowledge, and both consumers already treat it as "no observed run". Caching
+// it matters as much as caching a hit — otherwise a commit GitHub 404s costs one read per
+// consumer for an answer that will never change within the command.
+func checkRuns(ctx context.Context, client *ghapi.Client, owner, name, ref string,
+	pre *Prefetched,
+) ([]ghapi.CheckRun, error) {
+	if pre != nil {
+		if cached, read := pre.CheckRuns[ref]; read {
+			return cached, nil
+		}
+	}
+	runs, err := client.ListCheckRunsForRef(ctx, owner, name, ref)
+	switch {
+	case err != nil && notFound(err):
+		runs = nil
+	case err != nil:
+		return nil, err
+	}
+	if pre != nil {
+		if pre.CheckRuns == nil {
+			pre.CheckRuns = map[string][]ghapi.CheckRun{}
+		}
+		pre.CheckRuns[ref] = runs
+	}
+	return runs, nil
 }
 
 // Load performs the phase-bounded read set and evaluates the gate, issuing every read
@@ -199,7 +286,7 @@ func LoadWith(ctx context.Context, client *ghapi.Client, owner, name string,
 	}
 
 	if gate == relation.PhaseMerge {
-		if err := loadMergeEvidence(ctx, client, owner, name, &topology); err != nil {
+		if err := loadMergeEvidence(ctx, client, owner, name, &topology, pre); err != nil {
 			return nil, err
 		}
 	}
@@ -239,7 +326,7 @@ func openPullRequests(ctx context.Context, client *ghapi.Client, owner, name str
 // read could not establish; reporting a transport failure as a domain finding would tell
 // the operator the PR is unmergeable when the truth is that nothing was learned.
 func loadMergeEvidence(ctx context.Context, client *ghapi.Client, owner, name string,
-	topology *relation.Topology,
+	topology *relation.Topology, pre *Prefetched,
 ) error {
 	settings, err := client.GetRepositoryMergeSettings(ctx, owner, name)
 	if err != nil {
@@ -262,13 +349,14 @@ func loadMergeEvidence(ctx context.Context, client *ghapi.Client, owner, name st
 	if topology.PullRequest.HeadSHA == "" {
 		return nil
 	}
-	runs, err := client.ListCheckRunsForRef(ctx, owner, name, topology.PullRequest.HeadSHA)
-	switch {
-	case err != nil && notFound(err):
-		// No check-runs resource for this commit is knowledge, not a failed read: the
-		// required-check predicate reports each enforced name as having no observed run.
-		return nil
-	case err != nil:
+	// The check runs are taken from the shared read when one happened. The rendered CI
+	// column and this required-check predicate consume the same commit's runs, so without
+	// the reuse every ready open pull request in a summary paid for the identical list
+	// twice (NFR-008). checkRuns already folds a 404 into an empty result, which is
+	// knowledge rather than a failed read: the predicate reports each enforced name as
+	// having no observed run.
+	runs, err := checkRuns(ctx, client, owner, name, topology.PullRequest.HeadSHA, pre)
+	if err != nil {
 		return err
 	}
 	for _, run := range runs {
