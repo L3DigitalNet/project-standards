@@ -823,8 +823,8 @@ func TestSetDoesNotClaimAnUntouchedIssueWhenTheTypeWriteFails(t *testing.T) {
 	h.routes["PATCH "+fixtureRepo+"/issues/12"] = ghtest.Response{
 		Status: http.StatusServiceUnavailable, Body: `{"message":"Service unavailable"}`}
 
-	if code := h.run("set", "--issue", "12", "--type", "Feature", "--field", "Workflow=Ready"); code != cli.ExitFailure {
-		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	if code := h.run("set", "--issue", "12", "--type", "Feature", "--field", "Workflow=Ready"); code != cli.ExitOperational {
+		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitOperational, h.stderr)
 	}
 	wants(t, h.stderr.String(), "#12", "no field values were written", "unknown")
 	if strings.Contains(h.stderr.String(), "nothing changed") {
@@ -847,8 +847,8 @@ func TestSetReportsTheAppliedTypeWhenTheFieldWriteFails(t *testing.T) {
 	h.routes["POST "+fixtureRepo+"/issues/12/issue-field-values"] = ghtest.Response{
 		Status: http.StatusServiceUnavailable, Body: `{"message":"Service unavailable"}`}
 
-	if code := h.run("set", "--issue", "12", "--type", "Feature", "--field", "Workflow=Ready"); code != cli.ExitFailure {
-		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	if code := h.run("set", "--issue", "12", "--type", "Feature", "--field", "Workflow=Ready"); code != cli.ExitOperational {
+		t.Errorf("exit = %d, want %d\nstderr: %s", code, cli.ExitOperational, h.stderr)
 	}
 	wants(t, h.stderr.String(), "#12", "Issue Type is now", `"Feature"`, "rerun")
 
@@ -1183,8 +1183,8 @@ func TestNewNamesTheCreatedIssueWhenTheReceiptReadFails(t *testing.T) {
 	h.routes["GET "+fixtureRepo+"/issues/31"] = ghtest.Response{
 		Status: http.StatusInternalServerError, Body: `{"message":"Server Error"}`}
 
-	if code := h.run("new", "--type", "Task", "--title", "Record the frozen flag surface"); code != cli.ExitFailure {
-		t.Fatalf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	if code := h.run("new", "--type", "Task", "--title", "Record the frozen flag surface"); code != cli.ExitOperational {
+		t.Fatalf("exit = %d, want %d\nstderr: %s", code, cli.ExitOperational, h.stderr)
 	}
 	wants(t, h.stderr.String(), "created", "#31",
 		"https://github.com/L3DigitalNet/example-repo/issues/31", "could not read it back")
@@ -1304,6 +1304,11 @@ func TestNewEmitsTheReceiptAsJSON(t *testing.T) {
 }
 
 // ---------------------------------------------------------------- close / reopen
+//
+// The partial-failure cases below exit ExitOperational rather than ExitFailure: the write
+// that failed did so because the API refused it, and IR-005 reserves exit 1 for a verdict
+// the tool actually reached. The completed-step reporting is unchanged — ERR-014 requires
+// the message to state what provably landed, and exit 3 says only that no verdict exists.
 
 // FR-021 fixes the order: the native state change with its close reason first, then the
 // Workflow field. Asserting the recorded sequence is what makes the order a contract.
@@ -1350,8 +1355,8 @@ func TestClosePartialFailureReportsTheDivergentState(t *testing.T) {
 	h.routes["POST "+fixtureRepo+"/issues/12/issue-field-values"] = ghtest.Response{
 		Status: http.StatusServiceUnavailable, Body: `{"message":"Service unavailable"}`}
 
-	if code := h.run("close", "--issue", "12", "--as", "done"); code != cli.ExitFailure {
-		t.Fatalf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	if code := h.run("close", "--issue", "12", "--as", "done"); code != cli.ExitOperational {
+		t.Fatalf("exit = %d, want %d\nstderr: %s", code, cli.ExitOperational, h.stderr)
 	}
 	wants(t, h.stderr.String(),
 		"#12",               // which item diverged
@@ -1371,8 +1376,8 @@ func TestCloseRerunConvergesAfterAPartialFailure(t *testing.T) {
 	h := newHarness(t)
 	h.routes["POST "+fixtureRepo+"/issues/12/issue-field-values"] = ghtest.Response{
 		Status: http.StatusServiceUnavailable, Body: `{"message":"Service unavailable"}`}
-	if code := h.run("close", "--issue", "12", "--as", "done"); code != cli.ExitFailure {
-		t.Fatalf("first run exit = %d, want %d", code, cli.ExitFailure)
+	if code := h.run("close", "--issue", "12", "--as", "done"); code != cli.ExitOperational {
+		t.Fatalf("first run exit = %d, want %d", code, cli.ExitOperational)
 	}
 
 	// The corrective retry: the same invocation, once the transient failure clears.
@@ -1398,8 +1403,8 @@ func TestCloseLeavesTheWorkflowFieldAloneWhenTheStateChangeFails(t *testing.T) {
 	h.routes["PATCH "+fixtureRepo+"/issues/12"] = ghtest.Response{
 		Status: http.StatusForbidden, Body: `{"message":"Forbidden"}`}
 
-	if code := h.run("close", "--issue", "12", "--as", "done"); code != cli.ExitFailure {
-		t.Fatalf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
+	if code := h.run("close", "--issue", "12", "--as", "done"); code != cli.ExitOperational {
+		t.Fatalf("exit = %d, want %d\nstderr: %s", code, cli.ExitOperational, h.stderr)
 	}
 	for _, write := range h.transport.mutations() {
 		if strings.HasSuffix(write.Path, "/issue-field-values") {
@@ -1463,8 +1468,8 @@ func TestCloseReportsTheOpenIssueWhenTheReclassifyingCloseFails(t *testing.T) {
 	// The reopen is served; the close that should follow it is not.
 	h.env.Transport = &failPatchAfter{inner: h.transport, path: fixtureRepo + "/issues/18", serve: 1}
 
-	if code := h.run("close", "--issue", "18", "--as", "done"); code != cli.ExitFailure {
-		t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s", code, cli.ExitFailure, h.stdout, h.stderr)
+	if code := h.run("close", "--issue", "18", "--as", "done"); code != cli.ExitOperational {
+		t.Fatalf("exit = %d, want %d\nstdout: %s\nstderr: %s", code, cli.ExitOperational, h.stdout, h.stderr)
 	}
 	stderr := h.stderr.String()
 	wants(t, stderr,
@@ -1591,14 +1596,18 @@ func TestReopenRefusesAValueOutsideTheSchema(t *testing.T) {
 
 // ---------------------------------------------------------------- check
 
-func TestCheckPassesAnEligibleIssueAndItemizesEveryClass(t *testing.T) {
+// An eligible issue is `clear` and writes nothing. The 1.6 report listed every
+// precondition class in both directions; the DR-004 envelope has no member for a passing
+// class, so a clear verdict is now the whole statement that each one passed and the
+// itemization below covers the unmet direction.
+func TestCheckPassesAnEligibleIssue(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
 	if code := h.run("check", "--issue", "12"); code != cli.ExitOK {
 		t.Fatalf("exit = %d, want 0\nstderr: %s", code, h.stderr)
 	}
-	wants(t, h.stdout.String(), "pinned-fields", "acceptance-criteria", "blocking-dependencies", "size")
+	wants(t, h.stdout.String(), "clear")
 	for _, c := range h.transport.recorded() {
 		if c.Method != http.MethodGet {
 			t.Errorf("check issued a %s request; it is read-only", c.Method)
@@ -1622,7 +1631,7 @@ func TestCheckDoesNotRequireAnOptionalPinnedFieldForReady(t *testing.T) {
 	}{
 		{
 			name: "task with every required pin and no target date", issue: "22",
-			wantExit: cli.ExitOK, wants: []string{"pinned-fields", "Ready"},
+			wantExit: cli.ExitOK, wants: []string{"clear"},
 		},
 		{
 			name: "feature missing a required pin", issue: "14",
@@ -1670,29 +1679,23 @@ func TestCheckEmitsJSON(t *testing.T) {
 	if code := h.run("check", "--issue", "14", "--output", "json"); code != cli.ExitFailure {
 		t.Fatalf("exit = %d, want %d\nstderr: %s", code, cli.ExitFailure, h.stderr)
 	}
-	var report struct {
-		Repository string `json:"repository"`
-		Issue      int    `json:"issue"`
-		Eligible   bool   `json:"eligible"`
-		Findings   []struct {
-			Class  string `json:"class"`
-			Status string `json:"status"`
-			Detail string `json:"detail"`
-		} `json:"findings"`
+	envelope := decodeEnvelope(t, h.stdout.Bytes())
+	if envelope.Result != cli.ResultDomainFinding {
+		t.Errorf("result = %q, want %q", envelope.Result, cli.ResultDomainFinding)
 	}
-	if err := json.Unmarshal(h.stdout.Bytes(), &report); err != nil {
-		t.Fatalf("stdout is not the check report: %v\n%s", err, h.stdout)
+	if envelope.Target.Kind != cli.TargetIssue || envelope.Target.Number != 14 {
+		t.Errorf("target = %+v, want issue 14", envelope.Target)
 	}
-	if report.Issue != 14 || report.Eligible {
-		t.Errorf("report = %+v, want issue 14 ineligible", report)
+	codes := map[string]bool{}
+	for _, finding := range envelope.Findings {
+		codes[finding.Code] = true
 	}
-	classes := map[string]string{}
-	for _, finding := range report.Findings {
-		classes[finding.Class] = finding.Status
-	}
-	for _, class := range []string{"pinned-fields", "acceptance-criteria", "blocking-dependencies", "size"} {
-		if classes[class] != "blocked" {
-			t.Errorf("class %q status = %q, want blocked", class, classes[class])
+	for _, code := range []string{
+		"GHW-ISSUE-READY-PINNED-FIELDS", "GHW-ISSUE-READY-ACCEPTANCE-CRITERIA",
+		"GHW-ISSUE-READY-BLOCKED-BY", "GHW-ISSUE-READY-SIZE",
+	} {
+		if !codes[code] {
+			t.Errorf("the envelope carries no %s finding: %+v", code, envelope.Findings)
 		}
 	}
 }

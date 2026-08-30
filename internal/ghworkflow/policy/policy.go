@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 )
 
 // Policy is the parsed consumer configuration.
@@ -96,8 +98,13 @@ func Parse(data []byte) (*Policy, error) {
 	if org == "" {
 		return nil, errors.New("policy is missing a non-empty top-level `organization` key")
 	}
-	if !validLogin(org) {
-		return nil, fmt.Errorf("policy `organization` value %q is not a valid GitHub login", org)
+	// IR-001 requires one validation boundary for GitHub logins, and this is a containment
+	// boundary as well as a spelling check: the organization is interpolated into API
+	// request paths, so anything outside the login alphabet must be refused before it can
+	// reshape a URL. ghapi owns that validator because every request path is built there;
+	// a private copy here was a second implementation free to drift (DEV-021).
+	if err := ghapi.ValidateLogin(org); err != nil {
+		return nil, fmt.Errorf("policy `organization` value %q is not a valid GitHub login: %w", org, err)
 	}
 
 	version := values["package_version"]
@@ -121,21 +128,4 @@ func quotedString(n int, s string) (string, error) {
 		return "", fmt.Errorf("line %d: escapes inside quoted values are not supported", n)
 	}
 	return inner, nil
-}
-
-// validLogin mirrors GitHub's account-name rules. It is also a containment boundary: the
-// login is interpolated into the API request path, so anything outside this alphabet is
-// refused before it can reshape a URL.
-func validLogin(s string) bool {
-	if len(s) > 39 || strings.HasPrefix(s, "-") || strings.HasSuffix(s, "-") {
-		return false
-	}
-	for _, r := range s {
-		switch {
-		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-':
-		default:
-			return false
-		}
-	}
-	return true
 }

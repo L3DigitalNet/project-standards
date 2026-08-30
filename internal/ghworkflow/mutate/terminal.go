@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/orgschema"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 )
@@ -32,15 +33,38 @@ func runClose(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("close", flag.ContinueOnError)
 	tgt := addTargetFlags(fs, true)
 	issue := fs.Int("issue", 0, "issue number to close")
-	as := fs.String("as", "", "terminal disposition: done or dropped")
-	if err := parse(fs, env, args, "Usage: gh-workflow close --issue N --as done|dropped [flags]\n\n"+
-		"Applies the terminal transition as an ordered sequence: the native close with its\n"+
-		"reason first, then the matching Workflow value. Both steps are idempotent; if the\n"+
-		"second fails, the divergence is reported and rerunning this command converges.\n"); err != nil {
+	pull := fs.Int("pr", 0, "pull request number to close unmerged; only a Final PR has this route")
+	as := fs.String("as", "", "terminal disposition: done or dropped for --issue; "+
+		"in-progress, in-review, blocked, or dropped for --pr")
+	prReason := fs.String("reason", "", "one-line reason recorded on the pull request before it closes (--pr only)")
+	output := fs.String("output", string(cli.OutputHuman), "output format: human or json")
+	if err := parse(fs, env, args, "Usage: gh-workflow close --issue N --as done|dropped [flags]\n"+
+		"       gh-workflow close --pr P --as OUTCOME --reason S [flags]\n\n"+
+		"Issue mode applies the terminal transition as an ordered sequence: the native close\n"+
+		"with its reason first, then the matching Workflow value. PR mode is the sole route\n"+
+		"for intentionally closing an open Final unmerged: it records an immutable\n"+
+		"disposition comment, closes the pull request, then converges the governing issue.\n"+
+		"Both are idempotent; a partial failure is reported and rerunning converges.\n"); err != nil {
 		return err
+	}
+	mode, err := cli.ParseOutputMode(*output)
+	if err != nil {
+		return cli.Usagef("%v", err)
+	}
+	// The two modes are mutually exclusive rather than combinable: they close different
+	// objects under different vocabularies, and an invocation naming both has no meaning
+	// this command may pick between.
+	if *issue > 0 && *pull > 0 {
+		return cli.Usagef("pass exactly one of --issue N or --pr P")
+	}
+	if *pull > 0 {
+		return closePullRequest(ctx, env, tgt, mode, *pull, *as, *prReason)
 	}
 	if err := requireIssue(*issue); err != nil {
 		return err
+	}
+	if *prReason != "" {
+		return cli.Usagef("--reason records a pull request's disposition and has no meaning for --issue")
 	}
 
 	var workflow string
@@ -67,7 +91,7 @@ func runClose(ctx context.Context, env *cli.Env, args []string) error {
 	if err := requireWorkflowValue(schema, workflow); err != nil {
 		return err
 	}
-	return apply(ctx, env, tgt, *issue, move)
+	return apply(ctx, env, tgt, mode, "close", *issue, move)
 }
 
 func runReopen(ctx context.Context, env *cli.Env, args []string) error {
@@ -75,11 +99,16 @@ func runReopen(ctx context.Context, env *cli.Env, args []string) error {
 	tgt := addTargetFlags(fs, true)
 	issue := fs.Int("issue", 0, "issue number to reopen")
 	workflow := fs.String("workflow", "", "nonterminal Workflow value to restore")
+	output := fs.String("output", string(cli.OutputHuman), "output format: human or json")
 	if err := parse(fs, env, args, "Usage: gh-workflow reopen --issue N --workflow VALUE [flags]\n\n"+
 		"Reopens the issue and restores a nonterminal Workflow value, in that order and\n"+
 		"under the same protocol as close: idempotent steps, divergence reported, rerun to\n"+
 		"converge. Which value the work returns to is your judgment, so it is required.\n"); err != nil {
 		return err
+	}
+	mode, err := cli.ParseOutputMode(*output)
+	if err != nil {
+		return cli.Usagef("%v", err)
 	}
 	if err := requireIssue(*issue); err != nil {
 		return err
@@ -100,7 +129,7 @@ func runReopen(ctx context.Context, env *cli.Env, args []string) error {
 			"reopening restores a nonterminal value: %s",
 			*workflow, strings.Join(nonterminalWorkflowValues(schema), ", "))
 	}
-	return apply(ctx, env, tgt, *issue, transition{
+	return apply(ctx, env, tgt, mode, "reopen", *issue, transition{
 		state:    stateOpen,
 		reason:   reasonReopened,
 		workflow: *workflow,
@@ -119,14 +148,31 @@ func requireWorkflowValue(schema *orgschema.Schema, value string) error {
 	return validateValue(field, value)
 }
 
-// apply runs the ordered failure-safe sequence of spec FR-021.
+// The two ordered boundaries of the FR-021 terminal sequence, named once so the step
+// record a paired command emits and the sequence itself cannot drift apart.
+const (
+	stepNativeState   = "native-state"
+	stepWorkflowField = "workflow-field"
+)
+
+// convergeOutcome is what one terminal sequence did: whether it wrote anything, and the
+// operator-facing sentence describing the state it left.
+type convergeOutcome struct {
+	Changed bool
+	Message string
+}
+
+// apply runs the terminal sequence for the `close` and `reopen` subcommands and prints
+// its confirmation.
 //
-// The order is fixed and the direction matters: the native state moves first, so a
-// failure between the steps leaves an issue whose GitHub state is terminal and whose
-// Workflow field is not — visible in every listing, and exactly what the divergence
-// report names. The reverse order would leave a `Done` field on an open issue, which
-// reads as a completed item and hides itself.
-func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move transition) error {
+// The rendering split is deliberate: converge owns the protocol and every message it can
+// produce, and this wrapper owns only the streams and the repository resolution, so the
+// 1.7 paired commands can run the identical sequence as one recorded step (FR-033's "the
+// same operation converges the governing Issue through the existing `close --issue N --as
+// done` semantics") without a second implementation drifting from this one.
+func apply(ctx context.Context, env *cli.Env, tgt *target, mode cli.OutputMode,
+	command string, number int, move transition,
+) error {
 	repo, err := tgt.resolve(env)
 	if err != nil {
 		return err
@@ -136,18 +182,54 @@ func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move tran
 		return err
 	}
 
+	rec := newSteps(stepNativeState, stepWorkflowField)
+	outcome, convergeErr := converge(ctx, client, repo, number, move, rec)
+
+	// Human mode keeps the 1.6 confirmation text, which is the surface operators and the
+	// skill already read; JSON mode is the DR-004 envelope, whose steps are what make a
+	// partially applied terminal sequence machine-readable (ERR-014). The failure text is
+	// not duplicated into the envelope message: cli.Run prints the error either way.
+	if mode == cli.OutputJSON {
+		envelope := cli.NewEnvelope(command, cli.Classify(convergeErr),
+			cli.Target{Kind: cli.TargetIssue, Number: number, Repository: repo.String()})
+		envelope.Steps = rec.list()
+		if writeErr := cli.WriteEnvelope(envelope, mode, env); writeErr != nil {
+			return writeErr
+		}
+		return convergeErr
+	}
+	if convergeErr != nil {
+		return convergeErr
+	}
+	_, err = fmt.Fprintln(env.Stdout, outcome.Message)
+	return err
+}
+
+// converge runs the ordered failure-safe sequence of spec FR-021, recording each boundary
+// in rec when one is supplied.
+//
+// The order is fixed and the direction matters: the native state moves first, so a
+// failure between the steps leaves an issue whose GitHub state is terminal and whose
+// Workflow field is not — visible in every listing, and exactly what the divergence
+// report names. The reverse order would leave a `Done` field on an open issue, which
+// reads as a completed item and hides itself.
+func converge(ctx context.Context, client *ghapi.Client, repo render.Repository,
+	number int, move transition, rec *steps,
+) (convergeOutcome, error) {
 	before, err := render.FetchIssue(ctx, client, repo, number)
 	if err != nil {
-		return err
+		return convergeOutcome{}, err
 	}
 	if before.State == move.state && before.StateReason == move.reason &&
 		before.Field(render.FieldWorkflow) == move.workflow {
 		// A converged rerun is the normal end of the corrective-retry path, so it reports
 		// success and writes nothing: repeating the calls would only add timeline noise
 		// and consume the write budget GitHub meters.
-		_, err = fmt.Fprintf(env.Stdout, "%s#%d is already %s with Workflow = %s; nothing to change.\n",
-			repo, number, nativeState(move.state, move.reason), move.workflow)
-		return err
+		rec.skip(stepNativeState, "already "+nativeState(move.state, move.reason))
+		rec.skip(stepWorkflowField, "Workflow is already "+move.workflow)
+		return convergeOutcome{Message: fmt.Sprintf(
+			"%s#%d is already %s with Workflow = %s; nothing to change.",
+			repo, number, nativeState(move.state, move.reason), move.workflow)}, nil
 	}
 
 	// Resolving the field id first keeps a drifted schema from stranding the sequence
@@ -155,7 +237,7 @@ func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move tran
 	values, err := resolveFieldIDs(ctx, client, repo.Owner,
 		[]assignment{{Name: render.FieldWorkflow, Value: move.workflow}})
 	if err != nil {
-		return err
+		return convergeOutcome{}, err
 	}
 
 	// A closed issue cannot be reclassified in place. GitHub applies state_reason only when
@@ -176,7 +258,7 @@ func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move tran
 	if move.state == stateClosed && before.State == stateClosed && before.StateReason != move.reason {
 		if _, err := client.SetIssueState(ctx, repo.Owner, repo.Name, number,
 			stateOpen, reasonReopened); err != nil {
-			return fmt.Errorf("%s#%d: reopening to reclassify the close reason from %s to %s failed, "+
+			return convergeOutcome{}, fmt.Errorf("%s#%d: reopening to reclassify the close reason from %s to %s failed, "+
 				"so the issue is unchanged and nothing diverged: %w",
 				repo, number, before.StateReason, move.reason, err)
 		}
@@ -185,13 +267,14 @@ func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move tran
 
 	updated, err := client.SetIssueState(ctx, repo.Owner, repo.Name, number, move.state, move.reason)
 	if err != nil {
+		rec.fail(stepNativeState, "the native state change failed")
 		if reopenApplied {
-			return fmt.Errorf("%s#%d: the reclassifying reopen was applied but the close that follows "+
+			return convergeOutcome{}, fmt.Errorf("%s#%d: the reclassifying reopen was applied but the close that follows "+
 				"it failed, so the issue is now open and its Workflow field is untouched, still %s. "+
 				"Rerun `gh-workflow %s` to converge; every step is idempotent: %w",
 				repo, number, quotedOrUnset(before.Field(render.FieldWorkflow)), move.rerun, err)
 		}
-		return fmt.Errorf("%s#%d: the native state change failed, so the Workflow field was left "+
+		return convergeOutcome{}, fmt.Errorf("%s#%d: the native state change failed, so the Workflow field was left "+
 			"untouched and nothing diverged: %w", repo, number, err)
 	}
 	// The API's own answer is the oracle, not the 2xx. A dropped state_reason comes back as
@@ -200,8 +283,9 @@ func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move tran
 	// close: `reopened` is a byproduct of the transition, while a close reason is half of
 	// the terminal pairing FR-021 keeps synchronized.
 	if updated.State != move.state || (move.state == stateClosed && updated.StateReason != move.reason) {
+		rec.fail(stepNativeState, "GitHub reports "+nativeState(updated.State, updated.StateReason))
 		if reopenApplied {
-			return fmt.Errorf("%s#%d: the reclassifying reopen was applied, so the issue has already "+
+			return convergeOutcome{}, fmt.Errorf("%s#%d: the reclassifying reopen was applied, so the issue has already "+
 				"changed, but GitHub reports %s after the close that should have followed rather than "+
 				"the requested %s; the Workflow field was left untouched, still %s. Rerun "+
 				"`gh-workflow %s` to converge, or reclassify the issue in GitHub first",
@@ -209,24 +293,29 @@ func apply(ctx context.Context, env *cli.Env, tgt *target, number int, move tran
 				nativeState(move.state, move.reason),
 				quotedOrUnset(before.Field(render.FieldWorkflow)), move.rerun)
 		}
-		return fmt.Errorf("%s#%d: GitHub still reports %s after the state change rather than the "+
+		return convergeOutcome{}, fmt.Errorf("%s#%d: GitHub still reports %s after the state change rather than the "+
 			"requested %s, so the Workflow field was left untouched and nothing diverged; "+
 			"reclassify the issue in GitHub, then rerun `gh-workflow %s`",
 			repo, number, nativeState(updated.State, updated.StateReason),
 			nativeState(move.state, move.reason), move.rerun)
 	}
 
+	rec.complete(stepNativeState, "GitHub state "+nativeState(move.state, move.reason))
+
 	if err := client.AddIssueFieldValues(ctx, repo.Owner, repo.Name, number, values); err != nil {
-		return fmt.Errorf("%s#%d is now %s on GitHub but its Workflow field is still %s rather than %q.\n"+
+		rec.fail(stepWorkflowField, fmt.Sprintf("Workflow is still %s rather than %q",
+			quotedOrUnset(before.Field(render.FieldWorkflow)), move.workflow))
+		return convergeOutcome{Changed: true}, fmt.Errorf("%s#%d is now %s on GitHub but its Workflow field is still %s rather than %q.\n"+
 			"The terminal pairing has diverged. Rerun `gh-workflow %s` to converge; both steps are "+
 			"idempotent: %w",
 			repo, number, nativeState(move.state, move.reason),
 			quotedOrUnset(before.Field(render.FieldWorkflow)), move.workflow, move.rerun, err)
 	}
 
-	_, err = fmt.Fprintf(env.Stdout, "%s#%d: GitHub state %s; Workflow = %s.\n",
-		repo, number, nativeState(move.state, move.reason), move.workflow)
-	return err
+	rec.complete(stepWorkflowField, "Workflow = "+move.workflow)
+
+	return convergeOutcome{Changed: true, Message: fmt.Sprintf("%s#%d: GitHub state %s; Workflow = %s.",
+		repo, number, nativeState(move.state, move.reason), move.workflow)}, nil
 }
 
 // nativeState renders the state and its reason the way GitHub names them, because that is

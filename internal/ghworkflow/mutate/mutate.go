@@ -1,13 +1,19 @@
-// Package mutate is the tool's validated write surface: the four subcommands that change
-// repository work state — `new`, `set`, `close`, `reopen` — and read-only `check`, which
-// verifies the preconditions that make an issue eligible for `Ready` (spec FR-021,
-// FR-023).
+// Package mutate is the tool's validated write surface: the subcommands that change
+// repository work state — `new`, `set`, `close`, `reopen`, and the 1.7 paired operations
+// `ready` and `merge` — plus read-only `check`, the gate over an issue's Ready
+// preconditions or a pull request's phase (spec FR-021, FR-023, FR-031 through FR-034).
 //
 // One rule shapes every path here: validation precedes any mutating call. A value the
 // baseline schema does not define is refused before a client is even built, so a refusal
 // leaves GitHub untouched by construction rather than by cleanup (spec EC-008). The
 // organization schema itself is never written — these subcommands address repositories,
 // and schema changes remain human work.
+//
+// The 1.7 paired operations extend that rule rather than replacing it: each one evaluates
+// the shared relationship engine's gate immediately before its first write, so the state a
+// transition was authorized on is the state that still holds when it lands, and each
+// records its ordered boundaries as DR-004 steps so a partially applied operation reports
+// exactly which writes provably happened (ERR-014). Nothing is ever rolled back.
 //
 // The second shaping rule is FR-021's terminal pairing. `Workflow` and GitHub's native
 // open/closed state answer different questions and must agree at the terminals, but they
@@ -44,7 +50,7 @@ func init() {
 	})
 	cli.Register(&cli.Command{
 		Name:    "close",
-		Summary: "apply a terminal transition: native close reason first, then the Workflow value",
+		Summary: "close an issue with its paired Workflow value, or record a Final PR's disposition",
 		Run:     runClose,
 	})
 	cli.Register(&cli.Command{
@@ -53,8 +59,18 @@ func init() {
 		Run:     runReopen,
 	})
 	cli.Register(&cli.Command{
+		Name:    "ready",
+		Summary: "carry a draft pull request across Ready: fresh gate, Final issue sync, mark ready",
+		Run:     runReady,
+	})
+	cli.Register(&cli.Command{
+		Name:    "merge",
+		Summary: "admit a validated pull request and converge a Final PR's governing issue",
+		Run:     runMerge,
+	})
+	cli.Register(&cli.Command{
 		Name:    "check",
-		Summary: "verify an issue's Ready preconditions and itemize the findings (read-only)",
+		Summary: "gate one issue on its Ready preconditions or one pull request on its phase (read-only)",
 		Run:     runCheck,
 	})
 }

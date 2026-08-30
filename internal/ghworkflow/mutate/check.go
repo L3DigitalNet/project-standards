@@ -1,5 +1,21 @@
 package mutate
 
+// `gh-workflow check` (spec FR-023, FR-031): the gate. It decides, where `receipt`
+// describes and `summary` aggregates, and it is the only one of the three whose exit code
+// is a verdict rather than a report of successful rendering.
+//
+// Exactly one of `--issue N` and `--pr N` is required, because the two routes answer
+// different questions against different authorities. The Issue route asks whether an
+// issue may be admitted to `Ready`: a recognized ordinary Issue Type, native open state, a
+// nonterminal lifecycle-coherent `Workflow`, and the four content preconditions. The PR
+// route hands the pull request to the shared relationship engine at the gate its observed
+// state implies, or at the `--through` phase the caller named.
+//
+// All four IR-005 result classes are reachable here and they are not interchangeable:
+// clear (0), domain findings (1), a malformed invocation or local refusal (2), and an
+// authentication, API, or transport failure that produced no verdict at all (3). The whole
+// point of the last one is that a gate which cannot be evaluated must never read as clear.
+
 import (
 	"context"
 	"flag"
@@ -9,66 +25,58 @@ import (
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/orgschema"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
 )
 
-// The Ready precondition classes of spec FR-023, in report order. Every class appears in
-// every report whether met or not: a report that listed only failures would be
-// indistinguishable from one where a class was never evaluated.
+// The Ready precondition classes of spec FR-023. Each finding message opens with its
+// class, which is the operator-facing name the reference documentation and the 1.6 report
+// both used; the DR-004 `code` is the machine-readable identity.
 const (
 	classPinnedFields = "pinned-fields"
 	classAcceptance   = "acceptance-criteria"
 	classDependencies = "blocking-dependencies"
 	classSize         = "size"
-)
-
-// Finding statuses.
-const (
-	statusOK      = "ok"
-	statusBlocked = "blocked"
+	classIssueType    = "issue-type"
+	classNativeState  = "native-state"
+	classWorkflow     = "workflow"
 )
 
 // sizeTooLarge is the Size value that prohibits direct implementation: XL work is
 // decomposed, never dispatched, so it can never be Ready.
 const sizeTooLarge = "XL"
 
-// Finding is one precondition class and its verdict.
-type Finding struct {
-	Class  string `json:"class"`
-	Status string `json:"status"`
-	Detail string `json:"detail"`
-}
-
-// CheckReport is the machine-readable form of a readiness check.
-type CheckReport struct {
-	Repository string    `json:"repository"`
-	Issue      int       `json:"issue"`
-	Title      string    `json:"title"`
-	URL        string    `json:"url"`
-	Type       string    `json:"type"`
-	Eligible   bool      `json:"eligible"`
-	Findings   []Finding `json:"findings"`
-}
-
 func runCheck(ctx context.Context, env *cli.Env, args []string) error {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
-	tgt := addTargetFlags(fs, false)
-	issue := fs.Int("issue", 0, "issue number to check")
+	tgt := addTargetFlags(fs, true)
+	issue := fs.Int("issue", 0, "issue number to check for Ready eligibility")
+	pull := fs.Int("pr", 0, "pull request number to check against the relationship engine")
+	through := fs.String("through", "", "evaluate a pull request through this phase: "+
+		"structural, ready, merge, or post-merge (default: the phase its observed state implies)")
 	output := fs.String("output", string(cli.OutputHuman), "output format: human or json")
-	if err := parse(fs, env, args, "Usage: gh-workflow check --issue N [flags]\n\n"+
-		"Verifies the preconditions an issue must satisfy to be Ready and itemizes every\n"+
-		"one. Read-only: it mutates nothing. Exits zero when the issue is eligible and\n"+
-		"nonzero when any precondition is unmet.\n"); err != nil {
+	if err := parse(fs, env, args, "Usage: gh-workflow check --issue N [flags]\n"+
+		"       gh-workflow check --pr N [--through PHASE] [flags]\n\n"+
+		"Read-only: it mutates nothing. Exits 0 when the gate is clear, 1 when validation\n"+
+		"completed with findings, 2 for a malformed invocation, and 3 when authentication,\n"+
+		"the API, or transport prevented a verdict.\n"); err != nil {
 		return err
 	}
 	mode, err := cli.ParseOutputMode(*output)
 	if err != nil {
 		return cli.Usagef("%v", err)
 	}
-	if err := requireIssue(*issue); err != nil {
-		return err
+	switch {
+	case *issue > 0 && *pull > 0:
+		return cli.Usagef("--issue and --pr are mutually exclusive; pass exactly one")
+	case *issue <= 0 && *pull <= 0:
+		return cli.Usagef("pass exactly one of --issue N or --pr N")
 	}
 
+	schema, err := tgt.loadSchema(env)
+	if err != nil {
+		return err
+	}
 	repo, err := tgt.resolve(env)
 	if err != nil {
 		return err
@@ -77,50 +85,181 @@ func runCheck(ctx context.Context, env *cli.Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	report, err := inspect(ctx, client, repo, *issue)
+
+	if *pull > 0 {
+		return checkPullRequest(ctx, env, client, repo, schema, mode, *pull, *through)
+	}
+	// `--through` selects among the PR phases, and an Issue has none of them: accepting it
+	// silently would let an automation believe it had requested a gate the Issue route
+	// never evaluated.
+	if *through != "" {
+		return cli.Usagef("--through applies to --pr; the issue route has no phases")
+	}
+	return checkIssue(ctx, env, client, repo, schema, mode, *issue)
+}
+
+// checkPullRequest evaluates the relationship engine's gate.
+func checkPullRequest(ctx context.Context, env *cli.Env, client *ghapi.Client,
+	repo render.Repository, schema *orgschema.Schema, mode cli.OutputMode, number int, through string,
+) error {
+	var phase relation.Phase
+	if through != "" {
+		parsed, ok := relation.ParsePhase(through)
+		if !ok {
+			return cli.Usagef("unknown phase %q; --through takes %s, %s, %s, or %s",
+				through, relation.PhaseStructural, relation.PhaseReady,
+				relation.PhaseMerge, relation.PhasePostMerge)
+		}
+		phase = parsed
+	}
+
+	gate, err := loadPRGate(ctx, client, repo, schema, number, phase)
 	if err != nil {
 		return err
 	}
-	if err := emit(env, mode, func() string { return renderCheck(report) }, report); err != nil {
+	envelope := cli.NewEnvelope("check", cli.ResultClear, prTarget(repo, number, gate.pr.HTMLURL))
+	envelope.Gate = cli.Gate(gate.result.Gate)
+	envelope.Findings = gate.result.Findings
+	if !gate.result.Clear() {
+		envelope.Result = cli.ResultDomainFinding
+	}
+	if err := cli.WriteEnvelope(envelope, mode, env); err != nil {
 		return err
 	}
-
-	if !report.Eligible {
-		// The check itself succeeded, so the report is owed and already written; the
-		// nonzero exit is the eligibility verdict, not a precondition failure.
-		return fmt.Errorf("%s#%d is not eligible for Ready: %s",
-			report.Repository, report.Issue, strings.Join(unmetClasses(report), ", "))
+	if envelope.Result == cli.ResultDomainFinding {
+		// The gate ran and produced a verdict, so the report is owed and already written;
+		// the nonzero exit is that verdict rather than a failure to reach one.
+		return domainf("%s#%d does not pass the %s gate: %d finding(s)",
+			repo, number, gate.result.Gate, len(gate.result.Findings))
 	}
 	return nil
 }
 
-// inspect gathers live state and derives every class verdict. Both reads finish before
-// any verdict is formed, so a partial read produces no partial report.
-func inspect(ctx context.Context, client *ghapi.Client, repo render.Repository, number int) (*CheckReport, error) {
+// checkIssue evaluates the Ready preconditions of FR-023.
+func checkIssue(ctx context.Context, env *cli.Env, client *ghapi.Client,
+	repo render.Repository, schema *orgschema.Schema, mode cli.OutputMode, number int,
+) error {
+	// The shape read comes first and is its own call. The issues endpoint serves pull
+	// requests too, so without this an Issue-only route silently reports on a PR that has
+	// no Issue Type and no Issue Field values — every content class would read as missing
+	// and the verdict would be about the wrong object entirely (DEV-023). The projection
+	// render.FetchIssue returns does not carry the `pull_request` member, which is why the
+	// object is read here rather than derived from it.
+	raw, err := client.GetIssue(ctx, repo.Owner, repo.Name, number)
+	if err != nil {
+		return err
+	}
+	if raw.IsPullRequest() {
+		return cli.Usagef("%s#%d is a pull request, not an issue; check it with `gh-workflow check --pr %d`",
+			repo, number, number)
+	}
+
 	item, err := render.FetchIssue(ctx, client, repo, number)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	blockers, err := client.ListBlockingDependencies(ctx, repo.Owner, repo.Name, number)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	report := &CheckReport{
-		Repository: repo.String(),
-		Issue:      item.Number,
-		Title:      item.Title,
-		URL:        item.URL,
-		Type:       item.Type,
-		Findings: []Finding{
-			pinnedFieldsFinding(item),
-			acceptanceFinding(item),
-			dependenciesFinding(blockers),
-			sizeFinding(item),
-		},
+	envelope := cli.NewEnvelope("check", cli.ResultClear,
+		cli.Target{Kind: cli.TargetIssue, Number: number, Repository: repo.String(), URL: item.URL})
+	envelope.Gate = cli.Gate(relation.PhaseReady)
+	envelope.Findings = issueReadyFindings(item, blockers, schema, number)
+	if len(envelope.Findings) > 0 {
+		envelope.Result = cli.ResultDomainFinding
 	}
-	report.Eligible = len(unmetClasses(report)) == 0
-	return report, nil
+	if err := cli.WriteEnvelope(envelope, mode, env); err != nil {
+		return err
+	}
+	if envelope.Result == cli.ResultDomainFinding {
+		return domainf("%s#%d is not eligible for Ready: %d unmet precondition(s)",
+			repo, number, len(envelope.Findings))
+	}
+	return nil
+}
+
+// issueReadyFindings derives every unmet Ready precondition, in evaluation order.
+//
+// Only unmet classes produce findings. The 1.6 report itemized every class in both
+// directions, which the DR-004 envelope has no member for: `findings` is what is wrong,
+// and a passing class is the absence of a finding. The information the old "ok" lines
+// carried survives as the verdict itself — a clear result means every class passed.
+func issueReadyFindings(item render.WorkItem, blockers []ghapi.Issue,
+	schema *orgschema.Schema, number int,
+) []relation.Finding {
+	findings := make([]relation.Finding, 0, 4)
+	add := func(f relation.Finding) {
+		f.Kind, f.Number = relation.KindIssue, number
+		findings = append(findings, f)
+	}
+
+	if recognizedIssueType(item.Type, schema) == "" {
+		add(relation.Finding{
+			Code: "GHW-ISSUE-STRUCTURAL-TYPE-MISSING", Phase: relation.PhaseStructural,
+			Category: relation.CategoryNeedsDefinition, Effect: relation.EffectBlocksReady,
+			Message: fmt.Sprintf("%s: %s carries no recognized ordinary Issue Type", classIssueType,
+				typeLabel(item.Type)),
+			Remediation: fmt.Sprintf("Set one of %s with `gh-workflow set --issue N --type T`.",
+				strings.Join(schema.IssueTypes, ", ")),
+		})
+	}
+	if item.State != stateOpen {
+		// A closed issue cannot be admitted to an executable queue, whatever its content
+		// says: Ready is a statement about work that is about to start.
+		add(relation.Finding{
+			Code: "GHW-ISSUE-READY-NATIVE-STATE", Phase: relation.PhaseReady,
+			Category: relation.CategorySynchronizationRequired, Effect: relation.EffectBlocksReady,
+			Message: fmt.Sprintf("%s: the issue is %s, and only an open issue can be Ready",
+				classNativeState, nativeState(item.State, item.StateReason)),
+			Remediation: "Reopen it with `gh-workflow reopen --issue N --workflow VALUE` if the work is live.",
+		})
+	}
+	if workflow := item.Field(render.FieldWorkflow); workflow == "" || isTerminalWorkflow(workflow) {
+		// A terminal `Workflow` on an issue being gated for Ready is the divergence FR-021
+		// keeps paired, and an unset one means the lifecycle authority has never spoken.
+		add(relation.Finding{
+			Code: "GHW-ISSUE-READY-WORKFLOW-INCOHERENT", Phase: relation.PhaseReady,
+			Category: relation.CategorySynchronizationRequired, Effect: relation.EffectBlocksReady,
+			Message: fmt.Sprintf("%s: Workflow is %s, which is not a nonterminal lifecycle-coherent value",
+				classWorkflow, quotedOrUnset(workflow)),
+			Remediation: "Set a nonterminal Workflow with `gh-workflow set --issue N --field Workflow=VALUE`.",
+		})
+	}
+
+	if finding, ok := pinnedFieldsFinding(item); ok {
+		add(finding)
+	}
+	if !item.HasAcceptanceCriteria {
+		add(relation.Finding{
+			Code: "GHW-ISSUE-READY-ACCEPTANCE-CRITERIA", Phase: relation.PhaseReady,
+			Category: relation.CategoryNeedsDefinition, Effect: relation.EffectBlocksReady,
+			Message: classAcceptance + ": the body has no populated acceptance criteria section",
+			Remediation: "Write the acceptance criteria; the honest Workflow value for work without them " +
+				"is Needs definition.",
+		})
+	}
+	if finding, ok := dependenciesFinding(blockers); ok {
+		add(finding)
+	}
+	if item.Field(render.FieldSize) == sizeTooLarge {
+		add(relation.Finding{
+			Code: "GHW-ISSUE-READY-SIZE", Phase: relation.PhaseReady,
+			Category: relation.CategoryNeedsDefinition, Effect: relation.EffectBlocksReady,
+			Message:     classSize + ": Size is XL, which prohibits direct implementation",
+			Remediation: "Decompose the work into sub-issues that can be dispatched.",
+		})
+	}
+	return findings
+}
+
+// isTerminalWorkflow reports whether a Workflow value is one of the terminal pair. It
+// reads the same authority `set`, `close`, and `reopen` read, so the four subcommands
+// cannot disagree about what "terminal" means.
+func isTerminalWorkflow(value string) bool {
+	_, terminal := terminalReason(value)
+	return terminal
 }
 
 // readinessOptional names pinned fields whose emptiness does not block Ready.
@@ -141,9 +280,9 @@ func inspect(ctx context.Context, client *ghapi.Client, repo render.Repository, 
 var readinessOptional = map[string]bool{render.FieldTargetDate: true}
 
 // pinnedFieldsFinding checks the fields this Issue Type pins. The matrix lives in the
-// render engine because the summary and receipt report the same gaps; readiness is the
-// same question asked as a gate rather than as a report.
-func pinnedFieldsFinding(item render.WorkItem) Finding {
+// render engine because the summary and receipt report the same gaps, which is the one
+// machine-readable pinning authority FR-023 requires check and receipts to share.
+func pinnedFieldsFinding(item render.WorkItem) (relation.Finding, bool) {
 	var required, missing []string
 	for _, field := range render.PinnedFields(item.Type) {
 		if readinessOptional[field] {
@@ -154,75 +293,36 @@ func pinnedFieldsFinding(item render.WorkItem) Finding {
 			missing = append(missing, field)
 		}
 	}
-	if len(missing) > 0 {
-		return Finding{Class: classPinnedFields, Status: statusBlocked,
-			Detail: fmt.Sprintf("missing %s (of the %d fields %s pins that Ready requires)",
-				strings.Join(missing, ", "), len(required), typeLabel(item.Type))}
+	if len(missing) == 0 {
+		return relation.Finding{}, false
 	}
-	return Finding{Class: classPinnedFields, Status: statusOK,
-		Detail: fmt.Sprintf("all %d fields %s pins that Ready requires carry values",
-			len(required), typeLabel(item.Type))}
-}
-
-func acceptanceFinding(item render.WorkItem) Finding {
-	if !item.HasAcceptanceCriteria {
-		return Finding{Class: classAcceptance, Status: statusBlocked,
-			Detail: "the body has no populated acceptance criteria section; the honest " +
-				"Workflow value for work without them is Needs definition"}
-	}
-	return Finding{Class: classAcceptance, Status: statusOK,
-		Detail: "the body carries a populated acceptance criteria section"}
+	return relation.Finding{
+		Code: "GHW-ISSUE-READY-PINNED-FIELDS", Phase: relation.PhaseReady,
+		Category: relation.CategoryNeedsDefinition, Effect: relation.EffectBlocksReady,
+		Message: fmt.Sprintf("%s: missing %s (of the %d fields %s pins that Ready requires)",
+			classPinnedFields, strings.Join(missing, ", "), len(required), typeLabel(item.Type)),
+		Remediation: "Set the missing fields with `gh-workflow set --issue N --field Name=Value`.",
+	}, true
 }
 
 // dependenciesFinding counts only open blockers: a dependency that is already closed no
 // longer blocks anything, and reporting it would make readiness unreachable.
-func dependenciesFinding(blockers []ghapi.Issue) Finding {
+func dependenciesFinding(blockers []ghapi.Issue) (relation.Finding, bool) {
 	var open []string
 	for _, blocker := range blockers {
 		if blocker.State == stateOpen {
 			open = append(open, "#"+strconv.Itoa(blocker.Number))
 		}
 	}
-	if len(open) > 0 {
-		return Finding{Class: classDependencies, Status: statusBlocked,
-			Detail: fmt.Sprintf("blocked by %s, still open", strings.Join(open, ", "))}
+	if len(open) == 0 {
+		return relation.Finding{}, false
 	}
-	return Finding{Class: classDependencies, Status: statusOK, Detail: "no open blocking dependencies"}
-}
-
-func sizeFinding(item render.WorkItem) Finding {
-	if item.Field(render.FieldSize) == sizeTooLarge {
-		return Finding{Class: classSize, Status: statusBlocked,
-			Detail: "Size is XL, which prohibits direct implementation; decompose into sub-issues"}
-	}
-	return Finding{Class: classSize, Status: statusOK, Detail: "Size does not prohibit direct implementation"}
-}
-
-func unmetClasses(report *CheckReport) []string {
-	var unmet []string
-	for _, finding := range report.Findings {
-		if finding.Status == statusBlocked {
-			unmet = append(unmet, finding.Class)
-		}
-	}
-	return unmet
-}
-
-func renderCheck(report *CheckReport) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s#%d — %s\n%s\nType: %s\n\n",
-		report.Repository, report.Issue, report.Title, report.URL, orNone(report.Type))
-	for _, finding := range report.Findings {
-		fmt.Fprintf(&b, "  %-8s %-22s %s\n", finding.Status, finding.Class, finding.Detail)
-	}
-	if report.Eligible {
-		b.WriteString("\nReady preconditions met. Admitting the issue to the executable queue remains your decision.\n")
-	} else {
-		unmet := unmetClasses(report)
-		fmt.Fprintf(&b, "\nNot eligible for Ready: %d of %d preconditions unmet (%s).\n",
-			len(unmet), len(report.Findings), strings.Join(unmet, ", "))
-	}
-	return b.String()
+	return relation.Finding{
+		Code: "GHW-ISSUE-READY-BLOCKED-BY", Phase: relation.PhaseReady,
+		Category: relation.CategoryBlocked, Effect: relation.EffectBlocksReady,
+		Message:     fmt.Sprintf("%s: blocked by %s, still open", classDependencies, strings.Join(open, ", ")),
+		Remediation: "Close or drop the blocking issues, or remove the dependency.",
+	}, true
 }
 
 func typeLabel(issueType string) string {
@@ -230,11 +330,4 @@ func typeLabel(issueType string) string {
 		return "an issue with no Type"
 	}
 	return issueType
-}
-
-func orNone(value string) string {
-	if value == "" {
-		return "(none)"
-	}
-	return value
 }

@@ -239,8 +239,9 @@ func resolveFieldIDs(ctx context.Context, client *ghapi.Client, org string,
 	for _, item := range items {
 		field, ok := byName[item.Name]
 		if !ok {
-			return nil, fmt.Errorf("the %s organization defines no Issue Field named %q, "+
-				"though the baseline schema does; run `gh-workflow audit` to see the drift", org, item.Name)
+			return nil, &schemaDriftError{Field: item.Name, message: fmt.Sprintf(
+				"the %s organization defines no Issue Field named %q, "+
+					"though the baseline schema does; run `gh-workflow audit` to see the drift", org, item.Name)}
 		}
 		value, err := fieldValue(field, item.Value)
 		if err != nil {
@@ -271,9 +272,10 @@ func fieldValue(field ghapi.IssueFieldIdentity, raw string) (any, error) {
 	}
 	number, ok := jsonNumber(raw)
 	if !ok {
-		return nil, fmt.Errorf("the organization types %q as a %s field, but the baseline schema "+
-			"accepted the value %q, which is not a number; run `gh-workflow audit` to see the drift",
-			field.Name, field.DataType, raw)
+		return nil, &schemaDriftError{Field: field.Name, message: fmt.Sprintf(
+			"the organization types %q as a %s field, but the baseline schema "+
+				"accepted the value %q, which is not a number; run `gh-workflow audit` to see the drift",
+			field.Name, field.DataType, raw)}
 	}
 	return number, nil
 }

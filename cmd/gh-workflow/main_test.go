@@ -26,6 +26,11 @@ func TestSubcommandsAreWired(t *testing.T) {
 		"close":   false,
 		"reopen":  false,
 		"check":   false,
+		"ready":   false,
+		"merge":   false,
+	}
+	if len(want) != 10 {
+		t.Fatalf("the IR-005 surface is ten subcommands; this test names %d", len(want))
 	}
 	for _, cmd := range cli.Commands() {
 		if _, expected := want[cmd.Name]; expected {

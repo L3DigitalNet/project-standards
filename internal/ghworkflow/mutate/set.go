@@ -17,11 +17,16 @@ func runSet(ctx context.Context, env *cli.Env, args []string) error {
 	issue := fs.Int("issue", 0, "issue number to update")
 	issueType := fs.String("type", "", "Issue Type to assign, from the organization schema's vocabulary")
 	fields := addFieldFlag(fs, "Issue Field assignment as Name=Value; repeat for several fields")
+	output := fs.String("output", string(cli.OutputHuman), "output format: human or json")
 	if err := parse(fs, env, args, "Usage: gh-workflow set --issue N [--type TYPE] [--field Name=Value ...] [flags]\n\n"+
 		"Sets the Issue Type and Issue Field values after validating every one against\n"+
 		"org-schema.yaml. An invalid value is refused with the valid list and nothing is\n"+
 		"sent to GitHub. Anything not named here keeps its current value.\n"); err != nil {
 		return err
+	}
+	mode, err := cli.ParseOutputMode(*output)
+	if err != nil {
+		return cli.Usagef("%v", err)
 	}
 	if err := requireIssue(*issue); err != nil {
 		return err
@@ -65,25 +70,63 @@ func runSet(ctx context.Context, env *cli.Env, args []string) error {
 		return err
 	}
 
-	if *issueType != "" {
-		if err := applyIssueType(ctx, client, repo, *issue, *issueType, len(values) > 0); err != nil {
-			return err
-		}
-	}
-	if len(values) > 0 {
-		if err := client.AddIssueFieldValues(ctx, repo.Owner, repo.Name, *issue, values); err != nil {
-			if *issueType != "" {
-				return fmt.Errorf("%s#%d: the Issue Type is now %q but the field assignments that "+
-					"follow it failed, so those fields are untouched; rerun the same invocation to "+
-					"converge, since setting a type the issue already carries changes nothing: %w",
-					repo, *issue, *issueType, err)
-			}
-			return err
-		}
-	}
+	// The two writes are ordered boundaries like every other paired sequence: the type
+	// first, the field values second, so a failure between them is reported as the exact
+	// half-applied state it produced (ERR-014) rather than as a bare error.
+	rec := newSteps(stepIssueType, stepFieldValues)
+	writeErr := setWrites(ctx, client, repo, *issue, *issueType, values, rec)
 
+	if mode == cli.OutputJSON {
+		envelope := cli.NewEnvelope("set", cli.Classify(writeErr),
+			cli.Target{Kind: cli.TargetIssue, Number: *issue, Repository: repo.String()})
+		envelope.Steps = rec.list()
+		if err := cli.WriteEnvelope(envelope, mode, env); err != nil {
+			return err
+		}
+		return writeErr
+	}
+	if writeErr != nil {
+		return writeErr
+	}
 	_, err = fmt.Fprintf(env.Stdout, "%s#%d: %s\n", repo, *issue, describeSet(*issueType, fields.items))
 	return err
+}
+
+// The ordered boundaries of a `set` invocation.
+const (
+	stepIssueType   = "issue-type"
+	stepFieldValues = "field-values"
+)
+
+// setWrites performs the two ordered writes, recording each boundary.
+func setWrites(ctx context.Context, client *ghapi.Client, repo render.Repository, number int,
+	issueType string, values []ghapi.IssueFieldAssignment, rec *steps,
+) error {
+	if issueType == "" {
+		rec.skip(stepIssueType, "no --type was requested")
+	} else {
+		if err := applyIssueType(ctx, client, repo, number, issueType, len(values) > 0); err != nil {
+			rec.fail(stepIssueType, "whether the Issue Type change reached GitHub is unknown")
+			return err
+		}
+		rec.complete(stepIssueType, "Type = "+issueType)
+	}
+	if len(values) == 0 {
+		rec.skip(stepFieldValues, "no --field was requested")
+		return nil
+	}
+	if err := client.AddIssueFieldValues(ctx, repo.Owner, repo.Name, number, values); err != nil {
+		rec.fail(stepFieldValues, "the requested field values are untouched")
+		if issueType != "" {
+			return fmt.Errorf("%s#%d: the Issue Type is now %q but the field assignments that "+
+				"follow it failed, so those fields are untouched; rerun the same invocation to "+
+				"converge, since setting a type the issue already carries changes nothing: %w",
+				repo, number, issueType, err)
+		}
+		return err
+	}
+	rec.complete(stepFieldValues, "the requested field values are written")
+	return nil
 }
 
 // applyIssueType writes the type and verifies GitHub actually recorded it.
