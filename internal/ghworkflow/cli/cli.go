@@ -27,13 +27,21 @@ import (
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghauth"
 )
 
-// Process exit codes. Everything the operator can mistype is ExitUsage; everything the
-// environment can get wrong — authentication, reachability, malformed inputs — is
-// ExitFailure, which is the nonzero exit spec FR-016 requires for unmet preconditions.
+// Process exit codes, which are the machine-readable half of the IR-005 result classes:
+// ExitOK for a completed read or a clear gate, ExitFailure for validation that completed
+// with domain findings, ExitUsage for an invalid invocation or local refusal, and
+// ExitOperational for authentication, API, transport, or another environmental failure
+// that prevented completion.
+//
+// The distinction ExitOperational draws is the point of the code: exit 1 means the tool
+// reached a verdict the caller must act on, while exit 3 means no verdict exists and
+// retrying may succeed. Automation that conflates them either retries real findings
+// forever or treats an outage as a clean gate.
 const (
-	ExitOK      = 0
-	ExitFailure = 1
-	ExitUsage   = 2
+	ExitOK          = 0
+	ExitFailure     = 1
+	ExitUsage       = 2
+	ExitOperational = 3
 )
 
 // DefaultVersion is the version an unstamped build reports. It must stay a constant
@@ -42,7 +50,11 @@ const (
 // main.version from this. Initializing main.version from Version below instead would let
 // package initialization overwrite the linker's write and leave every stamped build
 // silently reporting this default.
-const DefaultVersion = "1.5"
+//
+// The value tracks the payload version it ships with (NFR-005): stamp, unstamped
+// fallback, and build output path advance together, so an unstamped build never claims a
+// version the payload no longer is.
+const DefaultVersion = "1.7"
 
 // Version is the tool version `help` prints, and the only surface that reports it. It is
 // a variable so the reproducible build can stamp it (spec NFR-005); cmd/gh-workflow owns
@@ -171,6 +183,38 @@ func Usagef(format string, args ...any) error {
 	return &UsageError{Err: fmt.Errorf(format, args...)}
 }
 
+// operational is the marker an error anywhere in a chain implements to select
+// ExitOperational. It is an interface rather than a shared error type on purpose: the
+// packages that produce operational failures — ghapi and ghauth — must not import this
+// one, because this package already imports them, and a shared sentinel would close the
+// cycle. Any package can satisfy an interface it never names.
+type operational interface{ Operational() bool }
+
+// IsOperational reports whether err's chain marks it as an environmental failure —
+// authentication, transport, a non-2xx API response, an undecodable body, or pagination
+// that truncated without explanation (NFR-007). Callers building an envelope classify
+// with this so the JSON result and the exit code cannot disagree.
+func IsOperational(err error) bool {
+	var marked operational
+	return errors.As(err, &marked) && marked.Operational()
+}
+
+// Classify maps an error to its IR-005 result class. A nil error is `clear`; note that a
+// command reporting domain findings must set ResultDomainFinding itself, because domain
+// findings are a successful outcome and never travel as an error.
+func Classify(err error) Result {
+	switch {
+	case err == nil:
+		return ResultClear
+	case errors.As(err, new(*UsageError)):
+		return ResultUsage
+	case IsOperational(err):
+		return ResultOperationalFailure
+	default:
+		return ResultDomainFinding
+	}
+}
+
 // Run dispatches args to a registered subcommand and returns the process exit code.
 func Run(ctx context.Context, env *Env, args []string) int {
 	if len(args) == 0 {
@@ -201,11 +245,9 @@ func Run(ctx context.Context, env *Env, args []string) int {
 	}
 
 	_, _ = fmt.Fprintf(env.Stderr, "gh-workflow %s: %v\n", cmd.Name, err)
-	var usageErr *UsageError
-	if errors.As(err, &usageErr) {
-		return ExitUsage
-	}
-	return ExitFailure
+	// Classification order matters: a UsageError that wraps an operational cause is
+	// still the operator's mistake, so the usage check runs first.
+	return Classify(err).ExitCode()
 }
 
 func writeUsage(w io.Writer) {
