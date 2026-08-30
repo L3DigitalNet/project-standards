@@ -211,7 +211,8 @@ func (c *Client) MergePullRequest(ctx context.Context, owner, repo string, numbe
 	if err != nil {
 		return nil, err
 	}
-	switch strings.ToLower(strings.TrimSpace(method)) {
+	normalizedMethod := strings.ToLower(strings.TrimSpace(method))
+	switch normalizedMethod {
 	case MergeMethodMerge, MergeMethodSquash, MergeMethodRebase:
 	default:
 		return nil, fmt.Errorf("merge method %q is not one of merge, squash, rebase", method)
@@ -219,10 +220,13 @@ func (c *Client) MergePullRequest(ctx context.Context, owner, repo string, numbe
 	if !isHexObjectID(headSHA) {
 		return nil, fmt.Errorf("head SHA %q is not a 40- or 64-character hex object id", headSHA)
 	}
+	// GitHub's REST merge endpoint only accepts the lowercase enum spelling, so the
+	// normalized value is what goes on the wire, not the caller's original casing (a
+	// caller-passed "Squash" would otherwise pass local validation and then fail remotely).
 	payload := struct {
 		MergeMethod string `json:"merge_method"`
 		SHA         string `json:"sha"`
-	}{MergeMethod: method, SHA: headSHA}
+	}{MergeMethod: normalizedMethod, SHA: headSHA}
 
 	var result MergeResult
 	if err := c.send(ctx, http.MethodPut,

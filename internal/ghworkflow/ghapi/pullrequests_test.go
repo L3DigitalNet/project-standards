@@ -284,6 +284,11 @@ func TestMergeMethodNormalizationIsSharedAcrossSurfaces(t *testing.T) {
 		"L3DigitalNet", "example-repo", 12, "Squash", headSHA); err != nil {
 		t.Fatalf("MergePullRequest() error = %v, want nil for a mixed-case method", err)
 	}
+	// GitHub's REST endpoint accepts only the lowercase enum; the caller's original
+	// casing must never reach the wire, or a locally accepted "Squash" fails remotely.
+	if body := restTransport.LastBody(); !strings.Contains(body, `"merge_method":"squash"`) {
+		t.Errorf("request body = %q, want the normalized lowercase merge_method", body)
+	}
 
 	graphqlTransport := &ghtest.Transport{Routes: map[string]ghtest.Response{
 		"POST /graphql": {Status: http.StatusOK, Body: `{"data":{}}`},
