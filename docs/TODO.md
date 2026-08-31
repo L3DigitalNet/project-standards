@@ -54,8 +54,10 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
-- [ ] Migrate the consumer fleet to github-workflow 1.7 (MS-6 item 2, owner-coordinated); repair-on-touch of
-  active PRs elsewhere.
+- [x] Migrate the consumer fleet to github-workflow 1.7 (MS-6 item 2). Completed 2026-08-31: all 24 locally
+  cloned consumers at release 5.26.0, the five package-enabled ones at github-workflow 1.7 with byte-identical
+  deployed binaries. Recorded in SPEC-GHW1 rev 1.37 and `docs/handoff/deployed.md`. Repair-on-touch of active
+  PRs elsewhere remains the standing 1.7 behavior, not a task.
 
 - [ ] Provide total-count truncation evidence for array-shaped list endpoints (security finding 4, deferred
   beyond NFR-007's server-misbehavior precondition).

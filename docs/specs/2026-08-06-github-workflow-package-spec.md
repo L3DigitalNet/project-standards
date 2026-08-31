@@ -6,7 +6,7 @@ profile: standard
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-08-06'
-last_reviewed: '2026-08-30'
+last_reviewed: '2026-08-31'
 supersedes: null
 superseded_by: null
 related:
@@ -72,6 +72,7 @@ related:
 | 1.34 | 2026-08-30 | Codex, final independent-review precision correction | Corrects the residual claims found by exact-byte native and headless-Opus verification of revision 1.33: broadens DEV-022 and the affected requirements to record that the managed block omits the field-shadowing-label and enforcement-bypass hard refusals as well as the open-is-not-Ready boundary, while retaining only the organization-schema hard refusal; aligns the associated contract-test coverage statements; removes DEV-027's false implication that any duplicate-`values` case has direct test coverage; and explains both the repository-route and audit uses that place `--policy` on all eight subcommands. No 1.7 target behavior is introduced. |
 | 1.35 | 2026-08-30 | Codex with owner-approved design | Defines the `github-workflow` 1.7 target after the independently verified 1.6 baseline. Adds the uniform T0-or-PR admission rule; canonical Final, Supporting, and Standalone governing-work relationships; PR-owned Standalone contracts; shared Structural/Ready/Merge/Post-merge validation; action-oriented findings; draft-first agent PRs; paired `ready`, `merge`, and Final-disposition operations; low-friction operator-authority semantics; and coordinated repair-on-touch migration. Retains the two-option consumer configuration and repository ownership of branch topology, merge method, and live enforcement. No 1.7 implementation is claimed by this revision. |
 | 1.36 | 2026-08-30 | Claude, orchestrated 1.7 implementation close-out | Records that `github-workflow` 1.7 is implemented, cut as an immutable payload, and promoted to the Catalog 5 default. Marks the §17.3 and §17.3.1 rows Passing with their real proving tests, checks the satisfied §17.1 Definition-of-Done items, completes MS-4/MS-5 and the MS-6 release step, and closes or explicitly retains every deviation FR-036 governs. Two contract clarifications, neither a target-behavior change: `Final-Disposition: VALUE` carries the lowercase OUTCOME token rather than the `Workflow` display name (FR-034, DEV-029), and `--schema PATH` is accepted by all ten subcommands (IR-005). Records the implemented merge-method selection tier and `--auto` outcome contract (FR-033, DEV-030/DEV-031) and the new `cli-envelope` payload resource (DR-004). |
+| 1.37 | 2026-08-31 | Claude, consumer-fleet migration close-out | Records that MS-6 item 2 — the consumer-fleet migration — is complete, closing the last open Definition-of-Done item and every milestone. All 24 locally cloned Project Standards consumers were reconciled to release 5.26.0 at `reconcile --check` and `project-standards validate` exit 0; the five that enable `github-workflow` (`agent-configs` from 1.6; `agent-ventures`, `llm-wiki`, `project-feldspar`, and `social-ventures` from 1.5) resolve 1.7 with a deployed `gh-workflow` binary byte-identical to the 1.7 payload artifact. Those five rollouts each went through a draft PR, `gh-workflow ready`, and `gh-workflow merge`, dogfooding the 1.7 admission model on its own migration; that run found DEV-032, a new retained deviation in the immutable 1.7 `pr-standard.md` Standalone example. Also checks the four §18.7 Documentation Deliverables items left unchecked at revision 1.36, each verified against the shipped v5.26.0 artifacts rather than assumed: the 1.7 payload's skill, six references, `README.md`, `adopt.md`, `agent-summary.md`, and managed block; Catalog 5's `role = "default"` 1.7 entry with 1.0–1.6 all retained; `UPGRADING.md`'s 5.26.0 refresh section covering the same-major migration, repair-on-touch of already-open PRs, and unchanged consumer configuration, alongside the `CHANGELOG.md` release note; and the `deployed.md` rollout record this revision accompanies. No requirement, design decision, or target behavior changes. |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -600,7 +601,7 @@ None handled: package artifacts are public-safe standard content plus the organi
 - [x] The shared engine proves one result across check, receipt, and summary; Ready/Merge/Final-disposition failure injection proves every recovery boundary.
 - [x] Documentation, managed blocks, skill/reference budgets, generated policy, provider coverage, binary reproducibility, and full package gates pass.
 - [x] A clean consumer adoption and a 1.6→1.7 upgrade converge, proven by the dogfood and upgrade suites.
-- [ ] All locally cloned consumers are updated through the owning Project Standards release workflow. **Outstanding at revision 1.36:** the consumer-fleet rollout (MS-6 item 2) is scheduled as a separate owner-coordinated pass after v5.26.0 publishes; nothing in the repository can complete it.
+- [x] All locally cloned consumers are updated through the owning Project Standards release workflow. **Completed 2026-08-31:** all 24 locally cloned consumers were reconciled to release 5.26.0 and each reports `reconcile --check` and `project-standards validate` at exit 0 on a clean tree in sync with `origin`. The five that enable `github-workflow` — `agent-configs` (from 1.6), `agent-ventures`, `llm-wiki`, `project-feldspar`, and `social-ventures` (from 1.5) — all resolve 1.7, and the deployed `gh-workflow` binary in each is byte-identical to the 1.7 payload artifact (`sha256:bf677a6760e7a857f09515932bf967abf2de91dab99c2c182b261b574d013981`). The remaining nineteen do not enable the package and took the release-pin advance and catalog refresh only.
 - [x] The deviations intersecting 1.7 behavior are either closed by target requirements or explicitly retained in the final implementation record; no unrecorded implementation/spec mismatch remains.
 
 ### 17.2 Test Strategy
@@ -755,16 +756,16 @@ Deleted: the package owns no durable data; every delivered artifact regenerates 
 ### 18.7 Documentation Deliverables
 
 - [x] Baseline family `README.md`, `adopt.md`, `agent-summary.md`, catalog, graph, and release records are complete through 1.6.
-- [ ] Version 1.7 skill, six references, companion, README/adoption/agent-summary, and managed block express the new contract without stale 1.6 procedures.
-- [ ] Catalog/index/graph select immutable 1.7 and preserve all predecessors.
-- [ ] `UPGRADING.md` and release notes describe the coordinated same-major migration, repair-on-touch active PRs, and unchanged consumer configuration.
-- [ ] Handoff/release records identify the Project Standards release and completed local-consumer rollout.
+- [x] Version 1.7 skill, six references, companion, README/adoption/agent-summary, and managed block express the new contract without stale 1.6 procedures.
+- [x] Catalog/index/graph select immutable 1.7 and preserve all predecessors.
+- [x] `UPGRADING.md` and release notes describe the coordinated same-major migration, repair-on-touch active PRs, and unchanged consumer configuration.
+- [x] Handoff/release records identify the Project Standards release and completed local-consumer rollout.
 
 ---
 
 ## 19. Implementation Plan
 
-MS-0 through MS-3 are completed historical provenance for versions 1.0–1.6. **At specification revision 1.36 MS-4 and MS-5 are complete over commit range `26cdfb75..db744fb0`, and MS-6's release step lands in v5.26.0 (this release); only the consumer-fleet migration (MS-6 item 2) remains.**
+MS-0 through MS-3 are completed historical provenance for versions 1.0–1.6. **At specification revision 1.36 MS-4 and MS-5 are complete over commit range `26cdfb75..db744fb0`, and MS-6's release step lands in v5.26.0. At specification revision 1.37 the consumer-fleet migration (MS-6 item 2) is complete, so every milestone is closed.**
 
 ### MS-0 — Family scaffold
 
@@ -814,7 +815,7 @@ Exit: FR-032–FR-034, NFR-005, NFR-008, and IR-005 pass the Go and package gate
 1. Complete docs, upgrade evidence, clean adoption, full repository gate, and Project Standards release.
 2. Update every locally cloned Project Standards consumer; verify all existing github-workflow consumers resolve 1.7; repair active PRs when touched.
 
-Exit: §17.1 complete, release published, local-consumer rollout recorded, and no unrecorded target deviation remains. **Release step complete at v5.26.0 (this release); the consumer-fleet migration is outstanding** and is scheduled as a separate owner-coordinated rollout after publication.
+Exit: §17.1 complete, release published, local-consumer rollout recorded, and no unrecorded target deviation remains. **Completed at specification revision 1.37 (2026-08-31):** v5.26.0 published, all 24 locally cloned consumers reconciled to 5.26.0, and all five `github-workflow` consumers resolving 1.7 with byte-identical deployed binaries. The five 1.7 rollouts each landed through a draft PR, `gh-workflow ready`, and `gh-workflow merge`, so the 1.7 tooling admitted its own migration; that dogfooding produced DEV-032.
 
 ### Milestone Summary
 
@@ -826,7 +827,7 @@ Exit: §17.1 complete, release published, local-consumer rollout recorded, and n
 | MS-3 Release integration | Shippable package | Completed — 1.0 shipped in v5.17.0; current 1.6 shipped in v5.25.0 |
 | MS-4 Shared PR model | 1.7 guidance, relationships, and validation engine | Completed — commit range `26cdfb75..db744fb0`; 1.6 bytes unchanged |
 | MS-5 Paired operations | Ready/Merge/Final-disposition implementation | Completed — commit range `26cdfb75..db744fb0`; binary rebuilt and byte-verified |
-| MS-6 Release and migration | Project Standards release plus local-consumer rollout | Release step complete at v5.26.0 (this release); fleet migration outstanding |
+| MS-6 Release and migration | Project Standards release plus local-consumer rollout | Completed — v5.26.0 published; 24 consumers at 5.26.0 and all 5 `github-workflow` consumers at 1.7 (2026-08-31) |
 
 ---
 
@@ -882,6 +883,7 @@ Exit: §17.1 complete, release published, local-consumer rollout recorded, and n
 | DEV-029 | FR-034 | The `Final-Disposition: VALUE` record carries the lowercase OUTCOME token (`in-progress`, `in-review`, `blocked`, `dropped`) rather than the `Workflow` display name (`In progress`, `In review`, `Blocked`, `Dropped`) the approved 1.7 text named. `mutate/closepr.go` writes the token and the Post-merge predicate matches the token. | The record is a machine-read pairing artifact, and the token is the argument the operator already typed on `--as`. Reusing the display name would have made the record depend on the organization's field vocabulary, which `org-schema.yaml` can change without a package cut. | **Closed at 1.7 by specification clarification.** FR-034 is amended at revision 1.36 to state the token form; this is a wording correction to the approved requirement, not a behavior change, and `mutate.TestClosePullRequestRecordsTheDispositionBeforeClosing` and `TestClosePullRequestRefusesAConflictingRecord` pin the written and matched forms. |
 | DEV-030 | FR-033 | FR-033 says the merge method may be selected "by current repository instructions". No such tier is implemented: selection is an explicit `--method METHOD` when supplied, otherwise the first live-permitted method in the fixed `squash`, `rebase`, `merge` order. | FR-035 freezes the consumer configuration surface at `organization` plus `harnesses`, so no rendered artifact can carry a per-repository merge-method preference, and the package does not read a repository's own instruction files. The two requirements cannot both hold; FR-035 is the narrower and more recently approved constraint. | **Retained at 1.7 (deliberate).** The fixed preference order is the whole selection tier, proven by `mutate.TestMergeUsesTheFirstPermittedMethodAndHonorsAnExplicitOne`. Reopening it requires an owner decision to relax FR-035. |
 | DEV-031 | FR-033 | FR-033 says `--auto` "disables auto-merge before returning unless another active mechanism has accepted responsibility." The implementation never disables it: it arms auto-merge with the selected method, then returns the `GHW-PR-MERGE-OUTCOME-PENDING` domain finding (Synchronization required, exit 1) whose remediation names the caller as the observer. | Disabling a mechanism the caller explicitly asked for would discard the admission rather than hand responsibility back, and would race GitHub's own auto-merge. The nonzero domain result already satisfies FR-033's controlling rule that dispatch is never reported as success. | **Retained at 1.7.** `mutate.TestMergeAutoRetainsObservationResponsibility` pins the arm-and-report behavior. A successor should either amend FR-033's disable clause or implement it; until then the finding, not a disable call, is the responsibility handoff. |
+| DEV-032 | FR-006, FR-028 | The 1.7 `pr-standard.md` shows the Standalone risk declaration as `Change risk: R2`, but the shipped Ready gate accepts only the four full `org-schema.yaml` labels. `relation.parse` pins `R1 Low`, `R2 Moderate`, `R3 High`, and `R4 Critical`, so a PR copying the delivered example is refused with `GHW-PR-READY-RISK-INVALID` (“the `Change risk:` value is not one of the four accepted values”) and blocked from Ready. FR-028 already states the full-label form, so the executable is correct and the delivered reference example is wrong. | Found on 2026-08-31 by dogfooding the 1.7 admission model on the consumer-fleet migration PRs, after the 1.7 payload was cut. Payload bytes are immutable (SPEC-BA02), so the example cannot be corrected inside 1.7, and the mismatch is one line of illustrative prose rather than a behavior defect: the finding's own remediation text prints the four accepted values, so an agent that reads the refusal recovers on the next attempt. | **Retained at 1.7 (unavoidable).** A conforming PR must write `Change risk: R2 Moderate`. Correcting the example requires a future payload version; a successor cut should replace the example with a full label and add a reference-content assertion binding the example to the four accepted values so the two cannot drift again. |
 
 ---
 

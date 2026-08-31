@@ -2,10 +2,10 @@
 
 ## Current focus
 
-- v5.26.0 published (commit `bc5027c0`, tags `v5.26.0`+`v5`); full evidence in `deployed.md`.
-- Defaults: github-workflow 1.7, agent-handoff 1.16, project-spec 1.10; SPEC-GHW1 rev 1.36 is current.
-- Next: consumer fleet migration to gw 1.7 (MS-6 item 2, owner-coordinated); #191 re-measure ≥ 2026-09-06; #129.
-- Security backlog: total-count evidence for array-shaped list endpoints (deferred security finding 4).
+- Fleet migration done: 24 consumers reconciled to 5.26.0, 5 resolve github-workflow 1.7; full record in `deployed.md`.
+- SPEC-GHW1 closed at revision 1.37 — MS-6 item 2 landed; no open milestone or Definition-of-Done item; DEV-032 retained.
+- Next: #202 (gw 1.7 short `R2` risk value vs the Ready gate; needs a 1.8 payload); #191 re-measure ≥ 2026-09-06; #129; security finding 4.
+- Owner action: remove CodeRabbit installation `150847460` on `L3DigitalNet` in the GitHub web UI; no PAT or API route can do it.
 
 ## Active incidents
 
