@@ -701,10 +701,14 @@ def _workflow(config: Mapping[str, object]) -> str:
         # v8.0.0 on, so `@v10` does not resolve. Both cache keys are explicit
         # rather than inherited, because each has survived a default flip:
         # v9 stopped pruning before saving, and v10 makes `enable-cache: auto`
-        # disable the cache entirely for `pull_request_target`, `workflow_run`,
-        # and `release`. Naming `enable-cache: true` keeps this workflow on the
-        # cache behavior it was measured under; none of the three events it
-        # would have opted out of is a trigger here in any case.
+        # disable the cache entirely for `release`, tag pushes,
+        # `pull_request_target`, and `workflow_run`. Naming `enable-cache: true`
+        # keeps this workflow on the cache behavior it was measured under; none
+        # of the four events it would have opted out of is a trigger here in any
+        # case. Tag pushes are the one class excluded by a filter rather than by
+        # an absent `on:` key: the `branches: ["main"]` qualifier above is what
+        # keeps `push` from firing on tags, so widening or dropping it changes
+        # which events reach this step.
         "      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1",
         "        with:",
         '          version: "0.11.6"',

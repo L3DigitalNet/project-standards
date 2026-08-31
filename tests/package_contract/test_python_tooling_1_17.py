@@ -72,7 +72,8 @@ _V10_PIN = "astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.
 # key — it is the `push` trigger filtered by a `tags:` pattern, indistinguishable
 # from any other `push` trigger at this level. Adding a string that can never
 # match a real trigger key would make the isdisjoint check below silently stop
-# covering that fourth class.
+# covering that fourth class. The tag-push class is instead pinned separately, by
+# `_push_branch_filter()` and its assertion in the cache test.
 _AUTO_DISABLED_EVENTS = frozenset({"pull_request_target", "workflow_run", "release"})
 
 _V116_AGGREGATE = "sha256:60d3a68c9973942b7a92f7affcd3fbac553b3c79c31bcd63b723e1186bd3c734"
@@ -220,6 +221,21 @@ def _trigger_events(document: dict[object, object]) -> set[str]:
     return set(cast("dict[str, object]", triggers))
 
 
+def _push_branch_filter(document: dict[object, object]) -> object:
+    """Return the `push` trigger's `branches` value, or None when it carries none.
+
+    Callers must confirm `push` is among `_trigger_events()` first. The
+    None return deliberately conflates "bare `push:`" with "`push:` filtered by
+    something other than branches" — both mean the tag-push class is no longer
+    excluded, which is the only distinction the assertion needs.
+    """
+    triggers = document[True] if True in document else document["on"]
+    push = cast("dict[str, object]", triggers)["push"]
+    if not isinstance(push, dict):
+        return None
+    return cast("dict[str, object]", push).get("branches")
+
+
 def _setup_uv_step(document: dict[object, object]) -> dict[str, object]:
     jobs = cast("dict[str, dict[str, object]]", document["jobs"])
     steps = cast("list[dict[str, object]]", jobs["check"]["steps"])
@@ -284,6 +300,13 @@ def test_python_tooling_1_17__cache_configuration__is_immune_to_the_v10_auto_fli
     four events. Either fact alone makes the flip a non-event, so both are
     pinned — a future cut that gives up one still has to notice it is now relying
     entirely on the other.
+
+    Three of the four classes are absent `on:` keys, so `_AUTO_DISABLED_EVENTS`
+    covers them. Tag pushes are not: this workflow does trigger on `push`, and
+    only the `branches: ["main"]` qualifier keeps a tag from matching. That
+    qualifier therefore carries a load it does not look like it carries, and is
+    asserted here so deleting it fails this test rather than silently widening
+    the trigger.
     """
     for shape in _PREDECESSOR_SHAPES:
         document = _workflow_document(_V117, _options(_V117, shape))
@@ -292,7 +315,11 @@ def test_python_tooling_1_17__cache_configuration__is_immune_to_the_v10_auto_fli
         enable_cache = cast("dict[str, object]", cache)["enable-cache"]
         assert enable_cache != "auto", shape
         assert enable_cache is True, shape
-        assert _trigger_events(document).isdisjoint(_AUTO_DISABLED_EVENTS), shape
+
+        triggers = _trigger_events(document)
+        assert triggers.isdisjoint(_AUTO_DISABLED_EVENTS), shape
+        if "push" in triggers:
+            assert _push_branch_filter(document) == ["main"], shape
 
 
 def test_python_tooling_1_17__workflow_render__differs_only_in_the_pin_line() -> None:

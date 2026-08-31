@@ -88,7 +88,7 @@ The rendered `scripts/check.py` resolves its arguments before it runs anything: 
 
 Managed CI-disabled configurations retain an explicit manual-only workflow so the selected gate remains inspectable without running automatically.
 
-The rendered CI workflow SHA-pins `astral-sh/setup-uv`, which publishes no moving major or minor tag from v8.0.0 on. Package `1.17` advances that pin to `v10.0.1` (issue #201). Both cache keys stay explicit rather than inherited because each has survived a default flip: v9 stopped pruning before saving the cache, and v10 makes `enable-cache: auto` disable the cache outright for `pull_request_target`, `workflow_run`, and `release`. Naming `enable-cache: true` holds the behavior the gate was measured under, and none of those three events triggers this workflow in any case. The pin is the only change in `1.17`; no option, unit identity, or rendered byte outside the `uses:` line moves.
+The rendered CI workflow SHA-pins `astral-sh/setup-uv`, which publishes no moving major or minor tag from v8.0.0 on. Package `1.17` advances that pin to `v10.0.1` (issue #201). Both cache keys stay explicit rather than inherited because each has survived a default flip: v9 stopped pruning before saving the cache, and v10 makes `enable-cache: auto` disable the cache outright for `release`, tag pushes, `pull_request_target`, and `workflow_run`. Naming `enable-cache: true` holds the behavior the gate was measured under, and none of those four events triggers this workflow in any case. The pin is the only change in `1.17`; no option, unit identity, or rendered byte outside the `uses:` line moves.
 
 ## Migration
 

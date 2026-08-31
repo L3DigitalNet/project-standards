@@ -27,7 +27,7 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:2c51e7781d29dd0566669c44e8975dd136abe8256d43f9ff9fbf6cef5b9adf17"
+digest = "sha256:6391eb8b7a2794ed4d549bd29df5c2592283f48096e7804d4cadf214fbbe305b"
 
 [[resources]]
 id = "agent-summary"

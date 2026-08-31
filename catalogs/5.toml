@@ -304,7 +304,7 @@ role = "retained"
 [[packages]]
 id = "markdown-frontmatter"
 version = "1.15"
-digest = "sha256:23c907f56d771ac1214bd5680a282d106fdee67a63675d0cb3fd147a0a920a97"
+digest = "sha256:a71148b696725c5fc31e0c0e57bf7060dd7e63fcfe9d690bbe95b8047d357edd"
 role = "default"
 
 [[packages]]
@@ -580,7 +580,7 @@ role = "retained"
 [[packages]]
 id = "python-tooling"
 version = "1.17"
-digest = "sha256:03963e2c75dead1ab9bb8683bf810066f7d988e275a14310a1a1ff23358223a2"
+digest = "sha256:4c5ec078fd033cf3bf14c16f6fbc5b48e58d24ffe03b026b30b1e76b9b0a0950"
 role = "default"
 
 [[packages]]
