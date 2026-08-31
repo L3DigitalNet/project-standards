@@ -110,7 +110,7 @@ Resyncing alone was not enough. The source's own Appendix D closed on a code spa
 
 ### What 1.11 changed
 
-The self-hosted validation workflow's pinned `astral-sh/setup-uv` action advances to `v10.0.1` (issue #201). That `uses:` line is the only byte that moves: no option, provider, schema, artifact, template, or lint rule changes, and the whole-file workflow target keeps its identity and managed policy, so an upgrading consumer sees the pin rewritten by ordinary reconciliation and nothing else. `enable-cache` remains an explicit boolean rather than `auto`, which is what v10 changed — under `auto` it now disables the cache for `pull_request_target`, `workflow_run`, and `release` — so the caching behavior this workflow was measured under is unaffected.
+The self-hosted validation workflow's pinned `astral-sh/setup-uv` action advances to `v10.0.1` (issue #201). That `uses:` line is the only byte that moves: no option, provider, schema, artifact, template, or lint rule changes, and the whole-file workflow target keeps its identity and managed policy, so an upgrading consumer sees the pin rewritten by ordinary reconciliation and nothing else. `enable-cache` remains an explicit boolean rather than `auto`, which is what v10 changed — under `auto` it now disables the cache for `release`, tag pushes, `pull_request_target`, and `workflow_run` — so the caching behavior this workflow was measured under is unaffected.
 
 ---
 
