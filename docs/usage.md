@@ -664,7 +664,7 @@ Exit status: `0` upgraded (written or previewed) · `2` any refusal — usage er
 
 ### `spec import`
 
-Preview or apply a preservation-first conversion through the selected Project Specification 1.9 `FIX` provider. The source is never changed, and no target is inferred.
+Preview or apply a preservation-first conversion through the selected Project Specification 1.11 `FIX` provider. The source is never changed, and no target is inferred.
 
 ```text
 project-standards spec import <source> --output <target> --id <spec-id> [--json] [--apply --expected-plan-digest <digest>]
@@ -681,7 +681,7 @@ Options:
 
 The importer removes only an approved leading ASCII decimal section number and maps the remaining heading only when it exactly equals a selected canonical title. Preamble, duplicate destinations, near matches, and unmapped headings remain byte-exact in adaptive-fenced review content with content-safe owner-decision diagnostics. Apply generates one current typed plan, compares its digest, and passes that same plan once to the executor only on a match. It stores no plan handle. Traversal, symlink, alias, structural, digest, precondition, and staging failures preserve the source and prior target.
 
-Exit status: `0` preview produced or matching plan applied · `2` invalid invocation, unavailable selected 1.9 provider, unsafe path, structural refusal, digest refusal, stale precondition, or executor failure.
+Exit status: `0` preview produced or matching plan applied · `2` invalid invocation, unavailable selected 1.11 provider, unsafe path, structural refusal, digest refusal, stale precondition, or executor failure.
 
 ## EXIT STATUS
 

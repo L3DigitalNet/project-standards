@@ -1,2 +1,8 @@
 make handoff-validate
 make handoff-drift-check
+uv run project-standards validate
+uv run project-standards standards validate-packages
+uv run project-standards standards validate-graph
+uv run project-standards standards render-catalog --check
+uv run project-standards standards sync-payload-projection --check
+uv run project-standards packages check-release
