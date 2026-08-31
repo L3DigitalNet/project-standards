@@ -72,6 +72,10 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Owner: resolve SPEC-GSF3 OQ-001, which blocks that plan's T1.
 
+- [ ] Owner: define issue #129 (ADR mechanical guardrails). `Workflow: Needs definition`; the v5.17.0 starting
+  brief at `docs/design/adr-conformance/2026-08-05-adr-mechanical-guardrails-v5.17-feature-proposal.md` is preserved
+  as historical input, but a formal specification still needs owner decisions and current-state re-derivation.
+
 - [ ] Migrate `agent-ventures` and `llm-wiki` off `.agents`-only skill trees onto the dual-tree layout, per the
   2026-08-26 session-corpus review's F2 finding.
 
