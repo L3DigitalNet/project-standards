@@ -1010,11 +1010,65 @@ def real_tree_digest(root: Path) -> str:
                 info = entry.lstat()
             except OSError:  # pragma: no cover - a racing external process
                 continue
-            digest.update(
-                f"{entry.relative_to(root).as_posix()}|{info.st_mode}|{info.st_size}|"
-                f"{info.st_ino}|{info.st_ctime_ns}|{info.st_mtime_ns}\n".encode()
-            )
+            digest.update(_entry_facts(entry.relative_to(root).as_posix(), info).encode())
     return digest.hexdigest()
+
+
+def _entry_facts(relative: str, info: os.stat_result) -> str:
+    """Return the recorded inode facts for one walked entry.
+
+    Issue #212: a directory's timestamps are a function of its children, and
+    ``_UNWATCHED_TREES`` deliberately excludes some of those children. Importing
+    any module under ``standards/**/providers/`` makes CPython write a
+    ``__pycache__`` directory beside it, which bumps the *parent* directory's
+    mtime and ctime — so recording directory times re-admitted exactly what the
+    exclusion exists to remove. That is why this canary failed in CI, which warms
+    bytecode caches, while passing under ``scripts/verify.sh``, which exports
+    ``PYTHONDONTWRITEBYTECODE=1``: an environment difference, never a read-only
+    violation in the seam.
+
+    Mode and inode are still recorded for a directory, so one that is added,
+    removed, or replaced is still caught — including replacement by a symlink,
+    which ``lstat`` reports as a link rather than a directory and which therefore
+    keeps the full file-shaped facts below.
+    """
+    if stat.S_ISDIR(info.st_mode):
+        return f"{relative}|{info.st_mode}|{info.st_ino}\n"
+    return (
+        f"{relative}|{info.st_mode}|{info.st_size}|"
+        f"{info.st_ino}|{info.st_ctime_ns}|{info.st_mtime_ns}\n"
+    )
+
+
+def test_real_tree_digest__excluded_child_in_a_watched_directory__is_not_a_change(
+    tmp_path: Path,
+) -> None:
+    """Issue #212: a bytecode-cache write must not read as a consumer-visible change.
+
+    ``_UNWATCHED_TREES`` already excludes ``__pycache__`` from the walk, but
+    recording a directory's timestamps re-admitted it through the parent:
+    importing any module under ``standards/**/providers/`` writes bytecode beside
+    it and bumps that directory's mtime.
+    """
+    watched = tmp_path / "providers"
+    watched.mkdir()
+    module = watched / "provider.py"
+    module.write_text("x = 1\n", encoding="utf-8")
+    before = real_tree_digest(tmp_path)
+
+    cache = watched / "__pycache__"
+    cache.mkdir()
+    (cache / "provider.pyc").write_bytes(b"\x00" * 16)
+
+    assert real_tree_digest(tmp_path) == before
+
+    # The canary must still catch a real write — including one that puts the
+    # original bytes back, which is why it records inode facts and not content.
+    original = module.read_bytes()
+    module.write_bytes(original + b"# touched\n")
+    assert real_tree_digest(tmp_path) != before
+    module.write_bytes(original)
+    assert real_tree_digest(tmp_path) != before
 
 
 def real_packaged_distribution() -> InstalledDistribution:
