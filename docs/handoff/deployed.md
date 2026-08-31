@@ -1,6 +1,6 @@
 # Deployed
 
-**Last updated:** 2026-08-30
+**Last updated:** 2026-08-31
 
 This repo is consumed as a versioned standard: downstream repos pin a `standards-ref` to a git tag and call the reusable workflow under `.github/workflows/`. "Deployed" here means published git refs on `main`.
 
