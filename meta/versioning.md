@@ -6,8 +6,8 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-08-01'
-reviewed: '2026-08-01'
+updated: '2026-08-31'
+reviewed: '2026-08-31'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -187,7 +187,6 @@ Every release MUST:
    - **Byte-verify the published assets.** Download the wheel and sdist back from the release and confirm each `sha256sum` equals the locally built candidate's. GitHub re-serving the bytes you uploaded is an assumption, not a fact, and the digests are what `docs/handoff/deployed.md` records.
    - **Confirm the release is marked "Latest"** rather than left as a draft, pre-release, or superseded by an out-of-order tag.
    - **Record the release in the handoff.** A new [`docs/handoff/deployed.md`](../docs/handoff/deployed.md) row is required — it is the definition of "Deployed" this checklist opens with — carrying the release commit, both tag objects, the byte-verified asset digests, and the classification. `docs/STATUS.md`, `docs/TODO.md`, `docs/handoff/state.md`, and a session log should follow through the repository's agent-handoff closeout convention.
-   - **Regenerate [`docs/GH-WORKFLOWS.md`](../docs/GH-WORKFLOWS.md)** with `gh-workflow ledger` so the issue and pull-request ledger reflects the closures the release performed.
    - **Decide the consumer pin rollout explicitly**, and record the decision either way. Rolling the `@vMAJOR` consumers forward and deliberately deferring are both acceptable; leaving it unstated is not, because the next release cannot tell a skipped rollout from a forgotten one.
    - **Contribute the durable lessons to `llm-wiki`** — anything a later release cut would otherwise rediscover.
 
