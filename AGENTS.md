@@ -35,6 +35,7 @@ This repo is the source of truth for reusable project standards. Catalog 5 has n
 - **Use rexec v0.2 accurately.** CPU-intensive work compatible with a synchronized tree uses `rexec -- <command>`; explicit rexec invocation is remote-only, so run directly when local execution is intended. The sole configuration is the schema-1 root `.rexec.toml`; after a client/configuration change, run `rexec config show`, `rexec doctor`, and `rexec setup --check`. `.git` is never synchronized, so Git-history, branch, index, and `git ls-files` workloads stay local. See `docs/handoff/conventions.md` #22.
 - **Keep package contracts green.** Under `uv run project-standards standards`, run `validate-packages --root . --json`, `validate-graph --root . --require-all-manifests --json`, `generate-package-schemas --root . --check`, and `sync-payload-projection --root . --check`.
 - **The schema is versioned** — see `docs/handoff/conventions.md` #4.
+- **Develop on `testing`, never on `main`, and admit every change — including leg-worktree cherry-picks — through the GitHub Workflow admission rule below**, not a direct push; T0 is the sole exception. See `CLAUDE.md`'s Non-Negotiables for the release-branch merge and its PR exemption.
 - `README.md` is the human-facing landing page, excluded from frontmatter validation.
 
 <!-- prettier-ignore-start -->
