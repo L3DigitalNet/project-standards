@@ -308,3 +308,44 @@ func TestParseBodyR4Evidence(t *testing.T) {
 		t.Errorf("missing controls = %d, want %d", got, want)
 	}
 }
+
+// The human envelope prints a finding's Message and drops its Remediation, so an
+// operator who never asks for JSON sees the message alone. Both risk findings must
+// therefore carry the accepted spellings in the message itself: issue #202 cost a
+// failed gate cycle per repository because the refusal named the constraint without
+// naming the vocabulary that satisfies it.
+func TestRiskFindingMessagesNameEveryAcceptedValue(t *testing.T) {
+	t.Parallel()
+
+	complete := "## Summary\n\nS\n\n## Governing work\n\n%s\n\n" +
+		"## Acceptance coverage\n\nA\n\n## Verification\n\nV\n"
+
+	for _, tc := range []struct {
+		name      string
+		governing string
+		wantCode  string
+	}{
+		{"missing", "Standalone", "GHW-PR-READY-RISK-MISSING"},
+		{"invalid", "Standalone\nChange risk: R2", "GHW-PR-READY-RISK-INVALID"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, findings := relation.ParseBody(strings.Replace(complete, "%s", tc.governing, 1))
+			var message string
+			for _, finding := range findings {
+				if finding.Code == tc.wantCode {
+					message = finding.Message
+				}
+			}
+			if message == "" {
+				t.Fatalf("no %s finding in %v", tc.wantCode, codes(findings))
+			}
+			for _, risk := range relation.Risks {
+				if !strings.Contains(message, string(risk)) {
+					t.Errorf("message %q omits accepted value %q", message, risk)
+				}
+			}
+		})
+	}
+}

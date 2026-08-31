@@ -62,8 +62,13 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 - [ ] Provide total-count truncation evidence for array-shaped list endpoints (security finding 4, deferred
   beyond NFR-007's server-misbehavior precondition).
 
-- [ ] Re-measure the github-workflow session corpus after 1.5 deploys (#191); wait for the measurement window
-  (opens 2026-09-06).
+- [ ] Re-measure the github-workflow session corpus (#191). Re-scoped 2026-08-31: the post-1.5 window was overtaken
+  by 1.6 and 1.7 before it opened — 1.7 moved the surfaces F3/F4/F8 measure — so the measurement now runs against a
+  post-1.7 window opening ~2026-09-11, with 1.7's baselines rather than 1.5's.
+
+- [ ] Prepare and publish release 5.27.0. The activation is staged on `testing` (python-tooling 1.17,
+  markdown-frontmatter 1.15, project-spec 1.11, github-workflow 1.8); `scripts/release_prep.py 5.27.0` needs a clean
+  tree, then reconcile, gate, tag, and publish.
 
 - [ ] Owner: resolve SPEC-GSF3 OQ-001, which blocks that plan's T1.
 

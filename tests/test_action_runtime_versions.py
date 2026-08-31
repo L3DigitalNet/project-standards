@@ -14,12 +14,12 @@ _EXTERNAL_ACTIONS = {
     "actions/setup-node": ("820762786026740c76f36085b0efc47a31fe5020", "v7.0.0"),
     "actions/setup-go": ("924ae3a1cded613372ab5595356fb5720e22ba16", "v6"),
     "actions/setup-python": ("5fda3b95a4ea91299a34e894583c3862153e4b97", "v7.0.0"),
-    "astral-sh/setup-uv": ("c771a70e6277c0a99b617c7a806ffedaca235ff9", "v9.0.0"),
+    "astral-sh/setup-uv": ("20cfd1bf945f4377ade1205e4dbc17946fc9a30d", "v10.0.1"),
     "DavidAnson/markdownlint-cli2-action": ("6bf21b07787794f89a243495939cd651942aeabe", "v24"),
 }
 _CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
 _SETUP_NODE = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"
-_SETUP_UV = "astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9"
+_SETUP_UV = "astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d"
 # The v1.2/v1.1 payload resources are released bytes and never advance; their pins
 # are deliberately older than the reviewed set above.
 _CURRENT_V2_CHECKOUT = "actions/checkout@v7"

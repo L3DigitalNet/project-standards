@@ -1,0 +1,1 @@
+../../../../../../standards/markdown-frontmatter/versions/1.15/templates/repository-frontmatter-adr.md

@@ -192,29 +192,42 @@ def test_project_spec_1_10__projection_and_catalog_activation_are_exact() -> Non
         assert not link.readlink().is_absolute()
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
+    # A released role only ever advances to `retained` (ADR 0024): 1.10 held
+    # `default` from the 5.25.0 activation until 1.11 took it, and both rows must
+    # stay advertised so an exact pin keeps resolving. Which version currently holds
+    # `default` is asserted catalog-derived in test_catalog_roles.py.
     roles = _catalog_roles()
     assert roles["1.9"] == "retained"
-    assert roles["1.10"] == "default"
+    assert roles["1.10"] == "retained"
 
     generated = (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
-    assert "| [`project-spec`](project-spec/README.md) | active | 1.10 | default |" in generated
+    assert "| [`project-spec`](project-spec/README.md) | active | 1.10 | retained |" in generated
 
     assert assert_schema_payload_references(build_package_repository(_ROOT)) == []
 
 
-def test_project_spec_1_10__is_the_selection_this_repository_dogfoods() -> None:
-    """Red between the cut and the release commit that reconciles `.standards/`.
+def test_project_spec_1_10__catalog_default__is_what_this_repository_dogfoods() -> None:
+    """`.standards/` must resolve the family's catalog default, and still offer 1.10.
 
-    The lock is rewritten by `reconcile --apply` during release preparation, not by
-    the cut, so this asserts the post-release state on purpose — the same contract
-    the predecessor's own module carried at its cut.
+    `.standards/catalog.toml` and `.standards/lock.toml` are rewritten by
+    `reconcile --apply` during release preparation, not by the cut, so this is red
+    between a cut and its release commit by design — that gap is the thing it
+    catches. The expected version is read from `catalogs/5.toml` rather than
+    written out, because the assertion is "producer and consumer agree", not "the
+    consumer is on 1.10": hardcoding the latter broke this module on the two cuts
+    after 1.10 without any producer/consumer disagreement existing.
+
+    The 1.10-specific half is availability: a retained payload stays selectable by
+    exact pin, so it must survive in `available` after losing the default.
     """
+    default = next(version for version, role in _catalog_roles().items() if role == "default")
+
     consumer_catalog = tomllib.loads(
         (_ROOT / ".standards/catalog.toml").read_text(encoding="utf-8")
     )
     selection = consumer_catalog["standards"]["project-spec"]
-    assert selection["default"] == "1.10"
-    assert "1.10" in selection["available"]
+    assert selection["default"] == default
+    assert {default, "1.10"} <= set(selection["available"])
 
     lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
-    assert lock["standards"]["project-spec"]["resolved"] == "1.10"
+    assert lock["standards"]["project-spec"]["resolved"] == default

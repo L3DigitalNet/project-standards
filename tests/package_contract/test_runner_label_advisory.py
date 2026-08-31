@@ -284,28 +284,51 @@ def test_runner_label_advisory__existing_error__still_fails_apply(tmp_path: Path
     )
 
 
+def _catalog_defaults() -> dict[str, str]:
+    """Return the version `catalogs/5.toml` marks `default` for each family here.
+
+    Deliberately not `_VERSIONS`. That constant names the payloads whose advisory
+    behavior this module exercises — the generation where `runner_labels` landed —
+    and those stay pinned so the proof keeps testing the same code. What the
+    repository *selects* is a separate fact that moves with every release train, so
+    it is derived. Conflating the two is what made this test fail on a cut that
+    changed nothing about runner labels.
+    """
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    packages = cast("list[dict[str, object]]", catalog["packages"])
+    return {
+        str(package["id"]): str(package["version"])
+        for package in packages
+        if str(package["role"]) == "default" and str(package["id"]) in _VERSIONS
+    }
+
+
 def test_runner_label_advisory__release_and_self_host_selections__stay_unchanged() -> None:
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     packages = cast("list[dict[str, object]]", catalog["packages"])
     advertised = {
         (str(package["id"]), str(package["version"])): str(package["role"]) for package in packages
     }
+    defaults = _catalog_defaults()
+    # Every generation that carried this feature stays advertised; withdrawing one
+    # would be a catalog-major transition (ADR 0024), so `retained` is the assertion
+    # that matters and it is spelled per version.
     assert advertised[("markdown-frontmatter", "1.10")] == "retained"
     assert advertised[("markdown-frontmatter", "1.11")] == "retained"
-    assert advertised[("markdown-frontmatter", "1.14")] == "default"
     assert advertised[("markdown-tooling", "1.14")] == "retained"
-    assert advertised[("markdown-tooling", "1.15")] == "default"
     assert advertised[("project-spec", "1.8")] == "retained"
     assert advertised[("project-spec", "1.9")] == "retained"
-    assert advertised[("project-spec", "1.10")] == "default"
+    for standard_id, version in defaults.items():
+        assert advertised[(standard_id, version)] == "default"
+    for standard_id, version in _VERSIONS.items():
+        if version != defaults[standard_id]:
+            assert advertised[(standard_id, version)] == "retained"
 
     lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
     standards = cast("dict[str, dict[str, object]]", lock["standards"])
-    assert {standard_id: standards[standard_id]["resolved"] for standard_id in _VERSIONS} == {
-        "markdown-frontmatter": "1.14",
-        "markdown-tooling": "1.15",
-        "project-spec": "1.10",
-    }
+    assert {
+        standard_id: standards[standard_id]["resolved"] for standard_id in _VERSIONS
+    } == defaults
     artifacts = cast("list[dict[str, object]]", lock["artifacts"])
     workflow_versions = {
         str(artifact["path"]): artifact["versions"]
@@ -319,14 +342,16 @@ def test_runner_label_advisory__release_and_self_host_selections__stay_unchanged
         }
     }
     assert workflow_versions == {
-        ".github/workflows/format.yml": {"markdown-tooling": "1.15"},
-        ".github/workflows/lint-markdown.yml": {"markdown-tooling": "1.15"},
-        ".github/workflows/validate-markdown-frontmatter.yml": {"markdown-frontmatter": "1.14"},
-        ".github/workflows/validate-specs.yml": {"project-spec": "1.10"},
+        ".github/workflows/format.yml": {"markdown-tooling": defaults["markdown-tooling"]},
+        ".github/workflows/lint-markdown.yml": {"markdown-tooling": defaults["markdown-tooling"]},
+        ".github/workflows/validate-markdown-frontmatter.yml": {
+            "markdown-frontmatter": defaults["markdown-frontmatter"]
+        },
+        ".github/workflows/validate-specs.yml": {"project-spec": defaults["project-spec"]},
     }
 
     rendered = (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
-    for standard_id, version in _VERSIONS.items():
+    for standard_id, version in defaults.items():
         assert (
             f"| [`{standard_id}`]({standard_id}/README.md) | active | {version} | "
             "default | consumer |"

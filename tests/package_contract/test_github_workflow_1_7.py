@@ -8,12 +8,15 @@ so the failure modes are documentary — a routing table that still shows eight
 subcommands, a rule stated in the skill but not in the always-injected block, a budget
 quietly exceeded because the new content is longer than what it replaced.
 
-Two boundaries this file deliberately observes. The 1.7 binary is still the copied 1.6
-executable at this commit, so the binary assertions read the digest from `payload.toml`
-rather than pinning bytes; the build leg replaces both together. And 1.7 is not yet
-advertised in `standard.toml` or `catalogs/5.toml`, so the family, catalog, and
+Two boundaries this file deliberately observes. The binary assertions read the digest
+from `payload.toml` rather than pinning bytes, so declaration and committed executable
+are held to each other whichever one an edit touches. And the family, catalog, and
 projection assertions are written as an equivalence — advertised if and only if
-projected — which is a real invariant before advertising and the full check after it.
+projected — which was a real invariant before 1.7 was advertised and is the full check
+now that it is.
+
+1.7 is a retained predecessor: 1.8 took the default and `scripts/build-gh-workflow.sh`
+moved with it, so nothing here claims 1.7 is the version the repository currently builds.
 """
 
 from __future__ import annotations
@@ -169,17 +172,24 @@ def test_github_workflow_1_7__configuration__is_byte_identical_to_the_predecesso
         assert (_SUCCESSOR / relative).read_bytes() == (_PREDECESSOR / relative).read_bytes()
 
 
-def test_github_workflow_1_7__tool_binary__is_declared_and_built_for_this_version() -> None:
-    """Pin the payload/build-script contract around bytes the build leg still owns."""
+def test_github_workflow_1_7__tool_binary__is_declared_for_this_version() -> None:
+    """Pin the payload's declaration of the committed 1.7 executable.
+
+    The build-script half of the contract moved on with 1.8: `scripts/build-gh-workflow.sh`
+    targets the successor from the moment it is cut and can no longer reproduce 1.7 (see
+    the script's own header). What 1.7 still owns is the negative — a script pointed back
+    here would rebuild over released bytes — plus the declared digest. The positive pin
+    travels with whichever cut is under development.
+    """
     committed = _SUCCESSOR / _TOOL_BINARY_SOURCE
     digest = f"sha256:{hashlib.sha256(committed.read_bytes()).hexdigest()}"
 
     for artifact_id in ("tool-binary", "tool-binary-claude"):
         entry = _artifacts(_SUCCESSOR)[artifact_id]
         assert entry["source"] == _TOOL_BINARY_SOURCE
-        # Read the expected digest from the payload instead of pinning a literal: the
-        # 1.7 binary is rebuilt after the Go work lands, and this assertion has to keep
-        # proving that the declaration and the committed bytes agree across that swap.
+        # Read the expected digest from the payload rather than pinning a literal: this
+        # assertion has to keep proving that the declaration and the committed bytes
+        # agree, whichever of the two the next edit touches.
         assert entry["digest"] == digest
         assert entry["mode"] == "0755"
     assert committed.stat().st_mode & 0o777 == 0o755
@@ -187,9 +197,9 @@ def test_github_workflow_1_7__tool_binary__is_declared_and_built_for_this_versio
     build_script = _BUILD_SCRIPT.read_text(encoding="utf-8")
     assert (
         f'ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.7/{_TOOL_BINARY_SOURCE}"'
-        in build_script
+        not in build_script
     )
-    assert 'ARTIFACT_LDFLAGS="-buildid= -X main.version=1.7"' in build_script
+    assert 'ARTIFACT_LDFLAGS="-buildid= -X main.version=1.7"' not in build_script
 
 
 def test_github_workflow_1_7__surface__is_ten_subcommands_everywhere_it_is_stated() -> None:

@@ -1,0 +1,311 @@
+schema_version = "1.0"
+
+[payload]
+standard = "github-workflow"
+version = "1.8"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["github-workflow.audit", "github-workflow.drift-check", "github-workflow.validate"]
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = ["agent-handoff"]
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:ffebd8ed57efc81dc55317482d651205fdd69181550837e0aa6f1ced110732fd"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:db4d1076ad8f9ea14536023c68c44f5912dc85edc7a202876c0e0d605258baa6"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:526d70a62acd7f6663d0b315de87664e50eb8c4b418f965511139def003c388d"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:a0adf449b9063e274314b585064cff178960fdc43a05ca05a3b065e38b7fe565"
+
+[[resources]]
+id = "policy-template"
+role = "template"
+path = "resources/policy.toml"
+media_type = "application/toml"
+digest = "sha256:b50a3cda7a9d73d64158867fdd27ebabddfb06f41f9d17e413f7085fa085614a"
+
+[[resources]]
+id = "provider-code"
+role = "provider-resource"
+path = "providers/gh_workflow.py"
+media_type = "text/x-python"
+digest = "sha256:048306e479515747b56ea982dca80e8664db04888b8c3e424ee6fa9e91555061"
+
+[[resources]]
+id = "provider-input"
+role = "provider-resource"
+path = "schemas/provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:a1f010addc7928c230e1d0f9c253cedc5b41973b2ea966261c13d38304fa96af"
+
+[[resources]]
+id = "provider-content"
+role = "provider-resource"
+path = "schemas/content.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:b283a32e612daa98b218bab151ecb1c91ac32b2558038e491f95dae4f8042206"
+
+[[resources]]
+id = "provider-findings"
+role = "provider-resource"
+path = "schemas/findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:caa57b52481e734fed06c9e07de74dfbfd2c954ceaa63233e129d479f74d8fa5"
+
+[[resources]]
+id = "cli-envelope"
+role = "tool-contract"
+path = "schemas/cli-envelope.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:0e3e480bfb441f7f506d290f83f884a775071563875ed3088d0bc981cf10328a"
+
+[[resources]]
+id = "provider-mutation-plan"
+role = "provider-resource"
+path = "schemas/mutation-plan.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57fd"
+
+[[artifacts]]
+id = "skill"
+target = ".agents/skills/github-workflow/SKILL.md"
+source = "skills/github-workflow/SKILL.md"
+digest = "sha256:c6613142866ccf4465b3524dd0b1826ccf7f366130d9026ba28a8d64782e83da"
+policy = "managed"
+
+[[artifacts]]
+id = "skill-openai"
+target = ".agents/skills/github-workflow/agents/openai.yaml"
+source = "skills/github-workflow/agents/openai.yaml"
+digest = "sha256:b4a95c41144530b3694e71ab4662de3031bca3c7ef9b9b7a963a5038003998f1"
+policy = "managed"
+when_any = [{ option = "harnesses", contains = "codex" }]
+
+[[artifacts]]
+id = "tool-binary"
+target = ".agents/skills/github-workflow/bin/gh-workflow"
+source = "skills/github-workflow/bin/gh-workflow"
+digest = "sha256:1d118602d768ff2ef5ceba0a377a616f8f4560dc915e10d93a38c201798f0579"
+policy = "managed"
+mode = "0755"
+
+[[artifacts]]
+id = "reference-field-vocabulary"
+target = ".agents/skills/github-workflow/references/field-vocabulary.md"
+source = "skills/github-workflow/references/field-vocabulary.md"
+digest = "sha256:4600470727d00ea16c0cde3233175b9aaf830ec3dec57fd1f7bf4b7523b7993c"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-issue-structure"
+target = ".agents/skills/github-workflow/references/issue-structure.md"
+source = "skills/github-workflow/references/issue-structure.md"
+digest = "sha256:1a0d0c7fbcc01a3e9d255e1c1f2cad83d85fc28be6766e758baf66544068f465"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-org-schema"
+target = ".agents/skills/github-workflow/references/org-schema.yaml"
+source = "skills/github-workflow/references/org-schema.yaml"
+digest = "sha256:b8170049e40fd944a3dd78a8b7ab9d153feda90b6df42445863fae5ece03da99"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-pr-standard"
+target = ".agents/skills/github-workflow/references/pr-standard.md"
+source = "skills/github-workflow/references/pr-standard.md"
+digest = "sha256:cfc4253c8b95c9da4c73c3131df1a522f10cc943b571bd56a6a3e9939f448a7c"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-review-checklist"
+target = ".agents/skills/github-workflow/references/review-checklist.md"
+source = "skills/github-workflow/references/review-checklist.md"
+digest = "sha256:95ca943ecfc018b7b07f942b7c452cca1a218fc9a7068a951080d363062a808b"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-summary-format"
+target = ".agents/skills/github-workflow/references/summary-format.md"
+source = "skills/github-workflow/references/summary-format.md"
+digest = "sha256:6e26f8d19e37f41babb7b1da9ff5aa3779e9caf3a1636c999ec276d078dbcb65"
+policy = "managed"
+
+# Claude Code discovers project skills only under `.claude/skills/`; it has never
+# read `.agents/skills/`, which is Codex's convention. Every skill file below is
+# therefore installed twice from one source, so both harnesses see the same bytes.
+# Each pair must stay byte-identical: same `source`, `digest`, `mode`, and
+# `when_any`, differing only in `id` and `target`. Copies, not symlinks — a symlink
+# checks out as a plain text file on a Windows clone without Developer Mode, which
+# would silently install the link path as the file body. Divergence is already
+# guarded because both targets are digest-locked managed artifacts. See issue #170.
+#
+# One deliberate exception: `agents/openai.yaml` is declared under `.agents/` only.
+# It is Codex's own skill-companion format and Claude Code has never read it, so the
+# `.claude/` copy was bytes no harness could use (issue #175). Every other skill file
+# still lands in both trees.
+[[artifacts]]
+id = "skill-claude"
+target = ".claude/skills/github-workflow/SKILL.md"
+source = "skills/github-workflow/SKILL.md"
+digest = "sha256:c6613142866ccf4465b3524dd0b1826ccf7f366130d9026ba28a8d64782e83da"
+policy = "managed"
+
+[[artifacts]]
+id = "tool-binary-claude"
+target = ".claude/skills/github-workflow/bin/gh-workflow"
+source = "skills/github-workflow/bin/gh-workflow"
+digest = "sha256:1d118602d768ff2ef5ceba0a377a616f8f4560dc915e10d93a38c201798f0579"
+policy = "managed"
+mode = "0755"
+
+[[artifacts]]
+id = "reference-field-vocabulary-claude"
+target = ".claude/skills/github-workflow/references/field-vocabulary.md"
+source = "skills/github-workflow/references/field-vocabulary.md"
+digest = "sha256:4600470727d00ea16c0cde3233175b9aaf830ec3dec57fd1f7bf4b7523b7993c"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-issue-structure-claude"
+target = ".claude/skills/github-workflow/references/issue-structure.md"
+source = "skills/github-workflow/references/issue-structure.md"
+digest = "sha256:1a0d0c7fbcc01a3e9d255e1c1f2cad83d85fc28be6766e758baf66544068f465"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-org-schema-claude"
+target = ".claude/skills/github-workflow/references/org-schema.yaml"
+source = "skills/github-workflow/references/org-schema.yaml"
+digest = "sha256:b8170049e40fd944a3dd78a8b7ab9d153feda90b6df42445863fae5ece03da99"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-pr-standard-claude"
+target = ".claude/skills/github-workflow/references/pr-standard.md"
+source = "skills/github-workflow/references/pr-standard.md"
+digest = "sha256:cfc4253c8b95c9da4c73c3131df1a522f10cc943b571bd56a6a3e9939f448a7c"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-review-checklist-claude"
+target = ".claude/skills/github-workflow/references/review-checklist.md"
+source = "skills/github-workflow/references/review-checklist.md"
+digest = "sha256:95ca943ecfc018b7b07f942b7c452cca1a218fc9a7068a951080d363062a808b"
+policy = "managed"
+
+[[artifacts]]
+id = "reference-summary-format-claude"
+target = ".claude/skills/github-workflow/references/summary-format.md"
+source = "skills/github-workflow/references/summary-format.md"
+digest = "sha256:6e26f8d19e37f41babb7b1da9ff5aa3779e9caf3a1636c999ec276d078dbcb65"
+policy = "managed"
+
+[[contributions]]
+id = "agents-instructions"
+target = "AGENTS.md"
+adapter = "markdown-block"
+scope = "block:github-workflow"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "harnesses", contains = "codex" }]
+
+[[contributions]]
+id = "claude-instructions"
+target = "CLAUDE.md"
+adapter = "markdown-block"
+scope = "block:github-workflow"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "harnesses", contains = "claude-code" }]
+
+[[contributions]]
+id = "policy"
+target = ".standards/packages/github-workflow/policy.toml"
+adapter = "whole-file"
+scope = "$file"
+policy = "managed"
+provider = "render-semantic"
+
+[[providers]]
+id = "render-semantic"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_semantic"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["policy-template"]
+
+[[providers]]
+id = "validate"
+operation = "validate"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_validate"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["policy-template"]
+
+[[providers]]
+id = "verify"
+operation = "verify"
+kind = "python"
+phase = "verify"
+effect = "findings"
+entrypoint = "payload:provider-code#run_verify"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["policy-template"]
+
+[[providers]]
+id = "drift-check"
+operation = "drift-check"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_drift_check"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["policy-template"]
+
+[[providers]]
+id = "upgrade"
+operation = "upgrade"
+kind = "python"
+phase = "authoring"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#run_upgrade"
+input_schema = "provider-input"
+output_schema = "provider-mutation-plan"
+resources = ["policy-template"]

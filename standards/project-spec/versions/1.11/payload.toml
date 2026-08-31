@@ -1,0 +1,352 @@
+schema_version = "1.0"
+
+[payload]
+standard = "project-spec"
+version = "1.11"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["spec.extract", "spec.id-next", "spec.lint", "spec.scaffold", "spec.upgrade", "spec.validate"]
+consumes_platform = ["project-standards.authoring", "project-standards.reconcile"]
+
+[relations]
+companions = ["markdown-frontmatter"]
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:b15d4e39fccf0db9645607e072b5668ecfb2d14e30fef1a6938dabd9d69b3a44"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:6045eb169fa1fb8ab46e73f2818ecc1b2a5bc649c5bbe3bb3f735d5bca890e9e"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:d322ced5985ffea594a849f7e33768bed02f6c88fea3da6e887435a5e1e158c4"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:dfff3b479f7f01780f993eb996c8a6775d0704771005c5902cda4cced7bb1f54"
+
+[[resources]]
+id = "example"
+role = "example"
+path = "examples/spec.example.md"
+media_type = "text/markdown"
+digest = "sha256:997c23a6321b118a7e2cfd34291134a880a4a523e07d4b0f9f7aa7d413d6946e"
+
+[[resources]]
+id = "tooling-notes"
+role = "tooling-note"
+path = "resources/tooling-notes.md"
+media_type = "text/markdown"
+digest = "sha256:6fb61a64bf6b5ce2e3b208a4ae521281b676e41570724134c93c59784dcad886"
+
+[[resources]]
+id = "template-light"
+role = "template"
+path = "templates/spec-light-template.md"
+media_type = "text/markdown"
+digest = "sha256:3143e4f3c242a7817bd6342928a1f2e5869bbad00d07f45f6d71c0edaf0bc839"
+
+[[resources]]
+id = "template-standard"
+role = "template"
+path = "templates/spec-standard-template.md"
+media_type = "text/markdown"
+digest = "sha256:0340061ace9d6491ce112c6de64533a2e1146444bccfa7b82e707427de1685be"
+
+[[resources]]
+id = "template-full"
+role = "template"
+path = "templates/spec-full-template.md"
+media_type = "text/markdown"
+digest = "sha256:14d80c056c8a6639b27c1d6c246019851a1d635b56f6e47f8685b2f36a705276"
+
+[[resources]]
+id = "workflow-source"
+role = "provider-resource"
+path = "resources/validate-specs.yml"
+media_type = "text/yaml"
+digest = "sha256:dd3cc398f3f4264aba826e88b9c5f911d0cd6b930343b361ac2604a6b1a8e89b"
+
+[[resources]]
+id = "legacy-workflow"
+role = "legacy-reference"
+path = "resources/legacy-validate-specs.yml"
+media_type = "text/yaml"
+digest = "sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447"
+
+[[resources]]
+id = "self-host-workflow"
+role = "provider-resource"
+path = "resources/self-host-validate-specs.yml"
+media_type = "text/yaml"
+digest = "sha256:0cfa37cd8508968cfd43eaf6ce5cb2412935dd5cd1085d7e58209434b8beb968"
+
+[[resources]]
+id = "provider-code"
+role = "provider-resource"
+path = "providers/project_spec.py"
+media_type = "text/x-python"
+digest = "sha256:85e78663efd7efb7162529ffcb2226aa3321b32da28bdb63ee49b2498a001e8f"
+
+[[resources]]
+id = "provider-input"
+role = "provider-resource"
+path = "schemas/provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:409fb3a8e8823845fe2272d0a575dcecd3c4bb1410a7cedb38b2240d6e84c6f5"
+
+[[resources]]
+id = "provider-findings"
+role = "provider-resource"
+path = "schemas/findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:48e903190fe18088a74c6fe476256856ac7d0805af40292d43b49c4c5ef2dbc6"
+
+[[resources]]
+id = "provider-lint-findings"
+role = "provider-resource"
+path = "schemas/lint-findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:3fbcf25c3cfe4cb650439ea9e4b89587d9ee23c1fad244d561635f26fad1f88a"
+
+[[resources]]
+id = "provider-content"
+role = "provider-resource"
+path = "schemas/content.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:8573fb58c93ae69bfda3d44d9cf8ff08a53a7b8b811e704995cd689c17fb7ef9"
+
+[[resources]]
+id = "provider-extract"
+role = "provider-resource"
+path = "schemas/extract.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:15766b81530941941b6c05cda749380dc49cc59827632fc82535c01dcc4fcbdf"
+
+[[resources]]
+id = "provider-id-next"
+role = "provider-resource"
+path = "schemas/id-next.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:fdfb0d10a39767e703482d53479218d0f5aac94280761d1e094e350e84e1f3b9"
+
+[[resources]]
+id = "provider-mutation-plan"
+role = "provider-resource"
+path = "schemas/mutation-plan.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:bdd2fe328832d50c68dd9b40d81d0b353e6bc9ebbecc8c96283c835ce364210d"
+
+[[resources]]
+id = "provider-migration-report"
+role = "provider-resource"
+path = "schemas/migration-report.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:dd9eb36bcc0adbc932d610fd3c9c9da49f9a65113f5c5689984e0dab262a9259"
+
+[[resources]]
+id = "schema-light"
+role = "document-schema"
+path = "schemas/spec-light.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:ffc2bb6a20a56b677297b5776e353a603d68874c1237e799ccc0c43d851420a7"
+
+[[resources]]
+id = "schema-standard"
+role = "document-schema"
+path = "schemas/spec-standard.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:6bfe16cda38079fb18527a6fc35a4dc74415843f1d7caa319b4f3209536bf504"
+
+[[resources]]
+id = "schema-full"
+role = "document-schema"
+path = "schemas/spec-full.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:a141f360e29aa84ad923678fd5aa9b557016df5bbbf73b6be7efb8274201d734"
+
+[[contributions]]
+id = "validate-specs-workflow"
+target = ".github/workflows/validate-specs.yml"
+adapter = "whole-file"
+scope = "$file"
+policy = "managed"
+provider = "render-workflow"
+when_any = [{ option = "workflow_ownership", equals = "managed" }]
+
+[[providers]]
+id = "validate"
+operation = "validate"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_validate"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["template-full", "template-light", "template-standard"]
+
+[[providers]]
+id = "lint"
+operation = "lint"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_lint"
+input_schema = "provider-input"
+output_schema = "provider-lint-findings"
+resources = ["template-full", "template-light", "template-standard"]
+
+[[providers]]
+id = "extract"
+operation = "extract"
+kind = "python"
+phase = "inspect"
+effect = "content"
+entrypoint = "payload:provider-code#run_extract"
+input_schema = "provider-input"
+output_schema = "provider-extract"
+resources = []
+
+[[providers]]
+id = "id-next"
+operation = "id-next"
+kind = "python"
+phase = "inspect"
+effect = "content"
+entrypoint = "payload:provider-code#run_id_next"
+input_schema = "provider-input"
+output_schema = "provider-id-next"
+resources = ["template-full", "template-light", "template-standard"]
+
+[[providers]]
+id = "scaffold"
+operation = "scaffold"
+kind = "python"
+phase = "authoring"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#run_scaffold"
+input_schema = "provider-input"
+output_schema = "provider-mutation-plan"
+resources = ["template-full", "template-light", "template-standard"]
+
+[[providers]]
+id = "upgrade"
+operation = "upgrade"
+kind = "python"
+phase = "authoring"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#run_upgrade"
+input_schema = "provider-input"
+output_schema = "provider-mutation-plan"
+resources = ["template-full", "template-light", "template-standard"]
+
+[[providers]]
+id = "fix"
+operation = "fix"
+kind = "python"
+phase = "authoring"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#run_import"
+input_schema = "provider-input"
+output_schema = "provider-mutation-plan"
+resources = ["template-full", "template-light", "template-standard"]
+
+[[providers]]
+id = "render-workflow"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_workflow"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["self-host-workflow"]
+
+[[providers]]
+id = "render-preview"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_preview"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["template-full", "template-light", "template-standard"]
+
+[[providers]]
+id = "verify-runner-labels"
+operation = "verify"
+kind = "python"
+phase = "verify"
+effect = "findings"
+entrypoint = "payload:provider-code#run_verify_runner_labels"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = []
+
+[[providers]]
+id = "migrate-legacy"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#run_migrate"
+input_schema = "provider-input"
+output_schema = "provider-migration-report"
+resources = ["legacy-workflow"]
+
+[[legacy_states]]
+id = "v4-project-spec"
+
+# Package 1.10 changed only the three shipped template bodies, restoring them to the
+# linter's canonical registry source. Package 1.11 changes only the `setup-uv` pin
+# inside the self-hosted workflow resource (issue #201). Neither adds a configuration
+# or artifact target, and the whole-file workflow target keeps its identity and
+# managed policy, so ordinary reconciliation needs no package-to-package migration
+# edge. The legacy route remains available for a repository entering the V5 control
+# plane directly at this version.
+[[migrations]]
+id = "legacy-v4-to-1-10"
+from = "legacy:v4-project-spec"
+to = "package:1.11"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = ["config:*", "contribution:validate-specs-workflow"]
+signatures = ["legacy-workflow"]
+
+[[legacy_signatures]]
+id = "legacy-workflow"
+kind = "whole-file"
+targets = [".github/workflows/validate-specs.yml"]
+consumer_owned_intent_pointer = "/spec/workflow_ownership"
+known_content_digests = [
+  "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8",
+  "sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447",
+  "sha256:0be22314a96e41f9861897e75baf7bfcf35b2f3ae51870db0f9cc6e982fa5525",
+  "sha256:abf536c4b4811ee0eb5e16d5d5a79a8a2370118da4278c612e0ee9461ba6045f",
+  "sha256:2ea6576b06bd68517d7ce7acc5687cf51f594e83b890855ac8a03582f3f884fc",
+  "sha256:b7ce900785841ebdfcd9758c76743f1390dbc162c6d48a21c1e9a246738f84a8",
+  "sha256:77fda8d63f55b3f2715b0c47b55ccd6306071fa6541d7b5a57decd1291e2c7bb",
+  "sha256:52e058a3de21ef4a89b4fbe3e877b000b07badbd2af5646ea0f4c82caabb2401",
+]

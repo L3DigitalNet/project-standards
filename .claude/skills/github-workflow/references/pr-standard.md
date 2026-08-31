@@ -72,10 +72,12 @@ Four sections, no boilerplate: there is no empty "Risk" or "Follow-up" heading t
 A Standalone PR additionally declares its own risk on the line immediately after `Standalone`:
 
 ```text
-Change risk: R2
+Change risk: R2 Moderate
 ```
 
-`Change risk` measures how dangerous it is to implement the change incorrectly. R1 takes normal tests and review; R2 adds an acceptance-criteria trace and focused regression coverage; R3 adds independent review, negative testing, and explicit rollback consideration. **R4 requires evidence, in the Summary or Acceptance coverage, of all four of:** a plan agreed before implementation, a recovery or rollback procedure, negative testing, and independent verification. R4 requires no ceremonial Issue and no second approval — the controls are technical, not procedural. [review-checklist.md](review-checklist.md) carries the review ladder these values drive.
+The value is one of exactly `R1 Low`, `R2 Moderate`, `R3 High`, or `R4 Critical` — the same four spellings [org-schema.yaml](org-schema.yaml) gives the `Change risk` field, because a Standalone PR's declaration is authoritative in the same way an Issue's field value is. A bare `R2` is refused: the Ready gate reports `GHW-PR-READY-RISK-INVALID` and names the four accepted values.
+
+`Change risk` measures how dangerous it is to implement the change incorrectly. `R1 Low` takes normal tests and review; `R2 Moderate` adds an acceptance-criteria trace and focused regression coverage; `R3 High` adds independent review, negative testing, and explicit rollback consideration. **`R4 Critical` requires evidence, in the Summary or Acceptance coverage, of all four of:** a plan agreed before implementation, a recovery or rollback procedure, negative testing, and independent verification. `R4 Critical` requires no ceremonial Issue and no second approval — the controls are technical, not procedural. [review-checklist.md](review-checklist.md) carries the review ladder these values drive.
 
 ## Lifecycle coherence
 

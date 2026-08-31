@@ -8,8 +8,12 @@ so a consumer still carrying the 1.6 render authenticates rather than tripping a
 unknown-content refusal. `adopt.md` gains the SL-STRUCTURE troubleshooting row
 for the strict-lint gate landed in the same release.
 
-The root workflow byte-parity row below turns green only once the producer-mode
-release-prep reconcile re-renders `.github/workflows/` from this payload.
+1.11 superseded 1.7 as the source of this repository's rendered root workflow (the
+setup-uv v10 advance, issue #201), so nothing here compares 1.7's resource with
+`.github/workflows/validate-specs.yml` any more: that file now carries bytes 1.7's
+digest chain cannot know. Root-workflow parity with whichever payload the catalog
+marks `default` is asserted catalog-derived in `test_project_spec_reconstruction`.
+What 1.7 still owes is its own immutable bytes and their declared digests.
 """
 
 from __future__ import annotations
@@ -38,7 +42,6 @@ _SUCCESSOR = _FAMILY / "versions/1.7"
 _PROJECTION = _ROOT / "src/project_standards/payloads/project-spec/1.7"
 _PREDECESSOR_DIGEST = "sha256:0f3bc8952fe4ef58e7619fecf1476ebd863a6cbb4eddf93bdbdea758f835be4c"
 _WORKFLOW_RESOURCE = "resources/self-host-validate-specs.yml"
-_ROOT_WORKFLOW = _ROOT / ".github/workflows/validate-specs.yml"
 _V1_6_WORKFLOW_DIGEST = "sha256:77fda8d63f55b3f2715b0c47b55ccd6306071fa6541d7b5a57decd1291e2c7bb"
 _V1_7_WORKFLOW_DIGEST = "sha256:52e058a3de21ef4a89b4fbe3e877b000b07badbd2af5646ea0f4c82caabb2401"
 _SUCCESSOR_CHANGES = frozenset(
@@ -88,10 +91,14 @@ def test_project_spec_1_7__successor__preserves_1_6_and_indexes_complete_payload
     ]
 
 
-def test_project_spec_1_7__workflow_resource__is_the_managed_root_source() -> None:
-    """The successor resource is byte-identical to the managed root workflow it owns."""
+def test_project_spec_1_7__workflow_resource__carries_the_generation_it_declares() -> None:
+    """The resource bytes, its manifest digest, and the 1.7 generation agree.
+
+    A released resource is immutable, so the v9.0.0 pin below is a contract and not
+    a snapshot: advancing it is what a new cut is for, and editing it here would
+    silently re-key every consumer authenticating against `_V1_7_WORKFLOW_DIGEST`.
+    """
     workflow = (_SUCCESSOR / _WORKFLOW_RESOURCE).read_bytes()
-    assert workflow == _ROOT_WORKFLOW.read_bytes()
 
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     resource = next(item for item in manifest.resources if item.id == "self-host-workflow")
@@ -138,8 +145,8 @@ def test_project_spec_1_7__identity_documents_and_schemas__name_the_successor() 
 def test_project_spec_1_7__catalog_role__stays_retained_behind_the_successor() -> None:
     """1.7 keeps an advertised, non-default row once 1.8 takes the default.
 
-    `test_project_spec_1_8__catalog_role__selects_the_successor_as_default` owns
-    the default assertion from the 5.17.0 activation onward.
+    Which version currently holds `default` is asserted catalog-derived in
+    test_catalog_roles.py, not re-pinned by any per-version module.
     """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
@@ -187,14 +194,18 @@ def test_project_spec_1_7__family_index__keeps_the_retained_version_selectable()
     assert indexed["1.7"].digest == integrity.aggregate_digest
 
 
-def test_project_spec_1_7__migration__recognizes_the_pinned_root_workflow() -> None:
+def test_project_spec_1_7__migration__recognizes_its_own_pinned_workflow() -> None:
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     payload = InstalledPayload(
         _SUCCESSOR,
         manifest,
         validate_payload_integrity(_SUCCESSOR, manifest),
     )
-    workflow = _ROOT_WORKFLOW.read_bytes()
+    # The 1.7-era render, not the live root file: since the 1.11 reconcile the root
+    # workflow carries the setup-uv v10 bytes, a generation 1.7's chain cannot know.
+    # A consumer still holding the 1.7 render is exactly who this classification is
+    # for, so migrating from the payload's own resource is the real case.
+    workflow = (_SUCCESSOR / _WORKFLOW_RESOURCE).read_bytes()
     workflow_digest = f"sha256:{hashlib.sha256(workflow).hexdigest()}"
     legacy_signature = next(
         item for item in manifest.legacy_signatures if item.id == "legacy-workflow"

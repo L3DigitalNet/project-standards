@@ -1,0 +1,21 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"content": { "type": "string" },
+		"file": { "type": "string", "minLength": 1 },
+		"selector": { "type": "string", "minLength": 1 },
+		"kind": { "enum": ["id", "section", "appendix", "heading"] },
+		"found": { "type": "boolean" },
+		"markdown": { "type": ["string", "null"] }
+	},
+	"required": ["content", "file", "selector", "kind", "found", "markdown"],
+	"allOf": [
+		{
+			"if": { "properties": { "found": { "const": true } }, "required": ["found"] },
+			"then": { "properties": { "markdown": { "type": "string", "minLength": 1 } } },
+			"else": { "properties": { "markdown": { "type": "null" } } }
+		}
+	]
+}

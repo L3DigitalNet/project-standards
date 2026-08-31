@@ -3,7 +3,7 @@ name: github-workflow
 description: Use when creating or mutating GitHub work state — issues, issue field values, pull requests, lifecycle transitions, milestones — when triaging, when auditing the organization schema, or when presenting an operator-requested issue or PR summary.
 metadata:
   author: Chris Purcell
-  version: '1.7'
+  version: '1.8'
   lines: 69
 ---
 

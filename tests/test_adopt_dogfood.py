@@ -15,8 +15,10 @@ import json
 import re
 import stat
 import subprocess
+import tomllib
 from hashlib import sha256
 from pathlib import Path
+from typing import cast
 
 import pytest
 import yaml
@@ -143,16 +145,28 @@ def test_generated_workflow_yaml_has_no_tabs() -> None:
     assert "\t" not in (_BUNDLES / "python-tooling" / "check.yml").read_text()
 
 
-@pytest.mark.parametrize(
-    "standard_id,version",
-    [("markdown-frontmatter", "1.14"), ("adr", "1.6"), ("project-spec", "1.10")],
-)
-def test_current_adoption_guides_use_v5_packages_not_v1_fragments(
-    standard_id: str,
-    version: str,
-) -> None:
+def _catalog_default(standard_id: str) -> str:
+    """Return the version `catalogs/5.toml` marks `default` for one family.
+
+    Derived rather than parametrized with a literal: the family-root adoption guide
+    always points at whichever payload is current, so a hardcoded version turns this
+    proof into a chore that every release train has to remember to retarget. It has
+    been retargeted on consecutive trains for exactly that reason.
+    """
+    catalog = tomllib.loads((_REPO / "catalogs/5.toml").read_text(encoding="utf-8"))
+    defaults = [
+        package["version"]
+        for package in cast("list[dict[str, str]]", catalog["packages"])
+        if package["id"] == standard_id and package["role"] == "default"
+    ]
+    assert len(defaults) == 1, f"{standard_id}: {defaults}"
+    return defaults[0]
+
+
+@pytest.mark.parametrize("standard_id", ["markdown-frontmatter", "adr", "project-spec"])
+def test_current_adoption_guides_use_v5_packages_not_v1_fragments(standard_id: str) -> None:
     doc = (_REPO / "standards" / standard_id / "adopt.md").read_text()
-    assert f"versions/{version}/adopt.md" in doc
+    assert f"versions/{_catalog_default(standard_id)}/adopt.md" in doc
     assert "project-standards init --catalog 5 --migrate" in doc
     assert "```yaml" not in doc
 

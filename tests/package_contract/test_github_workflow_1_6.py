@@ -150,12 +150,12 @@ def test_github_workflow_1_6__schemas__carry_no_predecessor_version_reference() 
 def test_github_workflow_1_6__tool_binary__is_declared_and_built_for_this_version() -> None:
     """Pin the contract between the committed binary bytes and the payload declaration.
 
-    The build script's own half of that contract moved to
-    `test_github_workflow_1_7.py` when `scripts/build-gh-workflow.sh` advanced to the
-    1.7 output path and version stamp (NFR-005). One script targets one version — the
-    successor under development — so a predecessor test that still pinned it would fail
-    on every cut, and 1.6's committed bytes are guarded by the release baseline
-    comparison rather than by a rebuild from this script.
+    The build script's own half of that contract always lives with the version under
+    development — `test_github_workflow_1_8.py` today — because
+    `scripts/build-gh-workflow.sh` targets exactly one output path and version stamp
+    (NFR-005). A predecessor test that still pinned it would fail on every cut, and
+    1.6's committed bytes are guarded by the release baseline comparison rather than by
+    a rebuild from this script.
     """
     committed = _SUCCESSOR / _TOOL_BINARY_SOURCE
     digest = f"sha256:{hashlib.sha256(committed.read_bytes()).hexdigest()}"

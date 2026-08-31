@@ -6,8 +6,10 @@ import json
 import shutil
 import socket
 import subprocess
+import tomllib
 import zipfile
 from pathlib import Path
+from typing import cast
 
 import pytest
 import yaml
@@ -66,14 +68,25 @@ _V1_1_SELF_HOST_WORKFLOW_DIGEST = (
 _V1_3_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:3cd986c11ee66c6da7169ba488d029e19473ec97d9fd785be616117e83307edc"
 )
-# The generation project-spec 1.7 renders: `runner-labels` plus the setup-uv 9.0.0
-# pin. `_CURRENT_` tracks whatever the root workflow holds, so it advances with
-# every catalog default; the `_V1_X_` constants above are frozen release history
-# this 1.3-era payload's provider still classifies. The superseded 1.6 generation
-# is asserted where its own chain lives, in `test_project_spec_1_7`.
-_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
-    "sha256:52e058a3de21ef4a89b4fbe3e877b000b07badbd2af5646ea0f4c82caabb2401"
-)
+
+
+def _current_self_host_workflow() -> bytes:
+    """Return the self-hosted workflow resource of the family's catalog default.
+
+    Derived from `catalogs/5.toml` rather than pinned as a digest literal: the root
+    workflow is re-rendered from whichever payload holds `default`, so a digest
+    literal here has to be hand-advanced by every activation and goes red on the cut
+    rather than on real drift. The `_V1_X_` constants above are the opposite case and
+    stay literal: they are frozen release history this 1.3-era payload's provider
+    must still classify, and a change to one of them is a defect.
+    """
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    default = next(
+        entry["version"]
+        for entry in cast("list[dict[str, str]]", catalog["packages"])
+        if entry["id"] == "project-spec" and entry["role"] == "default"
+    )
+    return (_FAMILY / f"versions/{default}/resources/self-host-validate-specs.yml").read_bytes()
 
 
 def _payload() -> InstalledPayload:
@@ -312,10 +325,12 @@ def test_project_spec_declares_historical_caller_and_current_workflow_history() 
         _PRE_ATOMIC_SELF_HOST_WORKFLOW_DIGEST,
         _V1_1_SELF_HOST_WORKFLOW_DIGEST,
     }
+    # Byte parity, not just a known digest: the managed root workflow is rendered
+    # from the current default payload, so any divergence means the reconcile did
+    # not run (or ran from a stale payload) in the release that advanced the default.
     assert (
-        f"sha256:{hashlib.sha256((_ROOT / '.github/workflows/validate-specs.yml').read_bytes()).hexdigest()}"
-        == _CURRENT_SELF_HOST_WORKFLOW_DIGEST
-    )
+        _ROOT / ".github/workflows/validate-specs.yml"
+    ).read_bytes() == _current_self_host_workflow()
 
 
 def test_project_spec_v2_docs_describe_only_the_v5_control_plane() -> None:

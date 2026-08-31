@@ -8,7 +8,7 @@ Read 2026-08-06T12:00:00Z · 4 open issues · 3 open PRs
 - **Blocked** — pull_request #21 Add the render engine: issue #12 is Blocked, and a Final claims every remaining acceptance criterion
 - **Needs definition** — issue #14 Add ledger TOC anchors: the issue is Needs definition: missing Change risk, Target date, and acceptance criteria
 - **Needs definition** — pull_request #21 Add the render engine: the body has no "## Summary" section; the body has no "## Acceptance coverage" section; the body has no "## Verification" section
-- **Needs definition** — pull_request #23 ✔ ⚠️ ©︎ ©️ 👨‍👩‍👧‍👦 1️⃣ 🇺🇸 漢字 אַ: a Standalone PR declares no authoritative \`Change risk:\` value; the body has no "## Summary" section; the body has no "## Acceptance coverage" section; the body has no "## Verification" section
+- **Needs definition** — pull_request #23 ✔ ⚠️ ©︎ ©️ 👨‍👩‍👧‍👦 1️⃣ 🇺🇸 漢字 אַ: a Standalone PR declares no authoritative \`Change risk:\` value; accepted values are \`R1 Low\`, \`R2 Moderate\`, \`R3 High\`, or \`R4 Critical\`; the body has no "## Summary" section; the body has no "## Acceptance coverage" section; the body has no "## Verification" section
 - **PR admission blocked** — pull_request #21 Add the render engine: GitHub has not finished computing mergeability
 - **PR admission blocked** — pull_request #23 ✔ ⚠️ ©︎ ©️ 👨‍👩‍👧‍👦 1️⃣ 🇺🇸 漢字 אַ: GitHub has not finished computing mergeability
 - **Synchronization required** — issue #15 Escape titles with \| pipes, \*stars\*, \<angles\> and `https://example.test/x`: Workflow Done contradicts GitHub open/—

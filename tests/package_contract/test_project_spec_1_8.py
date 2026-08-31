@@ -10,11 +10,15 @@ The load-bearing property is that an empty selection — the default — is
 compares bytes, so anything else would rewrite every consumer's managed caller on
 upgrade for a feature it did not select.
 
-The catalog-role and family-navigation rows below were deferred to release prep
-and landed with the 5.17.0 activation, which is the first commit permitted to
-advance catalogs/5.toml. Root-workflow parity stays with 1.7: `runner_labels`
-reaches caller mode only, so 1.8 supersedes none of the self-hosted bytes this
-repository renders.
+The catalog-role row below was deferred to release prep and landed with the 5.17.0
+activation, which is the first commit permitted to advance catalogs/5.toml. Root-
+workflow parity was never 1.8's: `runner_labels` reaches caller mode only, so 1.8
+supersedes none of the self-hosted bytes this repository renders.
+
+1.8 retired to `retained` long ago. The family-navigation assertion this module
+used to carry was dropped at the 1.11 cut, because it re-pinned which sibling
+currently holds `default` and so went red on each later cut rather than on a
+regression of its own; `test_catalog_roles.py` owns that invariant catalog-derived.
 """
 
 from __future__ import annotations
@@ -237,13 +241,13 @@ def test_project_spec_1_8__payload_projection__matches_successor() -> None:
         assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
-def test_project_spec_1_8__catalog_role__selects_the_successor_as_default() -> None:
-    """Catalog 5 must actually select the successor these tests pin.
+def test_project_spec_1_8__catalog_role__stays_advertised_and_retained() -> None:
+    """1.8 and the predecessors it shipped behind stay selectable by exact pin.
 
-    The payload can be complete and valid while the catalog still selects its
-    predecessor; only this row makes the successor the default a consumer on
-    `version = "latest"` resolves to. Landed by the 5.17.0 activation, which is
-    the first commit permitted to advance the catalog role.
+    Its `default` row landed with the 5.17.0 activation and moved on at the next
+    cut; a released role only ever advances to `retained`, never back, and never
+    to withdrawn (ADR 0024). Which version currently holds `default` is asserted
+    catalog-derived in test_catalog_roles.py, not re-pinned here.
     """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
@@ -255,16 +259,3 @@ def test_project_spec_1_8__catalog_role__selects_the_successor_as_default() -> N
     assert roles["1.8"] == "retained"
     assert roles["1.7"] == "retained"
     assert roles["1.6"] == "retained"
-
-
-def test_project_spec_1_8__mutable_navigation__names_the_new_authority() -> None:
-    """Family-level readers must resolve the same current payload as the index."""
-    expected_links = {
-        _FAMILY / "README.md": "versions/1.10/README.md",
-        _FAMILY / "adopt.md": "versions/1.10/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.10/agent-summary.md",
-    }
-    for path, expected_link in expected_links.items():
-        content = path.read_text(encoding="utf-8")
-        assert expected_link in content
-        assert "versions/1.8/" not in content

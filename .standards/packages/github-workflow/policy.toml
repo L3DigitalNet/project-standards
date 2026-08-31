@@ -5,4 +5,4 @@
 # only comments and double-quoted `key = "value"` assignments, so every future
 # value must keep that shape.
 organization = "L3DigitalNet"
-package_version = "1.7"
+package_version = "1.8"

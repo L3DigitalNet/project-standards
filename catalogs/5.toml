@@ -215,6 +215,12 @@ role = "retained"
 id = "github-workflow"
 version = "1.7"
 digest = "sha256:9758d1dab58643cb6f8461bd11dd139233c346e37e54c5580ba6a1cd4a17c17a"
+role = "retained"
+
+[[packages]]
+id = "github-workflow"
+version = "1.8"
+digest = "sha256:f98d80968f74cacec42711b82265f692368917130365097fe72c29ed0e6356a4"
 role = "default"
 
 [[packages]]
@@ -293,6 +299,12 @@ role = "retained"
 id = "markdown-frontmatter"
 version = "1.14"
 digest = "sha256:530491a10ed1f6bcfafcfcbd80f99206de9e28da66aa81dc38d74f2ec938a144"
+role = "retained"
+
+[[packages]]
+id = "markdown-frontmatter"
+version = "1.15"
+digest = "sha256:23c907f56d771ac1214bd5680a282d106fdee67a63675d0cb3fd147a0a920a97"
 role = "default"
 
 [[packages]]
@@ -437,6 +449,12 @@ role = "retained"
 id = "project-spec"
 version = "1.10"
 digest = "sha256:6797253d6982f041bc65d007cf023285a0aaff2fac21640ebfdc95e1c420706e"
+role = "retained"
+
+[[packages]]
+id = "project-spec"
+version = "1.11"
+digest = "sha256:3db70f47f1967b9a59fb06859824fb7071f73e2679613955b1da3469b1336599"
 role = "default"
 
 [[packages]]
@@ -557,6 +575,12 @@ role = "retained"
 id = "python-tooling"
 version = "1.16"
 digest = "sha256:60d3a68c9973942b7a92f7affcd3fbac553b3c79c31bcd63b723e1186bd3c734"
+role = "retained"
+
+[[packages]]
+id = "python-tooling"
+version = "1.17"
+digest = "sha256:03963e2c75dead1ab9bb8683bf810066f7d988e275a14310a1a1ff23358223a2"
 role = "default"
 
 [[packages]]

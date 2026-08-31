@@ -17,6 +17,11 @@ unbounded sdist breaks when a future breaking uv_build ships.
 
 Everything else in the payload is a copy of 1.15, so the second contract here is
 that no other rendered unit and no option moved.
+
+1.16 retired to `retained` when 1.17 was cut. The family-root navigation assertion
+this module used to carry was dropped there, because it re-pinned which sibling
+currently holds `default` and so went red on that cut rather than on a regression
+of its own; `test_catalog_roles.py` owns that invariant catalog-derived.
 """
 
 from __future__ import annotations
@@ -301,10 +306,13 @@ def test_python_tooling_1_16__predecessor_tree_and_activation_stay_exact() -> No
     }
     # Withdrawing an advertised package is a catalog-major transition (ADR 0024),
     # so every predecessor stays advertised and only its role moves to `retained`.
-    assert roles == {
-        **{f"1.{minor}": "retained" for minor in range(1, 16)},
-        "1.16": "default",
-    }
+    # 1.16 itself retired to `retained` when 1.17 was activated (issue #201); a
+    # released role never moves backwards, which is the whole of what this module
+    # can still prove. Which version currently holds `default`, and the full
+    # membership of this family's catalog rows, both move on every later cut and
+    # are asserted catalog-derived in test_catalog_roles.py instead.
+    assert roles["1.15"] == "retained"
+    assert roles["1.16"] == "retained"
 
 
 def test_python_tooling_1_16__versioned_guidance__states_the_uv_prerequisite() -> None:
@@ -393,10 +401,3 @@ def test_python_tooling_1_16__projection_and_index__are_complete() -> None:
     assert versions["1.16"]["payload"] == "versions/1.16/payload.toml"
     assert versions["1.16"]["digest"] == _payload(_V116).integrity.aggregate_digest.value
     assert "python-tooling@1.16" in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
-
-
-def test_python_tooling_1_16__mutable_navigation__names_the_new_authority() -> None:
-    for name in ("README.md", "adopt.md", "agent-summary.md"):
-        content = (_FAMILY / name).read_text(encoding="utf-8")
-        assert f"versions/1.16/{name}" in content
-        assert "versions/1.15/" not in content

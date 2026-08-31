@@ -29,12 +29,12 @@ Each layer has a distinct job:
 
 | Risk | Baseline treatment |
 | --- | --- |
-| **R1** | Normal tests and review |
-| **R2** | Acceptance-criteria trace plus focused regression coverage |
-| **R3** | Independent review, negative testing, explicit rollback consideration |
-| **R4** | Human-approved plan before implementation, independent verification, explicit recovery/rollback procedure |
+| **`R1 Low`** | Normal tests and review |
+| **`R2 Moderate`** | Acceptance-criteria trace plus focused regression coverage |
+| **`R3 High`** | Independent review, negative testing, explicit rollback consideration |
+| **`R4 Critical`** | Human-approved plan before implementation, independent verification, explicit recovery/rollback procedure |
 
-R3 and R4 are mechanically visible rather than merely advisory. A Standalone PR declares `Change risk: VALUE` in its body (see [pr-standard.md](pr-standard.md)), and an R4 declaration is only complete when the Summary or Acceptance coverage carries evidence of all four controls: a plan agreed before implementation, a recovery or rollback procedure, negative testing, and independent verification. Those are the whole requirement — R4 adds no ceremonial issue and no second approval artifact, and a declared risk value never substitutes for the repository's own required checks.
+R3 and R4 are mechanically visible rather than merely advisory. A Standalone PR declares `Change risk:` with one of those exact four values in its body (see [pr-standard.md](pr-standard.md)), and an R4 declaration is only complete when the Summary or Acceptance coverage carries evidence of all four controls: a plan agreed before implementation, a recovery or rollback procedure, negative testing, and independent verification. Those are the whole requirement — R4 adds no ceremonial issue and no second approval artifact, and a declared risk value never substitutes for the repository's own required checks.
 
 For higher-risk work — R3 and R4 — review explicitly examines:
 

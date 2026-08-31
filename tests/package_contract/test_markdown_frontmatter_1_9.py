@@ -6,8 +6,9 @@ from the caller's context and advances `astral-sh/setup-uv` to 9.0.0 with
 `prune-cache: true`, preserving the v8 cache behaviour deliberately rather than
 inheriting the action's flipped default. 1.8's bytes are untouched.
 
-The root workflow byte-parity row below turns green only once the producer-mode
-release-prep reconcile re-renders `.github/workflows/` from this payload.
+1.9 is a retained predecessor, so nothing here claims it is the payload the repository
+currently renders `.github/workflows/` from. That claim follows the catalog default and
+lives in `test_markdown_frontmatter_reconstruction.py`.
 """
 
 from __future__ import annotations
@@ -30,7 +31,6 @@ _SUCCESSOR = _FAMILY / "versions/1.9"
 _PROJECTION = _ROOT / "src/project_standards/payloads/markdown-frontmatter/1.9"
 _PREDECESSOR_DIGEST = "sha256:79410e07c98f8f9fcc69e1c31b8b2971134c8d19b855fe81008c296fb6850470"
 _WORKFLOW_RESOURCE = "resources/self-host-validate-markdown-frontmatter.yml"
-_ROOT_WORKFLOW = _ROOT / ".github/workflows/validate-markdown-frontmatter.yml"
 _SUCCESSOR_CHANGES = frozenset(
     {
         "README.md",
@@ -74,10 +74,18 @@ def test_markdown_frontmatter_1_9__successor__is_complete_and_preserves_1_8() ->
         )
 
 
-def test_markdown_frontmatter_1_9__workflow_resource__is_the_managed_root_source() -> None:
-    """The successor resource is byte-identical to the managed root workflow it owns."""
+def test_markdown_frontmatter_1_9__workflow_resource__pins_the_reviewed_actions() -> None:
+    """The resource ships the pins 1.9 was cut for, declared as a managed artifact.
+
+    Byte-parity with the repository's own `.github/workflows/` copy is deliberately not
+    asserted here any more. That copy is package-managed and the reconcile rewrites it
+    from whichever payload the catalog marks default, so the parity claim follows the
+    default rather than 1.9; `test_frontmatter_root_workflow_is_the_v5_public_endpoint`
+    in `test_markdown_frontmatter_reconstruction.py` owns it and derives the version.
+    What stays 1.9's own is the reviewed `setup-uv` 9.0.0 pin with `prune-cache: true`
+    and the `runner-labels` input — released bytes that may never move.
+    """
     workflow = (_SUCCESSOR / _WORKFLOW_RESOURCE).read_bytes()
-    assert workflow == _ROOT_WORKFLOW.read_bytes()
 
     text = workflow.decode("utf-8")
     references = [

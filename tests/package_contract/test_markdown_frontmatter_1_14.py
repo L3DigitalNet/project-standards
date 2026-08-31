@@ -306,7 +306,15 @@ def test_markdown_frontmatter_1_14__skill__matches_the_shipped_install_layout() 
     assert "Agent-Skills manifest metadata for the harness" in skill
 
 
-def test_markdown_frontmatter_1_14__identity__is_complete_and_current() -> None:
+def test_markdown_frontmatter_1_14__identity__is_complete_and_advertised() -> None:
+    """1.14's own identity, and its surviving row once a successor took the default.
+
+    The currency half of this proof is gone on purpose: 1.15 is the default, and a
+    predecessor that keeps asserting its own currency fails on every later cut. What
+    1.14 still owes a consumer holding an exact pin is an advertised, digest-bound row
+    that catalogs/5.toml and the rendered catalog.md agree about — so the role below is
+    read from the catalog rather than written into the expected table row.
+    """
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     integrity = validate_payload_integrity(_SUCCESSOR, manifest)
     family = load_family_manifest(_FAMILY / "standard.toml")
@@ -323,10 +331,10 @@ def test_markdown_frontmatter_1_14__identity__is_complete_and_current() -> None:
         if package["id"] == "markdown-frontmatter"
     }
     assert roles["1.13"] == "retained"
-    assert roles["1.14"] == "default"
+    assert roles["1.14"] == "retained"
     assert (
         "| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.14 | "
-        "default | consumer |"
+        f"{roles['1.14']} | consumer |"
     ) in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
 
 

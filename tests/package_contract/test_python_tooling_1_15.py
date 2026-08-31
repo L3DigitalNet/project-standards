@@ -17,9 +17,11 @@ and would report a hand-edited file as CP-MODIFIED-MANAGED afterwards.
   comment, docstring, and string prose, which `ruff format` never reflows.
 
 1.15 is a released, advertised payload: its bytes are immutable and its catalog
-role only ever moves forward to `retained`. The activation assertions below
-therefore track the family's current default rather than claiming 1.15 is still
-the selection.
+role only ever moves forward to `retained`. Nothing here claims 1.15 is still the
+selection. The family-root navigation assertion this module used to carry was
+dropped when 1.17 was cut, because it re-pinned which sibling currently holds
+`default` and so went red on that cut rather than on a regression of its own;
+`test_catalog_roles.py` owns that invariant catalog-derived, for every family.
 """
 
 from __future__ import annotations
@@ -642,11 +644,3 @@ def test_python_tooling_1_15__projection_and_index__are_complete() -> None:
     assert versions["1.15"]["payload"] == "versions/1.15/payload.toml"
     assert versions["1.15"]["digest"] == _payload(_V115).integrity.aggregate_digest.value
     assert "python-tooling@1.15" in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
-
-
-def test_python_tooling_1_15__mutable_navigation__names_the_new_authority() -> None:
-    """The family pages track the current default, which moved to 1.16 (issue #182)."""
-    for name in ("README.md", "adopt.md", "agent-summary.md"):
-        content = (_FAMILY / name).read_text(encoding="utf-8")
-        assert f"versions/1.16/{name}" in content
-        assert "versions/1.15/" not in content

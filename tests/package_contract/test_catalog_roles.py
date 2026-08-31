@@ -102,12 +102,17 @@ def test_catalog_roles__every_default_version__has_its_own_contract_test() -> No
 
 
 def test_catalog_roles__family_root_navigation__points_at_the_current_default() -> None:
-    """`README.md` and `agent-summary.md` at each family root are mutable navigation
-    that repoints on every activation. Checking that dynamically here (derived
-    from the catalog, not a hardcoded version literal) is what lets per-version
-    contract tests stop pinning it — the assertion that used to break every
-    historical github-workflow, markdown-frontmatter, and python-tooling test on
-    each new cut.
+    """`README.md`, `adopt.md`, and `agent-summary.md` at each family root are mutable
+    navigation that repoints on every activation. Checking that dynamically here
+    (derived from the catalog, not a hardcoded version literal) is what lets
+    per-version contract tests stop pinning it — the assertion that used to break
+    every historical github-workflow, markdown-frontmatter, and python-tooling test
+    on each new cut.
+
+    `adopt.md` joined the set when the last per-version navigation pins were deleted
+    at the 5.27.0 activation. It had been covered only by those historical tests, so
+    dropping them without widening this one would have left the family-root adoption
+    guide unpinned for every future cut.
     """
     for family_id, rows in _roles_by_family().items():
         defaults = [version for version, role in rows if role == "default"]
@@ -116,7 +121,7 @@ def test_catalog_roles__family_root_navigation__points_at_the_current_default() 
         (current_version,) = defaults
         family_root = _STANDARDS / family_id
 
-        for document in ("README.md", "agent-summary.md"):
+        for document in ("README.md", "adopt.md", "agent-summary.md"):
             path = family_root / document
             if not path.is_file():
                 continue

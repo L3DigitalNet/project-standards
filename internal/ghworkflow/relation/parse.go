@@ -42,6 +42,22 @@ const (
 // Risks lists the accepted Change risk values in ascending order.
 var Risks = []Risk{RiskR1, RiskR2, RiskR3, RiskR4}
 
+// riskVocabulary renders Risks as an Oxford-comma list of code spans for operator-facing
+// text. It is derived rather than written out because the human envelope prints a
+// finding's Message and discards its Remediation (FR-030 compression), so the accepted
+// spellings have to travel in the message itself -- and a hand-copied list there would be
+// a second place for the vocabulary to drift from Risks (issue #202).
+func riskVocabulary() string {
+	quoted := make([]string, 0, len(Risks))
+	for _, risk := range Risks {
+		quoted = append(quoted, "`"+string(risk)+"`")
+	}
+	if len(quoted) < 2 {
+		return strings.Join(quoted, "")
+	}
+	return strings.Join(quoted[:len(quoted)-1], ", ") + ", or " + quoted[len(quoted)-1]
+}
+
 // The four required Ready contract sections of FR-028, spelled exactly as the headings
 // must appear. Presence is order-insensitive; the spelling is not.
 const (
@@ -339,16 +355,20 @@ func riskFindings(lines []string, standaloneAt int, decl *Declaration) []Finding
 		return append(findings, Finding{
 			Code: "GHW-PR-READY-RISK-MISSING", Phase: PhaseReady,
 			Category: CategoryNeedsDefinition, Effect: EffectBlocksReady, Kind: KindPullRequest,
-			Message:     "a Standalone PR declares no authoritative `Change risk:` value",
-			Remediation: "Add `Change risk: R1 Low`, `R2 Moderate`, `R3 High`, or `R4 Critical` immediately after `Standalone`.",
+			Message: fmt.Sprintf(
+				"a Standalone PR declares no authoritative `Change risk:` value; accepted values are %s",
+				riskVocabulary()),
+			Remediation: fmt.Sprintf(
+				"Add `Change risk:` with one of %s immediately after `Standalone`.", riskVocabulary()),
 		})
 	}
 	if decl.Risk == "" {
 		findings = append(findings, Finding{
 			Code: "GHW-PR-READY-RISK-INVALID", Phase: PhaseReady,
 			Category: CategoryNeedsDefinition, Effect: EffectBlocksReady, Kind: KindPullRequest,
-			Message:     "the `Change risk:` value is not one of the four accepted values",
-			Remediation: "Use exactly `R1 Low`, `R2 Moderate`, `R3 High`, or `R4 Critical`.",
+			Message: fmt.Sprintf(
+				"the `Change risk:` value is not one of %s", riskVocabulary()),
+			Remediation: fmt.Sprintf("Use exactly %s.", riskVocabulary()),
 		})
 	}
 	// "Immediately after" is checked against the next non-empty line so a blank line
