@@ -6,7 +6,7 @@ description: 'Index of research reports maintained with the research corpus.'
 doc_type: 'index'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-08-27'
+updated: '2026-08-31'
 tags:
   - 'research'
   - 'index'
@@ -29,6 +29,7 @@ related: []
 | research-w8fn3k-pyyaml-transient-disposition | PyYAML Transient Import Failure Disposition | 2026-08-04 | 2026-08-04 | active | high | issue-disposition installation verification-evidence | docs/plans/2026-08-01-open-issue-resolution-program-plan.md |
 | research-m2rq8v-release-level-classification-evidence | Release-Level Classification Verification Evidence | 2026-08-04 | 2026-08-04 | active | high | release-classification verification-evidence versioning | docs/plans/2026-08-01-open-issue-resolution-program-plan.md |
 | res-e7q2vk-v5-15-release-evidence | EV-007: v5.15.0 Release Evidence | 2026-08-01 | 2026-08-04 | active | high | release evidence | docs/plans/2026-08-01-open-issue-resolution-program-plan.md |
+| research-e7jdty-go-migration-assessment | Go Migration Assessment | 2026-08-01 | 2026-08-31 | active | high | go migration performance architecture | docs/research/2026-07-31-release-gate-wall-clock-spike.md |
 | research-pe7k2m-plan-execution-efficiency | Plan-Execution Efficiency: Measured Costs and Ranked Remedies | 2026-08-07 | 2026-08-07 | active | high | plan-execution process-efficiency verification-gate worktree-bootstrap | docs/reference/session-export-gh-workflows-implementation.md |
 | research-by2ect-self-dogfooding-version-skew-producer-mode | Self-Dogfooding Version Skew: Producer-Mode Exemptions For A Consumer Lineage Guard | 2026-08-04 | 2026-08-04 | active | medium | dogfooding version-skew bootstrapping lineage-guard producer-consumer | docs/TODO.md |
 | research-g8t3vx-release-gate-wall-clock-spike | Release-Gate Wall-Clock Spike | 2026-07-31 | 2026-07-31 | active | high | release-gate pytest-xdist coverage sysmon performance | docs/handoff/conventions.md |

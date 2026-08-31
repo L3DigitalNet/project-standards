@@ -1,3 +1,29 @@
+---
+schema_version: '1.1'
+id: 'research-e7jdty-go-migration-assessment'
+title: 'Go Migration Assessment'
+description: 'Assessment of whether to migrate the Project Standards CLI, runtime, and repository tooling from Python to Go; recommends staying on Python for v5 and reserving Go as a candidate for a deliberately incompatible v6.'
+doc_type: 'research'
+status: 'active'
+created: '2026-08-01'
+updated: '2026-08-31'
+reviewed: '2026-08-31'
+owner: 'project-standards'
+consumer: 'agent'
+tags:
+  - 'go'
+  - 'migration'
+  - 'performance'
+  - 'architecture'
+aliases: []
+related:
+  - 'docs/research/2026-07-31-release-gate-wall-clock-spike.md'
+source: []
+confidence: 'high'
+visibility: 'internal'
+license: null
+---
+
 # Go Migration Assessment
 
 **Assessment date:** 2026-08-01 **Repository state assessed:** `testing` at `06274608`, including the existing uncommitted CLI-contract work **Decision scope:** migrating the Project Standards CLI, runtime, and possibly repository tooling from Python to Go
