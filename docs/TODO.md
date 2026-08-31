@@ -54,6 +54,12 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
+- [ ] Migrate the consumer fleet to github-workflow 1.7 (MS-6 item 2, owner-coordinated); repair-on-touch of
+  active PRs elsewhere.
+
+- [ ] Provide total-count truncation evidence for array-shaped list endpoints (security finding 4, deferred
+  beyond NFR-007's server-misbehavior precondition).
+
 - [ ] Re-measure the github-workflow session corpus after 1.5 deploys (#191); wait for the measurement window
   (opens 2026-09-06).
 

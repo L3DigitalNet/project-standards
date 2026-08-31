@@ -39,3 +39,4 @@
 - **ADR corpus conformance:** 11 of 23 active ADRs state no boundary; five authorities contested, five unowned. See `docs/reviews/adr-conformance/`; scheduled as v5.18.0.
 - **Owner deviation:** spec keeps `Unattended agent` owner-only, narrower than "all three by judgment"; no mechanism honors it yet.
 - **Consumer-pin rollout** deferred to owner scheduling; `@v5` trackers inherit new versions automatically without a manual bump.
+- **Security finding 4:** total-count truncation evidence for array-shaped list endpoints in github-workflow; deferred beyond NFR-007's server-misbehavior precondition (SPEC-GHW1).
