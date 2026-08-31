@@ -16,6 +16,7 @@ wrong on its own.
 from __future__ import annotations
 
 import importlib.util
+import sys
 import tomllib
 from pathlib import Path
 from types import ModuleType
@@ -157,7 +158,12 @@ def _load_provider(name: str) -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, _SUCCESSOR / "providers/agent_handoff.py")
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
