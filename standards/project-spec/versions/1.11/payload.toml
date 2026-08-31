@@ -99,7 +99,7 @@ id = "self-host-workflow"
 role = "provider-resource"
 path = "resources/self-host-validate-specs.yml"
 media_type = "text/yaml"
-digest = "sha256:0cfa37cd8508968cfd43eaf6ce5cb2412935dd5cd1085d7e58209434b8beb968"
+digest = "sha256:b53a3c655359a1e1677b13e348a65d493aac40c60629378559ee44416ed45e50"
 
 [[resources]]
 id = "provider-code"
