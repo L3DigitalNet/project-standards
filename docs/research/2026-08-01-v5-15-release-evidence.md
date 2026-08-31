@@ -6,7 +6,7 @@ description: 'Durable qualification and publication evidence for the v5.15.0 rel
 doc_type: 'research'
 status: 'active'
 created: '2026-08-01'
-updated: '2026-08-04'
+updated: '2026-08-31'
 reviewed: '2026-08-04'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
@@ -16,7 +16,7 @@ tags:
 aliases:
   - 'EV-007'
 related:
-  - 'docs/plans/2026-08-01-open-issue-resolution-program-plan.md'
+  - 'Open-Issue Resolution Program Plan (docs/plans/2026-08-01-open-issue-resolution-program-plan.md, deleted under the completed-plan policy in 923cb63d)'
   - 'meta/versioning.md'
   - 'CHANGELOG.md'
 source: []

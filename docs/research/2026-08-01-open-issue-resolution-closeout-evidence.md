@@ -6,7 +6,7 @@ description: 'Retained issue, release, ledger, and plan-cleanup evidence for the
 doc_type: 'research'
 status: 'active'
 created: '2026-08-12'
-updated: '2026-08-12'
+updated: '2026-08-31'
 reviewed: '2026-08-12'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -17,7 +17,7 @@ tags:
 aliases: []
 related:
   - 'docs/research/2026-08-01-project-spec-feature-release-evidence.md'
-  - 'docs/GH-WORKFLOWS.md'
+  - 'generated GitHub Workflow ledger doc (docs/GH-WORKFLOWS.md, removed as dogfood residue in 6a00ce69)'
   - 'docs/handoff/deployed.md'
 source:
   - 'https://github.com/L3DigitalNet/project-standards/releases/tag/v5.19.0'

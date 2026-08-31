@@ -6,7 +6,7 @@ description: 'Pinned source, licensing, ownership, and disposition inventory for
 doc_type: 'research'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-09'
+updated: '2026-08-31'
 reviewed: '2026-07-09'
 owner: 'project-standards'
 consumer: 'agent'
@@ -18,7 +18,7 @@ aliases:
   - 'agent-handoff ingestion inventory'
 related:
   - 'docs/specs/2026-07-09-agent-handoff-standard-package.md'
-  - 'docs/plans/2026-07-09-agent-handoff-standard-package.md'
+  - 'Agent Handoff standard package plan (docs/plans/2026-07-09-agent-handoff-standard-package.md, deleted under the completed-plan policy in ae6d2cca)'
 source:
   - '/home/chris/projects/agent-handoff-v3@56b24df7279572c485c2512783b0cc7e5395429b'
 confidence: 'high'

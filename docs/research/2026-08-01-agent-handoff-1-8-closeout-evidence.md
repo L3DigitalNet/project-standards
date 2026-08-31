@@ -6,7 +6,7 @@ description: 'EV-001: closeout evidence for issue #80 — the reproduced 1.7 Ses
 doc_type: 'research'
 status: 'active'
 created: '2026-08-04'
-updated: '2026-08-04'
+updated: '2026-08-31'
 reviewed: null
 owner: 'project-standards'
 consumer: 'agent'
@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'EV-001'
 related:
-  - 'docs/plans/2026-08-01-open-issue-resolution-program-plan.md'
+  - 'Open-Issue Resolution Program Plan (docs/plans/2026-08-01-open-issue-resolution-program-plan.md, deleted under the completed-plan policy in 923cb63d)'
   - 'docs/STATUS.md'
 source: []
 confidence: 'high'

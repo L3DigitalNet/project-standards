@@ -6,7 +6,7 @@ description: 'EV-009: unpublished child-plan completion evidence for Project Spe
 doc_type: 'research'
 status: 'active'
 created: '2026-08-11'
-updated: '2026-08-11'
+updated: '2026-08-31'
 reviewed: '2026-08-11'
 owner: 'project-standards'
 consumer: 'agent'
@@ -17,8 +17,8 @@ tags:
 aliases:
   - 'EV-009'
 related:
-  - 'docs/plans/2026-08-01-open-issue-resolution-program-plan.md'
-  - 'docs/plans/2026-08-01-project-spec-conformance-plan.md'
+  - 'Open-Issue Resolution Program Plan (docs/plans/2026-08-01-open-issue-resolution-program-plan.md, deleted under the completed-plan policy in 923cb63d)'
+  - 'Project Spec conformance plan (docs/plans/2026-08-01-project-spec-conformance-plan.md, deleted under the completed-plan policy in 10a49aee)'
   - 'docs/research/2026-08-01-project-spec-conformance-dogfood-evidence.md'
 source: []
 confidence: 'high'

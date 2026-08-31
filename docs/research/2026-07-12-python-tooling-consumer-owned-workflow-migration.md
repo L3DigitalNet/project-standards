@@ -8,7 +8,7 @@ status: active
 created: 2026-07-12
 updated: 2026-07-12
 reviewed: 2026-07-12
-owner: project-standards
+owner: 'project-standards'
 consumer: agent
 tags:
   - v5

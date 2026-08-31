@@ -6,7 +6,7 @@ description: 'Risk-based GitHub governance for a solo developer whose repositori
 doc_type: 'reference'
 status: 'draft'
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-08-31'
 reviewed: '2026-07-10'
 owner: 'Project standards'
 consumer: 'mix'
@@ -21,10 +21,10 @@ aliases:
   - 'GitHub Governance Standard'
   - 'Solo Agent Repository Standard'
 related:
-  - 'python-coding-standard.md'
-  - 'python-tooling-standard.md'
-  - 'markdown-frontmatter-standard.md'
-  - 'markdown-tooling-standard.md'
+  - 'standards/python-coding/README.md'
+  - 'standards/python-tooling/README.md'
+  - 'standards/markdown-frontmatter/README.md'
+  - 'standards/markdown-tooling/README.md'
 supersedes:
   - 'gh-repo-settings-guide.md'
 superseded_by: null

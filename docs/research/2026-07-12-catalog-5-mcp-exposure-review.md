@@ -8,7 +8,7 @@ status: 'active'
 created: '2026-07-12'
 updated: '2026-07-12'
 reviewed: '2026-07-12'
-owner: 'Project standards'
+owner: 'project-standards'
 consumer: 'agent'
 tags:
   - 'catalog-5'

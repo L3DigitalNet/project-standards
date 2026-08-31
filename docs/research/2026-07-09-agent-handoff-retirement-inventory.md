@@ -6,7 +6,7 @@ description: 'Consumer-by-consumer migration ledger and deletion checkpoint for 
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-08-04'
+updated: '2026-08-31'
 reviewed: null
 owner: 'project-standards'
 consumer: 'agent'
@@ -19,7 +19,7 @@ aliases:
   - 'agent-handoff consumer inventory'
 related:
   - 'docs/specs/2026-07-09-agent-handoff-standard-package.md'
-  - 'docs/plans/2026-07-09-agent-handoff-standard-package.md'
+  - 'Agent Handoff standard package plan (docs/plans/2026-07-09-agent-handoff-standard-package.md, deleted under the completed-plan policy in ae6d2cca)'
   - 'standards/agent-handoff/resources/legacy-migration.md'
   - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
 source: []

@@ -6,7 +6,7 @@ description: 'Retained evidence for the consolidated Project Standards 5.19.0 re
 doc_type: 'research'
 status: 'active'
 created: '2026-08-12'
-updated: '2026-08-12'
+updated: '2026-08-31'
 reviewed: '2026-08-12'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -17,7 +17,7 @@ aliases: []
 related:
   - 'CHANGELOG.md'
   - 'ROADMAP.md'
-  - 'docs/plans/2026-08-01-open-issue-resolution-program-plan.md'
+  - 'Open-Issue Resolution Program Plan (docs/plans/2026-08-01-open-issue-resolution-program-plan.md, deleted under the completed-plan policy in 923cb63d)'
 source:
   - 'https://github.com/L3DigitalNet/project-standards/releases/tag/v5.19.0'
 confidence: 'high'

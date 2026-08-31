@@ -6,7 +6,7 @@ description: 'EV-001: sanitized activation, semantic-preservation, and targeted 
 doc_type: 'research'
 status: 'active'
 created: '2026-08-11'
-updated: '2026-08-11'
+updated: '2026-08-31'
 reviewed: '2026-08-11'
 owner: 'project-standards'
 consumer: 'agent'
@@ -18,7 +18,7 @@ tags:
 aliases:
   - 'EV-001'
 related:
-  - 'docs/plans/2026-08-01-project-spec-conformance-plan.md'
+  - 'Project Spec conformance plan (docs/plans/2026-08-01-project-spec-conformance-plan.md, deleted under the completed-plan policy in 10a49aee)'
   - 'docs/specs/2026-08-01-project-spec-conformance-plan-input.md'
   - 'standards/project-spec/versions/1.9/README.md'
 source: []

@@ -374,7 +374,7 @@ No open questions remain. The initial mapping algorithm and digest-bound apply c
 
 ## References
 
-- [Open-Issue Resolution Program Plan](../plans/2026-08-01-open-issue-resolution-program-plan.md#t26-specify-house-format-conversion-for-55)
+- Open-Issue Resolution Program Plan, T26 "Specify house-format conversion for #55" (`docs/plans/2026-08-01-open-issue-resolution-program-plan.md`, deleted under the completed-plan policy in `923cb63d`)
 - [Project Specification 1.9 adoption guide](../../standards/project-spec/versions/1.9/adopt.md)
 - [Project Specification CLI](../../src/project_standards/specs/cli.py)
 - [Specification document parser](../../src/project_standards/specs/document.py)

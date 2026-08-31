@@ -6,7 +6,7 @@ description: 'Durable closure evidence for the widened v5.15.0 issue set (plan t
 doc_type: 'research'
 status: 'active'
 created: '2026-08-04'
-updated: '2026-08-05'
+updated: '2026-08-31'
 reviewed: '2026-08-05'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
@@ -16,7 +16,7 @@ tags:
 aliases:
   - 'EV-011'
 related:
-  - 'docs/plans/2026-08-01-open-issue-resolution-program-plan.md'
+  - 'Open-Issue Resolution Program Plan (docs/plans/2026-08-01-open-issue-resolution-program-plan.md, deleted under the completed-plan policy in 923cb63d)'
   - 'docs/research/2026-08-01-v5-15-release-evidence.md'
 source: []
 confidence: 'high'
