@@ -72,9 +72,12 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   commit is prepared but deliberately not folded into the release, because `main` admits only the release commit
   plus fast-forwards.
 
-- [ ] File three issues held back from the 5.27.0 train: the `markdownlint-cli2-action` v24.2.0 bump (its pin is
-  managed, so it needs a markdown-tooling 1.16 cut), the `AGENTS.md` Prettier gate exiting 123 on a clean repo, and
-  the command-guard `--check` grants being inert for the real `--root . --check` invocation form.
+- [ ] Triage the three issues filed from the 5.27.0 train, all at `Workflow: Inbox` with Priority unset:
+  [#209](https://github.com/L3DigitalNet/project-standards/issues/209) (Prettier gate exits 123 on a clean tree —
+  payload symlinks in the corpus), [#210](https://github.com/L3DigitalNet/project-standards/issues/210)
+  (command-guard `--check` grants inert for the real `--root . --check` form; fail-closed, so safe but useless), and
+  [#211](https://github.com/L3DigitalNet/project-standards/issues/211) (markdownlint-cli2-action pin needs a
+  markdown-tooling 1.16 cut, since the workflow is `policy = "managed"`).
 
 - [ ] Cut python-tooling 1.18 for the three adoption reports. #204 is a real guard defect (`build_backend = "none"`
   exempts the `[project]` check `uv lock` needs, and `adopt.md` lines 21 and 23 contradict each other); #205 and
