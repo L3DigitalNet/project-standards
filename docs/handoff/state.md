@@ -2,10 +2,10 @@
 
 ## Current focus
 
-- Staged for 5.27.0 on `testing`: python-tooling 1.17, markdown-frontmatter 1.15, project-spec 1.11 (#201), github-workflow 1.8 (#202).
-- Release is unprepared: `release_prep.py 5.27.0` needs a clean tree, so the activation lands first and the bump is its own commit.
-- #191 re-scoped, not closed: the post-1.5 window was overtaken by 1.6/1.7; re-measure from a post-1.7 window opening ~2026-09-11.
-- Next: land the activation commit, run `release_prep.py 5.27.0`, reconcile, then publish. #129 and security finding 4 remain deferred.
+- 5.27.0 published (`3f322935`, tags live, assets byte-verified and reproducible, hosted CI green). See `docs/STATUS.md`.
+- Next: land `policy-pr-testing` (`2a30419d`) on `testing` as the FIRST change admitted under the new PR rule.
+- Then file 3 queued issues: markdownlint-cli2-action bump (needs mt 1.16), AGENTS.md prettier exit 123, guard `--check` grants inert.
+- #203 and #207 await owner triage (Priority unset by design); #204/#205/#206 investigated, fixes belong to python-tooling 1.18.
 
 ## Active incidents
 

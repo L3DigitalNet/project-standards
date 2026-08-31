@@ -66,9 +66,20 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   by 1.6 and 1.7 before it opened — 1.7 moved the surfaces F3/F4/F8 measure — so the measurement now runs against a
   post-1.7 window opening ~2026-09-11, with 1.7's baselines rather than 1.5's.
 
-- [ ] Prepare and publish release 5.27.0. The activation is staged on `testing` (python-tooling 1.17,
-  markdown-frontmatter 1.15, project-spec 1.11, github-workflow 1.8); `scripts/release_prep.py 5.27.0` needs a clean
-  tree, then reconcile, gate, tag, and publish.
+- [ ] Land `policy-pr-testing` (`2a30419d`) on `testing` as the first change admitted under the new PR rule.
+
+  `CLAUDE.md` and `AGENTS.md` now require every change to `testing` to arrive through a draft PR, T0 excepted. The
+  commit is prepared but deliberately not folded into the release, because `main` admits only the release commit
+  plus fast-forwards.
+
+- [ ] File three issues held back from the 5.27.0 train: the `markdownlint-cli2-action` v24.2.0 bump (its pin is
+  managed, so it needs a markdown-tooling 1.16 cut), the `AGENTS.md` Prettier gate exiting 123 on a clean repo, and
+  the command-guard `--check` grants being inert for the real `--root . --check` invocation form.
+
+- [ ] Cut python-tooling 1.18 for the three adoption reports. #204 is a real guard defect (`build_backend = "none"`
+  exempts the `[project]` check `uv lock` needs, and `adopt.md` lines 21 and 23 contradict each other); #205 and
+  #206 are documentation gaps over mechanisms the key-ownership invariant already provides. Evidence is on each
+  issue.
 
 - [ ] Owner: resolve SPEC-GSF3 OQ-001, which blocks that plan's T1.
 
@@ -82,6 +93,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
 - [ ] Benchmark the fast release gate under controlled conditions and dial in worker counts and lane concurrency.
+  Now subsumed by research issue #207, which measured a 106-minute full battery and enumerated six levers.
 
   _(Owner 2026-07-31: the spike measured under real-usage load; `VERIFY_ORDINARY_WORKERS`/`VERIFY_COMPAT_WORKERS` overrides in `scripts/verify.sh` exist for the sweep.)_
 
