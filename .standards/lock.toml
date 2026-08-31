@@ -1,8 +1,8 @@
 [project_standards]
 schema_version = "1.1"
 catalog = "5"
-release = "5.26.0"
-catalog_digest = "sha256:7e4ab17d7c6c56418be5685b4b6384a90c9b875cbf275c85776f352a5596bec5"
+release = "5.27.0"
+catalog_digest = "sha256:c0088be396daff93c349e89f470b503f6c45f313569eec7131af8b695c5896dc"
 config_digest = "sha256:75181bdd5e27f8dac9c565666b87e8e38893a0b1bc37b5d2ce36f9ac387bc046"
 
 [standards.adr]
@@ -37,7 +37,7 @@ effective_config_digest = "sha256:f675a924a3693ca08c4e132725a702344200b5988aee13
 requested = "latest"
 resolved = "1.15"
 selection = "stable"
-payload_digest = "sha256:23c907f56d771ac1214bd5680a282d106fdee67a63675d0cb3fd147a0a920a97"
+payload_digest = "sha256:a71148b696725c5fc31e0c0e57bf7060dd7e63fcfe9d690bbe95b8047d357edd"
 effective_config_digest = "sha256:fb8966e18d64e368739d965f931f7c96c3ecaf1746ff0c8672f47a71069069e9"
 
 [standards.markdown-tooling]
@@ -51,7 +51,7 @@ effective_config_digest = "sha256:808fecfe9768d983b5b82d731b0a49c1f6eb9e7f0d2492
 requested = "latest"
 resolved = "1.11"
 selection = "stable"
-payload_digest = "sha256:3db70f47f1967b9a59fb06859824fb7071f73e2679613955b1da3469b1336599"
+payload_digest = "sha256:cb239f1ff669c38000da6b42be203c1dc6d094b089304a5b0280c1b8045dd081"
 effective_config_digest = "sha256:a800e0b127a30c7c0d1999a8ede88bdcd8ce5fc92619041803f8f7c0ee6218e1"
 
 [standards.project-toolbox]
@@ -65,7 +65,7 @@ effective_config_digest = "sha256:4dd5c7f0cc128f85163e3b3ed6e508dcd3926171a8031a
 requested = "latest"
 resolved = "1.17"
 selection = "stable"
-payload_digest = "sha256:03963e2c75dead1ab9bb8683bf810066f7d988e275a14310a1a1ff23358223a2"
+payload_digest = "sha256:4c5ec078fd033cf3bf14c16f6fbc5b48e58d24ffe03b026b30b1e76b9b0a0950"
 effective_config_digest = "sha256:0813d9b629efb76f09c27d139028d2ac30c1ac9e6a16fff2dd49e67be86083b8"
 
 [[artifacts]]
@@ -688,8 +688,8 @@ owners = ["project-spec"]
 versions = { project-spec = "1.11" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:0cfa37cd8508968cfd43eaf6ce5cb2412935dd5cd1085d7e58209434b8beb968"
-content_digest = "sha256:0cfa37cd8508968cfd43eaf6ce5cb2412935dd5cd1085d7e58209434b8beb968"
+semantic_digest = "sha256:b53a3c655359a1e1677b13e348a65d493aac40c60629378559ee44416ed45e50"
+content_digest = "sha256:b53a3c655359a1e1677b13e348a65d493aac40c60629378559ee44416ed45e50"
 created_container = false
 
 [[artifacts]]

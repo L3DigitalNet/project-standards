@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.27.0] — 2026-08-31
+
 ### Added
 
 - **`GitHub Workflow 1.8` makes the Ready gate's risk refusal self-sufficient and corrects the example that contradicted it.** 1.7's `references/pr-standard.md` showed `Change risk: R2` while the Ready gate accepted only the four full spellings `references/org-schema.yaml` declares, so a pull-request body copied verbatim from the shipped example was refused ([#202](https://github.com/L3DigitalNet/project-standards/issues/202); recorded as DEV-032 at SPEC-GHW1 revision 1.37). The example now reads `Change risk: R2 Moderate`, and `pr-standard.md` and `references/review-checklist.md` present the vocabulary as `R1 Low`, `R2 Moderate`, `R3 High`, `R4 Critical` throughout. `GHW-PR-READY-RISK-INVALID` and `GHW-PR-READY-RISK-MISSING` now carry those four values in the finding's own **message**, derived from the `Risks` slice rather than copied: the human envelope prints a finding's message and drops its remediation by design (FR-030 compression), so an operator who never asked for JSON saw the constraint without the vocabulary that satisfies it. No option, subcommand, or gate outcome changes, and the rendered `policy.toml` moves only its `package_version` stamp; Catalog 5 promotes `github-workflow@1.8` and retains 1.7, so the upgrade is a version bump.

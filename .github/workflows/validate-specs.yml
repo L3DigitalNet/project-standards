@@ -53,8 +53,8 @@ jobs:
           enable-cache: ${{ github.repository == 'L3DigitalNet/project-standards' }}
           # v9 flipped the pruning default to false; keep the prior always-prune
           # behavior. `enable-cache` stays an explicit boolean rather than `auto`,
-          # which v10 makes disable the cache for `pull_request_target`,
-          # `workflow_run`, and `release`.
+          # which v10 makes disable the cache for `release`, tag pushes,
+          # `pull_request_target`, and `workflow_run`.
           prune-cache: true
 
       - name: Install candidate wheel (this repo)
