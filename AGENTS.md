@@ -127,28 +127,28 @@ uv run ruff check src tests --fix
 <!-- markdownlint-disable MD025 -->
 # GitHub Workflow
 
-This repository's work belongs to the `L3DigitalNet` organization. Route every GitHub work-state action through the row below — this table is complete, so a delegated worker needs nothing else to route correctly. Load the repo-local `github-workflow` skill (`SKILL.md`, one read, ~70 lines) before triage, an organization-schema audit, or any judgment call the table leaves to you.
+This repository's work belongs to the `L3DigitalNet` organization. Route every GitHub work-state action through the complete table below. Every row is a `gh-workflow` subcommand unless it says raw `gh`. Load the `github-workflow` skill for triage, an organization-schema audit, T0 or relationship judgment, or uncommon recovery.
 
 | Action | Command |
 | --- | --- |
-| Create a typed issue | `gh-workflow new --type T --title S [--field Name=Value]` |
-| Set field values or the Issue Type | `gh-workflow set --issue N [--type T] [--field Name=Value]` |
-| Close as Done or Dropped | `gh-workflow close --issue N --as done\|dropped` |
-| Reopen | `gh-workflow reopen --issue N --workflow VALUE` |
-| Check Ready preconditions | `gh-workflow check --issue N` |
-| Read one issue's state and gaps | `gh-workflow receipt --issue N` |
-| Operator summary / schema audit | `gh-workflow summary` / `gh-workflow audit` |
-| Comment, retitle, create or merge a PR | raw `gh` — see `SKILL.md` |
+| Create a typed issue | `new --type T --title S [--field Name=Value]` |
+| Set fields or Issue Type | `set --issue N [--type T] [--field Name=Value]` |
+| Close or reopen an issue | `close --issue N --as done\|dropped` / `reopen --issue N --workflow VALUE` |
+| Check or read an issue or PR | `check --issue N` / `check --pr N [--through PHASE]` / `receipt --issue N` / `receipt --pr N` |
+| Summary / schema audit | `summary` / `audit` |
+| Open a draft PR | raw `gh pr create --draft --body-file PATH` |
+| Ready, then merge | `ready --pr N` / `merge --pr N [--method M] [--auto]` |
+| Close an open Final unmerged | `close --pr N --as OUTCOME --reason S` |
 | Wait for CI | `gh pr checks N --watch --fail-fast` or `gh run watch ID --exit-status` |
 
-The binary is at `.agents/skills/github-workflow/bin/gh-workflow` (and the `.claude/` twin). Its refusals name the valid values, so invoke it rather than looking a vocabulary up first. These rules bind even when the skill was never loaded:
+All ten accept `--output human|json`. The binary is at `.agents/skills/github-workflow/bin/gh-workflow` (and its `.claude/` twin); refusals name the valid values, so invoke it rather than guessing. These rules bind even when the skill was never loaded:
 
-- You author acceptance criteria, set `Workflow`, and admit work to `Ready` yourself; an issue whose criteria you could not write is `Needs definition`.
-- Set `Execution mode` by judgment, but `Unattended agent` is the operator's grant.
-- Never create, rename, or retire an organization issue type, field, or value — that schema is human-applied.
-- A nontrivial pull request links the issue that governs it.
-- Keep terminal state synchronized: `Done` closes as completed, `Dropped` closes as not planned, and a reopened issue returns to a nonterminal `Workflow` value in the same action. Merging a PR does not make its issue `Done`.
-- A related finding you can address this session needs no issue: fix it in place when this repository owns it, file it against the owning upstream repository in the organization, and ask the operator whether to file or tackle it now only when it warrants a full separate session.
+- An operator instruction is sufficient authority for the action it names. You author acceptance criteria and admit work to `Ready` yourself; open state never implies `Ready`.
+- A T0 commit — trivial prose repair, no protected surface, one `Workflow-Admission: T0` trailer — is the only autonomous direct push; all other work starts as a draft PR.
+- Every PR declares `Final: #N`, `Supporting: #N`, or `Standalone` under `## Governing work`.
+- Keep terminal state paired: `Done` closes as completed, `Dropped` as not planned, and reopen returns a nonterminal `Workflow` value.
+- Never create shadow state labels, mutate organization schema through this package, or bypass live enforcement.
+- A related finding you can address this session needs no issue: fix it in place when this repository owns it, file it against the owning upstream repository, and ask the operator only when it needs its own session.
 
 <!-- markdownlint-enable MD025 -->
 <!-- END project-standards:github-workflow -->

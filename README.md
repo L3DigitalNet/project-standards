@@ -130,9 +130,9 @@ Repository-local project knowledge and bounded session continuity for coding age
 
 GitHub work discipline for organization-owned repositories: typed issue contracts, field vocabulary, pull-request evidence, review expectations, and an attention-first operator summary. The package installs a mandatory repo-local `github-workflow` skill that keeps judgment with the agent, plus `gh-workflow` — a committed, reproducibly built static `linux/amd64` Go binary whose eight subcommands audit the organization schema, render operator summaries and creation receipts, and apply validated issue mutations. Every subcommand reads the consumer's repository and writes none of it: 1.5 removed the `ledger` subcommand that generated `docs/GH-WORKFLOWS.md`, and a repository upgrading from 1.4 or earlier deletes that now-unowned file itself. The organization schema itself is skill-audited and human-applied; the tool never creates or retires an issue type, field, or value.
 
-- **Standard:** [`standards/github-workflow/versions/1.6/README.md`](standards/github-workflow/versions/1.6/README.md)
-- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.6/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
-- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.6/adopt.md)
+- **Standard:** [`standards/github-workflow/versions/1.7/README.md`](standards/github-workflow/versions/1.7/README.md)
+- **Skill:** [`skills/github-workflow/`](standards/github-workflow/versions/1.7/skills/github-workflow/) — installed repo-local at `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, with the tool at `bin/gh-workflow`.
+- **Adopt:** [`adopt.md`](standards/github-workflow/versions/1.7/adopt.md)
 
 ### Project Toolbox Standard
 
@@ -157,14 +157,14 @@ The "standard for standards" — the V2 family/payload/catalog contract every pa
 
 ## Consuming the standards
 
-Project Standards 5.25.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
+Project Standards 5.26.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
 
 ```bash
-uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.25.0"
+uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.26.0"
 project-standards --version || project-standards --version
 ```
 
-The version command must report `project-standards 5.25.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.26.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
@@ -197,7 +197,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | Project Specification | `1.10` | [`standards/project-spec/versions/1.10/adopt.md`](standards/project-spec/versions/1.10/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
 | Agent Handoff | `1.16` | [`standards/agent-handoff/versions/1.16/adopt.md`](standards/agent-handoff/versions/1.16/adopt.md) |
-| GitHub Workflow | `1.6` | [`standards/github-workflow/versions/1.6/adopt.md`](standards/github-workflow/versions/1.6/adopt.md) |
+| GitHub Workflow | `1.7` | [`standards/github-workflow/versions/1.7/adopt.md`](standards/github-workflow/versions/1.7/adopt.md) |
 | Project Toolbox | `1.1` | [`standards/project-toolbox/versions/1.1/adopt.md`](standards/project-toolbox/versions/1.1/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
@@ -260,7 +260,7 @@ For private standards repos called by private consumers, enable cross-repository
 ```yaml
 repos:
   - repo: https://github.com/L3DigitalNet/project-standards
-    rev: v5.25.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
+    rev: v5.26.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
     hooks:
       - id: format-frontmatter-check
       - id: validate-id-check
@@ -296,7 +296,7 @@ npm ci                                                       # Prettier and mark
 uv run project-standards standards sync-payload-projection --root . --check --json # must pass before the build
 uv build --clear --wheel --out-dir build/release-wheel
 rm -rf -- build/wheel-runtime
-uv run python -m zipfile -e build/release-wheel/project_standards-5.25.0-py3-none-any.whl build/wheel-runtime
+uv run python -m zipfile -e build/release-wheel/project_standards-5.26.0-py3-none-any.whl build/wheel-runtime
 scripts/wheel-runtime-stamp.sh write         # records what the extraction was built from
 ```
 

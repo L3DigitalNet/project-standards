@@ -97,3 +97,9 @@ Not every Issue requires every heading. The principle is:
 > Fields describe the work operationally; the body defines the work semantically.
 
 Acceptance criteria are the exception to that optionality for executable work: an Issue without them cannot legitimately reach `Ready`, and the honest state for one that lacks them is `Needs definition`.
+
+## The canonical acceptance section
+
+`## Acceptance criteria` is machine-significant. `check` and `receipt` read that exact level-2 heading, with that exact spelling, and treat its content as the criteria; the section is satisfied when it carries at least one nonempty item. A synonym — `## Acceptance`, `## Success criteria`, `## Done when` — reads as absent, and a criteria list written under any other heading is invisible to the gate no matter how good it is.
+
+The same section is what a Final or Supporting PR's `## Acceptance coverage` answers, so the two documents line up item by item. If an Issue's criteria live somewhere else for a reason, move them under the canonical heading rather than teaching the gate a second spelling: one heading is what keeps the Issue, the check, and the PR talking about the same list.
