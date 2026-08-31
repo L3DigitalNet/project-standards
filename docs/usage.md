@@ -6,7 +6,7 @@ description: 'Canonical man-style usage reference for the project-standards comm
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-08-26'
+updated: '2026-08-31'
 reviewed: '2026-08-11'
 owner: ''
 consumer: 'mix'
@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'project-standards-usage'
 related:
-  - 'standards/cli-documentation/versions/1.3/README.md'
+  - 'standards/cli-documentation/versions/1.6/README.md'
 source: []
 confidence: 'high'
 visibility: 'public'
@@ -934,6 +934,6 @@ Exit status: `0` references valid, disabled, or skipped under a custom schema ·
 
 ## SEE ALSO
 
-- [`standards/cli-documentation/versions/1.3/README.md`](../standards/cli-documentation/versions/1.3/README.md) — the standard this document conforms to.
+- [`standards/cli-documentation/versions/1.6/README.md`](../standards/cli-documentation/versions/1.6/README.md) — the standard this document conforms to.
 - [`docs/reference/control-plane-diagnostics.md`](reference/control-plane-diagnostics.md) — every `CP-` diagnostic code the control plane emits, with meaning, cause, and remediation.
 - [`src/project_standards/README.md`](../src/project_standards/README.md) — the package's implementation and developer reference.
