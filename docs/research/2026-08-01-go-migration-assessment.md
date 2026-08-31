@@ -28,7 +28,7 @@ If the principal motivation is CI speed, stay with Python and optimize the workf
 
 ## Current repository surface
 
-The migration is substantially larger than the seven console scripts declared in [`pyproject.toml`](../pyproject.toml). The unified command exposes 12 top-level command families, several with their own nested command trees. The same domain implementation also serves the MCP process and executable standard providers.
+The migration is substantially larger than the seven console scripts declared in [`pyproject.toml`](../../pyproject.toml). The unified command exposes 12 top-level command families, several with their own nested command trees. The same domain implementation also serves the MCP process and executable standard providers.
 
 | Area | Python files | Approximate LOC | Migration significance |
 | --- | --: | --: | --- |
@@ -46,9 +46,9 @@ The current source tree contains about 195 Python files and 82,098 lines. The te
 
 Python files are not the repository's main source of file count. The tracked tree contains approximately 498 `.py`, 1,246 `.md`, 762 `.json`, 369 `.toml`, and 309 `.yml` files. Much of the repository is immutable standards content, schemas, examples, fixtures, and retained versions. A language change cannot remove that content.
 
-There is also no narrow public Python library layer that can be swapped out behind the CLI. [`src/project_standards/cli.py`](../src/project_standards/cli.py) imports validators, adoption, registry, and control-plane models directly. The control plane is the dependency hub for the CLI, package contract, Agent Handoff, specifications, and MCP services. Tests import implementation modules directly, so the effective internal contract is broad.
+There is also no narrow public Python library layer that can be swapped out behind the CLI. [`src/project_standards/cli.py`](../../src/project_standards/cli.py) imports validators, adoption, registry, and control-plane models directly. The control plane is the dependency hub for the CLI, package contract, Agent Handoff, specifications, and MCP services. Tests import implementation modules directly, so the effective internal contract is broad.
 
-The in-flight [`src/project_standards/cli_contract.py`](../src/project_standards/cli_contract.py) is useful groundwork: it begins to centralize allowed public exit statuses. It is not yet a complete cross-runtime contract and was treated as uncommitted user-owned work for this assessment.
+The in-flight [`src/project_standards/cli_contract.py`](../../src/project_standards/cli_contract.py) is useful groundwork: it begins to centralize allowed public exit statuses. It is not yet a complete cross-runtime contract and was treated as uncommitted user-owned work for this assessment.
 
 ## Performance assessment
 
@@ -67,7 +67,7 @@ Local warm probes on the assessed workstation produced these results:
 
 These are local observations, not Go comparisons. No Go prototype exists, so the report does not claim a specific replacement time. The startup result is nevertheless a legitimate reason to improve the current Python import graph or to value a future native executable.
 
-The repository's own [`release-gate wall-clock study`](research/2026-07-31-release-gate-wall-clock-spike.md) is more important than microbenchmarks. It records:
+The repository's own [`release-gate wall-clock study`](2026-07-31-release-gate-wall-clock-spike.md) is more important than microbenchmarks. It records:
 
 - a 55:31 covered serial baseline;
 - a 10:23 fully green fast gate under real-usage load;
@@ -77,7 +77,7 @@ The repository's own [`release-gate wall-clock study`](research/2026-07-31-relea
 
 That 5.3-fold improvement came from xdist, `sys.monitoring` coverage, concurrent lanes, cache isolation, and a sufficiently large temporary filesystem—not from changing the product language. It consumes much of the easy local speedup that might otherwise be attributed to Go.
 
-The latest inspected green hosted Check remained 40:14 because [`check.yml`](../.github/workflows/check.yml) runs the ordinary, compatibility, and performance legs serially. The observed step times were:
+The latest inspected green hosted Check remained 40:14 because [`check.yml`](../../.github/workflows/check.yml) runs the ordinary, compatibility, and performance legs serially. The observed step times were:
 
 - ordinary tests under coverage: 13:17;
 - compatibility matrix: 25:32;
@@ -108,9 +108,9 @@ Go's build cache can make repeated builds inexpensive, but it adds a distinct ca
 
 ### The wheel is part of the product contract
 
-The current pure-Python wheel is not just a launcher. It packages the `standards/` and `catalogs/` trees, exposes seven console entry points, and is tested as the candidate runtime. [`meta/versioning.md`](../meta/versioning.md) requires an isolated wheel build, extraction, wheel-first `PYTHONPATH`, the full serial gate, and package-contract validation before release.
+The current pure-Python wheel is not just a launcher. It packages the `standards/` and `catalogs/` trees, exposes seven console entry points, and is tested as the candidate runtime. [`meta/versioning.md`](../../meta/versioning.md) requires an isolated wheel build, extraction, wheel-first `PYTHONPATH`, the full serial gate, and package-contract validation before release.
 
-Consumers install an immutable Git tag with `uv tool install`; reusable workflows do the same. [`.pre-commit-hooks.yaml`](../.pre-commit-hooks.yaml) declares six Python 3.14 hooks by their current console-script names. A Go release must replace or bridge all of these interfaces:
+Consumers install an immutable Git tag with `uv tool install`; reusable workflows do the same. [`.pre-commit-hooks.yaml`](../../.pre-commit-hooks.yaml) declares six Python 3.14 hooks by their current console-script names. A Go release must replace or bridge all of these interfaces:
 
 - installation documentation and upgrade behavior;
 - reusable validation workflows;
