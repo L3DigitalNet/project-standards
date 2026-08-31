@@ -14,11 +14,14 @@ This directory is the durable home for Project Specification Standard documents 
 | [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.16; implemented | Immutable family/payload authoring contract including bounded direct package-config transforms |
 | [SPEC-VAIC — V5 Adoption Integrity Correction Train](2026-07-26-v5-adoption-integrity-correction-train-spec.md) | approved rev 0.13; implemented and released in 5.9.0 | Issues #32 and #35-#49, immutable successors, exact-candidate qualification, and closed-issue regression preservation |
 | [SPEC-VFCT — V5 Validation Fidelity Correction Train](2026-07-27-v5-validation-fidelity-correction-train-spec.md) | approved rev 0.4; implemented in 5.10.0 | Issues #50-#69: shared spec-engine, `standards show`, and control-plane planning loosening fixes (including #66's create-only removal guard), four new successor payloads, and the Catalog 5 default advance shipped in v5.10.0 |
+| [SPEC-GHW1 — GitHub Workflow Standard Package](2026-08-06-github-workflow-package-spec.md) | approved rev 1.38; implemented and released, `github-workflow` currently at 1.8 | Org-schema-driven `gh-workflow` tool and skill; the 1.7 target behavior plus the DEV-032 risk-label correction shipped in 1.8 |
+| [SPEC-055C — Project Specification Preservation-First Conversion](2026-08-01-project-spec-conversion-plan-input.md) | approved rev 0.2; issue #55 | Deterministic mapping and digest-bound apply for preservation-first Project Specification conversion |
 
 ## Future maintained specifications
 
 | Specification set | Status | Release relationship |
 | --- | --- | --- |
+| [SPEC-GSF3 — Durable Document References Optional Tooling](2026-07-31-durable-document-references-optional-tooling-spec.md) | draft rev 0.2; currency-audited 2026-08-27 | Optional meta-repository tooling for canonical spec/ADR references, validation, and guarded reconciliation |
 | [Usage Documentation Site](usage-documentation-site/README.md) | draft seven-spec set plus index; formal review pending | Dedicated post-v5 package program |
 
 ## Archive
