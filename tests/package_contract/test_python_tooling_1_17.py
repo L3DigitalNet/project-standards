@@ -6,12 +6,13 @@ pin is a full SHA and advancing it is a payload cut rather than a tag that
 follows on its own. 1.17 advances it to v10.0.1 and changes nothing else.
 
 v10's one breaking change is that `enable-cache: auto` now *disables* the cache
-for `pull_request_target`, `workflow_run`, and `release`. That flip is inert
-here for two independent reasons, and both are asserted below rather than
-asserted in prose: this workflow names `enable-cache: true` explicitly instead
-of inheriting `auto`, and it triggers only on `pull_request`, `push`, and (with
-CI disabled) `workflow_dispatch`, none of which the flip touches. If a future
-cut moved either fact, the pin bump stops being safe, so both are contract.
+for `release`, tag pushes, `pull_request_target`, and `workflow_run`. That flip
+is inert here for two independent reasons, and both are asserted below rather
+than asserted in prose: this workflow names `enable-cache: true` explicitly
+instead of inheriting `auto`, and it triggers only on `pull_request`, `push`,
+and (with CI disabled) `workflow_dispatch`, none of which the flip touches. If
+a future cut moved either fact, the pin bump stops being safe, so both are
+contract.
 
 Everything else in the payload is a copy of 1.16, so the second contract here is
 that exactly one rendered line and no option moved.
@@ -63,6 +64,15 @@ _V10_PIN = "astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.
 # The events v10 removed from `enable-cache: auto`. This workflow must trigger on
 # none of them for the "inert here" argument to hold independently of the
 # explicit `true` below.
+#
+# v10 actually disables the cache for four classes: these three plus tag
+# pushes. Tag pushes are deliberately not a member here: this set is compared
+# against `_trigger_events()`, which returns the workflow's literal `on:`
+# trigger keys (e.g. "push", "pull_request"), and "tag push" is not such a
+# key — it is the `push` trigger filtered by a `tags:` pattern, indistinguishable
+# from any other `push` trigger at this level. Adding a string that can never
+# match a real trigger key would make the isdisjoint check below silently stop
+# covering that fourth class.
 _AUTO_DISABLED_EVENTS = frozenset({"pull_request_target", "workflow_run", "release"})
 
 _V116_AGGREGATE = "sha256:60d3a68c9973942b7a92f7affcd3fbac553b3c79c31bcd63b723e1186bd3c734"
@@ -268,10 +278,10 @@ def test_python_tooling_1_17__predecessor_pin__is_the_superseded_reference() -> 
 def test_python_tooling_1_17__cache_configuration__is_immune_to_the_v10_auto_flip() -> None:
     """The substantive reason the bump is safe, asserted rather than claimed.
 
-    v10 redefines `enable-cache: auto` to disable the cache for
-    `pull_request_target`, `workflow_run`, and `release`. This workflow is immune
-    twice over: it never selects `auto`, and it never triggers on one of those
-    three events. Either fact alone makes the flip a non-event, so both are
+    v10 redefines `enable-cache: auto` to disable the cache for `release`, tag
+    pushes, `pull_request_target`, and `workflow_run`. This workflow is immune
+    twice over: it never selects `auto`, and it never triggers on any of those
+    four events. Either fact alone makes the flip a non-event, so both are
     pinned — a future cut that gives up one still has to notice it is now relying
     entirely on the other.
     """

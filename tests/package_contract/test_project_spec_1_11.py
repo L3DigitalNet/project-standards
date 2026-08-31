@@ -9,7 +9,7 @@ carry v9.0.0, because a "helpful" backport into the predecessor is a released-pa
 mutation rather than a fix.
 
 v10's own breaking change is that `enable-cache: auto` now disables the cache for
-`pull_request_target`, `workflow_run`, and `release`. This workflow never spells
+`release`, tag pushes, `pull_request_target`, and `workflow_run`. This workflow never spells
 `auto` — it passes an explicit repository-equality expression — so the flip cannot
 reach an adopter. That inertness is the reason the advance was judged safe, and it
 survives only as long as nobody rewrites the value to `auto`; hence it is asserted
@@ -241,8 +241,8 @@ def test_project_spec_1_11__predecessor_workflow__still_carries_the_v9_pin() -> 
 def test_project_spec_1_11__cache_enablement__is_never_auto() -> None:
     """v10's breaking change reaches only `auto`, which this workflow does not spell.
 
-    Under `enable-cache: auto`, v10 disables the cache for `pull_request_target`,
-    `workflow_run`, and `release`. The value here is an explicit repository-equality
+    Under `enable-cache: auto`, v10 disables the cache for `release`, tag pushes,
+    `pull_request_target`, and `workflow_run`. The value here is an explicit repository-equality
     expression, so the default flip is a non-event — and stays one only while the
     expression survives. A later simplification to `auto` would silently change the
     caching behavior this advance was accepted as not changing.

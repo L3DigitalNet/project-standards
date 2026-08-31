@@ -8,12 +8,12 @@ versioned documentation URLs the skill and the packaged agent summary embed,
 which name the release and payload directory that first carry these bytes.
 
 v10's one breaking change is that `enable-cache: auto` now *disables* the cache
-for `pull_request_target`, `workflow_run`, and `release`. It cannot reach this
-workflow: the cache key is an explicit repository-identity expression rather than
-`auto`, and the workflow is `workflow_call`-only, so none of the three events can
-start it directly. Both facts are asserted below rather than argued in prose,
-because a later cut that gives either one up has to notice it is then leaning
-entirely on the other.
+for `release`, tag pushes, `pull_request_target`, and `workflow_run`. It cannot
+reach this workflow: the cache key is an explicit repository-identity expression
+rather than `auto`, and the workflow is `workflow_call`-only, so none of the four
+events can start it directly. Both facts are asserted below rather than argued
+in prose, because a later cut that gives either one up has to notice it is then
+leaning entirely on the other.
 
 The rest of the payload is a copy of 1.14, so the second contract here is that no
 other released byte moved and no option changed.
@@ -58,6 +58,15 @@ _V10_PIN = "astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.
 # The events v10 removed from `enable-cache: auto`. This workflow must be startable
 # by none of them for the "inert here" argument to hold independently of the
 # explicit cache expression.
+#
+# v10 actually disables the cache for four classes: these three plus tag
+# pushes. Tag pushes are deliberately not a member here: this set is compared
+# against `_trigger_events()`, which returns the workflow's literal `on:`
+# trigger keys, and "tag push" is not such a key — it is the `push` trigger
+# filtered by a `tags:` pattern, indistinguishable from any other `push`
+# trigger at this level. Adding a string that can never match a real trigger
+# key would make the isdisjoint check below silently stop covering that
+# fourth class.
 _AUTO_DISABLED_EVENTS = frozenset({"pull_request_target", "workflow_run", "release"})
 
 # Every file 1.15 is allowed to move: the workflow resource carrying the pin, the
@@ -307,10 +316,10 @@ def test_markdown_frontmatter_1_15__predecessor_pin__is_the_superseded_reference
 def test_markdown_frontmatter_1_15__cache_configuration__is_immune_to_the_v10_auto_flip() -> None:
     """The substantive reason the bump is safe, asserted rather than claimed.
 
-    v10 redefines `enable-cache: auto` to disable the cache for
-    `pull_request_target`, `workflow_run`, and `release`. This workflow never
+    v10 redefines `enable-cache: auto` to disable the cache for `release`, tag
+    pushes, `pull_request_target`, and `workflow_run`. This workflow never
     selects `auto` — it decides by repository identity, so a fork of this public
-    repository caches nothing — and it is reusable-only, so none of the three
+    repository caches nothing — and it is reusable-only, so none of the four
     events can start it in the first place.
     """
     document = _workflow_document(_V115)
