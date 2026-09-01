@@ -329,6 +329,55 @@ func TestConfiguredFsmonitorHookNeverRuns(t *testing.T) {
 	}
 }
 
+// TestInheritedGitEnvironmentIsInert pins the environment allowlist from issue #235.
+//
+// The variables exported here are the ones that would let an environment the hook did
+// not choose redirect its reads: GIT_DIR and GIT_WORK_TREE name another repository, and
+// the GIT_CONFIG_COUNT family injects configuration directly — here a core.fsmonitor
+// hook, so a leak shows up as an executed command and not merely as different text. A
+// refactor back to `command.Env = nil`, or an allowlist that grows a GIT_* entry, fails
+// here rather than in a consumer's session.
+func TestInheritedGitEnvironmentIsInert(t *testing.T) {
+	r := newRepo(t)
+	r.write("docs/handoff/state.md", "STATE MARKER")
+	r.git("init")
+	r.git("add", "docs")
+	r.git("commit", "-m", "state")
+	r.git("checkout", "-b", "owning-branch")
+
+	decoy := t.TempDir()
+	sentinel := filepath.Join(t.TempDir(), "env-fsmonitor-ran")
+	fsmonitor := filepath.Join(decoy, "fsmonitor-hook.sh")
+	if err := os.WriteFile(fsmonitor, []byte("#!/bin/sh\n: > "+sentinel+"\nexit 1\n"), 0o755); err != nil { // #nosec G306 -- hook
+		t.Fatal(err)
+	}
+
+	stdout, _, code := r.run(startupEvent,
+		"GIT_DIR="+filepath.Join(decoy, "nonexistent.git"),
+		"GIT_WORK_TREE="+decoy,
+		"GIT_CONFIG_COUNT=1",
+		"GIT_CONFIG_KEY_0=core.fsmonitor",
+		"GIT_CONFIG_VALUE_0="+fsmonitor,
+	)
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if _, err := os.Stat(sentinel); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("environment-injected git config reached the child (stat sentinel: %v)", err)
+	}
+	if !strings.Contains(stdout, "Branch: owning-branch") {
+		t.Fatalf("inherited GIT_DIR/GIT_WORK_TREE changed the repository read: %q", stdout)
+	}
+	for _, marker := range []string{"(git status unavailable)", "(git branch unavailable)", "(git log unavailable)"} {
+		if strings.Contains(stdout, marker) {
+			t.Fatalf("git read degraded under the inherited environment: %s in %q", marker, stdout)
+		}
+	}
+	if !strings.Contains(stdout, "STATE MARKER") {
+		t.Fatalf("hook did not read the installing repository: %q", stdout)
+	}
+}
+
 func TestVersionFlagReportsTheStamp(t *testing.T) {
 	r := newRepo(t)
 	command := exec.Command(filepath.Join(r.root, installedPath), "--version")
