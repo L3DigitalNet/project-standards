@@ -151,7 +151,7 @@ Both filenames were derived from the `id` rather than from the short title. The 
 
 ### F3 — The ADR index points at the superseded 1.3 standard
 
-`docs/adr/README.md:35` reads "See the [ADR 1.3 standard](../../standards/adr/versions/1.3/README.md)", and `related` line 20 pins `standards/adr/versions/1.3/README.md`. The repository resolves 1.4. The index carries `reviewed: '2026-08-01'`, three days after 1.4 was published (`Last updated: 2026-08-03` in the 1.4 README) — so the review predates the package, but the pointer is now wrong. An author following the index reads the standard that lacks the boundary section entirely.
+`docs/adr/README.md:35` reads "See the [ADR 1.3 standard](../../../standards/adr/versions/1.3/README.md)", and `related` line 20 pins `standards/adr/versions/1.3/README.md`. The repository resolves 1.4. The index carries `reviewed: '2026-08-01'`, three days after 1.4 was published (`Last updated: 2026-08-03` in the 1.4 README) — so the review predates the package, but the pointer is now wrong. An author following the index reads the standard that lacks the boundary section entirely.
 
 The same file's `related` list also pins `standards/markdown-frontmatter/versions/1.2/field-values.md` and `standards/standard-bundle-authoring/versions/2.0/README.md` while current defaults are 1.9 and 2.6. Those are historical-evidence pins and defensible; the ADR-standard pointer in body prose is not, because it is presented as the format to follow.
 

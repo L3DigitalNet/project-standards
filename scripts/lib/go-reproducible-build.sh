@@ -105,16 +105,20 @@ go_artifact_main() {
             exit 1
         fi
 
-        local scratch
-        scratch="$(mktemp -d)"
-        # shellcheck disable=SC2064  # expand scratch now, not at trap time
-        trap "rm -rf '$scratch'" EXIT
-        go_artifact_build_to "$scratch/artifact"
+        # Deliberately not a `local`: the EXIT trap below expands the name when the
+        # shell exits, which is after this function has returned, so a local would
+        # already be out of scope and the scratch tree would survive the run.
+        GO_ARTIFACT_SCRATCH="$(mktemp -d)"
+        # Single-quoted so the path is expanded at trap time rather than baked into the
+        # trap string: a TMPDIR containing a single quote would otherwise close the
+        # quoting and run the remainder of the path as a command at shell exit.
+        trap 'if [[ -n ${GO_ARTIFACT_SCRATCH:-} ]]; then rm -rf -- "$GO_ARTIFACT_SCRATCH"; fi' EXIT
+        go_artifact_build_to "${GO_ARTIFACT_SCRATCH}/artifact"
 
-        if ! cmp -s "$scratch/artifact" "$ARTIFACT_OUTPUT_PATH"; then
+        if ! cmp -s "${GO_ARTIFACT_SCRATCH}/artifact" "$ARTIFACT_OUTPUT_PATH"; then
             echo "error: committed binary does not match a rebuild from this commit's source." >&2
             echo "       committed: $(sha256sum "$ARTIFACT_OUTPUT_PATH" | cut -d' ' -f1)" >&2
-            echo "       rebuilt:   $(sha256sum "$scratch/artifact" | cut -d' ' -f1)" >&2
+            echo "       rebuilt:   $(sha256sum "${GO_ARTIFACT_SCRATCH}/artifact" | cut -d' ' -f1)" >&2
             echo "       Run $BUILD_SCRIPT_NAME and commit the result." >&2
             exit 1
         fi
