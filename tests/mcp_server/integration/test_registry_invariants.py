@@ -155,8 +155,18 @@ def workflow_commands(document: Mapping[str, Any]) -> list[str]:
     return commands
 
 
-def pytest_phases() -> list[tuple[Path, list[str]]]:
-    """Every executable pytest invocation in every workflow, as argument lists.
+def pytest_phases_in_document(
+    path: Path, document: Mapping[str, Any]
+) -> list[tuple[Path, list[str]]]:
+    """Every executable pytest invocation in one already-parsed workflow document.
+
+    Factored out of :func:`pytest_phases` so the extraction logic itself — not
+    just its result over the real ``.github/workflows`` tree — can be exercised
+    directly against a document that was never written to that tree. That is
+    what ``test_ci_phase_discovery_is_not_vacuous`` needs for its path-scoped
+    witness: D1 (#236) deleted ``coherence.yml``, the only workflow that ever
+    invoked pytest with a ``tests/`` path argument, so no file under
+    ``.github/workflows`` still exercises that branch of the parser.
 
     The ``uv run``/``coverage run`` prefixes are stripped so what remains is the
     argument vector pytest itself receives, which is what decides selection. A
@@ -165,28 +175,39 @@ def pytest_phases() -> list[tuple[Path, list[str]]]:
     silently shrinking the union.
     """
     phases: list[tuple[Path, list[str]]] = []
+    for command in workflow_commands(document):
+        if "pytest" not in command:
+            continue
+        for line in command.splitlines():
+            if "pytest" not in line:
+                continue
+            tokens = shlex.split(line)
+            if "pytest" not in tokens and "-m" not in tokens:
+                continue
+            index = next(
+                (
+                    position
+                    for position, token in enumerate(tokens)
+                    if token == "pytest" or token.endswith("/pytest")
+                ),
+                None,
+            )
+            if index is None:
+                continue
+            phases.append((path, tokens[index + 1 :]))
+    return phases
+
+
+def pytest_phases() -> list[tuple[Path, list[str]]]:
+    """Every executable pytest invocation in every workflow, as argument lists.
+
+    Delegates the per-file parsing to :func:`pytest_phases_in_document`; this
+    layer only owns discovering which files exist.
+    """
+    phases: list[tuple[Path, list[str]]] = []
     for pattern in WORKFLOW_SUFFIXES:
         for path in sorted(WORKFLOW_DIRECTORY.glob(pattern)):
-            for command in workflow_commands(workflow_document(path)):
-                if "pytest" not in command:
-                    continue
-                for line in command.splitlines():
-                    if "pytest" not in line:
-                        continue
-                    tokens = shlex.split(line)
-                    if "pytest" not in tokens and "-m" not in tokens:
-                        continue
-                    index = next(
-                        (
-                            position
-                            for position, token in enumerate(tokens)
-                            if token == "pytest" or token.endswith("/pytest")
-                        ),
-                        None,
-                    )
-                    if index is None:
-                        continue
-                    phases.append((path, tokens[index + 1 :]))
+            phases.extend(pytest_phases_in_document(path, workflow_document(path)))
     return phases
 
 
@@ -415,7 +436,7 @@ def test_ci_executes_every_mcp_suite_across_its_pytest_phases() -> None:
     )
 
 
-def test_ci_phase_discovery_is_not_vacuous() -> None:
+def test_ci_phase_discovery_is_not_vacuous(tmp_path: Path) -> None:
     """Guard the guard: the phase extractor must find the gate it claims to read.
 
     ``pytest_phases`` parses shell text, so a form it did not anticipate would
@@ -434,8 +455,21 @@ def test_ci_phase_discovery_is_not_vacuous() -> None:
     assert any("-m" in arguments for arguments in from_check), (
         f"no extracted phase carries a marker expression, so that branch is untested: {from_check}"
     )
-    scoped = [arguments for path, arguments in phases if path.name == "coherence.yml"]
-    assert scoped and any("tests/coherence" in arguments for arguments in scoped), (
-        f"the path-scoped workflow was not extracted, so the unscoped test above proves less than "
-        f"it reads: {scoped}"
+
+    # Synthetic witness for the path-scoped branch (D1/#236): coherence.yml was
+    # the only real workflow that ever invoked pytest with a `tests/` path
+    # argument rather than a bare marker expression, and it was deleted because
+    # tests/coherence was already covered by check.yml's unscoped ordinary
+    # phase. Nothing under .github/workflows exercises that parser branch any
+    # more, so this feeds a minimal one-job, one-step workflow document
+    # straight through the same extractor function pytest_phases() calls per
+    # file, without writing anything to the real workflow directory.
+    synthetic_path = tmp_path / "synthetic-scoped.yml"
+    synthetic_path.write_text(
+        "jobs:\n  probe:\n    steps:\n      - run: uv run pytest tests/coherence -v\n",
+        encoding="utf-8",
+    )
+    scoped = pytest_phases_in_document(synthetic_path, workflow_document(synthetic_path))
+    assert scoped and any("tests/coherence" in arguments for _, arguments in scoped), (
+        f"the path-scoped extractor branch was not exercised by the synthetic witness: {scoped}"
     )

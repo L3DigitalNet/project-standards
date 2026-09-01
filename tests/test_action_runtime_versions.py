@@ -33,7 +33,6 @@ _LEGACY_PYTHON_DIGEST = "16a65f2bdc06adfc814786201ec32937bad4b5930cbf2bf72248900
 
 _ROOT_WORKFLOWS = (
     ".github/workflows/check.yml",
-    ".github/workflows/coherence.yml",
     ".github/workflows/format.yml",
     ".github/workflows/lint-markdown.yml",
     ".github/workflows/validate-markdown-frontmatter.yml",
@@ -42,7 +41,6 @@ _ROOT_WORKFLOWS = (
 )
 _UV_ROOT_WORKFLOWS = (
     ".github/workflows/check.yml",
-    ".github/workflows/coherence.yml",
     ".github/workflows/validate-markdown-frontmatter.yml",
     ".github/workflows/validate-specs.yml",
     ".github/workflows/validate-standards-graph.yml",
@@ -140,9 +138,12 @@ def test_live_node_workflows_use_node_24_generation_and_intended_cache_policy() 
         for step in _uses(".github/workflows/format.yml")
         if step["uses"].startswith("actions/setup-node@")
     )
-    coherence_setup = next(
+    # Coherence (repo-internal coherence coverage) was folded into check.yml's
+    # ordinary pytest step and its standalone workflow deleted (#236 C2); this
+    # is now the only live root workflow with npm-cache setup-node.
+    check_setup = next(
         step
-        for step in _uses(".github/workflows/coherence.yml")
+        for step in _uses(".github/workflows/check.yml")
         if step["uses"].startswith("actions/setup-node@")
     )
 
@@ -151,8 +152,8 @@ def test_live_node_workflows_use_node_24_generation_and_intended_cache_policy() 
         "uses": _SETUP_NODE,
         "with": {"node-version": "24", "package-manager-cache": False},
     }
-    assert coherence_setup["uses"] == _SETUP_NODE
-    assert coherence_setup["with"] == {"node-version": "24", "cache": "npm"}
+    assert check_setup["uses"] == _SETUP_NODE
+    assert check_setup["with"] == {"node-version": "24", "cache": "npm"}
 
 
 @pytest.mark.parametrize("relative_path", _CURRENT_V2_WORKFLOWS)

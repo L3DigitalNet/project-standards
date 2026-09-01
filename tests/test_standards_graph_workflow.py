@@ -27,8 +27,12 @@ def test_repository_graph_workflow_contract() -> None:
     reusable_gate = _load(".github/workflows/check.yml")
     triggers = workflow[True]
 
-    assert "pull_request" in triggers
-    assert triggers["push"]["branches"] == ["main", "testing"]
+    # D1 (#236 C1-C3, 2026-09-01): hosted CI collapsed to "main only + one
+    # gate" — this workflow no longer runs on pull_request or the testing
+    # branch, only on push to main plus a manual dispatch escape hatch.
+    assert "pull_request" not in triggers
+    assert triggers["push"]["branches"] == ["main"]
+    assert "workflow_dispatch" in triggers
     assert all("paths" not in trigger for trigger in triggers.values() if isinstance(trigger, dict))
 
     job = workflow["jobs"]["standards-graph"]
