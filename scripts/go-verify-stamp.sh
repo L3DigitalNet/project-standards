@@ -29,12 +29,17 @@
 # `check` as "run the proof". A missing stamp is stale, which is what makes a fresh
 # checkout (CI, a new worktree, a `rexec clean`ed workspace) verify rather than trust.
 #
-# KNOWN GAP under rexec: the stamp lands in the worker workspace, and rexec's mirror runs
-# rsync --delete without --delete-excluded, so a file that exists only on the worker is
-# removed on the next synchronization. Every remote `make go-check` therefore re-runs the
-# proof today. Excluding `build/go-verify.stamp` in `.rexec.toml` [sync].exclude is the
-# fix — that is the same mechanism the comment there records for `.venv` — and it was left
-# out of the change that added this script only because that file belonged to another leg.
+# KNOWN GAP under rexec, which is how this repository's gates actually run: the stamp is
+# written in the worker workspace and no `build/` exists in the local checkout, so the next
+# synchronization removes it and every remote `make go-check` re-runs the proof. Naming the
+# stamp in `.rexec.toml` [sync].exclude does NOT fix this and was tried and reverted on
+# 2026-09-01: a `[sync].exclude` entry only stops a path being uploaded, it does not protect
+# worker-only content from removal. Measured — the long-standing `build/dist` exclude does
+# not survive either: a file created there on the worker is gone by the next invocation.
+# `.venv` and `node_modules` survive because they are rexec's own built-in excludes, which
+# configuration cannot extend. A real fix belongs in rexec or in a stamp location outside
+# the mirrored tree; until then the saving lands for local and CI runs only, and the failure
+# direction is safe, because an absent stamp verifies.
 #
 # Requirements: bash, GNU coreutils (`sha256sum`, `sort -z`), findutils, sed.
 #
