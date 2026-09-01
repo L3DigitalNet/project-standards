@@ -5,7 +5,7 @@
 # only comments and double-quoted `key = "value"` assignments, so every future
 # value must keep that shape.
 organization = "L3DigitalNet"
-package_version = "1.9"
+package_version = "1.10"
 
 # Admission model (ADR 0031). `integration_branch` empty means the two-branch
 # topology; `admission_floor` is the commit-ish where enforcement begins, so an

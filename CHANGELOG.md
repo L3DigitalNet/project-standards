@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.29.0] — 2026-09-01
+
 ### Added
 
 - **`project-standards packages check-release --staged` reports a mid-train working tree without a false red.** Between a landed payload cut and release prep, `.standards/`, the catalog projection, and the project version legitimately lag the catalog, so the command reported `PC-RELEASE-PROJECTION`, `PC-RELEASE-PROJECT-VERSION`, and `PC-RELEASE-LEVEL` and exited `1` on a tree that was correct for its phase ([#227](https://github.com/L3DigitalNet/project-standards/issues/227), [#236](https://github.com/L3DigitalNet/project-standards/issues/236)). `--staged` labels those findings expected pre-bump — still printed, prefixed `EXPECTED-PRE-BUMP` — and exits `0` when nothing else is found. The expectation is keyed to the producer, not the code: `PC-RELEASE-LEVEL` has two producers, and only the one raised because the proposed tool version has not advanced past the baseline is excused, so a breaking default promotion, a catalog/tool major skew, or a wrong-level bump still fails under `--staged`, as does every other code including `PC-RELEASE-PAYLOAD-MUTATED` and `PC-CATALOG-DIGEST-REPLACED`. Under `--json` the object additively gains `staged` and `expected_pre_bump`; `classification` keeps its unstaged meaning, so a staged pass reads `"ok": true` with `"classification": "forbidden"`. Without the flag, output and exit status are unchanged.

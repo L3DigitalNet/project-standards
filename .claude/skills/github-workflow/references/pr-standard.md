@@ -135,6 +135,7 @@ The governing Issue's `Workflow` field is the sole lifecycle authority for gover
 | Final PR merging | Refused while the Issue is `Blocked` |
 | Supporting PR merging | Permitted while the Issue is `Blocked` only with explicit acceptance-coverage rationale that neither resolves nor conceals the blocker |
 | Final PR merged | `merge --pr N` converges the Issue to `Workflow = Done` and closes it as completed, in the same call |
+| Whole admission in one call | `land --pr N` advances an Issue still `Ready` to `In progress`, then runs the `ready` and `merge` operations and reports the merge commit with the diff that proves the head landed. Fail-closed: any refusal aborts the rest and the receipt names every boundary that completed |
 | Supporting or Standalone PR merged | Lifecycle-neutral; never authorizes `Done` |
 | Final PR closed unmerged | No lifecycle outcome is inferred; `close --pr N --as OUTCOME --reason S` records an explicit disposition and converges the Issue |
 
