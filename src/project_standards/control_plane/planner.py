@@ -77,6 +77,7 @@ from project_standards.control_plane.providers import (
     ProviderInvocation,
     ProviderResult,
     invoke_provider,
+    provider_snapshot_chain,
     resolve_referenced_inputs,
 )
 from project_standards.control_plane.resolution import (
@@ -2894,6 +2895,19 @@ def _alias_analysis(
 
 def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
     """Build one deterministic, complete, and read-only reconciliation plan."""
+    # Planning is the one pass that satisfies the snapshot chain's obligation:
+    # it invokes every render, validate, and transform provider in turn and
+    # writes nothing itself, so between two invocations only a provider could
+    # have touched a declared path — which is exactly what the chained BEFORE
+    # snapshot then proves it did not. Publication and the executor's
+    # post-publication verification providers stay outside the window; a window
+    # spanning a write would report the control plane's own bytes as a
+    # CP-PROVIDER-INTEGRITY violation by the next provider.
+    with provider_snapshot_chain():
+        return _plan_reconciliation(request)
+
+
+def _plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
     original_request = request
     resolution = resolve_packages(request.resolution)
     payloads = _payload_map(request.payloads)

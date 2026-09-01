@@ -533,9 +533,9 @@ def provider_snapshot_chain() -> Generator[None]:
 
     Nested windows are permitted and share the single slot; leaving any window
     discards it, so a chained snapshot never outlives the pass that vouched
-    for it.
+    for it — including the outer pass, which resumes with no slot rather than
+    with the reading it held before the inner pass ran.
     """
-    previous = _chain_slot()
     previous_active = getattr(_chain_state, "active", False)
     _chain_state.active = True
     _chain_state.slot = None
@@ -543,7 +543,7 @@ def provider_snapshot_chain() -> Generator[None]:
         yield
     finally:
         _chain_state.active = previous_active
-        _chain_state.slot = previous if previous_active else None
+        _chain_state.slot = None
 
 
 def _arm_snapshot_chain(after: RepositorySnapshot) -> None:
