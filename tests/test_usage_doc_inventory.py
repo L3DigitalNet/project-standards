@@ -55,6 +55,7 @@ _STANDARDS_VERBS = (
     "version",
     "validate-graph",
     "render-catalog",
+    "cut-successor",
     "validate-packages",
     "render-consumer-catalog",
     "generate-package-schemas",

@@ -13,6 +13,8 @@ from project_standards.adopt.errors import ManifestError
 from project_standards.cli_contract import PACKAGE_AUTHORING_COMMAND_HELP
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.locking import ControlPlaneBusyError
+from project_standards.package_contract.cut_successor import CutPlan, apply_cut, plan_cut
+from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.standard_manifest import StandardManifestError
 from project_standards.standards_graph.catalog import load_contract_defaults, render_catalog
 from project_standards.standards_graph.discovery import build_graph
@@ -27,6 +29,7 @@ _COMMAND_HELP = {
     "version": "set one standard's desired version selector",
     "validate-graph": "validate standard manifests as one graph",
     "render-catalog": "write or freshness-check standards/catalog.md",
+    "cut-successor": "author a successor payload version from its predecessor",
     **PACKAGE_AUTHORING_COMMAND_HELP,
 }
 
@@ -129,6 +132,141 @@ def _run_render_catalog(argv: list[str]) -> int:
         return _emit_error(False, "bad_args", str(exc))
     except (OSError, ValueError, StandardManifestError, ManifestError) as exc:
         return _emit_error(False, "catalog_error", str(exc))
+
+
+def _describe_plan(plan: CutPlan) -> list[str]:
+    root = plan.root
+    lines = [
+        f"Cut {plan.standard_id} {plan.predecessor.value} -> {plan.successor.value}",
+        f"  copy      {plan.source_dir.relative_to(root)} -> {plan.target_dir.relative_to(root)}",
+        f"  index     {plan.family_index.relative_to(root)}: add [[versions]] "
+        f"{plan.successor.value}",
+        f"  catalog   {plan.catalog_path.relative_to(root)}: add {plan.successor.value} as "
+        f"{plan.successor_role.value}",
+    ]
+    if plan.predecessor_role_after is not plan.predecessor_role:
+        lines.append(
+            f"  catalog   {plan.catalog_path.relative_to(root)}: {plan.predecessor.value} "
+            f"{plan.predecessor_role.value} -> {plan.predecessor_role_after.value}"
+        )
+    if plan.scaffold_target is not None:
+        lines.append(f"  scaffold  {plan.scaffold_target.relative_to(root)}")
+    lines.append("  then      standards sync-payload-projection, standards render-catalog")
+    return lines
+
+
+def _plan_jsonable(plan: CutPlan) -> dict[str, object]:
+    return {
+        "standard_id": plan.standard_id,
+        "predecessor": plan.predecessor.value,
+        "successor": plan.successor.value,
+        "source_dir": plan.source_dir.relative_to(plan.root).as_posix(),
+        "target_dir": plan.target_dir.relative_to(plan.root).as_posix(),
+        "family_index": plan.family_index.relative_to(plan.root).as_posix(),
+        "catalog": plan.catalog_path.relative_to(plan.root).as_posix(),
+        "successor_role": plan.successor_role.value,
+        "predecessor_role": plan.predecessor_role_after.value,
+        "scaffold_target": (
+            plan.scaffold_target.relative_to(plan.root).as_posix()
+            if plan.scaffold_target is not None
+            else None
+        ),
+    }
+
+
+def _run_cut_successor(argv: list[str]) -> int:
+    """Cut a successor payload version, then rerun the two generated-artifact writers.
+
+    The follow-on `sync-payload-projection` and `render-catalog` calls go through
+    the same entry points an author would type, so a cut can never produce a
+    projection or catalog that differs from the one those commands generate.
+    Their exit status is propagated: a cut whose generated artifacts did not
+    write is not a successful cut, even though the payload bytes already landed.
+    """
+    ap = _Parser(prog="project-standards standards cut-successor")
+    ap.add_argument("standard_id")
+    ap.add_argument("version")
+    ap.add_argument("--root", type=Path, default=Path.cwd())
+    ap.add_argument("--from", dest="predecessor")
+    ap.add_argument("--scaffold-test", action="store_true")
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--json", action="store_true")
+    json_mode = "--json" in argv
+    try:
+        args = ap.parse_args(argv)
+        json_mode = cast("bool", args.json)
+        root = cast("Path", args.root).resolve()
+        plan = plan_cut(
+            root,
+            cast("str", args.standard_id),
+            cast("str", args.version),
+            predecessor=cast("str | None", args.predecessor),
+            scaffold_test=cast("bool", args.scaffold_test),
+        )
+        if cast("bool", args.dry_run):
+            if json_mode:
+                print(
+                    json.dumps(
+                        {"ok": True, "dry_run": True, "plan": _plan_jsonable(plan)}, indent=2
+                    )
+                )
+            else:
+                print("\n".join(_describe_plan(plan)))
+            return 0
+        result = apply_cut(plan)
+    except _ArgparseError as exc:
+        return _emit_error(json_mode, "bad_args", str(exc))
+    except (OSError, ValueError, PackageContractError) as exc:
+        return _emit_error(json_mode, "cut_error", str(exc))
+
+    from project_standards.package_contract.cli import run_standards
+
+    generated = run_standards(["sync-payload-projection", "--root", str(root)])
+    if generated == 0:
+        generated = _run_render_catalog(["--root", str(root)])
+
+    occurrences = [
+        {"path": item.path, "line": item.line, "text": item.text} for item in result.occurrences
+    ]
+    if json_mode:
+        print(
+            json.dumps(
+                {
+                    "ok": generated == 0,
+                    "plan": _plan_jsonable(plan),
+                    "aggregate_digest": result.aggregate_digest.value,
+                    "files": result.file_count,
+                    "predecessor_references": occurrences,
+                    "repointed_migrations": list(result.repointed_migrations),
+                    "undecodable_files": list(result.undecodable),
+                    "scaffold_written": (
+                        result.scaffold_written.relative_to(root).as_posix()
+                        if result.scaffold_written is not None
+                        else None
+                    ),
+                },
+                indent=2,
+            )
+        )
+    else:
+        print("\n".join(_describe_plan(plan)))
+        print(f"  aggregate {result.aggregate_digest.value} over {result.file_count} files")
+        for migration in result.repointed_migrations:
+            print(f"  migration {migration}: to -> package:{plan.successor.value}")
+        if result.occurrences:
+            # Reported, never rewritten: only the author knows which of these name
+            # the version being cut and which are correct history.
+            print(
+                f"REVIEW: {len(result.occurrences)} line(s) in the new tree still name "
+                f"{plan.predecessor.value}:"
+            )
+            for item in result.occurrences:
+                print(f"  {item.path}:{item.line}: {item.text}")
+        else:
+            print(f"REVIEW: no line in the new tree names {plan.predecessor.value}")
+        for name in result.undecodable:
+            print(f"  (not text, unscanned) {name}")
+    return 1 if generated else 0
 
 
 def _control_parser(command: str) -> _Parser:
@@ -300,6 +438,8 @@ def run(argv: list[str] | None = None) -> int:
         return _run_validate_graph(rest)
     if command == "render-catalog":
         return _run_render_catalog(rest)
+    if command == "cut-successor":
+        return _run_cut_successor(rest)
     if command in {
         "validate-packages",
         "render-consumer-catalog",

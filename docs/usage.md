@@ -53,7 +53,7 @@ project-standards {--help | --version}
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes 34 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), the `mcp` server, eleven `standards` operations, one repository-only `packages` release check, seven `spec` verbs, and seven `agent-handoff` verbs.
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes 35 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), the `mcp` server, twelve `standards` operations, one repository-only `packages` release check, seven `spec` verbs, and seven `agent-handoff` verbs.
 
 Under unified authority, `validate` and `fix` invoke the provider selected by the applied Markdown Frontmatter package. Read-only validation consumes one immutable file snapshot; `fix` applies only the provider's typed plan through the platform executor and then revalidates. After `project-standards fix`, run `project-standards reconcile --check`, review the digest-only plan, and run `project-standards reconcile --apply` before the final `project-standards validate`. The standalone schema, ID, reference, ID-fix, and format-write surfaces use the same selected payload while retaining their narrower output contracts. In v5 legacy-only repositories, these commands warn and retain the local validator sequence as a bounded compatibility path. The six standalone console-script names documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
@@ -354,7 +354,7 @@ project-standards agent-handoff delta [--repo <dir>] --since <ref> [--json]
 Command group for V5 catalog selection plus V1 graph/catalog maintenance and V2 package authoring. Running `project-standards standards` with no verb prints usage to standard error and exits 2; `project-standards standards --help` prints usage and exits 0.
 
 ```text
-project-standards standards {list | show | enable | disable | version | validate-graph | render-catalog | validate-packages | render-consumer-catalog | generate-package-schemas | sync-payload-projection} [<args>...]
+project-standards standards {list | show | enable | disable | version | validate-graph | render-catalog | cut-successor | validate-packages | render-consumer-catalog | generate-package-schemas | sync-payload-projection} [<args>...]
 ```
 
 There are no group-level options other than `-h` / `--help`; each verb defines its own flags. An unrecognized verb exits 2.
@@ -440,6 +440,28 @@ Options:
 - **`--check`** — Compare the output file with a fresh render without writing it. Default: off.
 
 Exit status: `0` catalog written or fresh · `1` graph findings or stale output · `2` invalid invocation, unsafe output path, or load/write error.
+
+### `standards cut-successor`
+
+Author `standards/<standard-id>/versions/<version>/` as a copy of its predecessor, stamp the copied `payload.toml` with the new version and freshly computed per-file digests, index the payload in the family's `standard.toml`, advertise it in the catalog major that already carries the family, and then rerun `sync-payload-projection` and `render-catalog`. Released payload bytes are immutable, so this is how every fix and every feature reaches a published family.
+
+The successor inherits the predecessor's catalog role, and a `default` predecessor is demoted to `retained`. A reference-only or internal family therefore keeps its role rather than acquiring a default.
+
+```text
+project-standards standards cut-successor <standard-id> <version> [--root <path>] [--from <version>] [--scaffold-test] [--dry-run] [--json]
+```
+
+Options:
+
+- **`--root <path>`** — Repository root. Default: the current directory.
+- **`--from <version>`** — Predecessor to copy. Default: the family's highest indexed version.
+- **`--scaffold-test`** — Write `tests/package_contract/test_<standard-id>_<version>.py` carrying the cut's mechanical assertions and a TODO block listing the predecessor test's behavior cases.
+- **`--dry-run`** — Print the resolved plan and write nothing.
+- **`--json`** — Emit the plan, the aggregate digest, and the review list as JSON.
+
+Every line inside the new payload tree that still names the predecessor version is **reported, never rewritten**: a migration endpoint or a permalink into the predecessor's published documentation is correct history, and only the author can tell those from the references the cut must move. Family landing pages (`README.md`, `agent-summary.md`, `adopt.md` at the family root) are likewise left to the author. The command refuses to run when the successor directory already exists, so it can never overwrite work in progress or mutate released bytes.
+
+Exit status: `0` cut written and generated artifacts refreshed · `1` the follow-on projection or catalog writer reported findings · `2` invalid invocation, an existing successor, or a payload/catalog load or write error.
 
 ### `standards validate-packages`
 
