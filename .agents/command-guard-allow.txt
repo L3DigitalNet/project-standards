@@ -3,6 +3,12 @@ make handoff-drift-check
 uv run project-standards validate
 uv run project-standards standards validate-packages
 uv run project-standards standards validate-graph
-uv run project-standards standards render-catalog --check
-uv run project-standards standards sync-payload-projection --check
+# A grant is an exact-token prefix (agentguard command.go grantMatches), so the
+# option order in the grant must equal the order agents type. These two carry
+# `--root .` because that is how agents actually invoke them; dropping the
+# trailing `--check` would also permit the bare `render-catalog`/
+# `sync-payload-projection` forms, which WRITE, so the long form keeps the
+# grant read-only.
+uv run project-standards standards render-catalog --root . --check
+uv run project-standards standards sync-payload-projection --root . --check
 uv run project-standards packages check-release
