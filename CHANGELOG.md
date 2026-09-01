@@ -37,6 +37,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added
+
+- **`project-standards packages check-release --staged` reports a mid-train working tree without a false red.** Between a landed payload cut and release prep, `.standards/`, the catalog projection, and the project version legitimately lag the catalog, so the command reported `PC-RELEASE-LEVEL`, `PC-RELEASE-PROJECTION`, and `PC-RELEASE-PROJECT-VERSION` and exited `1` on a tree that was correct for its phase ([#227](https://github.com/L3DigitalNet/project-standards/issues/227), [#236](https://github.com/L3DigitalNet/project-standards/issues/236)). `--staged` labels exactly those three codes expected pre-bump — still printed, prefixed `EXPECTED-PRE-BUMP` — and exits `0` when nothing else is found; every other code, including `PC-RELEASE-PAYLOAD-MUTATED`, `PC-CATALOG-DIGEST-REPLACED`, and `PC-RELEASE-PACKAGE-CURRENT`, still fails. Under `--json` the object additively gains `staged` and `expected_pre_bump`. Without the flag, output and exit status are unchanged.
+
 ### Changed
 
 - **`scripts/verify.sh` stops a battery at the first red lane and sizes the `--full` compatibility lane for the machine that runs it** ([#236](https://github.com/L3DigitalNet/project-standards/issues/236)). `--fail-fast` skips every remaining serial lane once one has come back red and is the default for `--full`, where roughly 35 minutes of compatibility matrix ran after the ordinary lane had already failed on the 2026-09-01 train; `--keep-going` restores the run-every-lane behaviour and stays the default for the fast gate, whose three lanes are already running when the first red appears. A lane cut short is reported in the lane table as `skipped (--fail-fast)`, never omitted. `VERIFY_FULL_COMPAT_WORKERS` now defaults to `16` instead of a literal tuned for the retired 21-core workstation. Repository tooling only: no package, payload, or consumer-visible byte changes.

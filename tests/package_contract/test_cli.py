@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from collections.abc import Iterable
@@ -16,7 +17,10 @@ from project_standards.package_contract.cli import run_packages, run_standards
 from project_standards.package_contract.repository import (
     PackageRepository,
 )
-from tests.package_contract.helpers import copy_minimal_repository
+from tests.package_contract.helpers import (
+    copy_minimal_repository,
+    refresh_declared_file_digest,
+)
 
 _FIXTURE = Path(__file__).resolve().parents[1] / "fixtures/package_contract/valid/minimal"
 
@@ -526,3 +530,247 @@ def test_top_level_dispatch_and_help_preserve_existing_groups(
 
     assert main(["packages", "--help"]) == 0
     assert "check-release" in capsys.readouterr().out
+
+
+def _staged_consistency_findings() -> tuple[PackageFinding, ...]:
+    """Return the two consistency findings a correct mid-train tree still reports.
+
+    `.standards/` and the catalog projection are refreshed by release prep, not by
+    the payload cut, so a staged tree legitimately carries exactly these codes.
+    """
+    return (
+        PackageFinding(
+            code="PC-RELEASE-PROJECTION",
+            severity="error",
+            standard_id="project-standards",
+            version="",
+            path="src/project_standards/payloads",
+            identity="projection",
+            message="a generated catalog projection is stale",
+            hint="regenerate the catalog projection from the candidate catalog",
+        ),
+        PackageFinding(
+            code="PC-RELEASE-PROJECT-VERSION",
+            severity="error",
+            standard_id="project-standards",
+            version="5.2.0",
+            path="README.md",
+            identity="line:1:project-release",
+            message="release-current project version is stale",
+            hint="refresh release-current prose",
+        ),
+    )
+
+
+def _staged_consistency_stub(
+    _root: Path,
+    _repository: PackageRepository,
+    *,
+    distribution_version: str,
+) -> tuple[PackageFinding, ...]:
+    del distribution_version
+    return _staged_consistency_findings()
+
+
+def _mutate_released_payload(repository: Path) -> None:
+    """Change a released payload file and re-declare it everywhere it is pinned.
+
+    Digests are refreshed through payload.toml, standard.toml and the catalog so the
+    working tree is internally valid; only the comparison with the tagged baseline
+    can object, which is what makes PC-RELEASE-PAYLOAD-MUTATED the finding under test
+    rather than a repository-integrity or graph finding raised earlier.
+    """
+    payload_root = repository / "standards/demo/versions/1.2"
+    (payload_root / "README.md").write_text("# Demo (mutated)\n", encoding="utf-8")
+    refresh_declared_file_digest(repository / "standards/demo", "README.md")
+    aggregate = re.findall(
+        r'digest = "(sha256:[0-9a-f]{64})"',
+        (repository / "standards/demo/standard.toml").read_text(encoding="utf-8"),
+    )[-1]
+    catalog_path = repository / "catalogs/5.toml"
+    catalog_path.write_text(
+        re.sub(
+            r'digest = "sha256:[0-9a-f]{64}"',
+            f'digest = "{aggregate}"',
+            catalog_path.read_text(encoding="utf-8"),
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_packages_check_release_staged__only_expected_pre_bump_codes__exits_zero(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    shutil.copytree(_FIXTURE, repository)
+    _create_released_fixture(repository)
+    # 5.3.0 against a 5.2.0 baseline with an unchanged catalog is the mid-train
+    # shape: no package-version advance yet, so classification is forbidden with
+    # PC-RELEASE-LEVEL — the exact red `--staged` exists to reclassify.
+    monkeypatch.setattr(package_cli, "package_version", lambda: "5.3.0")
+    monkeypatch.setattr(package_cli, "validate_release_consistency", _staged_consistency_stub)
+
+    assert (
+        run_packages(
+            [
+                "check-release",
+                "--root",
+                str(repository),
+                "--baseline",
+                "v5.2.0",
+                "--staged",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert payload["staged"] is True
+    assert payload["classification"] == "forbidden"
+    assert payload["expected_pre_bump"] == [
+        "PC-RELEASE-LEVEL",
+        "PC-RELEASE-PROJECT-VERSION",
+        "PC-RELEASE-PROJECTION",
+    ]
+    assert sorted(finding["code"] for finding in payload["findings"]) == [
+        "PC-RELEASE-LEVEL",
+        "PC-RELEASE-PROJECT-VERSION",
+        "PC-RELEASE-PROJECTION",
+    ]
+
+    assert (
+        run_packages(
+            [
+                "check-release",
+                "--root",
+                str(repository),
+                "--baseline",
+                "v5.2.0",
+                "--staged",
+            ]
+        )
+        == 0
+    )
+    captured = capsys.readouterr()
+    assert "3 expected pre-bump finding(s)" in captured.out
+    assert captured.err.count("EXPECTED-PRE-BUMP ") == 3
+    assert "ERROR " not in captured.err
+
+
+def test_packages_check_release_staged__payload_mutation__still_exits_one(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    shutil.copytree(_FIXTURE, repository)
+    _create_released_fixture(repository)
+    _mutate_released_payload(repository)
+    monkeypatch.setattr(package_cli, "package_version", lambda: "5.3.0")
+    monkeypatch.setattr(package_cli, "validate_release_consistency", _staged_consistency_stub)
+
+    assert (
+        run_packages(
+            [
+                "check-release",
+                "--root",
+                str(repository),
+                "--baseline",
+                "v5.2.0",
+                "--staged",
+                "--json",
+            ]
+        )
+        == 1
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert "PC-RELEASE-PAYLOAD-MUTATED" in {finding["code"] for finding in payload["findings"]}
+    assert "PC-RELEASE-PAYLOAD-MUTATED" not in payload["expected_pre_bump"]
+
+
+def test_packages_check_release_staged__non_expected_consistency_finding__exits_one(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    shutil.copytree(_FIXTURE, repository)
+    _create_released_fixture(repository)
+    monkeypatch.setattr(package_cli, "package_version", lambda: "5.2.1")
+    stale = PackageFinding(
+        code="PC-RELEASE-PACKAGE-CURRENT",
+        severity="error",
+        standard_id="demo",
+        version="1.2",
+        path="README.md",
+        identity="line:1:package-current",
+        message="package-current prose names a superseded version",
+        hint="refresh package-current prose",
+    )
+
+    def package_current_finding(
+        _root: Path,
+        _repository: PackageRepository,
+        *,
+        distribution_version: str,
+    ) -> tuple[PackageFinding, ...]:
+        del distribution_version
+        return (stale,)
+
+    monkeypatch.setattr(package_cli, "validate_release_consistency", package_current_finding)
+
+    assert (
+        run_packages(
+            [
+                "check-release",
+                "--root",
+                str(repository),
+                "--baseline",
+                "v5.2.0",
+                "--staged",
+                "--json",
+            ]
+        )
+        == 1
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert [finding["code"] for finding in payload["findings"]] == ["PC-RELEASE-PACKAGE-CURRENT"]
+
+
+def test_packages_check_release__without_staged__output_is_unchanged(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Pin that `--staged` is inert when absent: same JSON keys, same exit code."""
+    repository = tmp_path / "repository"
+    shutil.copytree(_FIXTURE, repository)
+    _create_released_fixture(repository)
+    monkeypatch.setattr(package_cli, "package_version", lambda: "5.3.0")
+    monkeypatch.setattr(package_cli, "validate_release_consistency", _staged_consistency_stub)
+
+    assert (
+        run_packages(
+            [
+                "check-release",
+                "--root",
+                str(repository),
+                "--baseline",
+                "v5.2.0",
+                "--json",
+            ]
+        )
+        == 1
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload) == {"ok", "findings"}
+    assert payload["ok"] is False
+    assert [finding["code"] for finding in payload["findings"]] == [
+        "PC-RELEASE-PROJECTION",
+        "PC-RELEASE-PROJECT-VERSION",
+    ]

@@ -48,6 +48,19 @@ _SEMVER_TAG = re.compile(r"^v?((0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)
 _PACKAGES_COMMAND_HELP = {
     "check-release": "compare working payloads with a released tag",
 }
+# The exact codes a correct mid-train tree reports before the release-prep bump:
+# `.standards/catalog.toml`, `.standards/lock.toml`, the catalog projection, and
+# pyproject's version all lag a landed payload cut by design. `--staged` labels
+# these and nothing else as expected; every other release code stays fatal, so a
+# real regression (payload mutation, digest replacement) cannot hide behind the
+# flag. Keep this set in step with docs/usage.md's `--staged` entry.
+_STAGED_EXPECTED_CODES = frozenset(
+    {
+        "PC-RELEASE-LEVEL",
+        "PC-RELEASE-PROJECTION",
+        "PC-RELEASE-PROJECT-VERSION",
+    }
+)
 
 
 class _ArgparseError(Exception):
@@ -149,20 +162,36 @@ def _validated_repositories(
     return repositories, tuple(sort_findings(findings))
 
 
-def _format_findings(findings: tuple[PackageFinding, ...]) -> str:
+def _format_findings(
+    findings: tuple[PackageFinding, ...],
+    *,
+    expected_codes: frozenset[str] = frozenset(),
+) -> str:
+    """Render findings one per line, labelling `expected_codes` as non-fatal.
+
+    `expected_codes` is empty on every path except `check-release --staged`, so
+    the default rendering — and therefore the byte-for-byte output of every
+    other command — is unchanged.
+    """
     if not findings:
         return "OK package repository"
     lines: list[str] = []
     for finding in findings:
         version = f"@{finding.version}" if finding.version else ""
+        label = "EXPECTED-PRE-BUMP" if finding.code in expected_codes else "ERROR"
         lines.append(
-            f"ERROR {finding.code} {finding.standard_id}{version} "
+            f"{label} {finding.code} {finding.standard_id}{version} "
             f"{finding.identity}: {finding.message}"
         )
     return "\n".join(lines)
 
 
-def _emit_findings(findings: tuple[PackageFinding, ...], *, json_mode: bool) -> int:
+def _emit_findings(
+    findings: tuple[PackageFinding, ...],
+    *,
+    json_mode: bool,
+    expected_codes: frozenset[str] = frozenset(),
+) -> int:
     if json_mode:
         print(
             json.dumps(
@@ -172,7 +201,7 @@ def _emit_findings(findings: tuple[PackageFinding, ...], *, json_mode: bool) -> 
         )
     else:
         stream = sys.stderr if findings else sys.stdout
-        print(_format_findings(findings), file=stream)
+        print(_format_findings(findings, expected_codes=expected_codes), file=stream)
     return 1 if findings else 0
 
 
@@ -348,9 +377,12 @@ def _run_check_release(argv: list[str]) -> int:
     parser.add_argument("--baseline", required=True)
     parser.add_argument("--previous-version")
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--staged", action="store_true")
     try:
         args = parser.parse_args(argv)
         json_mode = cast("bool", args.json)
+        staged = cast("bool", args.staged)
+        expected_codes = _STAGED_EXPECTED_CODES if staged else frozenset[str]()
         root = _safe_root(cast("Path", args.root))
         baseline = cast("str", args.baseline)
         previous_version = _previous_version(
@@ -369,30 +401,57 @@ def _run_check_release(argv: list[str]) -> int:
             repository,
             distribution_version=current_version,
         )
-        if consistency_findings:
-            return _emit_findings(consistency_findings, json_mode=json_mode)
+        # A consistency finding outside the staged set means the tree is wrong for
+        # any phase, so `--staged` stops here exactly as the unstaged run does; only
+        # a purely expected pre-bump result continues into classification, where the
+        # baseline comparison is the evidence that matters mid-train.
+        if consistency_findings and any(
+            finding.code not in expected_codes for finding in consistency_findings
+        ):
+            return _emit_findings(
+                consistency_findings, json_mode=json_mode, expected_codes=expected_codes
+            )
+        carried = consistency_findings if staged else ()
         previous = load_git_release_snapshot(root, baseline, previous_major)
         result = classify_catalog_diff(
             previous,
             _release_snapshot(repository),
             ToolVersions(previous=previous_version, current=current_version),
         )
+        findings = tuple(sort_findings([*carried, *result.findings]))
+        blocking = tuple(finding for finding in findings if finding.code not in expected_codes)
+        # `--staged` exits on the findings that survive the expected set rather than on
+        # the classification: mid-train the classification is legitimately `forbidden`
+        # because pyproject still carries the released version. Unstaged keeps the
+        # historical rule verbatim.
+        failed = (
+            bool(blocking) if staged else result.classification is ReleaseClassification.FORBIDDEN
+        )
         if json_mode:
-            print(
-                json.dumps(
-                    {
-                        "ok": result.classification is not ReleaseClassification.FORBIDDEN,
-                        "classification": result.classification.value,
-                        "findings": findings_to_jsonable(result.findings),
-                    },
-                    indent=2,
+            document: dict[str, object] = {
+                "ok": not failed,
+                "classification": result.classification.value,
+                "findings": findings_to_jsonable(findings),
+            }
+            if staged:
+                document["staged"] = True
+                document["expected_pre_bump"] = sorted(
+                    {finding.code for finding in findings if finding.code in expected_codes}
                 )
-            )
+            print(json.dumps(document, indent=2))
         else:
             print(f"Release classification: {result.classification.value}")
-            if result.findings:
-                print(_format_findings(result.findings), file=sys.stderr)
-        return 1 if result.classification is ReleaseClassification.FORBIDDEN else 0
+            if staged and not failed:
+                print(
+                    f"Staged: {len(findings) - len(blocking)} expected pre-bump finding(s); "
+                    "no release-blocking finding."
+                )
+            if findings:
+                print(
+                    _format_findings(findings, expected_codes=expected_codes),
+                    file=sys.stderr,
+                )
+        return 1 if failed else 0
     except _ArgparseError as exc:
         return _emit_error("--json" in argv, "bad_args", str(exc))
     except (OSError, ValueError, PackageContractError) as exc:
