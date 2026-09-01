@@ -6,7 +6,7 @@ description: 'Index of research reports maintained with the research corpus.'
 doc_type: 'index'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-08-31'
+updated: '2026-09-01'
 tags:
   - 'research'
   - 'index'
@@ -18,6 +18,7 @@ related: []
 
 | id | title | created | updated | status | confidence | tags | related |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| research-9bxmq3-release-train-wall-clock-options | Release-Train Wall-Clock Options | 2026-09-01 | 2026-09-01 | active | high | release-gate wall-clock ci pytest-xdist rexec | docs/research/2026-07-31-release-gate-wall-clock-spike.md |
 | research-s8hhpt-open-issue-resolution-program-closeout-evidence | Open-Issue Resolution Program Closeout Evidence | 2026-08-12 | 2026-08-12 | active | high | release closeout issues | docs/research/2026-08-01-project-spec-feature-release-evidence.md |
 | research-gw67x6-project-spec-feature-release-evidence | Project Specification feature release evidence | 2026-08-12 | 2026-08-12 | active | high | release validation | CHANGELOG.md |
 | research-2zxxmq-project-specification-1-9-conformance-dogfood-evidence | Project Specification 1.9 Conformance Dogfood Evidence | 2026-08-11 | 2026-08-11 | active | high | project-spec conformance dogfood verification-evidence | docs/plans/2026-08-01-project-spec-conformance-plan.md |
