@@ -58,9 +58,9 @@ A proof that reappears in two layers is a defect in this table, not thoroughness
 | R1 | Push `testing`; fast-forward `main` from `testing` | — | no (local `main` re-pointable) |
 | R2 | `release_prep.py $RELEASE` (bump/relock/changelog), then `--apply-pins` (dry run, then applied) | L2 | no |
 | R3 | Hand pin bumps the allow-list deliberately excludes (judgment sites only) | — | no |
-| R4 | `make release-reconcile` (dogfooded control-plane reconcile + validate) | L1 (validators) | no |
+| R4 | `make release-reconcile` (dogfooded control-plane reconcile + validate) — **after R6a** | L1 (validators) | no |
 | R5 | `make release-golden RELEASE=$RELEASE` | L2 | no |
-| R6a | Rebuild the candidate wheel/sdist locally; record artifact digests | — | no |
+| R6a | Rebuild the candidate wheel/sdist locally; record artifact digests — **runs before R4** | — | no |
 | R6b | Worker environment parity (`rexec --shell 'uv sync --all-groups --locked'`) | — | no |
 | R6c | Fast gate set: `check-release --staged`, validators, markdown, `make go-check`, targeted pytest | L2 / L1 | no |
 | R7 | The release commit, on `main` | — | no (reset available) |
@@ -134,6 +134,8 @@ ROLLBACK: `git checkout -- <each file this step touched>`.
 
 ## R4 — reconcile the dogfooded control plane
 
+**Prerequisite: R6a has rebuilt the wheel runtime from the bumped tree.** Reconcile takes the `release` it writes from the `project-standards` on `PYTHONPATH`; a runtime built before R2 still reports `$PREV`, so pass 1 renders `.standards/catalog.toml` with the outgoing release number and the _next_ reconcile refuses with `PC-RELEASE-LEVEL` — exactly the mid-train render trap below, self-inflicted (v5.29.0 train, 2026-09-01). Confirm `PYTHONPATH=$PWD/build/wheel-runtime uv run project-standards --version` prints `$RELEASE` before running this step.
+
 ```bash
 make release-reconcile
 ```
@@ -158,6 +160,8 @@ OBSERVABLE: the diff is exactly two lines — the `release` string and the deriv
 ROLLBACK: `git checkout -- tests/fixtures/package_contract/valid/full/expected/catalog.toml`.
 
 ## R6a — candidate wheel + sdist (local — do not route through rexec)
+
+Run this immediately after R2/R3 and before R4: R4 and R6c both read the runtime this step extracts, and the step keeps its number only so earlier release records stay citable.
 
 ```bash
 uv sync --all-groups --locked
@@ -224,7 +228,7 @@ ROLLBACK: `git reset --hard <PRE_RELEASE_MAIN>` — valid until R9.
 
 ## R6d — the full battery, on the release commit (detached)
 
-Run after R7: the hygiene lane reads the Git index, which cannot see uncommitted work. Launch it detached yourself (`setsid nohup … &`) — never through a backgrounded tool call or a worker leg that the harness can kill mid-run — and keep the tree absolutely quiet for the whole run.
+Run after R7: the hygiene lane reads the Git index, which cannot see uncommitted work. Under D5 (one integrated gate) this step is already satisfied when the same `--full` battery ran green on the `testing` tip R1 fast-forwarded from and `git diff --stat <that tip> main` shows only R2–R5 paths (version bump, lock, changelog, allow-listed pins, the reconciled managed surface, the golden fixture); then R6c on the release commit is the honest cheap set and a second battery adds nothing. Run it here only when the release commit carries anything else. Launch it detached yourself (`setsid nohup … &`) — never through a backgrounded tool call or a worker leg that the harness can kill mid-run — and keep the tree absolutely quiet for the whole run.
 
 ```bash
 setsid nohup rexec --env VERIFY_FULL_COMPAT_WORKERS=16 -- scripts/verify.sh --full \
