@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/safetext"
 )
 
 // EnvelopeSchemaVersion is the DR-004 envelope version. It is the JSON contract's own
@@ -166,6 +167,7 @@ func WriteEnvelope(env Envelope, mode OutputMode, e *Env) error {
 	if env.Steps == nil {
 		env.Steps = []Step{}
 	}
+	env = sanitizeEnvelope(env)
 	if mode == OutputJSON {
 		encoded, err := MarshalJSON(env)
 		if err != nil {
@@ -175,6 +177,43 @@ func WriteEnvelope(env Envelope, mode OutputMode, e *Env) error {
 		return err
 	}
 	return writeHumanEnvelope(env, e.Stdout)
+}
+
+// sanitizeEnvelope encodes every free-text member of the envelope through safetext.
+//
+// This is the envelope's own boundary against untrusted GitHub text, and it is the last
+// one: a finding message may quote an issue title, a PR body, or — through a step message
+// or a wrapped API error — up to 200 bytes of a non-2xx response body, none of which this
+// package can distinguish from text the tool wrote itself. Through 1.9 sanitizing was the
+// business of the summary/receipt renderers only, so a hostile body reaching a finding or
+// a step printed its ANSI or bidi payload straight to the terminal and into the JSON.
+//
+// Both output modes are covered, and JSON deliberately so: a consumer piping the envelope
+// through `jq` into a terminal is exactly as exposed as the human view.
+//
+// The copy is not optional. Findings and Steps are slices the caller still owns, so
+// writing sanitized values in place would mutate the caller's findings — the ones a
+// command may go on to test or re-render. Codes, categories, kinds, and numbers are left
+// alone: they come from this tool's own closed vocabularies, never from GitHub.
+func sanitizeEnvelope(env Envelope) Envelope {
+	env.Target.Repository = safetext.SanitizeText(env.Target.Repository)
+	env.Target.URL = safetext.SanitizeText(env.Target.URL)
+
+	findings := make([]Finding, len(env.Findings))
+	for i, finding := range env.Findings {
+		finding.Message = safetext.SanitizeText(finding.Message)
+		finding.Remediation = safetext.SanitizeText(finding.Remediation)
+		findings[i] = finding
+	}
+	env.Findings = findings
+
+	steps := make([]Step, len(env.Steps))
+	for i, step := range env.Steps {
+		step.Message = safetext.SanitizeText(step.Message)
+		steps[i] = step
+	}
+	env.Steps = steps
+	return env
 }
 
 // writeHumanEnvelope renders the compressed human view: one line per work item per

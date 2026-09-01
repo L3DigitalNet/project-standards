@@ -27,7 +27,7 @@ const (
 	fixtureToken  = "gho_fixturetokenvalue"
 	fixtureBase   = "https://api.github.test"
 	fixturePolicy = "organization = \"L3DigitalNet\"\npackage_version = \"1.0\"\n"
-	fixtureGit    = "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = git@github.com:L3DigitalNet/example-repo.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n"
+	fixtureGit    = "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = git@github.test:L3DigitalNet/example-repo.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n"
 )
 
 // The JSON below is the same fixture work-item set as fixtureSnapshot, expressed as the

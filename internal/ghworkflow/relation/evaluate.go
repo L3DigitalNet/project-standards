@@ -503,11 +503,37 @@ func (e *evaluation) mergedFinalSync() {
 	})
 }
 
+// trustedAuthor reports whether login may author disposition evidence.
+//
+// Case-insensitive because GitHub preserves the case of a login but resolves it
+// case-insensitively, so "OctoCat" and "octocat" are one account and a case-sensitive
+// comparison would discard the tool's own record. An empty author is never trusted: it is
+// what an unattributed read produces, and unattributed evidence is exactly what this guard
+// exists to reject.
+func (e *evaluation) trustedAuthor(login string) bool {
+	if login == "" {
+		return false
+	}
+	for _, trusted := range e.topology.TrustedAuthors {
+		if strings.EqualFold(strings.TrimSpace(trusted), login) {
+			return true
+		}
+	}
+	return false
+}
+
 // finalDisposition applies FR-034 and ERR-015 to a closed, unmerged Final: exactly one
 // well-formed disposition record is required, and its value must agree with the Issue.
 func (e *evaluation) finalDisposition() {
 	var values []string
 	for _, comment := range e.topology.PullRequest.Comments {
+		// Evidence is attributed, not merely present. A comment from anyone else is
+		// ordinary discussion however exactly it imitates the record's shape: honoring it
+		// would let a third party either pin a permanent CONFLICT on the PR or supply a
+		// terminal outcome the operator never chose.
+		if !e.trustedAuthor(comment.Author) {
+			continue
+		}
 		for _, match := range dispositionRecord.FindAllStringSubmatch(comment.Body, -1) {
 			values = append(values, strings.TrimSpace(match[1]))
 		}

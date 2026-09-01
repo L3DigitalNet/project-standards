@@ -30,7 +30,7 @@ const (
 
 	fixturePolicy = "organization = \"L3DigitalNet\"\npackage_version = \"1.0\"\n"
 	fixtureGit    = "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\t" +
-		"url = git@github.com:L3DigitalNet/example-repo.git\n"
+		"url = git@github.test:L3DigitalNet/example-repo.git\n"
 )
 
 // fixtureSchema reproduces the delivered org-schema.yaml: it is the oracle every
@@ -425,6 +425,11 @@ func newHarness(t *testing.T) *harness {
 	}
 
 	routes := map[string]ghtest.Response{
+		// The authenticated actor. From 1.10 a disposition record counts as evidence only
+		// when this login authored it, so the fixture answers with the login the canned
+		// comment bodies use — a different value here would make every disposition in the
+		// suite third-party text.
+		"GET /user": {Status: http.StatusOK, Body: `{"login":"agent"}`},
 		"GET /orgs/" + fixtureOrg + "/issue-fields":                 {Status: http.StatusOK, Body: fixtureOrgFields},
 		"GET " + fixtureRepo + "/issues/12":                         {Status: http.StatusOK, Body: issueReady},
 		"GET " + fixtureRepo + "/issues/14":                         {Status: http.StatusOK, Body: issueNotReady},

@@ -164,8 +164,8 @@ func (c *Client) MarkPullRequestReady(ctx context.Context, nodeID string) error 
 	return c.graphql(ctx, markReadyMutation, map[string]any{"id": nodeID}, nil)
 }
 
-const enableAutoMergeMutation = `mutation($id:ID!,$method:PullRequestMergeMethod!){
-  enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:$method}){
+const enableAutoMergeMutation = `mutation($id:ID!,$method:PullRequestMergeMethod!,$oid:GitObjectID!){
+  enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:$method,expectedHeadOid:$oid}){
     pullRequest{ id autoMergeRequest{ mergeMethod } }
   }
 }`
@@ -175,16 +175,27 @@ const enableAutoMergeMutation = `mutation($id:ID!,$method:PullRequestMergeMethod
 // Arming auto-merge hands the outcome to GitHub, which is why FR-033 keeps observation
 // responsibility with the caller: this call succeeding means the request was accepted, not
 // that the pull request merged.
-func (c *Client) EnableAutoMerge(ctx context.Context, nodeID, method string) error {
+//
+// expectedHeadOid carries the same guarantee `sha` gives MergePullRequest, and matters
+// more here: the window between the caller's gate read and the actual merge is owned by
+// GitHub and can be arbitrarily long, so without it a push landing after this call merges
+// content that never passed the Merge phase. It is required rather than optional — an
+// empty value is refused locally — because "arm auto-merge on whatever the head turns out
+// to be" is not a request this tool has any reason to make. GitHub answers a head that has
+// moved with a mutation error, which the caller resolves by revalidating.
+func (c *Client) EnableAutoMerge(ctx context.Context, nodeID, method, expectedHeadOid string) error {
 	if nodeID == "" {
 		return fmt.Errorf("no pull-request node id to enable auto-merge on")
+	}
+	if expectedHeadOid == "" {
+		return fmt.Errorf("no validated head SHA to arm auto-merge against")
 	}
 	enum, err := graphqlMergeMethod(method)
 	if err != nil {
 		return err
 	}
 	return c.graphql(ctx, enableAutoMergeMutation,
-		map[string]any{"id": nodeID, "method": enum}, nil)
+		map[string]any{"id": nodeID, "method": enum, "oid": expectedHeadOid}, nil)
 }
 
 // MergeResult is GitHub's answer to a merge request.

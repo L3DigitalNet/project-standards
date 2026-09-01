@@ -1,0 +1,1 @@
+../../../../../../../standards/github-workflow/versions/1.10/skills/github-workflow/SKILL.md

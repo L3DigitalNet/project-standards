@@ -105,6 +105,14 @@ func (t *target) resolve(env *cli.Env) (render.Repository, error) {
 		if err != nil {
 			return render.Repository{}, fmt.Errorf("%w; pass --repo owner/name", err)
 		}
+		// Every subcommand resolving through here writes. A checkout whose origin is not
+		// the host this client talks to would otherwise have its `owner/name` applied to
+		// a same-named repository on the API host instead — a write to a repository the
+		// operator never addressed. It is refused as a usage error, which is what an
+		// identity refusal is on this path.
+		if err := repo.VerifyAPIHost(env.BaseURL); err != nil {
+			return render.Repository{}, cli.Usagef("%v", err)
+		}
 		return repo, nil
 	}
 	if strings.Contains(*t.repo, "/") {

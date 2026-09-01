@@ -159,7 +159,11 @@ func dispositionSteps(ctx context.Context, client *ghapi.Client, gate *prGate,
 	if err != nil {
 		return err
 	}
-	recorded := recordedDispositions(comments)
+	actor, err := client.AuthenticatedLogin(ctx)
+	if err != nil {
+		return err
+	}
+	recorded := recordedDispositions(comments, actor)
 	switch {
 	case len(recorded) == 0:
 		body := fmt.Sprintf("Final-Disposition: %s\nReason: %s\n", outcome, reason)
@@ -291,13 +295,23 @@ func convergeDisposition(ctx context.Context, client *ghapi.Client, gate *prGate
 }
 
 // recordedDispositions returns the distinct disposition values already recorded on the
-// pull request, in first-seen order. Duplicates of one value are not a contradiction —
-// ERR-015 distinguishes repeated evidence from conflicting evidence, and an interrupted
-// rerun may legitimately have written the same record twice.
-func recordedDispositions(comments []ghapi.Comment) []string {
+// pull request BY actor, in first-seen order. Duplicates of one value are not a
+// contradiction — ERR-015 distinguishes repeated evidence from conflicting evidence, and
+// an interrupted rerun may legitimately have written the same record twice.
+//
+// Only the authenticated actor's comments count, matching relation.trustedAuthor, which
+// applies the same rule to the same evidence on the read-only gate path — both ends must
+// move together or `check --through post-merge` and `close --pr` disagree about the same
+// pull request. Without the filter a third party's comment reaches the conflict branch
+// above, where it permanently blocks the record this command exists to write, or matches
+// the requested outcome and suppresses the operator's own `--reason`.
+func recordedDispositions(comments []ghapi.Comment, actor string) []string {
 	seen := map[string]bool{}
 	var values []string
 	for _, comment := range comments {
+		if actor == "" || !strings.EqualFold(comment.AuthorLogin(), actor) {
+			continue
+		}
 		for _, line := range strings.Split(comment.Body, "\n") {
 			rest, ok := strings.CutPrefix(strings.TrimSpace(line), "Final-Disposition:")
 			if !ok {

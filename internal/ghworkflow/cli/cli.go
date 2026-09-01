@@ -54,7 +54,7 @@ const (
 // The value tracks the payload version it ships with (NFR-005): stamp, unstamped
 // fallback, and build output path advance together, so an unstamped build never claims a
 // version the payload no longer is.
-const DefaultVersion = "1.9"
+const DefaultVersion = "1.10"
 
 // Version is the tool version `help` prints, and the only surface that reports it. It is
 // a variable so the reproducible build can stamp it (spec NFR-005); cmd/gh-workflow owns
@@ -295,6 +295,17 @@ func MarshalJSON(v any) ([]byte, error) {
 // ResolveRepoFile finds rel by walking up from start, which is how the tool locates its
 // delivered artifacts with no arguments (IR-005) regardless of where in a consumer
 // checkout the agent happened to invoke it.
+//
+// The walk stops at the enclosing checkout root — the first directory holding a `.git`
+// entry, which is inspected and then ends the search. Through 1.9 it continued to the
+// filesystem root, so `policy.toml` or `org-schema.yaml` planted in any ancestor of the
+// checkout was picked up silently: those two files name the organization the tool
+// addresses and the vocabulary it validates against, so an ancestor copy redirects writes
+// and widens accepted values without the operator seeing a different path.
+//
+// Outside a checkout the search is refused rather than widened. There is no root to bound
+// it, and the delivered artifacts live inside a consumer checkout by construction; an
+// explicit --policy/--schema path remains the way to name a file anywhere else.
 func ResolveRepoFile(start, rel string) (string, error) {
 	dir, err := filepath.Abs(start)
 	if err != nil {
@@ -302,12 +313,17 @@ func ResolveRepoFile(start, rel string) (string, error) {
 	}
 	for {
 		candidate := filepath.Join(dir, rel)
-		if info, err := os.Stat(candidate); err == nil && info.Mode().IsRegular() {
+		if info, statErr := os.Stat(candidate); statErr == nil && info.Mode().IsRegular() {
 			return candidate, nil
+		}
+		if _, statErr := os.Stat(filepath.Join(dir, ".git")); statErr == nil {
+			return "", fmt.Errorf("could not find %s in %s or any directory up to the checkout root %s",
+				rel, start, dir)
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", fmt.Errorf("could not find %s in %s or any parent directory", rel, start)
+			return "", fmt.Errorf("could not find %s in %s or any parent directory up to the checkout root",
+				rel, start)
 		}
 		dir = parent
 	}

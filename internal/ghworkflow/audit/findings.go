@@ -13,6 +13,7 @@ import (
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/orgschema"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/safetext"
 )
 
 // Status is a finding class. These four are the vocabulary FR-016 requires the report to
@@ -102,7 +103,17 @@ func (r *Report) HasDrift() bool {
 // runs, and Go map iteration order would make that useless.
 func Compare(schema *orgschema.Schema, liveTypes []ghapi.IssueType, liveFields []ghapi.IssueField) []Finding {
 	findings := compareIssueTypes(schema.IssueTypes, liveTypes)
-	return append(findings, compareIssueFields(schema.IssueFields, liveFields)...)
+	findings = append(findings, compareIssueFields(schema.IssueFields, liveFields)...)
+	// Every name and detail below carries live organization text — an Issue Type name, a
+	// field name, a single_select option — that an organization owner authored and this
+	// tool prints straight to a terminal. Sanitizing once here rather than per renderer
+	// covers the human report and the JSON alike; the encoder is idempotent, so baseline
+	// names passing through a second time are unchanged.
+	for i := range findings {
+		findings[i].Name = safetext.SanitizeText(findings[i].Name)
+		findings[i].Detail = safetext.SanitizeText(findings[i].Detail)
+	}
+	return findings
 }
 
 func compareIssueTypes(baseline []string, live []ghapi.IssueType) []Finding {

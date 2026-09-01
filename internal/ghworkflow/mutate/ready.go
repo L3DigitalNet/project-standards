@@ -156,6 +156,33 @@ func readySteps(ctx context.Context, client *ghapi.Client, gate *prGate, rec *st
 		rec.skip(stepVerifyReady, "no transition to verify")
 		return nil
 	}
+	// The conditional guard on the gate-read/mutation window (#234 item 4). The gate was
+	// evaluated against a specific head; marking the PR ready admits it for review, and
+	// GraphQL's markPullRequestReadyForReview takes no expectedHeadOid, so the head is
+	// re-observed here and the transition refused if it moved. Without this a push landing
+	// after the gate read is carried into review as though it had passed.
+	//
+	// Residual race, accepted deliberately: this is a compare-then-act, not an atomic
+	// conditional write, so a push landing between this read and the mutation below is
+	// still admitted. GitHub offers no conditional form of this mutation, so the window
+	// cannot be closed here — it is narrowed from "the whole gate evaluation" to one round
+	// trip, and `merge` (which does take a head SHA) is the gate that admits content.
+	current, err := client.GetPullRequest(ctx, repo.Owner, repo.Name, number)
+	if err != nil {
+		rec.fail(stepMarkReady, "the head could not be re-observed; the pull request is still a draft")
+		return err
+	}
+	if current.Head.SHA != gate.PR.Head.SHA {
+		rec.fail(stepMarkReady, "the head moved after the gate was evaluated; the pull request is still a draft")
+		envelope.Findings = append(envelope.Findings, relation.Finding{
+			Code: "GHW-PR-READY-HEAD-MOVED", Phase: relation.PhaseReady,
+			Category: relation.CategoryAdmissionBlocked, Effect: relation.EffectBlocksReady,
+			Kind: relation.KindPullRequest, Number: number,
+			Message:     "the branch head changed between the Ready gate and the transition, so the gate no longer describes this pull request",
+			Remediation: "Rerun `gh-workflow ready --pr N`; the gate is re-evaluated against the new head.",
+		})
+		return nil
+	}
 	if err := client.MarkPullRequestReady(ctx, gate.NodeID); err != nil {
 		rec.fail(stepMarkReady, "the pull request is still a draft")
 		return err

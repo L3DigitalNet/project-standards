@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -26,6 +25,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/safetext"
 )
 
 // DefaultBaseURL is the public GitHub REST endpoint.
@@ -78,6 +79,12 @@ type APIError struct {
 	Status  int
 	URL     string
 	Message string
+	// RateLimited records that this response was still a rate-limit refusal after the
+	// retries in ratelimit.go were spent. It exists because status alone cannot say so:
+	// GitHub answers both a permission refusal and a primary rate limit with 403, and
+	// only the headers — read at the transport step, gone by the time a caller sees this
+	// error — tell them apart.
+	RateLimited bool
 }
 
 // Error renders the failed request the way the operator would reproduce it.
@@ -87,11 +94,19 @@ func (e *APIError) Error() string {
 
 // Unwrap classifies credential rejections so callers can report an authentication
 // precondition failure without matching on status codes themselves.
+//
+// A rate-limit refusal is classified first and separately: reporting an exhausted quota
+// as ErrUnauthorized sends the operator to re-authenticate a token that was never
+// rejected, which is the misdiagnosis ratelimit.go exists to end.
 func (e *APIError) Unwrap() error {
-	if e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden {
+	switch {
+	case e.RateLimited:
+		return ErrRateLimited
+	case e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden:
 		return ErrUnauthorized
+	default:
+		return nil
 	}
-	return nil
 }
 
 // Client reads organization schema from the GitHub REST API.
@@ -99,6 +114,7 @@ type Client struct {
 	baseURL string
 	token   string
 	http    *http.Client
+	viewerCache
 }
 
 // NewClient returns a client authenticating with token. An empty baseURL means the
@@ -206,27 +222,24 @@ type pageMeta struct {
 
 // get performs the one and only GET request shape this package can build.
 func (c *Client) get(ctx context.Context, endpoint string) (body []byte, meta pageMeta, err error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	resp, body, limited, err := c.doWithRetry(ctx, "GET "+endpoint, func() (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return nil, fmt.Errorf("building the request for %s: %w", endpoint, err)
+		}
+		req.Header.Set("Authorization", "Bearer "+c.token)
+		req.Header.Set("Accept", acceptJSON)
+		req.Header.Set(apiVersionHeader, apiVersion)
+		req.Header.Set("User-Agent", userAgent)
+		return req, nil
+	})
 	if err != nil {
-		return nil, pageMeta{}, fmt.Errorf("building the request for %s: %w", endpoint, err)
-	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Accept", acceptJSON)
-	req.Header.Set(apiVersionHeader, apiVersion)
-	req.Header.Set("User-Agent", userAgent)
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, pageMeta{}, fmt.Errorf("%w: GET %s: %w", ErrUnreachable, endpoint, err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	body, err = io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
-	if err != nil {
-		return nil, pageMeta{}, fmt.Errorf("%w: reading the response for GET %s: %w", ErrUnreachable, endpoint, err)
+		return nil, pageMeta{}, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, pageMeta{}, &APIError{Status: resp.StatusCode, URL: endpoint, Message: apiMessage(body)}
+		return nil, pageMeta{}, &APIError{
+			Status: resp.StatusCode, URL: endpoint, Message: apiMessage(body), RateLimited: limited,
+		}
 	}
 	next, err := c.nextPageURL(resp.Header.Get("Link"))
 	if err != nil {
@@ -301,14 +314,21 @@ func originHost(u *url.URL) string {
 
 // apiMessage extracts GitHub's own error text, falling back to a bounded excerpt so a
 // stray HTML error page cannot flood the operator's terminal.
+//
+// Every path out of here is sanitized, because this text is attacker-reachable: the body
+// of a non-2xx response is not necessarily GitHub's own JSON — it may come from a proxy,
+// or from a repository-scoped endpoint echoing content — and it is carried in an error
+// that surfaces on the terminal and inside envelope step messages. cli.WriteEnvelope
+// sanitizes again at its own boundary; the encoder is idempotent, and neither layer may
+// assume the other ran.
 func apiMessage(body []byte) string {
 	var payload struct {
 		Message string `json:"message"`
 	}
 	if err := json.Unmarshal(body, &payload); err == nil && payload.Message != "" {
-		return payload.Message
+		return safetext.SanitizeText(payload.Message)
 	}
-	text := strings.TrimSpace(string(body))
+	text := safetext.SanitizeText(strings.TrimSpace(string(body)))
 	if len(text) > maxMessageBytes {
 		// Cutting at a fixed byte offset can land inside a multi-byte rune, and the half
 		// rune prints as U+FFFD: the operator reads corruption where the tool meant to

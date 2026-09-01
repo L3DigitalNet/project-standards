@@ -198,7 +198,9 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 		rec.skip(stepEnableAutoMerge, "the pull request is already merged")
 	case auto:
 		rec.skip(stepMerge, "--auto arms GitHub's auto-merge instead of merging now")
-		if err := client.EnableAutoMerge(ctx, gate.NodeID, method); err != nil {
+		// The head SHA the gate validated is what auto-merge is armed against, so a push
+		// landing while GitHub holds the request cannot be merged as though it had passed.
+		if err := client.EnableAutoMerge(ctx, gate.NodeID, method, gate.PR.Head.SHA); err != nil {
 			rec.fail(stepEnableAutoMerge, "auto-merge was not armed; the pull request is unchanged")
 			return err
 		}

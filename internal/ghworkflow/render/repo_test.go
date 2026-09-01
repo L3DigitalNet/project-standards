@@ -114,3 +114,37 @@ func TestParseRepository(t *testing.T) {
 		t.Errorf("ParseRepository() = %+v", repo)
 	}
 }
+
+// #234 item 5: an origin on another Git host still yields a well-formed owner/name pair,
+// and every request the tool then makes goes to the API host — so without this comparison
+// a same-named repository on GitHub is what actually gets written.
+func TestVerifyAPIHostRefusesAForeignOrigin(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		host    string
+		apiBase string
+		wantErr bool
+	}{
+		{name: "github.com against the public API", host: "github.com", apiBase: "https://api.github.com"},
+		{name: "enterprise host and its own API path", host: "ghe.example.com", apiBase: "https://ghe.example.com/api/v3"},
+		{name: "explicit --repo carries no host", host: "", apiBase: "https://api.github.com"},
+		{name: "foreign origin", host: "gitlab.com", apiBase: "https://api.github.com", wantErr: true},
+		// A suffix match would accept this one; the rule is equality or the `api.` prefix.
+		{name: "lookalike origin", host: "evil-github.com", apiBase: "https://api.github.com", wantErr: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			repo := render.Repository{Owner: "L3DigitalNet", Name: "example-repo", Host: tc.host}
+			err := repo.VerifyAPIHost(tc.apiBase)
+			if tc.wantErr && err == nil {
+				t.Fatalf("VerifyAPIHost(%q) with origin %q = nil, want a refusal", tc.apiBase, tc.host)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("VerifyAPIHost(%q) with origin %q = %v, want nil", tc.apiBase, tc.host, err)
+			}
+		})
+	}
+}

@@ -295,6 +295,15 @@ func LoadWith(ctx context.Context, client *ghapi.Client, owner, name string,
 		if err != nil {
 			return nil, err
 		}
+		// The actor is resolved before the evidence is handed to the engine, and its
+		// absence fails the read rather than degrading: the engine trusts no author it was
+		// not given, so continuing here would silently evaluate the disposition predicate
+		// with every comment discarded and report a missing record that exists.
+		actor, err := client.AuthenticatedLogin(ctx)
+		if err != nil {
+			return nil, err
+		}
+		topology.TrustedAuthors = []string{actor}
 		for _, comment := range comments {
 			topology.PullRequest.Comments = append(topology.PullRequest.Comments, relation.Comment{
 				Author: comment.AuthorLogin(), Body: comment.Body, CreatedAt: comment.CreatedAt,

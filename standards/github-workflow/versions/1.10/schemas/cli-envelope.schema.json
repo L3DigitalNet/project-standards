@@ -1,0 +1,113 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "gh-workflow --output json envelope",
+	"description": "The single JSON shape every gh-workflow subcommand emits under --output json (spec DR-004). This documents the tool's own output contract for consumers that parse it; it is not a control-plane provider schema, and findings.schema.json remains the schema the render, validate, verify, and drift-check providers are validated against. Kept in step with internal/ghworkflow/cli/envelope.go and internal/ghworkflow/relation/model.go, whose constants are authoritative: a vocabulary added there must be added here in the same change.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"schema_version",
+		"command",
+		"result",
+		"target",
+		"gate",
+		"findings",
+		"steps"
+	],
+	"properties": {
+		"schema_version": { "const": "1" },
+		"command": {
+			"enum": [
+				"audit",
+				"check",
+				"close",
+				"merge",
+				"new",
+				"ready",
+				"receipt",
+				"reopen",
+				"set",
+				"summary"
+			]
+		},
+		"result": { "enum": ["clear", "domain-finding", "usage", "operational-failure"] },
+		"target": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["kind"],
+			"properties": {
+				"kind": { "enum": ["issue", "pull_request", "repository", "organization"] },
+				"number": { "type": "integer" },
+				"repository": { "type": "string" },
+				"url": { "type": "string" }
+			}
+		},
+		"gate": {
+			"description": "The evaluated phase, or null when the command is not a gate. Never an empty string: an out-of-vocabulary phase value would break a strict consumer.",
+			"type": ["string", "null"],
+			"enum": ["structural", "ready", "merge", "post-merge", null]
+		},
+		"findings": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": [
+					"code",
+					"phase",
+					"category",
+					"effect",
+					"kind",
+					"number",
+					"message",
+					"remediation"
+				],
+				"properties": {
+					"code": {
+						"description": "GHW-{kind}-{phase}-{invariant}. Stable, and never reused for a different invariant.",
+						"type": "string",
+						"pattern": "^GHW-(ISSUE|PR)-(STRUCTURAL|READY|MERGE|POSTMERGE)-[A-Z0-9-]+$"
+					},
+					"phase": { "enum": ["structural", "ready", "merge", "post-merge"] },
+					"category": {
+						"description": "Listed in FR-030 display order, which is the order every attention list presents.",
+						"enum": [
+							"Blocked",
+							"Needs definition",
+							"PR admission blocked",
+							"Synchronization required",
+							"Disposition required",
+							"Target date passed"
+						]
+					},
+					"effect": {
+						"enum": [
+							"blocks-ready",
+							"blocks-merge",
+							"requires-synchronization",
+							"requires-disposition",
+							"evidence-integrity",
+							"advisory"
+						]
+					},
+					"kind": { "enum": ["issue", "pull_request"] },
+					"number": { "type": "integer" },
+					"message": { "type": "string" },
+					"remediation": { "type": "string" }
+				}
+			}
+		},
+		"steps": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["name", "status"],
+				"properties": {
+					"name": { "type": "string" },
+					"status": { "enum": ["completed", "skipped", "pending", "failed"] },
+					"message": { "type": "string" }
+				}
+			}
+		}
+	}
+}

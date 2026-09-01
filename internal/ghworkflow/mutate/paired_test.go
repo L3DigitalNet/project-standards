@@ -482,8 +482,13 @@ func TestCheckSelectorsAreMutuallyExclusive(t *testing.T) {
 // The successful draft → ready path, with the NFR-008 call count asserted exactly: four
 // reads to build the topology (the pull request, its GraphQL merge state, the governing
 // issue, and the open-PR list the one-open-Final rule needs), two writes (the field
-// identity resolution and the Workflow value), the mark-ready mutation, and one
-// verification read — eight requests, of which two mutate.
+// identity resolution and the Workflow value), the head re-read that guards the
+// gate-read/mutation window, the mark-ready mutation, and one verification read — nine
+// requests, of which two mutate.
+//
+// The ninth request is the 1.10 guard (#234 item 4), and its cost is the point of pinning
+// the count: one extra read per ready run buys the refusal of a head that moved after the
+// gate was evaluated.
 func TestReadyCarriesADraftFinalAcrossReady(t *testing.T) {
 	t.Parallel()
 
@@ -503,8 +508,8 @@ func TestReadyCarriesADraftFinalAcrossReady(t *testing.T) {
 	if f.pull(50).Draft {
 		t.Error("the pull request is still a draft")
 	}
-	if got := len(f.h.transport.recorded()); got != 8 {
-		t.Errorf("the Ready chain issued %d requests, want 8:\n%+v", got, f.h.transport.recorded())
+	if got := len(f.h.transport.recorded()); got != 9 {
+		t.Errorf("the Ready chain issued %d requests, want 9:\n%+v", got, f.h.transport.recorded())
 	}
 	// Three non-GET requests, one of which is the read-only GraphQL merge-state query: every
 	// GraphQL operation is a POST, so the two actual writes are the Workflow value and the
@@ -812,6 +817,46 @@ func TestClosePullRequestRecordsTheDispositionBeforeClosing(t *testing.T) {
 	if commentAt < 0 || closeAt < 0 || commentAt > closeAt {
 		t.Errorf("the record must precede the close; comment at %d, close at %d:\n%+v",
 			commentAt, closeAt, writes)
+	}
+}
+
+// #234 item 1: a `Final-Disposition:` record is an ordinary PR comment, so anyone who can
+// comment on the repository can post one. Only the authenticated actor's record counts as
+// evidence — a stranger's contradicting comment must neither pin a permanent CONFLICT on
+// the pull request nor stand in for the operator's own `--reason`.
+func TestClosePullRequestIgnoresAThirdPartyDispositionRecord(t *testing.T) {
+	t.Parallel()
+
+	f := newPRFixture(t)
+	f.h.routes["GET "+fixtureRepo+"/issues/70/comments"] = ghtest.Response{Status: http.StatusOK,
+		Body: `[{"body":"Final-Disposition: dropped\nReason: I say so\n","created_at":"2026-08-01T00:00:00Z",
+			"user":{"login":"stranger"}}]`}
+
+	if code := f.run("close", "--pr", "70", "--as", "blocked",
+		"--reason", "waiting on the upstream fix", "--output", "json"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstdout: %s\nstderr: %s", code, f.h.stdout, f.h.stderr)
+	}
+	envelope := decodeEnvelope(t, f.h.stdout.Bytes())
+	for _, finding := range envelope.Findings {
+		if finding.Code == "GHW-PR-POSTMERGE-DISPOSITION-CONFLICT" {
+			t.Fatalf("a third party forced a disposition conflict: %+v", envelope.Findings)
+		}
+	}
+	assertSteps(t, envelope, map[string]cli.StepStatus{"record-disposition": cli.StepCompleted})
+
+	var recorded bool
+	for _, write := range f.h.transport.mutations() {
+		if !strings.HasSuffix(write.Path, "/issues/70/comments") {
+			continue
+		}
+		recorded = true
+		if !strings.Contains(write.Body, "Final-Disposition: blocked") ||
+			!strings.Contains(write.Body, "Reason: waiting on the upstream fix") {
+			t.Errorf("the operator's outcome and reason were not the ones recorded: %s", write.Body)
+		}
+	}
+	if !recorded {
+		t.Error("no disposition was recorded; the stranger's comment suppressed the operator's own")
 	}
 }
 
