@@ -106,9 +106,14 @@ type PullRequest struct {
 	// endpoint sets it, so a caller reading a list must fall back to MergedAt != nil.
 	Merged   bool       `json:"merged"`
 	MergedAt *time.Time `json:"merged_at"`
-	ClosedAt *time.Time `json:"closed_at"`
-	Base     GitRef     `json:"base"`
-	Head     GitRef     `json:"head"`
+	// MergeCommitSHA is the commit GitHub created when the pull request merged. It is
+	// what binds a `Workflow-Admission: PR #N` trailer to one specific commit: without
+	// the equality check, a trailer copied onto any other commit would read as an
+	// admission that pull request never granted.
+	MergeCommitSHA string     `json:"merge_commit_sha"`
+	ClosedAt       *time.Time `json:"closed_at"`
+	Base           GitRef     `json:"base"`
+	Head           GitRef     `json:"head"`
 	// Mergeable is a tri-state: GitHub computes it asynchronously and returns null while
 	// the computation is pending. Nil means "not known yet", never "not mergeable" — a
 	// caller that collapses the two admits a PR on evidence GitHub had not produced.

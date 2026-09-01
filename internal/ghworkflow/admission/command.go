@@ -191,16 +191,20 @@ func classifyAll(commits []Commit, rules Rules, rng Range, offline bool) *Report
 
 // verifyPullRequests turns each distinct `PR #N` trailer into a live check.
 //
-// Distinct numbers are queried once each, not once per commit: a squashed pull request
-// contributes one commit, but a rebase or a cherry-pick can spread the same trailer
-// across many, and re-asking GitHub per commit would turn a large range into a rate
-// limit. A number that is not a merged pull request in this repository demotes every
-// commit that cited it, because the trailer's whole value is that it is checkable.
+// Distinct numbers are queried once each, not once per commit: a rebase or a cherry-pick
+// can spread the same trailer across many commits, and re-asking GitHub per commit would
+// turn a large range into a rate limit.
+//
+// The check is SHA equality, not merely "pull request N is merged". A trailer is only
+// evidence about the commit `merge --pr N` actually created, so an authenticated run
+// requires the cited pull request's own merge commit to *be* this commit. Without that
+// binding, one genuinely merged pull request would admit every commit that names it —
+// which is precisely what an author who writes their own trailer is reaching for.
 func verifyPullRequests(ctx context.Context, env *cli.Env, repoFlag string, report *Report) error {
-	numbers := map[int]bool{}
+	numbers := map[int]string{}
 	for _, finding := range report.Findings {
 		if finding.Class == ClassPullRequest && finding.Admitted() {
-			numbers[finding.PullRequest] = false
+			numbers[finding.PullRequest] = ""
 		}
 	}
 	if len(numbers) == 0 {
@@ -219,16 +223,28 @@ func verifyPullRequests(ctx context.Context, env *cli.Env, repoFlag string, repo
 		if err != nil {
 			return err
 		}
-		numbers[number] = pr.IsMerged()
+		if pr.IsMerged() {
+			numbers[number] = pr.MergeCommitSHA
+		}
 	}
 	for i, finding := range report.Findings {
-		if finding.Class != ClassPullRequest || !finding.Admitted() || numbers[finding.PullRequest] {
+		if finding.Class != ClassPullRequest || !finding.Admitted() {
 			continue
+		}
+		merged := numbers[finding.PullRequest]
+		if merged != "" && merged == finding.SHA {
+			continue
+		}
+		message := fmt.Sprintf(
+			"the trailer cites pull request #%d, which is not merged in %s", finding.PullRequest, repo)
+		if merged != "" {
+			message = fmt.Sprintf(
+				"the trailer cites pull request #%d, whose merge commit is %s, not this commit",
+				finding.PullRequest, shortSHA(merged))
 		}
 		report.Findings[i].Class = ClassUnadmitted
 		report.Findings[i].Code = CodePullRequestState
-		report.Findings[i].Message = fmt.Sprintf(
-			"the trailer cites pull request #%d, which is not merged in %s", finding.PullRequest, repo)
+		report.Findings[i].Message = message
 		report.Findings[i].Remediation = "Correct the trailer to the pull request that actually admitted this commit."
 		report.Counts.PullRequest--
 		report.Counts.Unadmitted++
@@ -245,7 +261,7 @@ func resolveRepository(workDir, explicit string) (render.Repository, error) {
 	return render.OriginRepository(workDir)
 }
 
-func sortedKeys(values map[int]bool) []int {
+func sortedKeys(values map[int]string) []int {
 	keys := make([]int, 0, len(values))
 	for key := range values {
 		keys = append(keys, key)

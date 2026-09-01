@@ -149,14 +149,60 @@ func TestClassify(t *testing.T) {
 			code:  admission.CodeTrailerConflict,
 		},
 		{
-			name: "a duplicated identical declaration survives a cherry-pick",
+			// Even an identical repeat is refused. With two lines present, which one a
+			// reader or a rewriting tool honors is no longer decided here, and "exactly
+			// one" is the property the forged-trailer cases below depend on.
+			name: "a duplicated identical declaration is still a conflict",
 			commit: admission.Commit{
 				SHA:   "b6",
 				Body:  "subject\n\n" + admission.TrailerKey + ": T0\n" + admission.TrailerKey + ": T0\n",
 				Paths: []string{"README.md"},
 			},
 			rules: defaultRules,
-			want:  admission.ClassT0,
+			want:  admission.ClassUnadmitted,
+			code:  admission.CodeTrailerConflict,
+		},
+		{
+			// A pull-request author writing their own trailer into the middle of the
+			// body: the tool's real trailer, if any, is in the final paragraph, and a
+			// declaration anywhere else admits nothing.
+			name: "a forged trailer above the final paragraph admits nothing",
+			commit: admission.Commit{
+				SHA: "b8", Subject: "feat: work",
+				Body: "feat: work\n\n" + admission.TrailerKey + ": PR #999\n\n" +
+					"Some closing prose about the change.\n",
+				Paths: []string{"src/app.py"},
+			},
+			rules: defaultRules,
+			want:  admission.ClassUnadmitted,
+			code:  admission.CodeMissing,
+		},
+		{
+			// A body ending in prose has no trailer block at all, so a genuine-looking
+			// declaration inside that paragraph is prose too. git agrees: this is what
+			// `git interpret-trailers` would report.
+			name: "a trailer inside a prose-ending paragraph admits nothing",
+			commit: admission.Commit{
+				SHA: "b9", Subject: "feat: work",
+				Body: "feat: work\n\n" + admission.TrailerKey +
+					": T0\nand some trailing prose that makes this not a trailer block\n",
+				Paths: []string{"README.md"},
+			},
+			rules: defaultRules,
+			want:  admission.ClassUnadmitted,
+			code:  admission.CodeMissing,
+		},
+		{
+			// The shape `merge --pr N` writes: a blank line, then a trailer-only final
+			// paragraph. This is the positive control for the two cases above.
+			name: "the trailer merge writes is a trailer-only final paragraph",
+			commit: admission.Commit{
+				SHA: "c0", Subject: "feat: work (#7)",
+				Body:  "feat: work (#7)\n\n" + admission.TrailerKey + ": PR #7\n",
+				Paths: []string{"src/app.py"},
+			},
+			rules: defaultRules,
+			want:  admission.ClassPullRequest,
 		},
 		{
 			// A path that merely starts with the same characters is not inside the

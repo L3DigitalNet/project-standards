@@ -235,7 +235,7 @@ func TestMergePullRequestPinsTheValidatedHead(t *testing.T) {
 	const headSHA = "111111111111111111111111111111111111111a"
 
 	result, err := client.MergePullRequest(context.Background(), "L3DigitalNet", "example-repo", 12,
-		ghapi.MergeMethodSquash, headSHA, "Workflow-Admission: PR #12\n")
+		ghapi.MergeMethodSquash, headSHA, "fix: a thing (#12)", "\nWorkflow-Admission: PR #12\n")
 	if err != nil {
 		t.Fatalf("MergePullRequest() error = %v, want nil", err)
 	}
@@ -248,24 +248,29 @@ func TestMergePullRequestPinsTheValidatedHead(t *testing.T) {
 	}
 	// The admission trailer only becomes repository history if it reaches the wire; a
 	// caller writing it into a field GitHub ignores would leave the classifier blind.
-	if body := transport.LastBody(); !strings.Contains(body, `"commit_message":"Workflow-Admission: PR #12`) {
+	if body := transport.LastBody(); !strings.Contains(body, `"commit_message":"\nWorkflow-Admission: PR #12`) {
 		t.Errorf("request body = %q, want the admission trailer sent as commit_message", body)
+	}
+	// Both fields must reach the wire: GitHub composes the subject from the pull
+	// request's author-controlled title when commit_title is omitted.
+	if body := transport.LastBody(); !strings.Contains(body, `"commit_title":"fix: a thing (#12)"`) {
+		t.Errorf("request body = %q, want the tool-composed commit_title sent", body)
 	}
 
 	if _, err := client.MergePullRequest(context.Background(), "L3DigitalNet", "example-repo", 12,
-		"fast-forward", headSHA, ""); err == nil {
+		"fast-forward", headSHA, "", ""); err == nil {
 		t.Error("MergePullRequest() accepted a method GitHub does not define")
 	}
 
 	if _, err := client.MergePullRequest(context.Background(), "L3DigitalNet", "example-repo", 12,
-		ghapi.MergeMethodSquash, "", ""); err == nil {
+		ghapi.MergeMethodSquash, "", "", ""); err == nil {
 		t.Error("MergePullRequest() accepted an empty head SHA")
 	} else if transport.Count() != 1 {
 		t.Errorf("made %d calls after refusing an empty head SHA, want exactly the 1 from the earlier merge", transport.Count())
 	}
 
 	if _, err := client.MergePullRequest(context.Background(), "L3DigitalNet", "example-repo", 12,
-		ghapi.MergeMethodSquash, "not-hex", ""); err == nil {
+		ghapi.MergeMethodSquash, "not-hex", "", ""); err == nil {
 		t.Error("MergePullRequest() accepted a malformed head SHA")
 	}
 }
@@ -286,7 +291,7 @@ func TestMergeMethodNormalizationIsSharedAcrossSurfaces(t *testing.T) {
 		},
 	}}
 	if _, err := newClient(t, restTransport).MergePullRequest(context.Background(),
-		"L3DigitalNet", "example-repo", 12, "Squash", headSHA, ""); err != nil {
+		"L3DigitalNet", "example-repo", 12, "Squash", headSHA, "", ""); err != nil {
 		t.Fatalf("MergePullRequest() error = %v, want nil for a mixed-case method", err)
 	}
 	// GitHub's REST endpoint accepts only the lowercase enum; the caller's original

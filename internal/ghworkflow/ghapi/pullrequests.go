@@ -205,7 +205,7 @@ type MergeResult struct {
 // 64-character hex object id before any request is built, rather than trusting the caller
 // to have validated it upstream.
 func (c *Client) MergePullRequest(ctx context.Context, owner, repo string, number int,
-	method, headSHA, commitMessage string,
+	method, headSHA, commitTitle, commitMessage string,
 ) (*MergeResult, error) {
 	base, err := repoPath(owner, repo)
 	if err != nil {
@@ -223,19 +223,30 @@ func (c *Client) MergePullRequest(ctx context.Context, owner, repo string, numbe
 	// GitHub's REST merge endpoint only accepts the lowercase enum spelling, so the
 	// normalized value is what goes on the wire, not the caller's original casing (a
 	// caller-passed "Squash" would otherwise pass local validation and then fail remotely).
-	// `commit_message` is the body GitHub writes into the merge or squash commit it
-	// creates, and it is how the `Workflow-Admission: PR #N` trailer becomes part of
-	// the repository's own history (ADR 0031 D1). GitHub applies it to the `merge` and
-	// `squash` methods only — a rebase replays the topic branch's original commits and
-	// creates nothing this field could reach, so a rebase-merged pull request carries
-	// no trailer and the classifier must be told about it some other way. Empty leaves
-	// GitHub's default body untouched, which is what every caller that does not care
-	// about the trailer wants.
+	// `commit_title` and `commit_message` are the subject and body GitHub writes into
+	// the merge or squash commit it creates, and the body is how the
+	// `Workflow-Admission: PR #N` trailer becomes part of the repository's own history
+	// (ADR 0031 D1). GitHub applies both to the `merge` and `squash` methods only — a
+	// rebase replays the topic branch's original commits and creates nothing these
+	// fields could reach, so a rebase-merged pull request carries no trailer and the
+	// classifier must be told about it some other way. Empty leaves GitHub's own
+	// composition untouched, which is what every caller that does not need the trailer
+	// wants.
+	//
+	// Both values are the caller's responsibility to sanitize. GitHub composes its
+	// defaults from the pull request's title and body, which are author-controlled, so
+	// a caller that passes either of them through unchanged writes whatever the author
+	// wrote — including a forged trailer and any terminal control sequence — into the
+	// repository's permanent history. `mutate` builds both from tool-owned text.
 	payload := struct {
 		MergeMethod   string `json:"merge_method"`
 		SHA           string `json:"sha"`
+		CommitTitle   string `json:"commit_title,omitempty"`
 		CommitMessage string `json:"commit_message,omitempty"`
-	}{MergeMethod: normalizedMethod, SHA: headSHA, CommitMessage: commitMessage}
+	}{
+		MergeMethod: normalizedMethod, SHA: headSHA,
+		CommitTitle: commitTitle, CommitMessage: commitMessage,
+	}
 
 	var result MergeResult
 	if err := c.send(ctx, http.MethodPut,

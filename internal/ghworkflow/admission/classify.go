@@ -140,27 +140,72 @@ func firstNonHandoffPath(paths []string) string {
 	return ""
 }
 
+// trailerLine matches one `Key: value` line of a git trailer block. The key alphabet is
+// git's own — letters, digits, and hyphens — so a prose line containing a colon is not
+// mistaken for a trailer.
+var trailerLine = regexp.MustCompile(`^[A-Za-z0-9-]+:[ \t]`)
+
 // Trailer returns the single `Workflow-Admission` value a commit declares.
 //
-// A second, differing value is an error rather than a last-one-wins choice: two
-// declarations mean the author claimed two admission routes, and silently taking one
-// would admit a commit on evidence its author did not intend. Repeating the identical
-// value is tolerated, because a rebase or a cherry-pick can duplicate a trailer line
-// without changing what was declared.
+// Only the commit message's **final paragraph** is read, and only when that whole
+// paragraph is trailer-shaped — which is git's own rule for what a trailer block is.
+// Two attacks make this strictness load-bearing rather than pedantic. A pull-request
+// author who writes `Workflow-Admission: PR #999` into the middle of a body would
+// otherwise hand themselves an admission the tool never granted; and a body ending in
+// ordinary prose would otherwise let a *real* trailer be read out of a paragraph git
+// does not treat as a trailer block at all, so `git interpret-trailers` and this
+// classifier would disagree about the same commit.
+//
+// Exactly one occurrence is required. A repeated value — even an identical one, which a
+// cherry-pick can produce — is a conflict rather than a tolerated duplicate: with two
+// lines present, which one a reader or a rewriting tool honors is no longer determined
+// by this function alone.
 func Trailer(body string) (string, error) {
+	paragraph := finalParagraph(body)
+	if len(paragraph) == 0 {
+		return "", nil
+	}
+	for _, line := range paragraph {
+		if !trailerLine.MatchString(line) {
+			// Not a trailer block. A `Workflow-Admission:` line inside it is prose that
+			// happens to look like a declaration, and must not admit anything.
+			return "", nil
+		}
+	}
 	var value string
-	for _, line := range strings.Split(body, "\n") {
-		rest, ok := strings.CutPrefix(strings.TrimSpace(line), TrailerKey+":")
+	found := 0
+	for _, line := range paragraph {
+		rest, ok := strings.CutPrefix(line, TrailerKey+":")
 		if !ok {
 			continue
 		}
-		found := strings.TrimSpace(rest)
-		if value != "" && found != value {
-			return "", fmt.Errorf("commit declares both %q and %q", value, found)
-		}
-		value = found
+		found++
+		value = strings.TrimSpace(rest)
+	}
+	if found > 1 {
+		return "", fmt.Errorf("commit carries %d %s trailers; exactly one is admitted", found, TrailerKey)
 	}
 	return value, nil
+}
+
+// finalParagraph returns the commit message's last blank-line-separated block, with each
+// line right-trimmed. Trailing blank lines are ignored so a message ending in a newline
+// still resolves to the block above it.
+func finalParagraph(body string) []string {
+	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
+	end := len(lines)
+	for end > 0 && strings.TrimSpace(lines[end-1]) == "" {
+		end--
+	}
+	start := end
+	for start > 0 && strings.TrimSpace(lines[start-1]) != "" {
+		start--
+	}
+	paragraph := make([]string, 0, end-start)
+	for _, line := range lines[start:end] {
+		paragraph = append(paragraph, strings.TrimRight(line, " \t"))
+	}
+	return paragraph
 }
 
 // Classify applies the four admission classes to one commit.
@@ -177,7 +222,8 @@ func Classify(commit Commit, rules Rules) Finding {
 	if err != nil {
 		finding.Code = CodeTrailerConflict
 		finding.Message = err.Error()
-		finding.Remediation = "Amend the commit so it carries exactly one `" + TrailerKey + "` trailer."
+		finding.Remediation = "Amend the commit so its final paragraph is a trailer block carrying exactly one `" +
+			TrailerKey + "` trailer."
 		return finding
 	}
 
