@@ -36,7 +36,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:0ca7dd5ccfc75e78cc6984fa8064f0c5d30ebe79be40488b05c762a1b37d5bc0"
+digest = "sha256:3d82762e4e361ae381965b4faa5fb193d795da9cc0b59fce282d925254b19223"
 
 [[resources]]
 id = "adopt"
@@ -57,7 +57,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/gh_workflow.py"
 media_type = "text/x-python"
-digest = "sha256:4c3ff4d7977138cb51df12d38889de90eee4591bc41dfedcf551dc517dbf1e1c"
+digest = "sha256:1ca5948e2a73da8ce91b6d6a435d20b723ab278fbc86d898af436fd9c0008f5b"
 
 [[resources]]
 id = "provider-input"
@@ -113,7 +113,7 @@ when_any = [{ option = "harnesses", contains = "codex" }]
 id = "tool-binary"
 target = ".agents/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:88844e828bc2b9c6a62bf643c97d379bdedc54ba06caf53dfa0bc499d96a3a2c"
+digest = "sha256:7b3951ab3e87b53225617bb0637092571ac1f32822d802667b69a330017e1cf2"
 policy = "managed"
 mode = "0755"
 
@@ -142,7 +142,7 @@ policy = "managed"
 id = "reference-pr-standard"
 target = ".agents/skills/github-workflow/references/pr-standard.md"
 source = "skills/github-workflow/references/pr-standard.md"
-digest = "sha256:15c0e08f7eebeb366597d5aa8cfadbda2a5d55764e085ea88241179d9995cebf"
+digest = "sha256:e86d81dccd26e0dfe2d1abe4650eae400ad22c20c8f0d97fc05360271026348a"
 policy = "managed"
 
 [[artifacts]]
@@ -183,7 +183,7 @@ policy = "managed"
 id = "tool-binary-claude"
 target = ".claude/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:88844e828bc2b9c6a62bf643c97d379bdedc54ba06caf53dfa0bc499d96a3a2c"
+digest = "sha256:7b3951ab3e87b53225617bb0637092571ac1f32822d802667b69a330017e1cf2"
 policy = "managed"
 mode = "0755"
 
@@ -212,7 +212,7 @@ policy = "managed"
 id = "reference-pr-standard-claude"
 target = ".claude/skills/github-workflow/references/pr-standard.md"
 source = "skills/github-workflow/references/pr-standard.md"
-digest = "sha256:15c0e08f7eebeb366597d5aa8cfadbda2a5d55764e085ea88241179d9995cebf"
+digest = "sha256:e86d81dccd26e0dfe2d1abe4650eae400ad22c20c8f0d97fc05360271026348a"
 policy = "managed"
 
 [[artifacts]]
