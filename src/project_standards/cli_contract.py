@@ -30,6 +30,7 @@ PUBLIC_COMMAND_EXIT_CODES: Final = {
     "standards": frozenset({0, 1, 2}),
     "standards validate-graph": frozenset({0, 1, 2}),
     "standards render-catalog": frozenset({0, 1, 2}),
+    "standards cut-successor": frozenset({0, 1, 2}),
     "standards validate-packages": frozenset({0, 1, 2}),
     "standards render-consumer-catalog": frozenset({0, 1, 2}),
     "standards generate-package-schemas": frozenset({0, 1, 2}),
