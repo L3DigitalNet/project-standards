@@ -343,7 +343,7 @@
         "mode": {
           "anyOf": [
             {
-              "pattern": "^0[0-7]{3}$",
+              "pattern": "^0[0-7][0145][0145]$",
               "type": "string"
             },
             {
@@ -444,7 +444,7 @@
         "after_mode": {
           "anyOf": [
             {
-              "pattern": "^0[0-7]{3}$",
+              "pattern": "^0[0-7][0145][0145]$",
               "type": "string"
             },
             {
@@ -469,7 +469,7 @@
         "before_mode": {
           "anyOf": [
             {
-              "pattern": "^0[0-7]{3}$",
+              "pattern": "^0[0-7][0145][0145]$",
               "type": "string"
             },
             {

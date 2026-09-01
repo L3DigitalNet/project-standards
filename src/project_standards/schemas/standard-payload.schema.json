@@ -956,7 +956,7 @@
         "mode": {
           "anyOf": [
             {
-              "pattern": "^0[0-7]{3}$",
+              "pattern": "^0[0-7][0145][0145]$",
               "type": "string"
             },
             {
@@ -964,6 +964,7 @@
             }
           ],
           "default": null,
+          "description": "Octal file mode applied verbatim when the artifact is materialized. A group- or other-write bit is refused, so 0644, 0700, and 0755 are valid and 0666, 0775, and 0777 are not.",
           "title": "Mode"
         },
         "policy": {

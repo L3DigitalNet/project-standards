@@ -70,7 +70,19 @@ MediaType = Annotated[
     str,
     StringConstraints(pattern=r"^[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*$"),
 ]
-PosixMode = Annotated[str, StringConstraints(pattern=r"^0[0-7]{3}$")]
+# Four octal digits whose group and other digits carry no write bit, so `0777`,
+# `0666`, and `0775` are refused while `0755`, `0644`, and `0700` remain expressible.
+# `executor.py` applies a declared mode verbatim through `fchmod`, so a payload that
+# declared a world-writable mode would hand every local account write access to a
+# managed file (issue #230, finding 2). The leading `0` already keeps setuid, setgid,
+# and sticky out of reach. Narrowing the grammar rejects no published payload: every
+# declared artifact mode across the catalog is `0755`.
+#
+# The write-free octal digits are exactly {0, 1, 4, 5}, so the last two positions are
+# an enumeration, not a range. Issue #230 spells the pattern `^0[0-7][0-57][0-57]$`,
+# which is a transcription slip: `[0-57]` is the range 0-5 plus 7, so it admits 2, 3,
+# and 7 and would accept the very `0777` the issue exists to reject.
+PosixMode = Annotated[str, StringConstraints(pattern=r"^0[0-7][0145][0145]$")]
 SharedIdentity = Annotated[
     str,
     StringConstraints(pattern=r"^[a-z0-9]+(?:[./_-][a-z0-9]+)*$"),
@@ -245,7 +257,17 @@ class WholeArtifactDeclaration(ConditionalMaterialization):
     source: SafeRelativePath
     digest: Sha256Digest
     policy: ArtifactPolicy
-    mode: PosixMode | None = None
+    # The pattern alone reports only itself in a validation error, so the payload
+    # author's reason for a rejection lives here, where the generated schema carries
+    # it to every consumer of the contract.
+    mode: PosixMode | None = Field(
+        default=None,
+        description=(
+            "Octal file mode applied verbatim when the artifact is materialized. A "
+            "group- or other-write bit is refused, so 0644, 0700, and 0755 are valid "
+            "and 0666, 0775, and 0777 are not."
+        ),
+    )
 
 
 @dataclass(frozen=True, slots=True)

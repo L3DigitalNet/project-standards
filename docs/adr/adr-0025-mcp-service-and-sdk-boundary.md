@@ -6,7 +6,7 @@ description: 'Freezes the exact official MCP SDK dependency, the one-way adapter
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-28'
-updated: '2026-08-09'
+updated: '2026-09-01'
 reviewed: '2026-08-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -142,6 +142,10 @@ Every provider invocation reached through `invoke_read_provider` runs in a spawn
 An import-boundary contract test asserts that no module under `mcp_services` imports `mcp` or `mcp_server` and that no `mcp_services` public signature exposes an SDK type. Provider-boundary tests cover the 30-second timeout, `SIGTERM`-then-`SIGKILL` termination with reaping, unchanged repository state after a timeout, bounded IPC with explicit truncation markers, and the absence of worker output on the server's protocol `stdout`.
 
 An IPC-cleanup test asserts that after each of the four completion paths — success, timeout, kill, and crash — the parent holds no open worker pipe, queue, temporary file, or socket, and no child process remains unreaped; file-descriptor and child-process counts return to their pre-invocation values. A dispatch-guard test asserts that `invoke_read_provider` refuses any operation outside the approved `findings` set. Dependency resolution, the exact pin, and `uv run pip-audit` are checked in the T1 verification gate.
+
+### Amendments
+
+**Amended 2026-09-01 (#230, child-environment allowlist).** The worker's environment is now part of this boundary's stated contract. A Python provider child receives an allowlist and nothing else: `PATH`, `PYTHONPATH` (always recomputed from the parent's active `sys.path`, never inherited), `HOME`, `LANG`, `LC_ALL`, `LC_CTYPE`, `TMPDIR`, `PYTHONDONTWRITEBYTECODE`, and every `COVERAGE_*` variable — the last so the coverage lane keeps measuring provider children. Any other parent variable, including `GITHUB_TOKEN` and `BAO_*`, is absent in the child, so payload provider bytes cannot read a credential the parent happens to hold. This tightens the boundary and reinterprets nothing: command-kind providers already ran with an empty environment, and the Python kind now matches that posture. The allowlist is `_WORKER_ENVIRONMENT_NAMES` / `_WORKER_ENVIRONMENT_PREFIXES` in `src/project_standards/control_plane/provider_subprocess.py`; adding a name to it is an amendment to this record, because it widens what a provider can read.
 
 ## Pros and Cons of the Options
 
