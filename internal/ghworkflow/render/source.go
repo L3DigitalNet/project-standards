@@ -31,10 +31,17 @@ import (
 func Fetch(ctx context.Context, client *ghapi.Client, repo Repository) (*Snapshot, *topology.Prefetched, error) {
 	readAt := time.Now().UTC()
 
+	pre := topology.NewPrefetched()
+
 	rawIssues, err := client.ListOpenIssues(ctx, repo.Owner, repo.Name)
 	if err != nil {
 		return nil, nil, err
 	}
+	// The open-issue list is the same corpus every governed pull request's topology load
+	// then asks for one issue at a time, so it is handed over rather than dropped after the
+	// projection below (NFR-008). Only the open ones are indexed; a Final governed by a
+	// closed issue still costs its own read, which is what keeps it resolvable.
+	pre.SeedOpenIssues(rawIssues)
 	issues := make([]WorkItem, 0, len(rawIssues))
 	for _, issue := range rawIssues {
 		issues = append(issues, issueItem(issue))
@@ -44,7 +51,7 @@ func Fetch(ctx context.Context, client *ghapi.Client, repo Repository) (*Snapsho
 	if err != nil {
 		return nil, nil, err
 	}
-	pre := &topology.Prefetched{OpenPullRequests: rawPulls}
+	pre.SeedOpenPullRequests(rawPulls)
 	pulls := make([]WorkItem, 0, len(rawPulls))
 	for _, pull := range rawPulls {
 		item, err := pullItem(ctx, client, repo, pull, pre)
@@ -66,17 +73,24 @@ func FetchIssue(ctx context.Context, client *ghapi.Client, repo Repository, numb
 	return issueItem(*issue), nil
 }
 
-// FetchPullRequest reads one pull request for a receipt.
-func FetchPullRequest(ctx context.Context, client *ghapi.Client, repo Repository, number int) (WorkItem, error) {
-	pull, err := client.GetPullRequest(ctx, repo.Owner, repo.Name, number)
-	if err != nil {
-		return WorkItem{}, err
-	}
-	// No prefetch: a receipt loads exactly one pull request, so there is no second consumer
-	// of this commit's check runs to share with, and passing nil keeps the read set visible
-	// at this call site.
-	return pullItem(ctx, client, repo, *pull, nil)
+// PullRequestItem projects an already-read pull request onto the render model.
+//
+// It is exported so a caller that has just loaded a topology can render the same pull
+// request without reading it again: `receipt --pr` holds gate.PR and hands it straight
+// here, and the check runs its CI column needs are served from the same pre the Merge
+// gate already filled.
+func PullRequestItem(ctx context.Context, client *ghapi.Client, repo Repository,
+	pull ghapi.PullRequest, pre *topology.Prefetched,
+) (WorkItem, error) {
+	return pullItem(ctx, client, repo, pull, pre)
 }
+
+// IssueItem projects an already-read issue onto the render model.
+//
+// Exported for `check --issue`, which must read the raw issue itself to tell an issue from
+// a pull request (the projection drops the `pull_request` member), and would otherwise read
+// the identical object a second time through FetchIssue (NFR-008, E4#5).
+func IssueItem(issue ghapi.Issue) WorkItem { return issueItem(issue) }
 
 // issueItem projects one API issue onto the render model.
 //

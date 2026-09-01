@@ -20,6 +20,17 @@ type Repository struct {
 	// identity — String and every report ignore it — but it is the evidence
 	// VerifyAPIHost needs, and only the origin path can supply it.
 	Host string `json:"-"`
+	// FromOrigin records that this pair came from a checkout's `origin` remote rather than
+	// from an operator who typed it.
+	//
+	// It exists because an empty Host is ambiguous and the two readings have opposite
+	// consequences. A repository the operator named explicitly has no host and needs none.
+	// A remote Git accepts but that carries no host — `owner/repo`, `:owner/repo` — also
+	// produces an empty Host, and treating that as "nothing to compare" let an
+	// origin-derived pair skip both ValidateHost and VerifyAPIHost and be written to
+	// api.github.com under the operator's real token. This flag is what lets VerifyAPIHost
+	// tell the two apart and refuse the second.
+	FromOrigin bool `json:"-"`
 }
 
 // String renders the repository as `owner/name`, the form every message and report uses.
@@ -204,8 +215,9 @@ func repositoryFromURL(remote string) (Repository, error) {
 		return Repository{}, fmt.Errorf("origin remote %q does not name a GitHub repository: %w", remote, err)
 	}
 	// The host travels with the pair so VerifyAPIHost can compare it against the API base
-	// URL before any write; this is the only path that knows it.
-	repo.Host = host
+	// URL before any write; this is the only path that knows it. FromOrigin is set even
+	// when the host is empty, which is exactly the case the verification must refuse.
+	repo.Host, repo.FromOrigin = host, true
 	return repo, nil
 }
 
@@ -220,7 +232,11 @@ func repositoryFromURL(remote string) (Repository, error) {
 // because by then the host is gone and only the name remains.
 //
 // A repository the operator named explicitly carries no host and passes: they addressed
-// GitHub deliberately, and there is nothing to disagree with.
+// GitHub deliberately, and there is nothing to disagree with. An origin-derived
+// repository whose host could not be determined is refused instead of passed: Git accepts
+// hostless remotes (`owner/repo`, `:owner/repo`) and a checkout carrying one would
+// otherwise reach this function indistinguishable from an explicitly typed pair, skipping
+// both ValidateHost and this comparison — the exact bypass the paragraph above describes.
 //
 // The API host is matched to the Git host rather than compared literally, because the two
 // are never spelled the same on github.com (`github.com` versus `api.github.com`) and are
@@ -230,6 +246,11 @@ func repositoryFromURL(remote string) (Repository, error) {
 // `evil-github.com`.
 func (r Repository) VerifyAPIHost(apiBaseURL string) error {
 	if r.Host == "" {
+		if r.FromOrigin {
+			return fmt.Errorf("%w: the origin remote names no host, so it cannot be checked "+
+				"against the host this tool writes to; pass --repo owner/name to address a "+
+				"repository deliberately", ghapi.ErrInvalidIdentity)
+		}
 		return nil
 	}
 	base, err := url.Parse(strings.TrimRight(apiBaseURL, "/"))

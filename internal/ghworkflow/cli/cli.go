@@ -306,6 +306,16 @@ func MarshalJSON(v any) ([]byte, error) {
 // Outside a checkout the search is refused rather than widened. There is no root to bound
 // it, and the delivered artifacts live inside a consumer checkout by construction; an
 // explicit --policy/--schema path remains the way to name a file anywhere else.
+// within reports whether path is root itself or lies beneath it. The comparison is on
+// cleaned paths with a separator appended, so a sibling directory whose name merely
+// starts with the root's name ("/checkout-evil" against "/checkout") is not accepted.
+func within(root, path string) bool {
+	if path == root {
+		return true
+	}
+	return strings.HasPrefix(path, root+string(filepath.Separator))
+}
+
 func ResolveRepoFile(start, rel string) (string, error) {
 	dir, err := filepath.Abs(start)
 	if err != nil {
@@ -314,6 +324,24 @@ func ResolveRepoFile(start, rel string) (string, error) {
 	for {
 		candidate := filepath.Join(dir, rel)
 		if info, statErr := os.Stat(candidate); statErr == nil && info.Mode().IsRegular() {
+			// The search stops at the checkout root, but os.Stat follows symbolic links, so
+			// the file it accepted may live anywhere: a symlink committed at the delivered
+			// path would make the tool load its policy or its organization schema from
+			// outside the checkout entirely — which is the vocabulary every value is
+			// validated against and the organization every write is addressed to. Resolved
+			// and re-tested against the root the search was bounded by.
+			resolved, resolveErr := filepath.EvalSymlinks(candidate)
+			if resolveErr != nil {
+				return "", fmt.Errorf("resolving %s: %w", candidate, resolveErr)
+			}
+			root, rootErr := filepath.EvalSymlinks(dir)
+			if rootErr != nil {
+				return "", fmt.Errorf("resolving the checkout root %s: %w", dir, rootErr)
+			}
+			if !within(root, resolved) {
+				return "", fmt.Errorf("%s resolves to %s, which is outside the checkout root %s",
+					candidate, resolved, root)
+			}
 			return candidate, nil
 		}
 		if _, statErr := os.Stat(filepath.Join(dir, ".git")); statErr == nil {

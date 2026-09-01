@@ -254,11 +254,17 @@ func issueReceipt(ctx context.Context, env *cli.Env, client *ghapi.Client,
 func pullRequestReceipt(ctx context.Context, env *cli.Env, client *ghapi.Client,
 	repo Repository, schema *orgschema.Schema, mode cli.OutputMode, number int,
 ) error {
-	gate, err := topology.Load(ctx, client, repo.Owner, repo.Name, schema, number, "")
+	// One snapshot, projected twice. The receipt used to load the topology and then
+	// re-fetch the same pull request and the same commit's check runs through the render
+	// path, which cost two duplicate reads for bytes it already held (NFR-008, E4#4). The
+	// memo is what makes that safe: the display item is projected from gate.PR, and its CI
+	// column reuses the check runs the Merge evidence read.
+	pre := topology.NewPrefetched()
+	gate, err := topology.LoadWith(ctx, client, repo.Owner, repo.Name, schema, number, "", pre)
 	if err != nil {
 		return err
 	}
-	item, err := FetchPullRequest(ctx, client, repo, number)
+	item, err := PullRequestItem(ctx, client, repo, *gate.PR, pre)
 	if err != nil {
 		return err
 	}

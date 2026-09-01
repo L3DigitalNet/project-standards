@@ -267,6 +267,29 @@ func (c *Client) MergePullRequest(ctx context.Context, owner, repo string, numbe
 	return &result, nil
 }
 
+// PullRequestFile is one path a pull request changes. A rename reports both names, and
+// both matter to the landing proof: a diff restricted to the new name alone would not
+// notice that the old path is still present on the integration branch.
+type PullRequestFile struct {
+	Filename         string `json:"filename"`
+	PreviousFilename string `json:"previous_filename"`
+}
+
+// ListPullRequestFiles returns every path the pull request changes, across every page.
+//
+// Completeness is the point: the paths bound the landing proof's diff, and a short read
+// would produce a proof that passes by not looking at the file that failed to land.
+// getPaged fails closed on an unexplained short read (NFR-007).
+func (c *Client) ListPullRequestFiles(ctx context.Context, owner, repo string, number int,
+) ([]PullRequestFile, error) {
+	base, err := repoPath(owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return getPaged[PullRequestFile](ctx, c,
+		fmt.Sprintf("%s/pulls/%d/files", base, number), url.Values{})
+}
+
 // RepositoryMergeSettings is which merge methods the repository permits.
 //
 // Known distinguishes "the repository said so" from "we could not ask". FR-033's fallback

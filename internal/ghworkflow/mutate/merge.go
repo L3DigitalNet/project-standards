@@ -113,7 +113,7 @@ func runMerge(ctx context.Context, env *cli.Env, args []string) error {
 		return domainf("%s#%d: no usable merge method, and nothing was written", repo, *number)
 	}
 
-	stepErr := mergeSteps(ctx, client, gate, selected, *auto, rec, &envelope)
+	_, stepErr := mergeSteps(ctx, client, gate, selected, *auto, rec, &envelope)
 	envelope.Steps = rec.list()
 	switch {
 	case stepErr != nil:
@@ -183,9 +183,14 @@ func selectMergeMethod(explicit string, settings relation.RepositoryMergeSetting
 
 // mergeSteps performs admission, terminal observation, and Final convergence in order,
 // recording each boundary.
+//
+// The observed terminal pull request is returned so a caller can prove what landed from
+// the state this function already read: it is nil whenever the pull request did not reach
+// a merged outcome, which is the only condition under which a landing proof would be a
+// claim about a merge that never happened.
 func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method string,
 	auto bool, rec *steps, envelope *cli.Envelope,
-) error {
+) (*ghapi.PullRequest, error) {
 	repo := render.Repository{Owner: gate.Owner, Name: gate.Name}
 	number := gate.PR.Number
 
@@ -202,7 +207,7 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 		// landing while GitHub holds the request cannot be merged as though it had passed.
 		if err := client.EnableAutoMerge(ctx, gate.NodeID, method, gate.PR.Head.SHA); err != nil {
 			rec.fail(stepEnableAutoMerge, "auto-merge was not armed; the pull request is unchanged")
-			return err
+			return nil, err
 		}
 		rec.complete(stepEnableAutoMerge, "auto-merge armed with the "+method+" method")
 	default:
@@ -212,11 +217,11 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 			gate.PR.Head.SHA, title, message)
 		if err != nil {
 			rec.fail(stepMerge, "the pull request was not merged; the governing issue is untouched")
-			return err
+			return nil, err
 		}
 		if !result.Merged {
 			rec.fail(stepMerge, "GitHub accepted the request without merging: "+result.Message)
-			return domainf("%s#%d: GitHub did not merge the pull request: %s", repo, number, result.Message)
+			return nil, domainf("%s#%d: GitHub did not merge the pull request: %s", repo, number, result.Message)
 		}
 		rec.complete(stepMerge, "merged with the "+method+" method")
 	}
@@ -227,12 +232,12 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 	after, err := client.GetPullRequest(ctx, repo.Owner, repo.Name, number)
 	if err != nil {
 		rec.fail(stepObserveTerminal, "the terminal outcome could not be observed")
-		return err
+		return nil, err
 	}
 	if !after.IsMerged() {
 		rec.fail(stepObserveTerminal, "the pull request has not reached a merged outcome")
 		envelope.Findings = append(envelope.Findings, autoMergePendingFinding(number, method, auto))
-		return nil
+		return nil, nil
 	}
 	rec.complete(stepObserveTerminal, "GitHub reports the pull request merged")
 
@@ -240,11 +245,11 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 		// FR-029: Supporting and Standalone admission is lifecycle-neutral and never
 		// authorizes Done, so this route must not touch an Issue it merely references.
 		rec.skip(stepConvergeIssue, "only a Final PR authorizes issue completion")
-		return nil
+		return after, nil
 	}
 	if gate.GoverningIssue() == 0 {
 		rec.skip(stepConvergeIssue, "no governing issue resolved")
-		return nil
+		return after, nil
 	}
 	move := transition{
 		state: stateClosed, reason: "completed", workflow: relation.WorkflowDone,
@@ -258,10 +263,10 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 		rec.fail(stepConvergeIssue, fmt.Sprintf(
 			"the merge stands; issue #%d did not converge to %s and rerunning this command retries it",
 			gate.GoverningIssue(), relation.WorkflowDone))
-		return err
+		return nil, err
 	}
 	rec.complete(stepConvergeIssue, outcome.Message)
-	return nil
+	return after, nil
 }
 
 // admissionCommitText builds the subject and body GitHub writes into the commit this

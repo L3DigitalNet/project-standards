@@ -18,7 +18,9 @@ import (
 	"testing"
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghtest"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/mutate"
 )
 
 // finalBody is a structurally complete Final declaration on issue 12: the four required
@@ -60,6 +62,33 @@ const supportingBody = "## Summary\n\nOne slice.\n\n" +
 
 const headSHA = "0f1e2d3c4b5a69788796a5b4c3d2e1f009182736"
 
+// mergeCommitSHA is the commit the fake reports for an admitted pull request. It differs
+// from headSHA on purpose: a squash merge creates a new object, and the landing proof has
+// to name the merge commit while diffing the head that was admitted.
+const mergeCommitSHA = "9a8b7c6d5e4f30211203f4e5d6c7b8a900112233"
+
+// issueDispatched is the governing issue of the `land` fixture: dispatched but not started, so
+// it is still `Ready`. It is what makes the first step of the transaction reachable —
+// against an issue already In progress that step is a skip and proves nothing.
+const issueDispatched = `{"number":17,"title":"Land the transport",
+	"html_url":"https://github.com/L3DigitalNet/example-repo/issues/17",
+	"state":"open","state_reason":null,
+	"body":"## Outcome\n\nShip it.\n\n## Acceptance criteria\n\n- Prior bytes survive.\n",
+	"type":{"name":"Bug"},
+	"issue_field_values":[
+		{"issue_field_name":"Workflow","data_type":"single_select","value":%q,"single_select_option":{"name":%q}},
+		{"issue_field_name":"Priority","data_type":"single_select","value":"P1 — Next","single_select_option":{"name":"P1 — Next"}},
+		{"issue_field_name":"Size","data_type":"single_select","value":"M","single_select_option":{"name":"M"}},
+		{"issue_field_name":"Change risk","data_type":"single_select","value":"R2 — Moderate","single_select_option":{"name":"R2 — Moderate"}},
+		{"issue_field_name":"Execution mode","data_type":"single_select","value":"Interactive agent","single_select_option":{"name":"Interactive agent"}},
+		{"issue_field_name":"Severity","data_type":"single_select","value":"S2 — Moderate","single_select_option":{"name":"S2 — Moderate"}}]}`
+
+// landFinalBody is the draft Final `land` carries end to end, governing issue 17.
+const landFinalBody = "## Summary\n\nLand the transport.\n\n" +
+	"## Governing work\n\nFinal: #17\n\n" +
+	"## Acceptance coverage\n\n- Prior bytes survive.\n\n" +
+	"## Verification\n\n- go test ./...\n"
+
 // pullState is one pull request the fake serves. Draft, Merged, and Closed move as the
 // commands write, which is what makes the verification and observation reads meaningful.
 type pullState struct {
@@ -82,6 +111,12 @@ type prFixture struct {
 	// where `close --pr` reads an existing `Final-Disposition:` record from. A pull request
 	// with no entry answers with an empty list, so only the idempotence fixtures carry one.
 	comments map[int]string
+
+	// issue17Workflow is the one issue whose Workflow the fake actually moves, because the
+	// `land` transaction reads it back after writing it: a canned response would report the
+	// pre-write value and the Ready gate would refuse the pull request this command just
+	// advanced.
+	issue17Workflow string
 
 	// failMarkReady, failAutoMerge, and failMerge fail one boundary each. They are separate
 	// switches rather than one route override because every mutation but the merge travels
@@ -106,7 +141,8 @@ func newPRFixture(t *testing.T) *prFixture {
 		90: {Number: 90, Body: readyFinalBody, Closed: true},
 		91: {Number: 91, Body: readyFinalBody, Closed: true},
 		92: {Number: 92, Body: readyFinalBody},
-	}, comments: map[int]string{
+		55: {Number: 55, Body: landFinalBody, Draft: true},
+	}, issue17Workflow: mutate.WorkflowReadyForTest, comments: map[int]string{
 		90: `[{"body":"Final-Disposition: in-review\nReason: the first attempt was interrupted\n",
 			"created_at":"2026-08-30T00:00:00Z","user":{"login":"agent"}}]`,
 	}}
@@ -160,10 +196,11 @@ func (f *prFixture) route(req *http.Request) (ghtest.Response, bool) {
 		}
 		return ghtest.Response{Status: http.StatusOK, Body: body}, true
 	}
-	// Issue 13 is served here rather than by the shared patch model, which only knows the
-	// 1.6 fixtures: the close echoes the requested state so both terminal directions —
-	// `done` after a merge and `not_planned` after a drop — read back correctly.
-	if req.Method == http.MethodPatch && path == fixtureRepo+"/issues/13" {
+	// Issues 13 and 17 are served here rather than by the shared patch model, which only
+	// knows the 1.6 fixtures: the close echoes the requested state so both terminal
+	// directions — `done` after a merge and `not_planned` after a drop — read back
+	// correctly.
+	if req.Method == http.MethodPatch && (path == fixtureRepo+"/issues/13" || path == fixtureRepo+"/issues/17") {
 		var payload struct {
 			State  string `json:"state"`
 			Reason string `json:"state_reason"`
@@ -172,9 +209,42 @@ func (f *prFixture) route(req *http.Request) (ghtest.Response, bool) {
 			return ghtest.Response{Status: http.StatusBadRequest, Body: `{"message":"bad request"}`}, true
 		}
 		return ghtest.Response{Status: http.StatusOK, Body: fmt.Sprintf(
-			`{"number":13,"state":%q,"state_reason":%q,"type":{"name":"Bug"}}`, payload.State, payload.Reason)}, true
+			`{"number":%s,"state":%q,"state_reason":%q,"type":{"name":"Bug"}}`,
+			strings.TrimPrefix(path, fixtureRepo+"/issues/"), payload.State, payload.Reason)}, true
 	}
 
+	// Issue 17 is stateful: the `land` transaction writes its Workflow and then re-evaluates
+	// the Ready gate against a fresh read, so the fake has to move with the write.
+	if path == fixtureRepo+"/issues/17" && req.Method == http.MethodGet {
+		f.mu.Lock()
+		workflow := f.issue17Workflow
+		f.mu.Unlock()
+		return ghtest.Response{Status: http.StatusOK,
+			Body: fmt.Sprintf(issueDispatched, workflow, workflow)}, true
+	}
+	if path == fixtureRepo+"/issues/17/issue-field-values" && req.Method == http.MethodPost {
+		// The written value is taken from the request rather than assumed: `land` writes
+		// this endpoint twice with different values (Ready -> In progress, then the Ready
+		// transition's In progress -> In review), and a fake that hardcoded one of them
+		// would make the Merge gate read a Workflow the command never wrote.
+		var payload struct {
+			Values []struct {
+				Value string `json:"value"`
+			} `json:"issue_field_values"`
+		}
+		if err := json.Unmarshal([]byte(readBody(req)), &payload); err != nil || len(payload.Values) != 1 {
+			return ghtest.Response{Status: http.StatusBadRequest, Body: `{"message":"bad request"}`}, true
+		}
+		f.mu.Lock()
+		f.issue17Workflow = payload.Values[0].Value
+		f.mu.Unlock()
+		return ghtest.Response{Status: http.StatusOK, Body: "[]"}, true
+	}
+	if strings.HasSuffix(path, "/files") && req.Method == http.MethodGet {
+		return ghtest.Response{Status: http.StatusOK,
+			Body: `[{"filename":"internal/ghworkflow/mutate/land.go"},
+				{"filename":"docs/new.md","previous_filename":"docs/old.md"}]`}, true
+	}
 	if req.Method == http.MethodPost && path == "/graphql" {
 		return f.graphql(req)
 	}
@@ -284,6 +354,12 @@ func (f *prFixture) pullResponse(number int) (ghtest.Response, bool) {
 	if state.Closed || state.Merged {
 		nativeState = "closed"
 	}
+	// A merged pull request reports the commit GitHub created, which is the OID `land`
+	// prints as its landing proof; an unmerged one reports null exactly as GitHub does.
+	mergeCommit := "null"
+	if state.Merged {
+		mergeCommit = `"` + mergeCommitSHA + `"`
+	}
 	autoMerge := "null"
 	if state.AutoMerge {
 		autoMerge = `{"merge_method":"squash"}`
@@ -295,10 +371,10 @@ func (f *prFixture) pullResponse(number int) (ghtest.Response, bool) {
 	return ghtest.Response{Status: http.StatusOK, Body: fmt.Sprintf(
 		`{"number":%d,"node_id":"PR_node_%d","title":"Land the transport",
 		  "html_url":"https://github.com/L3DigitalNet/example-repo/pull/%d",
-		  "state":%q,"draft":%t,"merged":%t,"body":%s,
+		  "state":%q,"draft":%t,"merged":%t,"merge_commit_sha":%s,"body":%s,
 		  "base":{"ref":"main","sha":"basesha"},"head":{"ref":"topic","sha":%q},
 		  "mergeable":true,"auto_merge":%s,"labels":[]}`,
-		number, number, number, nativeState, state.Draft, state.Merged, body, headSHA, autoMerge)}, true
+		number, number, number, nativeState, state.Draft, state.Merged, mergeCommit, body, headSHA, autoMerge)}, true
 }
 
 // nodeNumber recovers the pull request from the GraphQL node id the fake hands out, which
@@ -1151,5 +1227,123 @@ func TestClosePullRequestRecordsADispositionOnAnAlreadyClosedFinal(t *testing.T)
 		default:
 			t.Errorf("the resume issued an unexpected mutating request: %+v", write)
 		}
+	}
+}
+
+// ------------------------------------------------------------------ land (#236 C13)
+
+// The whole transaction on a draft Final whose issue is still `Ready`: the advance, the
+// Ready transition, the admission, the Final convergence, and the landing proof, in one
+// invocation with one receipt.
+func TestLandRunsTheWholeAdmissionAsOneTransaction(t *testing.T) {
+	t.Parallel()
+
+	f := newPRFixture(t)
+	if code := f.run("land", "--pr", "55", "--output", "json"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstdout: %s\nstderr: %s", code, f.h.stdout, f.h.stderr)
+	}
+	envelope := decodeEnvelope(t, f.h.stdout.Bytes())
+	assertSteps(t, envelope, map[string]cli.StepStatus{
+		"advance-governing-issue":    cli.StepCompleted,
+		"synchronize-issue-workflow": cli.StepCompleted,
+		"mark-ready":                 cli.StepCompleted,
+		"verify-ready":               cli.StepCompleted,
+		"merge":                      cli.StepCompleted,
+		"enable-auto-merge":          cli.StepSkipped,
+		"observe-terminal-state":     cli.StepCompleted,
+		"converge-governing-issue":   cli.StepCompleted,
+		"landing-proof":              cli.StepCompleted,
+	})
+	if !f.pull(55).Merged {
+		t.Error("the pull request was not merged")
+	}
+	// The proof is the operator-facing half of the transaction: the merge commit GitHub
+	// created, and the diff that shows the admitted head's paths now read the same on the
+	// integration branch. Both halves are asserted because either alone is unfalsifiable.
+	var proof string
+	for _, step := range envelope.Steps {
+		if step.Name == "landing-proof" {
+			proof = step.Message
+		}
+	}
+	for _, want := range []string{mergeCommitSHA, "git diff origin/main " + headSHA,
+		"internal/ghworkflow/mutate/land.go", "docs/old.md"} {
+		if !strings.Contains(proof, want) {
+			t.Errorf("landing proof = %q, want it to carry %q", proof, want)
+		}
+	}
+}
+
+// Fail-closed at the first step: a refusal aborts the rest and the receipt says which
+// boundaries were reached. The mark-ready mutation fails here, so nothing may merge.
+func TestLandStopsAtTheFirstRefusalAndReportsWhatCompleted(t *testing.T) {
+	t.Parallel()
+
+	f := newPRFixture(t)
+	f.failMarkReady = true
+	if code := f.run("land", "--pr", "55", "--output", "json"); code == cli.ExitOK {
+		t.Fatalf("exit = 0; a failed mark-ready must not report a landed pull request\nstdout: %s", f.h.stdout)
+	}
+	envelope := decodeEnvelope(t, f.h.stdout.Bytes())
+	assertSteps(t, envelope, map[string]cli.StepStatus{
+		"advance-governing-issue":    cli.StepCompleted,
+		"synchronize-issue-workflow": cli.StepCompleted,
+		"mark-ready":                 cli.StepFailed,
+		"verify-ready":               cli.StepPending,
+		"merge":                      cli.StepPending,
+		"enable-auto-merge":          cli.StepPending,
+		"observe-terminal-state":     cli.StepPending,
+		"converge-governing-issue":   cli.StepPending,
+		"landing-proof":              cli.StepPending,
+	})
+	if f.pull(55).Merged {
+		t.Error("the pull request merged although the Ready transition failed")
+	}
+}
+
+// A Standalone pull request governs no issue, so the transaction skips its first step
+// rather than refusing: the remaining boundaries are the whole operation for it.
+func TestLandSkipsTheIssueAdvanceForAStandalonePullRequest(t *testing.T) {
+	t.Parallel()
+
+	f := newPRFixture(t)
+	f.mu.Lock()
+	// A Standalone declaration carries its own `Change risk:` immediately after the
+	// relationship line; without it the Ready gate refuses the PR for a reason that has
+	// nothing to do with the step under test.
+	f.pulls[55].Body = strings.Replace(landFinalBody, "Final: #17",
+		"Standalone\n\nChange risk: R2 Moderate", 1)
+	f.mu.Unlock()
+	if code := f.run("land", "--pr", "55", "--output", "json"); code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstdout: %s\nstderr: %s", code, f.h.stdout, f.h.stderr)
+	}
+	envelope := decodeEnvelope(t, f.h.stdout.Bytes())
+	assertSteps(t, envelope, map[string]cli.StepStatus{
+		"advance-governing-issue":    cli.StepSkipped,
+		"synchronize-issue-workflow": cli.StepSkipped,
+		"mark-ready":                 cli.StepCompleted,
+		"merge":                      cli.StepCompleted,
+		"converge-governing-issue":   cli.StepSkipped,
+		"landing-proof":              cli.StepCompleted,
+	})
+	for _, write := range f.h.transport.mutations() {
+		if strings.Contains(write.Path, "/issues/17") {
+			t.Errorf("a Standalone pull request wrote to its non-existent governing issue: %+v", write)
+		}
+	}
+}
+
+// The proof command is a contract with the operator who runs it: a rename contributes both
+// names, and `--` keeps a path that looks like a revision from being read as one.
+func TestLandingProofCommandNamesBothEndsOfARename(t *testing.T) {
+	t.Parallel()
+
+	got := mutate.LandingProofCommandForTest("main", headSHA, []ghapi.PullRequestFile{
+		{Filename: "docs/new.md", PreviousFilename: "docs/old.md"},
+		{Filename: "docs/new.md"},
+	})
+	want := "git fetch origin main && git diff origin/main " + headSHA + " -- docs/new.md docs/old.md"
+	if got != want {
+		t.Errorf("landing proof command =\n%s\nwant\n%s", got, want)
 	}
 }

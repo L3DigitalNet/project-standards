@@ -321,24 +321,34 @@ func originHost(u *url.URL) string {
 // that surfaces on the terminal and inside envelope step messages. cli.WriteEnvelope
 // sanitizes again at its own boundary; the encoder is idempotent, and neither layer may
 // assume the other ran.
+// boundedMessage is the single encode-and-bound step every remote-supplied error string
+// passes through: sanitized so a hostile body cannot repaint a terminal or an envelope,
+// and truncated so an unbounded response cannot fill the operator's screen or a log with
+// text the tool merely relayed. Both properties are required of every such string, so
+// callers use this rather than the sanitizer alone.
+func boundedMessage(text string) string {
+	text = safetext.SanitizeText(text)
+	if len(text) <= maxMessageBytes {
+		return text
+	}
+	// Cutting at a fixed byte offset can land inside a multi-byte rune, and the half rune
+	// prints as U+FFFD: the operator reads corruption where the tool meant to show a
+	// truncated message. Back up to a rune boundary first.
+	cut := maxMessageBytes
+	for cut > 0 && !utf8.RuneStart(text[cut]) {
+		cut--
+	}
+	return text[:cut] + "…"
+}
+
 func apiMessage(body []byte) string {
 	var payload struct {
 		Message string `json:"message"`
 	}
 	if err := json.Unmarshal(body, &payload); err == nil && payload.Message != "" {
-		return safetext.SanitizeText(payload.Message)
+		return boundedMessage(payload.Message)
 	}
-	text := safetext.SanitizeText(strings.TrimSpace(string(body)))
-	if len(text) > maxMessageBytes {
-		// Cutting at a fixed byte offset can land inside a multi-byte rune, and the half
-		// rune prints as U+FFFD: the operator reads corruption where the tool meant to
-		// show a truncated message. Back up to a rune boundary first.
-		cut := maxMessageBytes
-		for cut > 0 && !utf8.RuneStart(text[cut]) {
-			cut--
-		}
-		text = text[:cut] + "…"
-	}
+	text := boundedMessage(strings.TrimSpace(string(body)))
 	if text == "" {
 		return "no response body"
 	}

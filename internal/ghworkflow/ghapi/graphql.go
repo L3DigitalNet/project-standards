@@ -70,13 +70,18 @@ func (c *Client) graphql(ctx context.Context, query string, variables map[string
 		return err
 	}
 	if len(envelope.Errors) > 0 {
+		// GraphQL error text is remote-supplied and echoes content the tool did not
+		// author, and it reaches the terminal and DR-004 step messages exactly as a REST
+		// error body does — so it passes the same encode-and-bound step. The type is
+		// GitHub's own enumerated token and is bounded with the message so one error
+		// object cannot exceed the budget through the prefix alone.
 		messages := make([]string, 0, len(envelope.Errors))
 		for _, e := range envelope.Errors {
 			if e.Type != "" {
-				messages = append(messages, e.Type+": "+e.Message)
+				messages = append(messages, boundedMessage(e.Type+": "+e.Message))
 				continue
 			}
-			messages = append(messages, e.Message)
+			messages = append(messages, boundedMessage(e.Message))
 		}
 		return &GraphQLError{Messages: messages}
 	}

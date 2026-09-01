@@ -85,7 +85,7 @@ id = "cli-envelope"
 role = "tool-contract"
 path = "schemas/cli-envelope.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:0e3e480bfb441f7f506d290f83f884a775071563875ed3088d0bc981cf10328a"
+digest = "sha256:cda1e85c1df15a159bd03b38251411d430dace4ad0d029acb150580a11279559"
 
 [[resources]]
 id = "provider-mutation-plan"
@@ -98,7 +98,7 @@ digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57f
 id = "skill"
 target = ".agents/skills/github-workflow/SKILL.md"
 source = "skills/github-workflow/SKILL.md"
-digest = "sha256:8c8ffe24d494017090d10c8a1749a67f32defa41b63c7fb3774a0f60786cff65"
+digest = "sha256:fa0ede8f086902f4882f698605cea228415a3434f9235d38c2f6be5e2cdfe4a3"
 policy = "managed"
 
 [[artifacts]]
@@ -113,7 +113,7 @@ when_any = [{ option = "harnesses", contains = "codex" }]
 id = "tool-binary"
 target = ".agents/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:a02596054261afdd06b8318af502b7059645eebef7f403de0fa735026231722f"
+digest = "sha256:6868b345a31a320f3fd0762893a9d86a83120f5f9a4d45411fae2ec5f4d69c01"
 policy = "managed"
 mode = "0755"
 
@@ -142,7 +142,7 @@ policy = "managed"
 id = "reference-pr-standard"
 target = ".agents/skills/github-workflow/references/pr-standard.md"
 source = "skills/github-workflow/references/pr-standard.md"
-digest = "sha256:e86d81dccd26e0dfe2d1abe4650eae400ad22c20c8f0d97fc05360271026348a"
+digest = "sha256:5dd705ea18f339ba44ddc104d03e4781307573d90f29e29cee8ddfbe3964b4f8"
 policy = "managed"
 
 [[artifacts]]
@@ -176,14 +176,14 @@ policy = "managed"
 id = "skill-claude"
 target = ".claude/skills/github-workflow/SKILL.md"
 source = "skills/github-workflow/SKILL.md"
-digest = "sha256:8c8ffe24d494017090d10c8a1749a67f32defa41b63c7fb3774a0f60786cff65"
+digest = "sha256:fa0ede8f086902f4882f698605cea228415a3434f9235d38c2f6be5e2cdfe4a3"
 policy = "managed"
 
 [[artifacts]]
 id = "tool-binary-claude"
 target = ".claude/skills/github-workflow/bin/gh-workflow"
 source = "skills/github-workflow/bin/gh-workflow"
-digest = "sha256:a02596054261afdd06b8318af502b7059645eebef7f403de0fa735026231722f"
+digest = "sha256:6868b345a31a320f3fd0762893a9d86a83120f5f9a4d45411fae2ec5f4d69c01"
 policy = "managed"
 mode = "0755"
 
@@ -212,7 +212,7 @@ policy = "managed"
 id = "reference-pr-standard-claude"
 target = ".claude/skills/github-workflow/references/pr-standard.md"
 source = "skills/github-workflow/references/pr-standard.md"
-digest = "sha256:e86d81dccd26e0dfe2d1abe4650eae400ad22c20c8f0d97fc05360271026348a"
+digest = "sha256:5dd705ea18f339ba44ddc104d03e4781307573d90f29e29cee8ddfbe3964b4f8"
 policy = "managed"
 
 [[artifacts]]

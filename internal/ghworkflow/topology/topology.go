@@ -49,6 +49,10 @@ const (
 	dateLayout      = "2006-01-02"
 )
 
+// stateOpen is GitHub's own spelling of an open issue's state, which the open-issue memo
+// filters on.
+const stateOpen = "open"
+
 // Gate is one loaded pull request: the live objects, the assembled topology, and the
 // engine's verdict over it.
 type Gate struct {
@@ -85,32 +89,67 @@ func (g *Gate) Workflow() string {
 	return g.Topology.GoverningIssue.Workflow
 }
 
-// Prefetched carries live reads the calling command already performed, so a command that
-// loads many gates does not re-issue one shared read per gate (NFR-008: "shared live reads
-// are reused within one command").
+// Prefetched memoizes the live reads a single command shares across many gate loads, so
+// a command that loads N gates issues each shared read once instead of N times (NFR-008:
+// "shared live reads are reused within one command").
 //
-// A non-nil *Prefetched asserts that every read it names was performed against the same
-// repository in the same command, and its value is authoritative — an empty
-// OpenPullRequests means "the repository has no open pull requests", never "not read yet".
-// That is why the presence of the struct, and not the emptiness of a field, is the signal:
-// a caller that has only some of these reads passes nil rather than a half-filled value.
+// Every field is unexported and reached through one accessor that reads on first use and
+// records the answer, so a value can never claim a read that did not happen. That is the
+// whole safety argument: an earlier design exported the fields and treated a non-nil
+// struct as the assertion that every read it named had been performed, which meant a
+// caller holding only some of the reads had to pass nil or silently answer the
+// one-open-Final rule from an empty list. Seeding is therefore explicit — the two Seed
+// methods below record a read the caller genuinely performed — and everything unseeded is
+// simply read on demand.
 //
-// Only `summary` supplies one today. `check`, `ready`, `merge`, and `close --pr` load a
-// single gate, so there is nothing to share and passing nil keeps their read set visible
-// at their own call site.
+// A Prefetched is valid only for the repository and the moment it was built against:
+// handing one to a load against another repository would answer cardinality, lifecycle,
+// and CI questions from the wrong corpus. It carries no synchronization, because the
+// commands that use it are sequential by construction.
 type Prefetched struct {
-	// OpenPullRequests is the complete `state=open` pull-request list for this repository,
+	// openPullRequests is the complete `state=open` pull-request list for this repository,
 	// bodies included — the one-open-Final cardinality rule (FR-027) is answered from it.
-	OpenPullRequests []ghapi.PullRequest
-	// CheckRuns holds the check runs already read, keyed by the commit SHA they were read
+	openPullRequests     []ghapi.PullRequest
+	openPullRequestsRead bool
+	// openIssues indexes the repository's open issues by number. GetIssue is served from it
+	// for a number it holds; a closed or absent issue falls through to the API, without
+	// which a Final governed by a closed issue would read as unresolved and raise
+	// GHW-PR-STRUCTURAL-ISSUE-UNRESOLVED against an issue that exists.
+	openIssues     map[int]ghapi.Issue
+	openIssuesRead bool
+	// checkRuns holds the check runs already read, keyed by the commit SHA they were read
 	// for. Presence of a key means the read happened; a present-but-empty entry means the
-	// commit genuinely has no check runs, which is a different fact from "not read yet" and
-	// is why the map is consulted with the two-value form everywhere.
-	//
-	// Only the unexported checkRuns writes it, so a key can never claim a read that did not
-	// happen; callers construct a Prefetched without it and let the first read populate it.
-	// A nil map is legal and simply memoizes nothing.
-	CheckRuns map[string][]ghapi.CheckRun
+	// commit genuinely has no check runs, which is a different fact from "not read yet".
+	checkRuns map[string][]ghapi.CheckRun
+	// mergeSettings is repository-level and therefore identical for every gate in one
+	// command; non-nil means it was read.
+	mergeSettings *ghapi.RepositoryMergeSettings
+	// enforcement is branch-level, keyed by base ref: two pull requests targeting the same
+	// branch share one answer, two targeting different branches do not.
+	enforcement map[string]ghapi.BranchEnforcement
+}
+
+// NewPrefetched returns an empty memo. Every read it is asked for happens on first use.
+func NewPrefetched() *Prefetched { return &Prefetched{} }
+
+// SeedOpenPullRequests records the `state=open` list the caller already read.
+func (p *Prefetched) SeedOpenPullRequests(pulls []ghapi.PullRequest) {
+	p.openPullRequests, p.openPullRequestsRead = pulls, true
+}
+
+// SeedOpenIssues records the open-issue list the caller already read.
+//
+// Only open issues belong here: the index is consulted as "this number is open and here
+// it is", and seeding a closed issue would let a stale open-state projection satisfy a
+// lifecycle predicate that must see the closure.
+func (p *Prefetched) SeedOpenIssues(issues []ghapi.Issue) {
+	index := make(map[int]ghapi.Issue, len(issues))
+	for _, issue := range issues {
+		if issue.State == stateOpen {
+			index[issue.Number] = issue
+		}
+	}
+	p.openIssues, p.openIssuesRead = index, true
 }
 
 // CIState summarizes the CI verdict for a commit, retaining the check runs it read in pre.
@@ -171,7 +210,7 @@ func checkRuns(ctx context.Context, client *ghapi.Client, owner, name, ref strin
 	pre *Prefetched,
 ) ([]ghapi.CheckRun, error) {
 	if pre != nil {
-		if cached, read := pre.CheckRuns[ref]; read {
+		if cached, read := pre.checkRuns[ref]; read {
 			return cached, nil
 		}
 	}
@@ -183,10 +222,10 @@ func checkRuns(ctx context.Context, client *ghapi.Client, owner, name, ref strin
 		return nil, err
 	}
 	if pre != nil {
-		if pre.CheckRuns == nil {
-			pre.CheckRuns = map[string][]ghapi.CheckRun{}
+		if pre.checkRuns == nil {
+			pre.checkRuns = map[string][]ghapi.CheckRun{}
 		}
-		pre.CheckRuns[ref] = runs
+		pre.checkRuns[ref] = runs
 	}
 	return runs, nil
 }
@@ -254,7 +293,7 @@ func LoadWith(ctx context.Context, client *ghapi.Client, owner, name string,
 	topology := relation.Topology{PullRequest: observed, Now: time.Now().UTC()}
 
 	if decl.Relationship.Governed() && decl.IssueNumber > 0 {
-		issue, err := client.GetIssue(ctx, owner, name, decl.IssueNumber)
+		issue, err := governingIssue(ctx, client, owner, name, decl.IssueNumber, pre)
 		switch {
 		case err != nil && !notFound(err):
 			return nil, err
@@ -316,15 +355,85 @@ func LoadWith(ctx context.Context, client *ghapi.Client, owner, name string,
 	return g, nil
 }
 
-// openPullRequests returns the repository's open pull requests, reading them only when the
-// caller did not already hold them.
+// openPullRequests returns the repository's open pull requests, reading them at most once
+// per Prefetched.
 func openPullRequests(ctx context.Context, client *ghapi.Client, owner, name string,
 	pre *Prefetched,
 ) ([]ghapi.PullRequest, error) {
-	if pre != nil {
-		return pre.OpenPullRequests, nil
+	if pre != nil && pre.openPullRequestsRead {
+		return pre.openPullRequests, nil
 	}
-	return client.ListOpenPullRequests(ctx, owner, name)
+	pulls, err := client.ListOpenPullRequests(ctx, owner, name)
+	if err != nil {
+		return nil, err
+	}
+	if pre != nil {
+		pre.SeedOpenPullRequests(pulls)
+	}
+	return pulls, nil
+}
+
+// governingIssue reads one issue, serving it from the open-issue index when that index
+// holds it.
+//
+// The fall-through is the load-bearing half. A pull request may declare an issue that is
+// closed, that belongs to no open queue, or that does not exist at all, and only the API
+// can distinguish those; answering "absent from the open list" as "no such issue" would
+// report a Final governed by a closed issue as unresolved. The index is therefore a
+// positive cache only, never a negative one.
+func governingIssue(ctx context.Context, client *ghapi.Client, owner, name string,
+	number int, pre *Prefetched,
+) (*ghapi.Issue, error) {
+	if pre != nil && pre.openIssuesRead {
+		if issue, open := pre.openIssues[number]; open {
+			return &issue, nil
+		}
+	}
+	return client.GetIssue(ctx, owner, name, number)
+}
+
+// mergeSettings reads the repository's permitted merge methods at most once per
+// Prefetched. The answer is repository-level, so every gate in one command shares it.
+func mergeSettings(ctx context.Context, client *ghapi.Client, owner, name string,
+	pre *Prefetched,
+) (*ghapi.RepositoryMergeSettings, error) {
+	if pre != nil && pre.mergeSettings != nil {
+		return pre.mergeSettings, nil
+	}
+	settings, err := client.GetRepositoryMergeSettings(ctx, owner, name)
+	if err != nil {
+		return nil, err
+	}
+	if pre != nil {
+		pre.mergeSettings = settings
+	}
+	return settings, nil
+}
+
+// branchEnforcement reads one base branch's live enforcement at most once per Prefetched.
+//
+// Keyed by ref rather than cached as a single value: a command may load gates against
+// different base branches, and answering a feature branch's admission from `main`'s
+// rulesets would report enforcement the pull request is not actually subject to.
+func branchEnforcement(ctx context.Context, client *ghapi.Client, owner, name, ref string,
+	pre *Prefetched,
+) (ghapi.BranchEnforcement, error) {
+	if pre != nil {
+		if cached, read := pre.enforcement[ref]; read {
+			return cached, nil
+		}
+	}
+	evidence, err := client.GetBranchEnforcement(ctx, owner, name, ref)
+	if err != nil {
+		return ghapi.BranchEnforcement{}, err
+	}
+	if pre != nil {
+		if pre.enforcement == nil {
+			pre.enforcement = map[string]ghapi.BranchEnforcement{}
+		}
+		pre.enforcement[ref] = *evidence
+	}
+	return *evidence, nil
 }
 
 // loadMergeEvidence adds the live admission evidence: what the repository permits, what
@@ -334,10 +443,16 @@ func openPullRequests(ctx context.Context, client *ghapi.Client, owner, name str
 // Known=false. ERR-013's fail-closed rule covers evidence that an *otherwise successful*
 // read could not establish; reporting a transport failure as a domain finding would tell
 // the operator the PR is unmergeable when the truth is that nothing was learned.
+//
+// The two branch- and repository-level reads are memoized in pre when one was supplied:
+// the permitted merge methods are a property of the repository and the enforcement of the
+// base branch, so a summary loading many pull requests learned the identical answer once
+// per pull request before this (NFR-008). The verdict is unchanged either way — the memo
+// returns the same bytes the read would have.
 func loadMergeEvidence(ctx context.Context, client *ghapi.Client, owner, name string,
 	topology *relation.Topology, pre *Prefetched,
 ) error {
-	settings, err := client.GetRepositoryMergeSettings(ctx, owner, name)
+	settings, err := mergeSettings(ctx, client, owner, name, pre)
 	if err != nil {
 		return err
 	}
@@ -346,7 +461,7 @@ func loadMergeEvidence(ctx context.Context, client *ghapi.Client, owner, name st
 		AllowMerge: settings.AllowMerge, Known: settings.Known,
 	}
 
-	enforcement, err := client.GetBranchEnforcement(ctx, owner, name, topology.PullRequest.BaseRef)
+	enforcement, err := branchEnforcement(ctx, client, owner, name, topology.PullRequest.BaseRef, pre)
 	if err != nil {
 		return err
 	}

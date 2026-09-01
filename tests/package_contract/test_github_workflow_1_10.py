@@ -47,9 +47,9 @@ _PROJECTION_110 = _ROOT / "src/project_standards/payloads/github-workflow/1.10"
 _BINARY = "skills/github-workflow/bin/gh-workflow"
 _SKILL = "skills/github-workflow/SKILL.md"
 
-# NFR-006 and NFR-003. The cut spends none of either budget — no delivered prose grew
-# except the two version-history sections in README.md and adopt.md, which are outside
-# both — so the ceilings are asserted to catch a future edit that does.
+# NFR-006 and NFR-003. SKILL.md sits at exactly the byte ceiling, so the `land` routing
+# and admission text added here was paid for by compressing prose elsewhere in the same
+# file rather than by extending it — which is the displacement rule NFR-006 states.
 _SKILL_MAX_LINES = 70
 _SKILL_MAX_BYTES = 12000
 
@@ -70,13 +70,15 @@ def _payload(root: Path) -> InstalledPayload:
     return InstalledPayload(root, manifest, validate_payload_integrity(root, manifest))
 
 
-def test_github_workflow_1_10__delivered_units__move_only_the_hardening_surfaces() -> None:
+def test_github_workflow_1_10__delivered_units__move_only_the_declared_surfaces() -> None:
     """Everything outside this set survives byte-for-byte from 1.9.
 
-    This is what turns "1.10 is a hardening cut" into a checkable claim: no reference,
-    schema, or provider changes, so an adopter's rendered output is 1.9's apart from the
-    `package_version` stamp, and the only new bytes are the binary and the prose that
-    accounts for it.
+    This is what keeps 1.10's scope checkable: no provider and no configuration option
+    changes, so an adopter's rendered `policy.toml` is 1.9's apart from the
+    `package_version` stamp. What does move is the binary, the two prose files that
+    account for it, and the three surfaces the `land` subcommand adds — its routing row
+    in the skill, its lifecycle row in `pr-standard.md`, and its name in the envelope
+    schema's `command` enumeration, which is the contract a consumer parses against.
     """
     changed = frozenset(
         {
@@ -85,6 +87,8 @@ def test_github_workflow_1_10__delivered_units__move_only_the_hardening_surfaces
             "agent-summary.md",
             "payload.toml",
             "schemas/provider-input.schema.json",
+            "schemas/cli-envelope.schema.json",
+            "skills/github-workflow/references/pr-standard.md",
             _SKILL,
             _BINARY,
         }

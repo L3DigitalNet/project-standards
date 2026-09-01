@@ -446,8 +446,8 @@ def test_github_workflow_1_8__predecessor_tree_and_activation_stay_exact() -> No
     # Withdrawing an advertised package is a catalog-major transition (ADR 0024), so
     # every predecessor stays advertised and only its role moves to `retained`.
     assert roles == {
-        **{f"1.{minor}": "retained" for minor in range(9)},
-        "1.9": "default",
+        **{f"1.{minor}": "retained" for minor in range(10)},
+        "1.10": "default",
     }
 
 

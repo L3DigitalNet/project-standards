@@ -69,6 +69,11 @@ func init() {
 		Run:     runMerge,
 	})
 	cli.Register(&cli.Command{
+		Name:    "land",
+		Summary: "land a pull request as one transaction: advance the issue, ready, merge, prove",
+		Run:     runLand,
+	})
+	cli.Register(&cli.Command{
 		Name:    "check",
 		Summary: "gate one issue on its Ready preconditions or one pull request on its phase (read-only)",
 		Run:     runCheck,
