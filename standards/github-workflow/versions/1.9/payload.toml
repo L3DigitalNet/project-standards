@@ -36,7 +36,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:33c707023f005cccea3925745413755af06924e5d5de582dee53e33dc2edea9b"
+digest = "sha256:0ca7dd5ccfc75e78cc6984fa8064f0c5d30ebe79be40488b05c762a1b37d5bc0"
 
 [[resources]]
 id = "adopt"
@@ -57,7 +57,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/gh_workflow.py"
 media_type = "text/x-python"
-digest = "sha256:f0daee01b812dbe47296b5bdf59a25229bf6e79c46a3e0ae6cbe7d3ee01f0ddf"
+digest = "sha256:4c3ff4d7977138cb51df12d38889de90eee4591bc41dfedcf551dc517dbf1e1c"
 
 [[resources]]
 id = "provider-input"

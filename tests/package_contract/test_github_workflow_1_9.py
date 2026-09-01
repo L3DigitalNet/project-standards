@@ -397,6 +397,31 @@ def test_github_workflow_1_9__rendered_policy__carries_the_options_as_quoted_sca
     assert 'package_version = "1.9"' in default_policy
 
 
+def test_github_workflow_1_9__organization__refuses_a_login_the_shipped_tool_cannot_load() -> None:
+    """Close the render/load asymmetry: `a--b` was accepted here and refused there.
+
+    `ghapi.ValidateLogin` in the shipped binary rejects a doubled hyphen, and it is the
+    function that reads the rendered `policy.toml`. Through 1.8 the provider's own check
+    omitted that rule, so a consumer could configure `a--b`, watch reconcile report
+    success, and then have every subcommand refuse the file it had just written. Both
+    boundaries now state the same grammar, and both are asserted here because a schema
+    that admits what the provider refuses is the same defect in the other direction.
+    """
+    schema = cast(
+        "dict[str, object]", json.loads((_V19 / "config.schema.json").read_text(encoding="utf-8"))
+    )
+    pattern = cast("dict[str, dict[str, object]]", schema["properties"])["organization"]["pattern"]
+    compiled = re.compile(cast("str", pattern))
+
+    for accepted in ("L3DigitalNet", "a-b", "a", _MAX_LOGIN):
+        assert compiled.match(accepted), f"the schema refuses the valid login {accepted}"
+    for refused in ("a--b", "-ab", "ab-", "a_b", "a.b"):
+        assert not compiled.match(refused), f"the schema accepts the invalid login {refused}"
+
+    with pytest.raises(ValueError, match="not a valid GitHub login"):
+        _render_policy(_V19, {"organization": "a--b", "harnesses": ["codex"]})
+
+
 # ---------------------------------------------------------------------------
 # The classifier, run
 # ---------------------------------------------------------------------------

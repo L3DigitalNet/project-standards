@@ -157,11 +157,17 @@ def _organization(config: Mapping[str, object]) -> str:
     backslashes, and non-login characters, so a value that would produce a policy
     file the tool cannot parse is rejected here, while rendering, rather than
     written and discovered at audit time.
+
+    The grammar must match `ghapi.ValidateLogin` in the shipped Go binary exactly,
+    because that function is what refuses the rendered file. Through 1.8 this check
+    was the weaker of the two: it omitted the doubled-hyphen rule, so `a--b` rendered
+    a `policy.toml` the packaged tool then refused on every `Load`, and reconcile
+    reported success on a configuration no subcommand could use.
     """
     value = config.get("organization")
     if not isinstance(value, str) or not value:
         raise ValueError("config.organization must be a nonempty string")
-    if len(value) > 39 or value.startswith("-") or value.endswith("-"):
+    if len(value) > 39 or value.startswith("-") or value.endswith("-") or "--" in value:
         raise ValueError("config.organization is not a valid GitHub login")
     if not all(
         character.isascii() and (character.isalnum() or character == "-") for character in value

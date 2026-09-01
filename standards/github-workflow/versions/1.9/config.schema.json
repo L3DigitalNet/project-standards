@@ -4,7 +4,12 @@
 	"additionalProperties": false,
 	"required": ["organization", "harnesses"],
 	"properties": {
-		"organization": { "type": "string", "minLength": 1 },
+		"organization": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 39,
+			"pattern": "^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$"
+		},
 		"harnesses": {
 			"type": "array",
 			"items": { "enum": ["claude-code", "codex"] },
