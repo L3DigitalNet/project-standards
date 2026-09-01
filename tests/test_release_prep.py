@@ -385,3 +385,216 @@ def test_sweep_version_references__agent_summary_only__preserves_old_target_set(
 
     assert result.detail == "0 occurrence(s) of 5.18.0 reported for review"
     assert "  none" in capsys.readouterr().out
+
+
+def _write_pin_tree(root: Path) -> None:
+    """Materialize one line per allow-listed matcher plus the judgment sites beside them.
+
+    Every judgment site here is a real one the v5.28.0 train had to leave alone: the
+    ROADMAP heading, the UPGRADING history heading, `_BASELINE_REF`, and package prose in
+    `meta/versioning.md` that names a version the catalog does not select.
+    """
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    (root / "meta").mkdir(parents=True, exist_ok=True)
+    (root / "tests" / "package_contract").mkdir(parents=True, exist_ok=True)
+
+    (root / "README.md").write_text(
+        "Project Standards 5.28.0 requires Python 3.14 or newer.\n"
+        'uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.28.0"\n'
+        "must report `project-standards 5.28.0`.\n"
+        "    rev: v5.28.0 # pre-commit requires an immutable rev\n"
+        "extract build/release-wheel/project_standards-5.28.0-py3-none-any.whl\n"
+        "The v5.27.0 train is history and must not move.\n",
+        encoding="utf-8",
+    )
+    (root / "UPGRADING.md").write_text(
+        "- Install or invoke the exact v5 release you intend to pin. For 5.28.0:\n"
+        '  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.28.0"\n'
+        "  Confirm that the command reports `project-standards 5.28.0`.\n"
+        "### What the 5.28.0 defaults rewrite on refresh: an authored history heading\n",
+        encoding="utf-8",
+    )
+    (root / "docs" / "mcp-server.md").write_text(
+        'uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.28.0"\n'
+        "sha256sum dist/project_standards-5.28.0-py3-none-any.whl\n"
+        "The version command reports `project-standards 5.28.0`.\n",
+        encoding="utf-8",
+    )
+    (root / "meta" / "versioning.md").write_text(
+        "- The **Markdown Tooling contract version** is the closed option inside the "
+        "selected payload, enforced independently from package release `1.15`.\n"
+        "- The **Agent Handoff contract version** is the closed option inside the "
+        "selected payload, enforced independently from package release `1.16`.\n"
+        "- Markdown Tooling 1.14 remains advertised as released history.\n",
+        encoding="utf-8",
+    )
+    (root / "ROADMAP.md").write_text("## Shipped in 5.28.0\n", encoding="utf-8")
+    (root / "tests" / "package_contract" / "test_current_catalog_activation.py").write_text(
+        '_BASELINE_REF = "v5.28.0"\n_RELEASE_VERSION = "5.28.0"\n',
+        encoding="utf-8",
+    )
+    _write_catalog(
+        root,
+        [
+            ("markdown-tooling", "1.16", "default"),
+            ("markdown-tooling", "1.15", "retained"),
+            ("agent-handoff", "1.16", "default"),
+        ],
+    )
+
+
+def test_plan_pins__allow_listed_sites__rewrites_pins_and_leaves_judgment_sites(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release_prep = _release_prep_module()
+    _write_pin_tree(tmp_path)
+    monkeypatch.setattr(release_prep, "REPO_ROOT", tmp_path)
+
+    plan = release_prep.plan_pins(release_prep.Version(5, 28, 0), release_prep.Version(5, 29, 0))
+
+    assert [(edit.path, edit.matcher, edit.observed, edit.expected) for edit in plan.edits] == [
+        ("README.md", "product-prose", "5.28.0", "5.29.0"),
+        ("README.md", "install-tag", "5.28.0", "5.29.0"),
+        ("README.md", "version-report", "5.28.0", "5.29.0"),
+        ("README.md", "precommit-rev", "5.28.0", "5.29.0"),
+        ("README.md", "wheel-artifact", "5.28.0", "5.29.0"),
+        ("UPGRADING.md", "upgrade-target", "5.28.0", "5.29.0"),
+        ("UPGRADING.md", "install-tag", "5.28.0", "5.29.0"),
+        ("UPGRADING.md", "version-report", "5.28.0", "5.29.0"),
+        ("docs/mcp-server.md", "install-tag", "5.28.0", "5.29.0"),
+        ("docs/mcp-server.md", "wheel-artifact", "5.28.0", "5.29.0"),
+        ("docs/mcp-server.md", "version-report", "5.28.0", "5.29.0"),
+        (
+            "tests/package_contract/test_current_catalog_activation.py",
+            "release-constant",
+            "5.28.0",
+            "5.29.0",
+        ),
+        ("meta/versioning.md", "package-contract-prose", "1.15", "1.16"),
+    ]
+    # ROADMAP.md is absent from the allow-list entirely, so no plan can ever name it.
+    assert {path for path, _ in plan.updates} == {
+        "README.md",
+        "UPGRADING.md",
+        "docs/mcp-server.md",
+        "meta/versioning.md",
+        "tests/package_contract/test_current_catalog_activation.py",
+    }
+
+
+def test_apply_pins__dry_run__prints_diff_and_writes_nothing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    release_prep = _release_prep_module()
+    _write_pin_tree(tmp_path)
+    monkeypatch.setattr(release_prep, "REPO_ROOT", tmp_path)
+    before = {path: path.read_text(encoding="utf-8") for path in sorted(tmp_path.rglob("*.md"))}
+
+    plan = release_prep.plan_pins(release_prep.Version(5, 28, 0), release_prep.Version(5, 29, 0))
+    result = release_prep.apply_pins(plan, dry_run=True)
+
+    assert result.status == "planned"
+    output = capsys.readouterr().out
+    assert "--- a/README.md" in output
+    assert "+++ b/README.md" in output
+    assert "+Project Standards 5.29.0 requires Python 3.14 or newer." in output
+    assert {path: path.read_text(encoding="utf-8") for path in before} == before
+
+
+def test_apply_pins__applied__rewrites_only_pinned_lines_and_is_idempotent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release_prep = _release_prep_module()
+    _write_pin_tree(tmp_path)
+    monkeypatch.setattr(release_prep, "REPO_ROOT", tmp_path)
+    current = release_prep.Version(5, 28, 0)
+    target = release_prep.Version(5, 29, 0)
+
+    release_prep.apply_pins(release_prep.plan_pins(current, target), dry_run=False)
+
+    readme = (tmp_path / "README.md").read_text(encoding="utf-8")
+    assert "5.28.0" not in readme
+    assert "The v5.27.0 train is history and must not move." in readme
+    upgrading = (tmp_path / "UPGRADING.md").read_text(encoding="utf-8")
+    assert "### What the 5.28.0 defaults rewrite on refresh" in upgrading
+    activation = (
+        tmp_path / "tests" / "package_contract" / "test_current_catalog_activation.py"
+    ).read_text(encoding="utf-8")
+    assert activation == '_BASELINE_REF = "v5.28.0"\n_RELEASE_VERSION = "5.29.0"\n'
+    versioning = (tmp_path / "meta" / "versioning.md").read_text(encoding="utf-8")
+    assert "independently from package release `1.16`" in versioning
+    assert "Markdown Tooling 1.14 remains advertised as released history." in versioning
+    assert (tmp_path / "ROADMAP.md").read_text(encoding="utf-8") == "## Shipped in 5.28.0\n"
+
+    # A second pass finds nothing: the outgoing version is gone from every allow-listed
+    # site, so re-running R3 after a partial train cannot double-rewrite.
+    assert release_prep.plan_pins(current, target).edits == ()
+
+
+def test_plan_pins__missing_allow_listed_site__fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release_prep = _release_prep_module()
+    _write_pin_tree(tmp_path)
+    (tmp_path / "docs" / "mcp-server.md").unlink()
+    monkeypatch.setattr(release_prep, "REPO_ROOT", tmp_path)
+
+    with pytest.raises(release_prep.ReleasePrepError) as error:
+        release_prep.plan_pins(release_prep.Version(5, 28, 0), release_prep.Version(5, 29, 0))
+
+    assert "allow-listed pin site docs/mcp-server.md does not exist" in str(error.value)
+
+
+def test_main__apply_pins_write_off_release_branch__refuses(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    release_prep = _release_prep_module()
+    _write_pin_tree(tmp_path)
+    monkeypatch.setattr(release_prep, "REPO_ROOT", tmp_path)
+
+    def previous_release_tag(_target: object) -> str:
+        return "v5.28.0"
+
+    def git(*_args: str) -> str:
+        return "testing\n"
+
+    monkeypatch.setattr(release_prep, "_previous_release_tag", previous_release_tag)
+    monkeypatch.setattr(release_prep, "_git", git)
+
+    assert release_prep.main(["5.29.0", "--apply-pins"]) == 1
+    assert "pin rewrites must be applied on 'main'" in capsys.readouterr().err
+    assert "5.29.0" not in (tmp_path / "README.md").read_text(encoding="utf-8")
+
+
+def test_main__apply_pins_dry_run__runs_no_release_step(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    release_prep = _release_prep_module()
+    _write_pin_tree(tmp_path)
+    monkeypatch.setattr(release_prep, "REPO_ROOT", tmp_path)
+
+    def previous_release_tag(_target: object) -> str:
+        return "v5.28.0"
+
+    monkeypatch.setattr(release_prep, "_previous_release_tag", previous_release_tag)
+
+    def unexpected(*_args: object, **_kwargs: object) -> Any:
+        pytest.fail("--apply-pins ran a release step other than the pin rewrite")
+
+    monkeypatch.setattr(release_prep, "check_preconditions", unexpected)
+    monkeypatch.setattr(release_prep, "bump_version", unexpected)
+    monkeypatch.setattr(release_prep, "verify_chain", unexpected)
+
+    assert release_prep.main(["5.29.0", "--apply-pins", "--dry-run"]) == 0
+    assert (
+        "outgoing version taken from the previous release tag: v5.28.0" in capsys.readouterr().out
+    )

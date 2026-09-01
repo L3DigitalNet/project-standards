@@ -11,8 +11,9 @@ here:
     contract; a script must never mint or move one.
   * step 3 (in-repo `@vN` reference rewrite, MAJOR only) — versioning.md carves out
     three classes that must be reviewed individually (UPGRADING.md history, fixed
-    `blob/vN` permalinks, a standard's first-shipping examples), so this script
-    *reports* stale references and rewrites none.
+    `blob/vN` permalinks, a standard's first-shipping examples), so the default run
+    *reports* stale references and rewrites none. `--apply-pins` rewrites the
+    strictly mechanical subset of them, named site by site in an allow-list.
   * step 6 (UPGRADING.md prose, MAJOR only) — authored migration prose.
 
 The script edits files and runs the mechanical wiring checks. It never commits,
@@ -22,10 +23,15 @@ verification; its summary prints that operator handoff before tag instructions.
 Usage (from the repository root):
 
     uv run python scripts/release_prep.py X.Y.Z [--dry-run]
+    uv run python scripts/release_prep.py X.Y.Z --apply-pins [--dry-run]
 
 `--dry-run` prints every planned edit and mutation command without performing any
 of them; the read-only `--check` verification commands still run so the dry run
 reports the true pre-bump state of the chain.
+
+`--apply-pins` is a separate mode, not an extra step of the default run: it does
+only the allow-listed pin rewrites (runbook step R3) and exits, because those land
+after the version bump has been reviewed. See `run_apply_pins`.
 
 Exit codes: 0 success, 1 a step failed, 2 bad invocation.
 
@@ -36,11 +42,12 @@ before the project environment is guaranteed to be in any particular state.
 from __future__ import annotations
 
 import argparse
+import difflib
 import re
 import subprocess
 import sys
 import tomllib
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -392,6 +399,240 @@ def sweep_version_references(current: Version) -> StepResult:
         "ok",
         f"{len(hits)} occurrence(s) of {current} reported for review",
     )
+
+
+# ---- step 3a: allow-listed pin rewrites --------------------------------------
+#
+# The sweep above deliberately rewrites nothing, which left the release runbook's R3 as a
+# hand-written batch of line-addressed `sed -i` commands whose addresses had to be
+# re-derived on every train (#227 E3 item 5). The addresses are the hazard: a doc leg that
+# landed after the runbook was written shifts them, and a mis-addressed `sed` edits the
+# wrong line silently.
+#
+# `--apply-pins` replaces that batch with an allow-list. Nothing is rewritten unless a
+# (path, matcher) pair below names it, so every judgment site the sweep exists to surface
+# — ROADMAP.md sections, UPGRADING.md history headings, `_BASELINE_REF`, package prose
+# outside the two contract lines — stays reported and untouched by construction. Adding a
+# matcher is the deliberate act of declaring a site mechanical.
+#
+# The second guard is the value: a match is rewritten only when the version it carries is
+# exactly the outgoing one. A site already at the target, or naming some third version, is
+# left alone rather than "corrected".
+
+_VERSION_TEXT = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+
+# Every matcher captures the version in a `version` group; only that group's span is
+# rewritten, so surrounding prose is never touched. Each one is anchored on text that only
+# ever accompanies a release pin, never on the bare version string.
+_PIN_MATCHERS: dict[str, re.Pattern[str]] = {
+    "install-tag": re.compile(rf"project-standards@v(?P<version>{_VERSION_TEXT})"),
+    "wheel-artifact": re.compile(
+        rf"project_standards-(?P<version>{_VERSION_TEXT})-py3-none-any\.whl"
+    ),
+    "version-report": re.compile(rf"project-standards (?P<version>{_VERSION_TEXT})"),
+    "product-prose": re.compile(rf"Project Standards (?P<version>{_VERSION_TEXT})"),
+    "upgrade-target": re.compile(rf"release you intend to pin\. For (?P<version>{_VERSION_TEXT}):"),
+    "precommit-rev": re.compile(rf"rev: v(?P<version>{_VERSION_TEXT})"),
+    "release-constant": re.compile(rf'_RELEASE_VERSION = "(?P<version>{_VERSION_TEXT})"'),
+}
+
+# The allow-list itself: path -> the matchers admitted in that file. A path missing from
+# the tree is a hard error, not a skip — a renamed pin site must be re-declared here rather
+# than silently dropping out of the release.
+_RELEASE_PIN_SITES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "README.md",
+        ("install-tag", "wheel-artifact", "version-report", "product-prose", "precommit-rev"),
+    ),
+    ("UPGRADING.md", ("install-tag", "version-report", "upgrade-target")),
+    ("docs/mcp-server.md", ("install-tag", "wheel-artifact", "version-report")),
+    ("tests/package_contract/test_current_catalog_activation.py", ("release-constant",)),
+)
+
+# meta/versioning.md pins *package* releases, not the tool release, which is why the
+# release-version sweep never reported it and why markdown-tooling's line was left at 1.15
+# through the whole v5.28.0 train. The expected value comes from the candidate catalog's
+# own selection, so this pin follows the cut rather than a transcribed number.
+_PACKAGE_PIN_PATH = "meta/versioning.md"
+_PACKAGE_PIN_MATCHER = re.compile(
+    r"The \*\*(?P<family>[A-Z][A-Za-z]*(?: [A-Z][A-Za-z]*)*) contract version\*\*"
+    rf".*?independently from package release `(?P<version>{_PACKAGE_VERSION_TEXT})`"
+)
+
+
+@dataclass(frozen=True)
+class PinEdit:
+    """One allow-listed rewrite, reported whether or not it is written."""
+
+    path: str
+    line: int
+    matcher: str
+    observed: str
+    expected: str
+
+
+@dataclass(frozen=True)
+class PinPlan:
+    """A validated, not-yet-written batch of pin rewrites plus its unified diff."""
+
+    edits: tuple[PinEdit, ...]
+    updates: tuple[tuple[str, str], ...]
+    diff: str
+
+
+def _rewrite_line(
+    line: str,
+    matchers: Sequence[tuple[str, re.Pattern[str]]],
+    expected_for: Callable[[re.Match[str]], str | None],
+) -> tuple[str, list[tuple[str, str, str]]]:
+    """Return the rewritten line and one record per replaced match.
+
+    Spans are replaced right-to-left so an earlier replacement cannot invalidate a later
+    match's offsets when two pins share a line.
+    """
+    replacements: list[tuple[int, int, str, str, str]] = []
+    for name, pattern in matchers:
+        for match in pattern.finditer(line):
+            expected = expected_for(match)
+            observed = match.group("version")
+            if expected is None or observed == expected:
+                continue
+            start, end = match.span("version")
+            replacements.append((start, end, name, observed, expected))
+
+    records: list[tuple[str, str, str]] = []
+    for start, end, name, observed, expected in sorted(replacements, reverse=True):
+        line = line[:start] + expected + line[end:]
+        records.append((name, observed, expected))
+    records.reverse()
+    return line, records
+
+
+def plan_pins(current: Version, target: Version) -> PinPlan:
+    """Compute every allow-listed pin rewrite, reading files but writing none.
+
+    The whole batch is planned before anything is written, so a missing allow-listed path
+    or an unreadable file aborts with the tree untouched instead of half-rewritten.
+    """
+    selections = {selection.family: selection.version for selection in _catalog_selections(target)}
+
+    _Expected = Callable[[re.Match[str]], str | None]
+    sites: list[tuple[str, Sequence[tuple[str, re.Pattern[str]]], _Expected]] = []
+    for path, matcher_names in _RELEASE_PIN_SITES:
+        matchers = [(name, _PIN_MATCHERS[name]) for name in matcher_names]
+        # Only the outgoing release moves. Anything else at a pin site is either already
+        # done or a number this release does not own.
+        sites.append(
+            (
+                path,
+                matchers,
+                lambda match: str(target) if match["version"] == str(current) else None,
+            )
+        )
+
+    def _package_expected(match: re.Match[str]) -> str | None:
+        family = match["family"].casefold().replace(" ", "-")
+        return selections.get(family)
+
+    sites.append(
+        (_PACKAGE_PIN_PATH, [("package-contract-prose", _PACKAGE_PIN_MATCHER)], _package_expected)
+    )
+
+    edits: list[PinEdit] = []
+    updates: list[tuple[str, str]] = []
+    diff_chunks: list[str] = []
+    for path, matchers, expected_for in sites:
+        absolute = REPO_ROOT / path
+        if not absolute.is_file():
+            raise ReleasePrepError(
+                f"allow-listed pin site {path} does not exist; update _RELEASE_PIN_SITES "
+                "before preparing the release"
+            )
+        try:
+            original = absolute.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as error:
+            raise ReleasePrepError(f"cannot read pin site {path}: {error}") from error
+
+        lines = original.splitlines(keepends=True)
+        rewritten: list[str] = []
+        changed = False
+        for number, line in enumerate(lines, start=1):
+            new_line, records = _rewrite_line(line, matchers, expected_for)
+            rewritten.append(new_line)
+            for matcher, observed, expected in records:
+                edits.append(PinEdit(path, number, matcher, observed, expected))
+                changed = True
+        if not changed:
+            continue
+        updated = "".join(rewritten)
+        updates.append((path, updated))
+        diff_chunks.extend(
+            difflib.unified_diff(
+                lines,
+                rewritten,
+                fromfile=f"a/{path}",
+                tofile=f"b/{path}",
+            )
+        )
+    return PinPlan(tuple(edits), tuple(updates), "".join(diff_chunks))
+
+
+def apply_pins(plan: PinPlan, *, dry_run: bool) -> StepResult:
+    """Print the pin diff and, unless this is a dry run, write it."""
+    label = "3a. pin rewrites"
+    print("\n-- allow-listed pin rewrites --")
+    if not plan.edits:
+        print("  none: every allow-listed pin already carries the target version")
+        return StepResult(label, "ok", "no pin site needed rewriting")
+
+    for edit in plan.edits:
+        print(
+            f"  {edit.path}:{edit.line}: matcher={edit.matcher} {edit.observed} -> {edit.expected}"
+        )
+    print()
+    sys.stdout.write(plan.diff)
+
+    if dry_run:
+        return StepResult(
+            label,
+            "planned",
+            f"{len(plan.edits)} pin(s) in {len(plan.updates)} file(s); nothing written",
+        )
+    for path, text in plan.updates:
+        (REPO_ROOT / path).write_text(text, encoding="utf-8")
+    return StepResult(
+        label, "ok", f"{len(plan.edits)} pin(s) rewritten in {len(plan.updates)} file(s)"
+    )
+
+
+def run_apply_pins(target: Version, *, dry_run: bool) -> int:
+    """Standalone `--apply-pins` mode: rewrite the allow-listed pins and nothing else.
+
+    Runs as its own step rather than inside the release run because the runbook does: the
+    version bump (step 2) has to land and be reviewed first, and by then the tree is dirty
+    and pyproject.toml already reads the target, so neither `check_preconditions` nor
+    `_current_version` can supply the outgoing version. The highest release tag below the
+    target is that version, and it reads the same before and after the bump.
+
+    The RELEASE_BRANCH guard applies to the write, not to the dry run: writing pins is a
+    release mutation and belongs on the release branch like every other, while a dry run
+    produces only a diff on stdout and is exactly what a release engineer wants to read
+    from the working branch before the train starts.
+    """
+    baseline = _previous_release_tag(target)
+    current = Version.parse(baseline[1:])
+    if not dry_run:
+        branch = _git("rev-parse", "--abbrev-ref", "HEAD").strip()
+        if branch != RELEASE_BRANCH:
+            raise ReleasePrepError(
+                f"pin rewrites must be applied on {RELEASE_BRANCH!r}; found {branch!r}. "
+                "Use --dry-run to review the diff from another branch."
+            )
+    plan = plan_pins(current, target)
+    result = apply_pins(plan, dry_run=dry_run)
+    print(f"\n== pin rewrite summary ==\n  {result.name}  {result.status}  {result.detail}")
+    print(f"  outgoing version taken from the previous release tag: {baseline}")
+    return 0
 
 
 def _parse_package_version(text: str, *, context: str) -> tuple[int, int]:
@@ -783,6 +1024,9 @@ def print_summary(
     print(
         f"  Update the release-current references check-release listed (they still name {current})."
     )
+    print("  The mechanical subset of them is an allow-listed rewrite; review the diff first:")
+    print(f"      uv run python scripts/release_prep.py {target} --apply-pins --dry-run")
+    print(f"      uv run python scripts/release_prep.py {target} --apply-pins")
     print("  Reconcile the dogfooded control plane so the catalog projection matches:")
     print("      uv run project-standards reconcile --apply")
     if target.major > current.major:
@@ -845,11 +1089,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="print every planned edit and mutation without performing it",
     )
+    parser.add_argument(
+        "--apply-pins",
+        action="store_true",
+        help=(
+            "rewrite only the allow-listed release pins (runbook step R3) and exit; "
+            "combine with --dry-run to print the diff without writing"
+        ),
+    )
     args = parser.parse_args(argv)
     dry_run = cast("bool", args.dry_run)
+    apply_pins_mode = cast("bool", args.apply_pins)
 
     try:
         target = Version.parse(cast("str", args.version))
+        if apply_pins_mode:
+            return run_apply_pins(target, dry_run=dry_run)
         current, precondition = check_preconditions(target)
         # Every validation that can reject the run happens before the first
         # write — including the check-release baseline lookup, whose "no prior
