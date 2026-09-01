@@ -155,3 +155,34 @@ func TestParseOutputMode(t *testing.T) {
 		t.Error("ParseOutputMode(yaml) error = nil, want a failure")
 	}
 }
+
+// #234 item 6: the walk stops at the checkout root. policy.toml names the organization
+// every write addresses and org-schema.yaml is the vocabulary every value is validated
+// against, so a copy planted above the checkout silently redirects and widens both.
+func TestResolveRepoFileStopsAtTheCheckoutRoot(t *testing.T) {
+	t.Parallel()
+
+	outside := t.TempDir()
+	planted := filepath.Join(outside, cli.DefaultSchemaPath)
+	if err := os.MkdirAll(filepath.Dir(planted), 0o750); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(planted, []byte("issue_types:\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	// The checkout is a child of the directory holding the planted file, which is exactly
+	// the shape the finding describes: a real checkout nested under someone else's tree.
+	checkout := filepath.Join(outside, "checkout")
+	nested := filepath.Join(checkout, "docs", "adr")
+	if err := os.MkdirAll(nested, 0o750); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(checkout, ".git"), []byte("gitdir: elsewhere\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	if got, err := cli.ResolveRepoFile(nested, cli.DefaultSchemaPath); err == nil {
+		t.Fatalf("ResolveRepoFile() = %q, want a refusal: the file lies outside the checkout", got)
+	}
+}

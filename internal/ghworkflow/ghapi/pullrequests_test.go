@@ -182,12 +182,20 @@ func TestGraphQLMutationsSendTheDocumentedOperations(t *testing.T) {
 		t.Errorf("request body = %q, want the markPullRequestReadyForReview mutation", body)
 	}
 
-	if err := client.EnableAutoMerge(context.Background(), "PR_kwABC", ghapi.MergeMethodSquash); err != nil {
+	if err := client.EnableAutoMerge(context.Background(), "PR_kwABC", ghapi.MergeMethodSquash, "deadbeef"); err != nil {
 		t.Fatalf("EnableAutoMerge() error = %v, want nil", err)
 	}
 	body := transport.LastBody()
 	if !strings.Contains(body, "enablePullRequestAutoMerge") {
 		t.Errorf("request body = %q, want the enablePullRequestAutoMerge mutation", body)
+	}
+	// The validated head travels with the request: auto-merge that is not conditional on
+	// it merges whatever lands while GitHub holds the pull request (#234 item 3).
+	if !strings.Contains(body, "expectedHeadOid") || !strings.Contains(body, `"deadbeef"`) {
+		t.Errorf("request body = %q, want the validated head as expectedHeadOid", body)
+	}
+	if err := client.EnableAutoMerge(context.Background(), "PR_kwABC", ghapi.MergeMethodSquash, ""); err == nil {
+		t.Error("EnableAutoMerge() with no head SHA = nil, want a refusal")
 	}
 	// REST spells the method lowercase and GraphQL demands the enum; callers use one
 	// spelling and the client converts.
@@ -195,7 +203,7 @@ func TestGraphQLMutationsSendTheDocumentedOperations(t *testing.T) {
 		t.Errorf("request body = %q, want the GraphQL enum spelling", body)
 	}
 
-	if err := client.EnableAutoMerge(context.Background(), "PR_kwABC", "fast-forward"); err == nil {
+	if err := client.EnableAutoMerge(context.Background(), "PR_kwABC", "fast-forward", "deadbeef"); err == nil {
 		t.Error("EnableAutoMerge() accepted a method GitHub does not define")
 	}
 }
@@ -304,7 +312,7 @@ func TestMergeMethodNormalizationIsSharedAcrossSurfaces(t *testing.T) {
 		"POST /graphql": {Status: http.StatusOK, Body: `{"data":{}}`},
 	}}
 	if err := newClient(t, graphqlTransport).EnableAutoMerge(context.Background(),
-		"PR_kwABC", "Squash"); err != nil {
+		"PR_kwABC", "Squash", "deadbeef"); err != nil {
 		t.Fatalf("EnableAutoMerge() error = %v, want nil for a mixed-case method", err)
 	}
 	if body := graphqlTransport.LastBody(); !strings.Contains(body, `"SQUASH"`) {

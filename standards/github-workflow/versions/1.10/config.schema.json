@@ -1,0 +1,42 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["organization", "harnesses"],
+	"properties": {
+		"organization": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 39,
+			"pattern": "^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$"
+		},
+		"harnesses": {
+			"type": "array",
+			"items": { "enum": ["claude-code", "codex"] },
+			"minItems": 1,
+			"uniqueItems": true
+		},
+		"integration_branch": {
+			"type": "string",
+			"default": "",
+			"maxLength": 255,
+			"pattern": "^(?:|[A-Za-z0-9_](?:[A-Za-z0-9._/-]*[A-Za-z0-9_])?)(?![\\s\\S])"
+		},
+		"release_subject_prefix": {
+			"type": "string",
+			"default": "",
+			"maxLength": 255,
+			"pattern": "^[^\\u0000-\\u001f\\u007f\"\\\\]*(?![\\s\\S])"
+		},
+		"admission_floor": {
+			"type": "string",
+			"default": "",
+			"maxLength": 255,
+			"pattern": "^(?:|[A-Za-z0-9_](?:[A-Za-z0-9._/-]*[A-Za-z0-9_])?)(?![\\s\\S])"
+		},
+		"handoff_admission": {
+			"enum": ["agent-handoff", "none"],
+			"default": "agent-handoff"
+		}
+	}
+}

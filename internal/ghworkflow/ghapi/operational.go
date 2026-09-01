@@ -33,8 +33,16 @@ func (e *operationalError) Operational() bool { return true }
 var (
 	// ErrUnreachable marks a transport-level failure: DNS, dial, TLS, timeout.
 	ErrUnreachable error = &operationalError{"github api is unreachable"}
-	// ErrUnauthorized marks a credential rejection (401/403).
+	// ErrUnauthorized marks a credential rejection (401, or a 403 that is not a rate
+	// limit — see ErrRateLimited).
 	ErrUnauthorized error = &operationalError{"github rejected the credentials"}
+	// ErrRateLimited marks a 403 or 429 that GitHub's own headers identify as a rate
+	// limit, returned only after the bounded retries in ratelimit.go were spent.
+	//
+	// It is a distinct sentinel because the operator's next action is the opposite of
+	// ErrUnauthorized's: waiting and rerunning clears a rate limit, while re-authenticating
+	// clears a credential rejection, and 1.9 reported the first as the second.
+	ErrRateLimited error = &operationalError{"the github api rate limit is exhausted"}
 	// ErrDecode marks a response that arrived but could not be read as the documented
 	// shape, which is an API-contract failure rather than anything the operator typed.
 	ErrDecode error = &operationalError{"the github response could not be decoded"}

@@ -17,6 +17,7 @@ import (
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/policy"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/safetext"
 )
 
 func init() {
@@ -344,11 +345,18 @@ func renderHuman(report *Report) string {
 		if finding.SHA == "" {
 			// A range-level finding (CodeEmptyRange) has no commit to identify, so the
 			// SHA/subject line would render as leading whitespace.
-			fmt.Fprintf(&b, "  %s — %s\n    %s\n", finding.Code, finding.Message, finding.Remediation)
+			fmt.Fprintf(&b, "  %s — %s\n    %s\n", finding.Code,
+				safetext.SanitizeText(finding.Message), finding.Remediation)
 			continue
 		}
+		// The subject and the message carry commit text this tool did not author: any
+		// author who can land a commit in the classified range controls them, and a
+		// subject carrying ESC or a bidi override would repaint the operator's terminal
+		// from inside the report that is supposed to expose it. Encoded at the point of
+		// printing, which is where the untrusted bytes leave the tool.
 		fmt.Fprintf(&b, "  %s %s\n    %s — %s\n    %s\n",
-			shortSHA(finding.SHA), finding.Subject, finding.Code, finding.Message, finding.Remediation)
+			shortSHA(finding.SHA), safetext.SanitizeText(finding.Subject), finding.Code,
+			safetext.SanitizeText(finding.Message), finding.Remediation)
 	}
 
 	fmt.Fprintf(&b, "\nSummary: %d T0, %d pull request, %d handoff, %d release, %d unadmitted\n",

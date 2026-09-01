@@ -154,10 +154,10 @@ func checkIssue(ctx context.Context, env *cli.Env, client *ghapi.Client,
 			repo, number, number)
 	}
 
-	item, err := render.FetchIssue(ctx, client, repo, number)
-	if err != nil {
-		return err
-	}
+	// Projected from the object already in hand rather than read again: the shape read
+	// above returns the same issue FetchIssue would have fetched, and the projection is a
+	// pure function of it (NFR-008, E4#5).
+	item := render.IssueItem(*raw)
 	blockers, err := client.ListBlockingDependencies(ctx, repo.Owner, repo.Name, number)
 	if err != nil {
 		return err

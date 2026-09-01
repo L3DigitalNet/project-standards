@@ -30,6 +30,15 @@ type Topology struct {
 	// Now is injected rather than read from the clock so Target-date findings are
 	// reproducible in tests and identical across the reads of one command.
 	Now time.Time
+	// TrustedAuthors are the logins whose PR comments count as disposition evidence:
+	// the authenticated actor, plus whatever allowlist the caller adds. The engine reads
+	// no identity of its own, so a caller that leaves this empty gets no evidence at all
+	// — deliberately fail-closed, because the alternative default is the 1.9 behavior
+	// where any commenter could record a binding disposition.
+	//
+	// Comparison is case-insensitive (GitHub logins are case-preserving but not
+	// case-sensitive); see trustedAuthor in evaluate.go, which owns the rule.
+	TrustedAuthors []string
 }
 
 // PullRequest is the observed state of the PR under evaluation.

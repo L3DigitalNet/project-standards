@@ -164,8 +164,8 @@ func (c *Client) MarkPullRequestReady(ctx context.Context, nodeID string) error 
 	return c.graphql(ctx, markReadyMutation, map[string]any{"id": nodeID}, nil)
 }
 
-const enableAutoMergeMutation = `mutation($id:ID!,$method:PullRequestMergeMethod!){
-  enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:$method}){
+const enableAutoMergeMutation = `mutation($id:ID!,$method:PullRequestMergeMethod!,$oid:GitObjectID!){
+  enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:$method,expectedHeadOid:$oid}){
     pullRequest{ id autoMergeRequest{ mergeMethod } }
   }
 }`
@@ -175,16 +175,27 @@ const enableAutoMergeMutation = `mutation($id:ID!,$method:PullRequestMergeMethod
 // Arming auto-merge hands the outcome to GitHub, which is why FR-033 keeps observation
 // responsibility with the caller: this call succeeding means the request was accepted, not
 // that the pull request merged.
-func (c *Client) EnableAutoMerge(ctx context.Context, nodeID, method string) error {
+//
+// expectedHeadOid carries the same guarantee `sha` gives MergePullRequest, and matters
+// more here: the window between the caller's gate read and the actual merge is owned by
+// GitHub and can be arbitrarily long, so without it a push landing after this call merges
+// content that never passed the Merge phase. It is required rather than optional — an
+// empty value is refused locally — because "arm auto-merge on whatever the head turns out
+// to be" is not a request this tool has any reason to make. GitHub answers a head that has
+// moved with a mutation error, which the caller resolves by revalidating.
+func (c *Client) EnableAutoMerge(ctx context.Context, nodeID, method, expectedHeadOid string) error {
 	if nodeID == "" {
 		return fmt.Errorf("no pull-request node id to enable auto-merge on")
+	}
+	if expectedHeadOid == "" {
+		return fmt.Errorf("no validated head SHA to arm auto-merge against")
 	}
 	enum, err := graphqlMergeMethod(method)
 	if err != nil {
 		return err
 	}
 	return c.graphql(ctx, enableAutoMergeMutation,
-		map[string]any{"id": nodeID, "method": enum}, nil)
+		map[string]any{"id": nodeID, "method": enum, "oid": expectedHeadOid}, nil)
 }
 
 // MergeResult is GitHub's answer to a merge request.
@@ -254,6 +265,29 @@ func (c *Client) MergePullRequest(ctx context.Context, owner, repo string, numbe
 		return nil, err
 	}
 	return &result, nil
+}
+
+// PullRequestFile is one path a pull request changes. A rename reports both names, and
+// both matter to the landing proof: a diff restricted to the new name alone would not
+// notice that the old path is still present on the integration branch.
+type PullRequestFile struct {
+	Filename         string `json:"filename"`
+	PreviousFilename string `json:"previous_filename"`
+}
+
+// ListPullRequestFiles returns every path the pull request changes, across every page.
+//
+// Completeness is the point: the paths bound the landing proof's diff, and a short read
+// would produce a proof that passes by not looking at the file that failed to land.
+// getPaged fails closed on an unexplained short read (NFR-007).
+func (c *Client) ListPullRequestFiles(ctx context.Context, owner, repo string, number int,
+) ([]PullRequestFile, error) {
+	base, err := repoPath(owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return getPaged[PullRequestFile](ctx, c,
+		fmt.Sprintf("%s/pulls/%d/files", base, number), url.Values{})
 }
 
 // RepositoryMergeSettings is which merge methods the repository permits.

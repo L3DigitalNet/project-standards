@@ -54,7 +54,7 @@ const (
 // The value tracks the payload version it ships with (NFR-005): stamp, unstamped
 // fallback, and build output path advance together, so an unstamped build never claims a
 // version the payload no longer is.
-const DefaultVersion = "1.9"
+const DefaultVersion = "1.10"
 
 // Version is the tool version `help` prints, and the only surface that reports it. It is
 // a variable so the reproducible build can stamp it (spec NFR-005); cmd/gh-workflow owns
@@ -295,6 +295,27 @@ func MarshalJSON(v any) ([]byte, error) {
 // ResolveRepoFile finds rel by walking up from start, which is how the tool locates its
 // delivered artifacts with no arguments (IR-005) regardless of where in a consumer
 // checkout the agent happened to invoke it.
+//
+// The walk stops at the enclosing checkout root — the first directory holding a `.git`
+// entry, which is inspected and then ends the search. Through 1.9 it continued to the
+// filesystem root, so `policy.toml` or `org-schema.yaml` planted in any ancestor of the
+// checkout was picked up silently: those two files name the organization the tool
+// addresses and the vocabulary it validates against, so an ancestor copy redirects writes
+// and widens accepted values without the operator seeing a different path.
+//
+// Outside a checkout the search is refused rather than widened. There is no root to bound
+// it, and the delivered artifacts live inside a consumer checkout by construction; an
+// explicit --policy/--schema path remains the way to name a file anywhere else.
+// within reports whether path is root itself or lies beneath it. The comparison is on
+// cleaned paths with a separator appended, so a sibling directory whose name merely
+// starts with the root's name ("/checkout-evil" against "/checkout") is not accepted.
+func within(root, path string) bool {
+	if path == root {
+		return true
+	}
+	return strings.HasPrefix(path, root+string(filepath.Separator))
+}
+
 func ResolveRepoFile(start, rel string) (string, error) {
 	dir, err := filepath.Abs(start)
 	if err != nil {
@@ -302,12 +323,35 @@ func ResolveRepoFile(start, rel string) (string, error) {
 	}
 	for {
 		candidate := filepath.Join(dir, rel)
-		if info, err := os.Stat(candidate); err == nil && info.Mode().IsRegular() {
+		if info, statErr := os.Stat(candidate); statErr == nil && info.Mode().IsRegular() {
+			// The search stops at the checkout root, but os.Stat follows symbolic links, so
+			// the file it accepted may live anywhere: a symlink committed at the delivered
+			// path would make the tool load its policy or its organization schema from
+			// outside the checkout entirely — which is the vocabulary every value is
+			// validated against and the organization every write is addressed to. Resolved
+			// and re-tested against the root the search was bounded by.
+			resolved, resolveErr := filepath.EvalSymlinks(candidate)
+			if resolveErr != nil {
+				return "", fmt.Errorf("resolving %s: %w", candidate, resolveErr)
+			}
+			root, rootErr := filepath.EvalSymlinks(dir)
+			if rootErr != nil {
+				return "", fmt.Errorf("resolving the checkout root %s: %w", dir, rootErr)
+			}
+			if !within(root, resolved) {
+				return "", fmt.Errorf("%s resolves to %s, which is outside the checkout root %s",
+					candidate, resolved, root)
+			}
 			return candidate, nil
+		}
+		if _, statErr := os.Stat(filepath.Join(dir, ".git")); statErr == nil {
+			return "", fmt.Errorf("could not find %s in %s or any directory up to the checkout root %s",
+				rel, start, dir)
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", fmt.Errorf("could not find %s in %s or any parent directory", rel, start)
+			return "", fmt.Errorf("could not find %s in %s or any parent directory up to the checkout root",
+				rel, start)
 		}
 		dir = parent
 	}

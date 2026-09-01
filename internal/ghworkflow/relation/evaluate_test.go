@@ -33,6 +33,10 @@ func openTopology() relation.Topology {
 			Known: true, RequiredStatusChecks: []string{"gate"}, RequiresReview: true, Source: "branch-protection",
 		},
 		Now: testNow,
+		// "agent" is the authenticated actor for every case here, matching the author the
+		// disposition fixtures use. It is set on the shared base topology because from
+		// 1.10 an evaluation with no trusted author sees no disposition evidence at all.
+		TrustedAuthors: []string{"agent"},
 	}
 }
 
@@ -683,15 +687,18 @@ func allFindings(t *testing.T) []relation.Finding {
 		func(tp *relation.Topology) { tp.PullRequest.State = "closed" },
 		func(tp *relation.Topology) {
 			tp.PullRequest.State = "closed"
-			tp.PullRequest.Comments = []relation.Comment{{Body: "Final-Disposition: dropped"}}
+			tp.PullRequest.Comments = []relation.Comment{{Author: "agent", Body: "Final-Disposition: dropped"}}
 		},
 		func(tp *relation.Topology) {
 			tp.PullRequest.State = "closed"
-			tp.PullRequest.Comments = []relation.Comment{{Body: "Final-Disposition: nope"}}
+			tp.PullRequest.Comments = []relation.Comment{{Author: "agent", Body: "Final-Disposition: nope"}}
 		},
 		func(tp *relation.Topology) {
 			tp.PullRequest.State = "closed"
-			tp.PullRequest.Comments = []relation.Comment{{Body: "Final-Disposition: blocked"}, {Body: "Final-Disposition: dropped"}}
+			tp.PullRequest.Comments = []relation.Comment{
+				{Author: "agent", Body: "Final-Disposition: blocked"},
+				{Author: "agent", Body: "Final-Disposition: dropped"},
+			}
 		},
 	}
 

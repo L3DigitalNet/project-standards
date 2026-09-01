@@ -1,0 +1,134 @@
+# Adopt GitHub Workflow 1.10
+
+Use this package in an organization-owned repository whose work is tracked as GitHub issues and pull requests, and whose agent sessions should follow one shared discipline when they touch that work state.
+
+The common V5 control-plane lifecycle — initialization, preview, apply, disable, removal, and catalog updates — is documented by `project-standards`. This guide covers github-workflow-specific choices only.
+
+## Prerequisites
+
+- The repository is owned by a GitHub organization. A personal-account repository cannot adopt this package: organization-level issue fields do not exist there, and no fallback mode is offered.
+- The organization's issue types and issue fields already exist, or a human will apply them. The package reports schema differences; it never creates or edits organization schema.
+- The `gh` CLI is installed and already authenticated as the operator. The package embeds no credentials and performs GitHub reads under that existing authentication.
+- Agent sessions run on linux/amd64. Version 1.10 ships the `gh-workflow` binary for that platform only. Elsewhere the skill and references still deliver, but every subcommand is unavailable until a payload version carrying that platform exists — reconcile cannot substitute one.
+
+## Select the configuration
+
+Two options are required, so there is no minimal variant that omits either one. The four admission options 1.9 adds are optional and defaulted; a configuration that names none behaves exactly as 1.8 did.
+
+```toml
+[standards.github-workflow]
+enabled = true
+version = "1.10"
+
+[standards.github-workflow.config]
+organization = "example-org"
+harnesses = ["claude-code", "codex"]
+```
+
+Set `organization` to the login of the organization that owns the repository. It is the only place an organization name enters the package.
+
+### The admission options (1.9)
+
+All four are optional scalars with meaningful defaults; add only the ones your topology needs.
+
+| Option | Default | Set it when |
+| --- | --- | --- |
+| `integration_branch` | `""` | Authored work lands on a long-lived branch other than the default, which the default branch is then fast-forwarded from. Empty means the two-branch topology, and `admission --branch B` still takes the branch explicitly. |
+| `release_subject_prefix` | `""` | Your release tooling writes a recognizable subject and you would rather not teach it to write a trailer. |
+| `admission_floor` | `""` | You are adopting into a repository with existing history. Set it to the commit-ish where enforcement begins — adoption cannot rewrite the past, and a permanently red control is an ignored one. |
+| `handoff_admission` | `"agent-handoff"` | Set it to `"none"` when the repository has **not** adopted `agent-handoff` and `docs/TODO.md`, `docs/STATUS.md`, or `docs/handoff/` are ordinary documents you do not want commit-exempt. |
+
+The exempt path set itself is not configurable. `handoff_admission` switches the class on or off and nothing widens it — an exempt set a repository can extend is one an agent can extend to cover its own change.
+
+Nothing invokes `admission` automatically. Wire it into your own CI on the branch where work lands, for example `gh-workflow admission --branch main --offline`, or the check exists and covers nothing.
+
+List in `harnesses` only the harnesses the repository actually uses. Each listed harness receives the managed instruction block that points its sessions at the packaged skill; a harness left out receives nothing. Valid entries are `claude-code` and `codex`, and the list must not be empty — an adoption that instructs no harness would install the skill without binding any session to it.
+
+## Apply and verify
+
+Reconcile the repository through `project-standards`, then confirm the result:
+
+```bash
+project-standards reconcile
+project-standards validate
+```
+
+Reconciliation is offline and deterministic. Rerunning it converges rather than accumulating changes, so a repeated run is a safe way to confirm the repository matches the package.
+
+Reconcile delivers the skill, its six references, the `gh-workflow` binary, the rendered policy file, and — for each selected harness — the instruction block and the Codex companion. [`README.md`](README.md#4-what-the-package-delivers) lists the exact paths and their conditions.
+
+Every skill file lands twice, under `.agents/skills/github-workflow/` and under `.claude/skills/github-workflow/`, because Claude Code discovers project skills only under the latter and Codex uses the former. Both trees are package-managed and byte-identical; commit both. Editing either is drift.
+
+## First run
+
+Two commands confirm the package works end to end against your organization. Neither writes anything, to GitHub or to your repository:
+
+```bash
+.agents/skills/github-workflow/bin/gh-workflow audit     # organization schema, read-only
+.agents/skills/github-workflow/bin/gh-workflow summary   # open work, read-only, printed
+```
+
+`audit` is read-only in both directions: it compares your live organization schema to the packaged baseline and prints the result, writing nothing. Differences are expected on first adoption and are a report for a human, not a task for an agent — the package never creates, renames, or retires an Issue Type, field, or value.
+
+`summary` prints the attention-first operator summary to stdout and writes no file.
+
+### Upgrading from 1.9
+
+Nothing to decide. Version 1.10 adds no option and changes no gate outcome; the upgrade is a version bump followed by a reconcile. What changes is behavior under content the tool did not author: only the authenticated actor's `Final-Disposition:` record counts as evidence, untrusted text is encoded before it reaches the terminal or the JSON envelope, `merge --auto` and `ready` are conditional on the head the gate validated, `policy.toml` and `org-schema.yaml` are searched only up to the checkout root, an `origin` remote on another host is refused before a write, and a rate limit is retried and reported as one rather than as a credential rejection (issue #234).
+
+Two consequences are worth knowing before the first run. A `close --pr` rerun no longer honors a disposition record written by anyone but the authenticated actor, so a record posted by another account is now ignored rather than treated as the canonical one. And a checkout whose `origin` points at a non-GitHub host is refused for writes; pass `--repo owner/name` to address a GitHub repository from such a checkout deliberately.
+
+### Upgrading from 1.8
+
+The upgrade itself is a version bump followed by a reconcile: every new option is optional and defaulted, and a consumer that sets none gets 1.8's behavior with the new vocabulary in its guidance.
+
+Two things are worth doing in the same change. Set the options above that describe your topology — most repositories need at least `admission_floor`, since a first run over existing history reports every commit that predates the rule. And wire `gh-workflow admission` into CI; the payload ships no workflow, so an unwired check is a rule with no enforcement.
+
+If you carry a hand-written carve-out for handoff or bookkeeping commits in `AGENTS.md` or `CLAUDE.md`, delete it: the managed block now names the four classes and the exemption, and a hand-written middle ground beside it is the repository-configurable tier the standard refuses.
+
+### Upgrading from 1.7
+
+Nothing to decide. Version 1.8 changes no configuration key, and no delivered behavior changes either: it corrects the `Change risk` example in `pr-standard.md` and makes the Ready gate's risk refusals name the values they accept (issue #202). The upgrade is a version bump followed by a reconcile.
+
+### Upgrading from 1.6
+
+Nothing to decide there either. Version 1.7 changed no configuration key: the two options, their meanings, and every rendered `policy.toml` value outside the `package_version` stamp are identical, so that upgrade is also a version bump followed by a reconcile.
+
+What changes is the discipline the delivered guidance describes. Admission becomes T0-or-pull-request, every PR declares `Final: #N`, `Supporting: #N`, or `Standalone` under `## Governing work`, agent-created PRs start as drafts, and `ready`, `merge`, and `close --pr` are the routes across each boundary. A pull request that was open before the upgrade is repaired when a summary, check, ready, or merge run next touches it — the package neither scans for older PRs nor rewrites a terminal PR's evidence, so there is no migration step and no ledger to keep.
+
+### Upgrading from 1.4 or earlier: the orphaned ledger
+
+Versions 1.0 through 1.4 carried a `ledger` subcommand that generated `docs/GH-WORKFLOWS.md` in your repository. It is removed in 1.5, and nothing regenerates that file any more. It was never a payload artifact — no digest, outside drift-check — so reconcile will neither update nor remove it, and from 1.7 the `upgrade` provider warns about it only when the caller actually observed the file, which is why this paragraph is the durable instruction rather than the diagnostic. **Delete `docs/GH-WORKFLOWS.md` yourself** if you committed it, or drop the `.gitignore` entry if you did not; leaving it in place leaves a stale snapshot no tool owns. Also drop any tooling exclusion you added for the path (for example a `markdown-frontmatter` `exclude` entry).
+
+## Committing the shipped binary past an added-file size guard
+
+The `gh-workflow` binary is roughly 9.7 MB and is delivered to both skill trees, so a repository running `pre-commit`'s `check-added-large-files` at a typical `--maxkb=1024` refuses the adoption commit twice over:
+
+```text
+.agents/skills/github-workflow/bin/gh-workflow (9695 KB) exceeds 1024 KB.
+.claude/skills/github-workflow/bin/gh-workflow (9695 KB) exceeds 1024 KB.
+```
+
+Exempt those two paths and leave the threshold alone. Add an `exclude` to the hook entry already in your `.pre-commit-config.yaml`, keeping its existing `repo`, `rev`, and `args`. `exclude` is a regular expression matched against the file path, so anchor it to the exact managed locations rather than to a directory or an extension:
+
+```yaml
+- id: check-added-large-files
+  args: [--maxkb=1024]
+  exclude: ^\.(agents|claude)/skills/github-workflow/bin/gh-workflow$
+```
+
+If another package already exempts a binary of its own, combine the alternatives in one anchored expression instead of widening either — for example `^\.(agents/(skills/github-workflow/bin/gh-workflow|hooks/agent-handoff/session-start)|claude/skills/github-workflow/bin/gh-workflow)$`.
+
+Two things this deliberately does not do. It does not raise `--maxkb`, which would stop the guard from noticing an unrelated large file anywhere in the repository — the exact protection the guard exists to give. It does not pass `--no-verify` or disable the hook for the adoption commit, which suspends every hook rather than the one that fired.
+
+Understand what the exemption costs before relying on it. The path stops being size-checked on every future commit, not just this one, so anything that later appears at that path is unmeasured. That is acceptable here because the bytes are not consumer-authored: both copies are `policy = "managed"` artifacts with a digest pinned in the payload, and the control plane re-verifies them. Pair the exemption with the managed-state check at the same boundary so the path the size guard stops watching is still watched:
+
+```bash
+project-standards reconcile --check
+```
+
+## Living with the package
+
+- Keep configuration changes in `.standards/config.toml` and reapply through reconcile. Editing managed artifacts by hand is reported as drift.
+- Content outside the package's managed block in your agent-instruction files remains yours. Reconcile rewrites the block, not the file around it.
+- Upgrades arrive as new package versions selected through the catalog. Version 1.10 is immutable once released.

@@ -114,3 +114,79 @@ func TestParseRepository(t *testing.T) {
 		t.Errorf("ParseRepository() = %+v", repo)
 	}
 }
+
+// #234 item 5: an origin on another Git host still yields a well-formed owner/name pair,
+// and every request the tool then makes goes to the API host — so without this comparison
+// a same-named repository on GitHub is what actually gets written.
+func TestVerifyAPIHostRefusesAForeignOrigin(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name       string
+		host       string
+		fromOrigin bool
+		apiBase    string
+		wantErr    bool
+	}{
+		{name: "github.com against the public API", host: "github.com", fromOrigin: true,
+			apiBase: "https://api.github.com"},
+		{name: "enterprise host and its own API path", host: "ghe.example.com", fromOrigin: true,
+			apiBase: "https://ghe.example.com/api/v3"},
+		{name: "explicit --repo carries no host", host: "", apiBase: "https://api.github.com"},
+		{name: "foreign origin", host: "gitlab.com", fromOrigin: true,
+			apiBase: "https://api.github.com", wantErr: true},
+		// A suffix match would accept this one; the rule is equality or the `api.` prefix.
+		{name: "lookalike origin", host: "evil-github.com", fromOrigin: true,
+			apiBase: "https://api.github.com", wantErr: true},
+		// An origin-derived pair with no host is the bypass: it is indistinguishable from
+		// an explicitly typed one unless FromOrigin says otherwise, and it reached the API
+		// host having passed no host check at all.
+		{name: "origin-derived with no parseable host", host: "", fromOrigin: true,
+			apiBase: "https://api.github.com", wantErr: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			repo := render.Repository{Owner: "L3DigitalNet", Name: "example-repo",
+				Host: tc.host, FromOrigin: tc.fromOrigin}
+			err := repo.VerifyAPIHost(tc.apiBase)
+			if tc.wantErr && err == nil {
+				t.Fatalf("VerifyAPIHost(%q) with origin %q = nil, want a refusal", tc.apiBase, tc.host)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("VerifyAPIHost(%q) with origin %q = %v, want nil", tc.apiBase, tc.host, err)
+			}
+		})
+	}
+}
+
+// Git accepts a remote with no host at all, and both spellings previously produced an
+// origin-derived repository that skipped ValidateHost (nothing to validate) and then
+// VerifyAPIHost (no host to compare) — reaching api.github.com unchecked.
+func TestOriginRepositoryMarksAHostlessRemoteAsOriginDerived(t *testing.T) {
+	t.Parallel()
+
+	for _, remote := range []string{"owner/repo", ":owner/repo"} {
+		t.Run(remote, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			if err := os.MkdirAll(filepath.Join(root, ".git"), 0o750); err != nil {
+				t.Fatalf("MkdirAll() error = %v", err)
+			}
+			config := "[remote \"origin\"]\n\turl = " + remote + "\n"
+			if err := os.WriteFile(filepath.Join(root, ".git", "config"), []byte(config), 0o600); err != nil {
+				t.Fatalf("WriteFile() error = %v", err)
+			}
+			repo, err := render.OriginRepository(root)
+			if err != nil {
+				// A remote this malformed may be refused outright, which closes the hole
+				// just as well; what must never happen is a silently accepted pair.
+				return
+			}
+			if err := repo.VerifyAPIHost("https://api.github.com"); err == nil {
+				t.Errorf("origin %q resolved to %+v and passed the host check", remote, repo)
+			}
+		})
+	}
+}

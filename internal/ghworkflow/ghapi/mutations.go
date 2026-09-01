@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 )
 
@@ -57,18 +56,27 @@ type RequestError struct {
 	Status  int
 	URL     string
 	Message string
+	// RateLimited carries the same fact as APIError.RateLimited: the write was still
+	// refused for rate limiting after the retries in ratelimit.go were spent.
+	RateLimited bool
 }
 
 func (e *RequestError) Error() string {
 	return fmt.Sprintf("%s %s: %d %s", e.Method, e.URL, e.Status, e.Message)
 }
 
-// Unwrap classifies credential rejections, matching APIError.
+// Unwrap classifies credential rejections, matching APIError — including the rate-limit
+// split, which must stay identical on both types so a caller never has to know whether a
+// failure came from a read or a write to interpret it.
 func (e *RequestError) Unwrap() error {
-	if e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden {
+	switch {
+	case e.RateLimited:
+		return ErrRateLimited
+	case e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden:
 		return ErrUnauthorized
+	default:
+		return nil
 	}
-	return nil
 }
 
 // ListIssueFieldIdentities returns every organization Issue Field with its API id. This
@@ -202,28 +210,28 @@ func (c *Client) send(ctx context.Context, method, path string, payload, out any
 	}
 	endpoint := c.baseURL + path
 
-	req, err := http.NewRequestWithContext(ctx, method, endpoint, bytes.NewReader(encoded))
+	// A fresh body reader per attempt: doWithRetry may reissue this request, and a reader
+	// consumed by the first attempt would send an empty payload on the second.
+	resp, body, limited, err := c.doWithRetry(ctx, method+" "+endpoint, func() (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, method, endpoint, bytes.NewReader(encoded))
+		if err != nil {
+			return nil, fmt.Errorf("building the request for %s %s: %w", method, endpoint, err)
+		}
+		req.Header.Set("Authorization", "Bearer "+c.token)
+		req.Header.Set("Accept", acceptJSON)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set(apiVersionHeader, apiVersion)
+		req.Header.Set("User-Agent", userAgent)
+		return req, nil
+	})
 	if err != nil {
-		return fmt.Errorf("building the request for %s %s: %w", method, endpoint, err)
-	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Accept", acceptJSON)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(apiVersionHeader, apiVersion)
-	req.Header.Set("User-Agent", userAgent)
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("%w: %s %s: %w", ErrUnreachable, method, endpoint, err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
-	if err != nil {
-		return fmt.Errorf("%w: reading the response for %s %s: %w", ErrUnreachable, method, endpoint, err)
+		return err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return &RequestError{Method: method, Status: resp.StatusCode, URL: endpoint, Message: apiMessage(body)}
+		return &RequestError{
+			Method: method, Status: resp.StatusCode, URL: endpoint,
+			Message: apiMessage(body), RateLimited: limited,
+		}
 	}
 	if out == nil {
 		return nil

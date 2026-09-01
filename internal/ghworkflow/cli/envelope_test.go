@@ -116,8 +116,8 @@ func TestClassify(t *testing.T) {
 func TestDefaultVersion(t *testing.T) {
 	t.Parallel()
 
-	if cli.DefaultVersion != "1.9" {
-		t.Errorf("DefaultVersion = %q, want %q", cli.DefaultVersion, "1.9")
+	if cli.DefaultVersion != "1.10" {
+		t.Errorf("DefaultVersion = %q, want %q", cli.DefaultVersion, "1.10")
 	}
 }
 
@@ -255,5 +255,54 @@ func TestMarshalJSONFailureYieldsNoBytes(t *testing.T) {
 	}
 	if encoded != nil {
 		t.Errorf("MarshalJSON returned %q alongside the error, want no bytes", encoded)
+	}
+}
+
+// Hostile GitHub text reaching the envelope is encoded at the envelope's own boundary,
+// in both output modes and whether it arrived in a finding, a step message, or the target
+// (#234 item 2). The payload here is the realistic one: an ANSI erase sequence that
+// repaints the operator's terminal, a bare carriage return that overwrites the line
+// already printed, and a bidi override that reorders what is displayed.
+func TestWriteEnvelopeSanitizesUntrustedText(t *testing.T) {
+	t.Parallel()
+
+	const hostile = "title\x1b[2J\rrewritten\u202e"
+	build := func() cli.Envelope {
+		envelope := cli.NewEnvelope("close", cli.ResultDomainFinding, cli.Target{
+			Kind: cli.TargetPullRequest, Number: 40, Repository: "L3DigitalNet/example",
+			URL: "https://github.test/x" + hostile,
+		})
+		envelope.Findings = []cli.Finding{{
+			Code: "GHW-PR-POSTMERGE-DISPOSITION-CONFLICT", Kind: relation.KindPullRequest, Number: 40,
+			Message: "the API answered: " + hostile, Remediation: "resolve " + hostile,
+		}}
+		envelope.Steps = []cli.Step{{Name: "record-disposition", Status: cli.StepFailed, Message: hostile}}
+		return envelope
+	}
+
+	for _, mode := range []cli.OutputMode{cli.OutputJSON, cli.OutputHuman} {
+		env, stdout, _ := testEnv()
+		if err := cli.WriteEnvelope(build(), mode, env); err != nil {
+			t.Fatalf("WriteEnvelope(%s): %v", mode, err)
+		}
+		for _, forbidden := range []string{"\x1b", "\r", "\u202e"} {
+			if strings.Contains(stdout.String(), forbidden) {
+				t.Errorf("%s output carries %q unencoded:\n%s", mode, forbidden, stdout.String())
+			}
+		}
+		if !strings.Contains(stdout.String(), "title") {
+			t.Errorf("%s output lost the surrounding text:\n%s", mode, stdout.String())
+		}
+	}
+
+	// The caller's own findings are left alone: a command may re-render or test them after
+	// writing, and silently rewriting a slice the caller still holds is a different bug.
+	envelope := build()
+	env, _, _ := testEnv()
+	if err := cli.WriteEnvelope(envelope, cli.OutputJSON, env); err != nil {
+		t.Fatalf("WriteEnvelope: %v", err)
+	}
+	if !strings.Contains(envelope.Findings[0].Message, "\x1b") {
+		t.Error("WriteEnvelope mutated the caller's findings in place")
 	}
 }

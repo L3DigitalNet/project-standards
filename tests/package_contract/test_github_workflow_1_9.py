@@ -21,6 +21,11 @@ proven by running the committed binary — first over this repository's own hist
 where a clean report would disprove the control, then over a synthetic repository
 where every commit is admitted and removing one trailer flips the verdict.
 
+1.9 is a retained predecessor from the 1.10 cut: 1.10 took the default and
+`scripts/build-gh-workflow.sh` moved with it, so nothing here claims 1.9 is the version
+the repository currently builds or the one the family root points at. The 1.9 payload's
+own bytes, and the classifier compiled into them, are unchanged and still proven here.
+
 The binary is executed here, unlike in the predecessor suites, which read it only as
 bytes. That is the point of the cut: a classifier nobody runs is the gap #203 names.
 The runs are guarded by a linux/amd64 skip, since the payload ships that build only.
@@ -706,21 +711,22 @@ def test_github_workflow_1_9__binary__reports_the_version_it_ships_with() -> Non
     assert "admission" in result.stdout + result.stderr
 
 
-def test_github_workflow_1_9__build_script__targets_this_version() -> None:
-    """The reproducible build must name the payload under development, not a released one.
+def test_github_workflow_1_9__build_script__no_longer_targets_this_version() -> None:
+    """The build script must not point back at a released payload.
 
-    `scripts/build-gh-workflow.sh` is the single definition of how the committed bytes
-    are produced, and `make go-verify-binary` re-runs it to prove the committed binary
-    still matches this commit's Go source. A script left pointing at a released payload
+    `scripts/build-gh-workflow.sh` targets the successor from the moment it is cut and
+    can no longer reproduce 1.9 (see the script's own header). A script pointed back here
     would rebuild over immutable bytes and stamp them with the wrong version, and
-    `go-verify-binary` would still pass because it compares the file it just wrote.
+    `go-verify-binary` would still pass because it compares the file it just wrote. The
+    positive pin travels with whichever cut is under development and lives in that cut's
+    test file.
     """
     build_script = (_ROOT / "scripts/build-gh-workflow.sh").read_text(encoding="utf-8")
 
-    assert f'ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.9/{_BINARY}"' in (
+    assert f'ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.9/{_BINARY}"' not in (
         build_script
     )
-    assert 'ARTIFACT_LDFLAGS="-buildid= -X main.version=1.9"' in build_script
+    assert 'ARTIFACT_LDFLAGS="-buildid= -X main.version=1.9"' not in build_script
 
 
 def test_github_workflow_1_9__binary__is_declared_by_the_payload_it_ships_in() -> None:
@@ -802,8 +808,8 @@ def test_github_workflow_1_9__predecessor_tree_and_activation_stay_exact() -> No
     # Withdrawing an advertised package is a catalog-major transition (ADR 0024), so
     # every predecessor stays advertised and only its role moves to `retained`.
     assert roles == {
-        **{f"1.{minor}": "retained" for minor in range(9)},
-        "1.9": "default",
+        **{f"1.{minor}": "retained" for minor in range(10)},
+        "1.10": "default",
     }
 
 

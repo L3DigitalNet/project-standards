@@ -118,6 +118,45 @@ func readySteps(ctx context.Context, client *ghapi.Client, gate *prGate, rec *st
 	repo := render.Repository{Owner: gate.Owner, Name: gate.Name}
 	number := gate.PR.Number
 
+	// The conditional guard on the gate-read/mutation window (#234 item 4), and it runs
+	// BEFORE the first write on purpose. The gate was evaluated against a specific head;
+	// marking the PR ready admits it for review, and GraphQL's
+	// markPullRequestReadyForReview takes no expectedHeadOid, so the head is re-observed
+	// here and the whole operation refused if it moved. Placed after the issue
+	// synchronization — where it lived through 1.10 — a moved head left the governing
+	// issue advanced to `In review` for a pull request that was never marked ready, which
+	// is the EC-011 divergence this command exists to avoid creating.
+	//
+	// Residual race, accepted deliberately: this is a compare-then-act, not an atomic
+	// conditional write, so a push landing between this read and the mutation below is
+	// still admitted. GitHub offers no conditional form of that mutation, so the window
+	// cannot be closed here — it is narrowed from "the whole gate evaluation" to the
+	// remaining round trips, and `merge` (which does take a head SHA) is the gate that
+	// admits content.
+	//
+	// A pull request that is already ready has no transition to guard: no mutation follows,
+	// so re-observing the head would spend a round trip to protect nothing (NFR-008).
+	if gate.PR.Draft {
+		current, err := client.GetPullRequest(ctx, repo.Owner, repo.Name, number)
+		if err != nil {
+			rec.fail(stepMarkReady, "the head could not be re-observed; nothing was written")
+			return err
+		}
+		if current.Head.SHA != gate.PR.Head.SHA {
+			rec.fail(stepMarkReady, "the head moved after the gate was evaluated; nothing was written")
+			envelope.Findings = append(envelope.Findings, relation.Finding{
+				Code: "GHW-PR-READY-HEAD-MOVED", Phase: relation.PhaseReady,
+				Category: relation.CategoryAdmissionBlocked, Effect: relation.EffectBlocksReady,
+				Kind: relation.KindPullRequest, Number: number,
+				Message:     "the branch head changed between the Ready gate and the transition, so the gate no longer describes this pull request",
+				Remediation: "Rerun `gh-workflow ready --pr N`; the gate is re-evaluated against the new head.",
+			})
+			rec.skip(stepSyncIssue, "the head moved, so no lifecycle write was made")
+			rec.skip(stepVerifyReady, "no transition was attempted")
+			return nil
+		}
+	}
+
 	switch {
 	case gate.Decl.Relationship != relation.RelationshipFinal:
 		rec.skip(stepSyncIssue, "only a Final PR synchronizes issue lifecycle")
