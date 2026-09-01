@@ -8,6 +8,17 @@
 # cannot express this — it sees pushed commits, not their provenance — so the
 # rule has to hold locally, at commit time.
 #
+# This is the local half of the GitHub Workflow admission model's `release`
+# class. The other half is declarative: .standards/config.toml sets
+# integration_branch = "testing" and release_subject_prefix = "release:", which
+# reconcile renders into .standards/packages/github-workflow/policy.toml and
+# `gh-workflow admission` reads. RELEASE_MESSAGE_PREFIX below must stay equal to
+# that rendered release_subject_prefix — a guard that admits a subject the
+# classifier does not, or the reverse, produces a commit on `main` that one of
+# the two calls illegal. Change either end and update the other in the same
+# commit. The admission classifier is a retrospective range check with no
+# hook; this guard is what stops the bad commit from existing.
+#
 # Usage (invoked only by the adapters scripts/install-githooks.sh writes):
 #   main-branch-guard pre-commit
 #   main-branch-guard commit-msg <message-file>
@@ -39,6 +50,7 @@
 #   cannot launder an ordinary commit onto `main`.
 set -euo pipefail
 
+# Matches release_subject_prefix in .standards/config.toml (see the header).
 readonly RELEASE_MESSAGE_PREFIX='release:'
 readonly OVERRIDE_VARIABLE='PROJECT_STANDARDS_MAIN_COMMIT_OVERRIDE'
 readonly RELEASE_VARIABLE='PROJECT_STANDARDS_RELEASE_COMMIT'
