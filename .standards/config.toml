@@ -21,7 +21,7 @@ config = { contract_version = "1.0" }
 [standards.github-workflow]
 enabled = true
 version = "latest"
-config = { admission_floor = "25e0094a0b8815757d686b417f96ed8ba6b2ad20", harnesses = ["claude-code", "codex"], integration_branch = "testing", organization = "L3DigitalNet", release_subject_prefix = "release:" }
+config = { admission_floor = "1922e320fae07d0f062050eeaa84a68792057dfc", harnesses = ["claude-code", "codex"], integration_branch = "testing", organization = "L3DigitalNet", release_subject_prefix = "release:" }
 
 [standards.markdown-frontmatter]
 enabled = true
