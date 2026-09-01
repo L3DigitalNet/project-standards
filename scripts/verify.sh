@@ -326,8 +326,13 @@ lane_compatibility() {
         -m compatibility -n "$workers" --dist load --max-worker-restart=0
         --basetemp="$BASETEMP_ROOT/compatibility"
     )
-    # The compatibility matrix installs wheels per case; there is no cheap
-    # subset, so smoke mode proves the lane runs by collecting only.
+    # Smoke mode collects only because there is no cheap subset, NOT because of
+    # the wheel: both distributions are session fixtures
+    # (tests/package_compatibility/conftest.py) and the wheel arm additionally
+    # honors PROJECT_STANDARDS_COMPATIBILITY_WHEEL, exported above, so the build
+    # happens at most once per worker. The cost is the matrix rows themselves —
+    # each runs the full adopt/reconcile lifecycle once per distribution — and no
+    # `-k` selection of them proves the ownership matrix this lane exists for.
     [[ "$SMOKE" == "1" ]] && args+=(--collect-only -q)
     "$VENV_BIN/pytest" "${args[@]}" || return $?
     reap_basetemp "$BASETEMP_ROOT/compatibility"

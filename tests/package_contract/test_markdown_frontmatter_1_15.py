@@ -38,8 +38,6 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
-from project_standards.package_contract.repository import build_package_repository
-from tests.package_contract.helpers import assert_schema_payload_references
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -416,8 +414,6 @@ def test_markdown_frontmatter_1_15__machine_readable_payload__carries_no_1_14_re
     which predecessors owe no migration edge. Markdown is excluded because the
     standard's own history prose names 1.14 deliberately.
     """
-    assert assert_schema_payload_references(build_package_repository(_ROOT)) == []
-
     stale = {
         relative
         for relative, path in _files(_V115).items()

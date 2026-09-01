@@ -84,15 +84,9 @@ def _venv_environment(**extra: str) -> dict[str, str]:
 
 
 @pytest.fixture(scope="module")
-def installed_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
+def installed_venv(tmp_path_factory: pytest.TempPathFactory, built_wheel: Path) -> Path:
     tmp = tmp_path_factory.mktemp("wheel-smoke")
-    subprocess.run(
-        ["uv", "build", "--wheel", "--out-dir", str(tmp)],
-        cwd=_ROOT,
-        check=True,
-        capture_output=True,
-    )
-    (wheel,) = tmp.glob("*.whl")
+    wheel = built_wheel
     venv = tmp / "venv"
     subprocess.run(["uv", "venv", "--seed", str(venv)], check=True, capture_output=True)
     subprocess.run(

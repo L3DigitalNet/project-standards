@@ -179,16 +179,8 @@ def test_automatic_adoption_preserves_executable_hook_mode(tmp_path: Path) -> No
     assert main(["agent-handoff", "validate", "--repo", str(tmp_path)]) == 0
 
 
-def test_wheel_contains_complete_agent_handoff_bundle(tmp_path: Path) -> None:
-    subprocess.run(
-        ["uv", "build", "--wheel", "--out-dir", str(tmp_path)],
-        cwd=_REPO,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    (wheel,) = tmp_path.glob("*.whl")
-    names = set(zipfile.ZipFile(wheel).namelist())
+def test_wheel_contains_complete_agent_handoff_bundle(built_wheel: Path) -> None:
+    names = set(zipfile.ZipFile(built_wheel).namelist())
 
     for bundled in payload_tree(_BUNDLE):
         if not bundled.is_file():
@@ -198,16 +190,10 @@ def test_wheel_contains_complete_agent_handoff_bundle(tmp_path: Path) -> None:
         assert any(name.endswith(expected) for name in names), expected
 
 
-def test_installed_wheel_adopts_and_validates_without_source_checkout(tmp_path: Path) -> None:
-    dist = tmp_path / "dist"
-    subprocess.run(
-        ["uv", "build", "--wheel", "--out-dir", str(dist)],
-        cwd=_REPO,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    (wheel,) = dist.glob("*.whl")
+def test_installed_wheel_adopts_and_validates_without_source_checkout(
+    tmp_path: Path, built_wheel: Path
+) -> None:
+    wheel = built_wheel
     venv = tmp_path / "venv"
     environment = {**os.environ, "PYTHONPATH": ""}
     subprocess.run(["uv", "venv", "--seed", str(venv)], check=True, capture_output=True)
