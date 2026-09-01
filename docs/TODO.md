@@ -66,18 +66,21 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   by 1.6 and 1.7 before it opened — 1.7 moved the surfaces F3/F4/F8 measure — so the measurement now runs against a
   post-1.7 window opening ~2026-09-11, with 1.7's baselines rather than 1.5's.
 
-- [ ] Land `policy-pr-testing` (`2a30419d`) on `testing` as the first change admitted under the new PR rule.
+- [ ] Owner: decide whether to trim `AGENTS.md` and `CLAUDE.md`, which exceed their agent-handoff byte budgets.
 
-  `CLAUDE.md` and `AGENTS.md` now require every change to `testing` to arrive through a draft PR, T0 excepted. The
-  commit is prepared but deliberately not folded into the release, because `main` admits only the release commit
-  plus fast-forwards.
+  `handoff-validate` reports `AGENTS.md` 5461 against a 4096 cap and `CLAUDE.md` 4036 against 2048 — warnings, not
+  errors, so nothing is blocked. Both grew again when the PR-admission rule landed (#208), which is the expected
+  cost of stating a non-negotiable precisely. The question is whether the eager budget is still the right size for
+  this repository or whether detail should move to a lazy document; both answers are defensible and it is a
+  judgment call, not a defect.
 
-- [ ] Triage the three issues filed from the 5.27.0 train, all at `Workflow: Inbox` with Priority unset:
-  [#209](https://github.com/L3DigitalNet/project-standards/issues/209) (Prettier gate exits 123 on a clean tree —
-  payload symlinks in the corpus), [#210](https://github.com/L3DigitalNet/project-standards/issues/210)
-  (command-guard `--check` grants inert for the real `--root . --check` form; fail-closed, so safe but useless), and
-  [#211](https://github.com/L3DigitalNet/project-standards/issues/211) (markdownlint-cli2-action pin needs a
-  markdown-tooling 1.16 cut, since the workflow is `policy = "managed"`).
+- [ ] Triage the open queue, all with Priority unset — their definitions are complete and only the priority call is
+  owed: [#207](https://github.com/L3DigitalNet/project-standards/issues/207) (release wall-clock research),
+  [#209](https://github.com/L3DigitalNet/project-standards/issues/209) (Prettier gate exits 123 on a clean tree),
+  [#210](https://github.com/L3DigitalNet/project-standards/issues/210) (command-guard `--check` grants inert),
+  [#211](https://github.com/L3DigitalNet/project-standards/issues/211) (markdownlint pin needs markdown-tooling
+  1.16), [#215](https://github.com/L3DigitalNet/project-standards/issues/215) (guarded provider-load helper plus a
+  meta-test, so an eleventh call site cannot omit the bytecode guard).
 
 - [ ] Cut python-tooling 1.18 for the three adoption reports. #204 is a real guard defect (`build_backend = "none"`
   exempts the `[project]` check `uv lock` needs, and `adopt.md` lines 21 and 23 contradict each other); #205 and
