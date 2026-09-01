@@ -1,9 +1,9 @@
 name: Validate standards graph
 
 on:
-  pull_request:
   push:
-    branches: ["main", "testing"]
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
