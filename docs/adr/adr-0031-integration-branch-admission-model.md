@@ -4,7 +4,7 @@ id: 'adr-0031-project-standards-integration-branch-admission-model'
 title: 'ADR 0031: Integration-Branch Admission Model and Its Enforcement'
 description: 'Defines branch classes, the four admission classes including the Agent Handoff exemption, their commit trailers, and the shipped classifier that enforces them.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-09-01'
 updated: '2026-09-01'
 reviewed: null
@@ -45,7 +45,7 @@ project:
 
 # ADR 0031: Integration-Branch Admission Model and Its Enforcement
 
-MADR status: **proposed** (2026-09-01; awaiting owner ratification — issues 203 and 218).
+MADR status: **accepted**. Ratified by the owner 2026-09-01: D3 takes option A (a classifier subcommand in the shipped binary; the managed CI job is deferred to 1.10 and the packaged hook is rejected) and D2's exempt path set is not consumer-extensible. Implemented by `github-workflow` 1.9.
 
 ## Context and Problem Statement
 
@@ -53,7 +53,7 @@ MADR status: **proposed** (2026-09-01; awaiting owner ratification — issues 20
 
 **No vocabulary for a long-lived integration branch (#203).** Where the default branch is reached only by fast-forward from an integration branch, the obligation has no moment at which it attaches: not at commit time on the integration branch — which reads as the exempt "construction branch" that `pr-standard.md` names once and defines nowhere — and not at fast-forward time, where no commit is authored. Measured in this repository at `3bda3cf4` over `9c47907f..HEAD`: **362 commits, 1 merge commit, 0 `Workflow-Admission` trailers, 4 merged pull requests**. Twenty-five days at effectively zero compliance, and the package ships no executable enforcement of any kind.
 
-**No route for Agent Handoff bookkeeping (#218).** T0 condition 1 requires every hunk to be a spelling, grammar, punctuation, or reflow repair, so a closeout that rewrites `state.md` and appends a session row can never qualify. The observed consequence is a pull request per closeout (#216) and, here, a hand-written carve-out in `CLAUDE.md`/`AGENTS.md` (`d5792907`) that is precisely the repository-configurable middle ground the standard forbids. 66 of the 362 commits touch only handoff surfaces.
+**No route for Agent Handoff bookkeeping (#218).** T0 condition 1 requires every hunk to be a spelling, grammar, punctuation, or reflow repair, so a closeout that rewrites `state.md` and appends a session row can never qualify. The observed consequence is a pull request per closeout (#216) and, here, a hand-written carve-out in `CLAUDE.md`/`AGENTS.md` (`d5792907`) that is precisely the repository-configurable middle ground the standard forbids. 33 of the 362 commits touch only handoff surfaces. (An earlier draft of this ADR said 66; the figure was re-measured with `git rev-list --count --no-merges 9c47907f..3bda3cf4 -- . ':(exclude)docs/handoff' ':(exclude)docs/STATUS.md' ':(exclude)docs/TODO.md'`, which reports 328 of the 361 non-merge commits touching a non-handoff path.)
 
 Payload bytes are immutable once published, and both defects edit the same admission prose, so one cut must carry both.
 
@@ -133,7 +133,9 @@ Ship `gh-workflow admission --branch B [--since REF] [--offline]`: it classifies
 
 Placement follows the binary's existing seam: a new `internal/ghworkflow/admission` package with one self-registering command file, plus one blank import in `cmd/gh-workflow/main.go`, whose own comment records that "adding a subcommand adds one import line here and one file in its own package; no dispatch table is edited". Commit inspection shells out to `git` with fixed argument vectors; the module takes no new dependency (`go mod tidy -diff` is a gate). Sealing is the standing procedure: `scripts/build-gh-workflow.sh` moves `ARTIFACT_OUTPUT_PATH` to the 1.9 payload directory and `ARTIFACT_LDFLAGS` to `-X main.version=1.9`, `make go-binary` rebuilds the committed bytes, and `make go-check` re-runs `go-verify-binary`, which rebuilds to a temp directory and byte-compares — so the payload binary can never drift from the source in the same commit.
 
-Non-vacuity is provable now. Classifying `9c47907f..3bda3cf4` by the D1/D2 rules with no floor yields 9 release commits, 0 T0, 66 handoff-only, 4 PR-admitted, and **283 unadmitted commits** out of 362. The contract test pins that shape, and the negative case removes the handoff or release clause and asserts the count moves.
+Non-vacuity is proven, not estimated. The shipped classifier over `9c47907f..3bda3cf4` with no floor and this repository's `release_subject_prefix` reports 9 release commits, 0 T0, 0 handoff, 0 PR-admitted, and **353 unadmitted commits** out of 362 — 320 `GHW-ADMISSION-MISSING` and 33 `GHW-ADMISSION-HANDOFF-UNDECLARED`. With no policy at all the figure is 362 of 362.
+
+Two figures in an earlier draft of this ADR were wrong and are corrected here. The handoff-only count is 33, not 66, so the derived total was wrong too; and the "4 PR-admitted" figure confused _merged pull requests_ with _admitted commits_. Four pull requests did merge, but none of their commits carries a `PR #N` trailer, because `merge` only began writing one in 1.9 — which is the whole reason the trailer is the load-bearing addition in D1. The contract test asserts the shape from the classifier's own output rather than pinning any of these literals, since every one of them moves with the next commit, and the negative case builds a corpus where every commit is admitted and removes one trailer to prove the verdict flips.
 
 **Deferred, not rejected — B, a managed CI workflow contribution.** It is the only option that fires without anyone remembering, and `markdown-frontmatter` shows the mechanism (a job contributed into `.github/workflows/validate-standards.yml` under `shared_identity`, gated by `workflow_ownership`, with `runner_labels`). But `github-workflow` contributes nothing to `.github/` today, so B means new workflow templates, a render provider, two new options, and their contract tests — a second cut's work that would not fit 1.9 this week, and it would carry no classification logic of its own. 1.9 therefore ships the classifier and states plainly in `pr-standard.md` what enforces the rule and what does not, and wires the check into _this_ repository's consumer-owned CI as the dogfood proof. **Reopens** as 1.10 once the classifier's finding set is stable.
 
@@ -158,12 +160,13 @@ Non-vacuity is provable now. Classifying `9c47907f..3bda3cf4` by the D1/D2 rules
 - Good, because the obligation finally attaches to the branch where work lands, and the tool that merges writes the evidence the check reads.
 - Good, because the handoff exemption is owned by the standard, so the hand-written carve-out can be deleted rather than blessed.
 - Bad, because 1.9 ships a check nobody is obliged to run; until B lands, coverage depends on each consumer wiring it into CI, and `pr-standard.md` must say so rather than imply coverage.
+- Bad, because the `release` class and `release_subject_prefix` are self-admission: the classifier checks neither the paths a release commit touches, nor the branch it lands on, nor that a version actually moved, so any commit carrying `Workflow-Admission: release` — or merely opening with the configured subject prefix — is admitted. That is a documented limitation of the model, not enforcement; the release route's real guard remains `release_prep.py` and the `main`-branch hook.
 - Bad, because `admission_floor` makes the historical corpus permanently invisible to the check by design; the record of what it would have flagged lives here, not in a passing gate.
 - Neutral, because `Workflow-Admission` grows from one value to four; existing T0 commits stay valid and no published payload changes.
 
 ### Confirmation
 
-A change is in scope when it is a commit on a branch named by `integration_branch` or on the repository default branch, after `admission_floor`. Conformance is confirmed by `gh-workflow admission --branch <branch>` exiting `0`, and by the 1.9 contract test file pinning the classification of this repository's `9c47907f..3bda3cf4` corpus together with a negative case that fails when a clause is removed. Out-of-scope commits — topic branches, and anything at or before the floor — receive no finding.
+A change is in scope when it is a commit on a branch named by `integration_branch` or on the repository default branch, after `admission_floor`. Conformance is confirmed by `gh-workflow admission --branch <branch>` exiting `0`. The historical measurement is reproducible with `gh-workflow admission --branch 3bda3cf4 --since 9c47907f --offline --output json`, and the 1.9 contract test file asserts the shape of that run together with a negative case that fails when a clause is removed. Out-of-scope commits — topic branches, and anything at or before the floor — receive no finding.
 
 ## Pros and Cons of the Options
 

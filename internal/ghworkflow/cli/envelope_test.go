@@ -116,8 +116,8 @@ func TestClassify(t *testing.T) {
 func TestDefaultVersion(t *testing.T) {
 	t.Parallel()
 
-	if cli.DefaultVersion != "1.7" {
-		t.Errorf("DefaultVersion = %q, want %q", cli.DefaultVersion, "1.7")
+	if cli.DefaultVersion != "1.9" {
+		t.Errorf("DefaultVersion = %q, want %q", cli.DefaultVersion, "1.9")
 	}
 }
 

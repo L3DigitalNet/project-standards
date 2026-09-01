@@ -22,6 +22,10 @@ literal, not extraction of a delimited string.
 
 Nothing else in 1.8 moves — no option, no rendered `policy.toml` byte beyond the
 version stamp it interpolates, no subcommand — which is the second contract here.
+
+1.8 is a retained predecessor from the 1.9 cut: 1.9 took the default and
+`scripts/build-gh-workflow.sh` moved with it, so nothing here claims 1.8 is the version
+the repository currently builds or the one the family root points at.
 """
 
 from __future__ import annotations
@@ -359,28 +363,22 @@ def test_github_workflow_1_8__binary__is_declared_by_the_payload_it_ships_in() -
     assert stat.S_IMODE(committed.stat().st_mode) == 0o755
 
 
-def test_github_workflow_1_8__build_script__targets_this_version() -> None:
-    """The reproducible build must name the payload under development, not a released one.
+def test_github_workflow_1_8__build_script__no_longer_targets_this_version() -> None:
+    """The build script must not point back at a released payload.
 
-    `scripts/build-gh-workflow.sh` is the single definition of how the committed bytes
-    are produced, and `make go-verify-binary` re-runs it to prove the committed binary
-    still matches this commit's Go source. Both halves of that proof are pinned to one
-    version: the output path decides which payload gets overwritten, and the
-    `main.version` stamp lands inside the bytes. A script left pointing at a released
-    payload would rebuild over immutable bytes and stamp them with the wrong version,
-    and `go-verify-binary` would still pass because it compares the file it just wrote.
-
-    Every predecessor proof asserts only the negative — that the script no longer names
-    *it*. Those negatives are individually true and collectively vacuous: nothing caught
-    that this positive pin was dropped when the 1.7 test's copy became stale at this cut.
-    The positive assertion travels with whichever version is current and belongs here.
+    `scripts/build-gh-workflow.sh` targets the successor from the moment it is cut and
+    can no longer reproduce 1.8 (see the script's own header). A script pointed back
+    here would rebuild over immutable bytes and stamp them with the wrong version, and
+    `go-verify-binary` would still pass because it compares the file it just wrote. The
+    positive pin travels with whichever cut is under development and lives in that
+    cut's test file.
     """
     build_script = (_ROOT / "scripts/build-gh-workflow.sh").read_text(encoding="utf-8")
 
-    assert f'ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.8/{_BINARY}"' in (
+    assert f'ARTIFACT_OUTPUT_PATH="standards/github-workflow/versions/1.8/{_BINARY}"' not in (
         build_script
     )
-    assert 'ARTIFACT_LDFLAGS="-buildid= -X main.version=1.8"' in build_script
+    assert 'ARTIFACT_LDFLAGS="-buildid= -X main.version=1.8"' not in build_script
 
 
 def test_github_workflow_1_8__delivered_units__move_only_the_two_references() -> None:
@@ -448,8 +446,8 @@ def test_github_workflow_1_8__predecessor_tree_and_activation_stay_exact() -> No
     # Withdrawing an advertised package is a catalog-major transition (ADR 0024), so
     # every predecessor stays advertised and only its role moves to `retained`.
     assert roles == {
-        **{f"1.{minor}": "retained" for minor in range(8)},
-        "1.8": "default",
+        **{f"1.{minor}": "retained" for minor in range(9)},
+        "1.9": "default",
     }
 
 
@@ -513,10 +511,3 @@ def test_github_workflow_1_8__projection_and_index__are_complete() -> None:
     assert versions["1.8"]["payload"] == "versions/1.8/payload.toml"
     assert versions["1.8"]["digest"] == _payload(_V18).integrity.aggregate_digest.value
     assert "github-workflow@1.8" in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
-
-
-def test_github_workflow_1_8__mutable_navigation__names_the_new_authority() -> None:
-    for name in ("README.md", "adopt.md", "agent-summary.md"):
-        content = (_FAMILY / name).read_text(encoding="utf-8")
-        assert "versions/1.8/" in content
-        assert "versions/1.7/" not in content

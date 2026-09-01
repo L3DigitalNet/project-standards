@@ -1,6 +1,6 @@
 # Adopt the GitHub Workflow Standard
 
-The current consumer package is [`github-workflow@1.8`](versions/1.8/adopt.md). Use it in a repository owned by a GitHub organization whose work is tracked as issues and pull requests: it delivers the repo-local agent skill, its references, and the `gh-workflow` binary into both `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, plus one managed instruction block per selected harness.
+The current consumer package is [`github-workflow@1.9`](versions/1.9/adopt.md). Use it in a repository owned by a GitHub organization whose work is tracked as issues and pull requests: it delivers the repo-local agent skill, its references, and the `gh-workflow` binary into both `.agents/skills/github-workflow/` and `.claude/skills/github-workflow/`, plus one managed instruction block per selected harness.
 
 It does not apply to personal-account repositories. Organization-level issue fields do not exist outside an organization, and the package offers no fallback that operates without them.
 
@@ -9,7 +9,7 @@ It does not apply to personal-account repositories. Organization-level issue fie
 Both options are required, so there is no minimal variant that omits either one. Set `organization` to the login of the organization that owns the repository, and list in `harnesses` only the harnesses the repository actually uses.
 
 ```bash
-project-standards standards enable github-workflow --version 1.8
+project-standards standards enable github-workflow --version 1.9
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -25,7 +25,7 @@ project-standards reconcile --check
 
 `audit` is read-only: it compares live organization schema against the packaged baseline and prints the result. Differences are expected on first adoption and are a report for a human — the package never creates, renames, or retires an Issue Type, field, or value.
 
-Every subcommand is read-only against the repository; nothing this package ships writes a file into the checkout. Versions 1.0 through 1.4 carried a `ledger` subcommand that generated `docs/GH-WORKFLOWS.md`; 1.5 removes it, and a repository upgrading from an earlier version deletes that now-unowned file itself. See the [version-specific guide](versions/1.8/adopt.md) for exact options, first-run expectations, and troubleshooting.
+Every subcommand is read-only against the repository; nothing this package ships writes a file into the checkout. Versions 1.0 through 1.4 carried a `ledger` subcommand that generated `docs/GH-WORKFLOWS.md`; 1.5 removes it, and a repository upgrading from an earlier version deletes that now-unowned file itself. See the [version-specific guide](versions/1.9/adopt.md) for exact options, first-run expectations, and troubleshooting.
 
 Agent sessions run the binary on linux/amd64. Elsewhere the skill and references still deliver, but every subcommand is unavailable until a payload version carrying that platform exists; reconcile cannot substitute one.
 

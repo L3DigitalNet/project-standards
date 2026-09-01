@@ -15,7 +15,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"strings"
 
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/admission"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
@@ -203,7 +205,9 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 		rec.complete(stepEnableAutoMerge, "auto-merge armed with the "+method+" method")
 	default:
 		rec.skip(stepEnableAutoMerge, "--auto was not requested")
-		result, err := client.MergePullRequest(ctx, repo.Owner, repo.Name, number, method, gate.PR.Head.SHA)
+		title, message := admissionCommitText(gate.PR.Title, number)
+		result, err := client.MergePullRequest(ctx, repo.Owner, repo.Name, number, method,
+			gate.PR.Head.SHA, title, message)
 		if err != nil {
 			rec.fail(stepMerge, "the pull request was not merged; the governing issue is untouched")
 			return err
@@ -256,6 +260,64 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 	}
 	rec.complete(stepConvergeIssue, outcome.Message)
 	return nil
+}
+
+// admissionCommitText builds the subject and body GitHub writes into the commit this
+// command creates: the pull-request admission evidence of ADR 0031 D1.
+//
+// It is written here, by the tool that already owns merging, because a trailer an author
+// has to remember is a trailer that is missing: the measured corpus behind ADR 0031 had
+// 0 trailers across 362 commits. Writing it turns pull-request provenance into a fact
+// `gh-workflow admission --offline` can read from `git log` with no API call.
+//
+// The body is tool-owned text and nothing else. GitHub's own default body is composed
+// from the pull request — author-controlled — so echoing it would let an author write
+// `Workflow-Admission: PR #999` into the commit the tool signs off on, or end the body
+// with prose so the real trailer is no longer in a trailer paragraph and the classifier
+// reads no declaration at all. The subject is the only author text that survives, and it
+// is sanitized: a title carrying CR, ESC, or a bidi override reaches every terminal that
+// later prints `git log`.
+//
+// Two limits travel with this. GitHub applies neither field to a rebase merge, so a
+// rebase-admitted pull request contributes commits with no trailer. And the body
+// replaces GitHub's default squash body — the list of squashed commit subjects — which
+// the pull request itself still records.
+func admissionCommitText(prTitle string, number int) (title, message string) {
+	subject := sanitizeSubject(prTitle)
+	if subject == "" {
+		subject = fmt.Sprintf("Merge pull request #%d", number)
+	} else {
+		subject = fmt.Sprintf("%s (#%d)", subject, number)
+	}
+	// A leading blank line makes the trailer its own final paragraph even in GitHub's
+	// rendering, which is the shape `git interpret-trailers` and the classifier both
+	// require; without it a one-line body can be folded onto the subject.
+	return subject, fmt.Sprintf("\n%s: PR #%d\n", admission.TrailerKey, number)
+}
+
+// sanitizeSubject reduces an author-supplied pull-request title to one safe line.
+//
+// Removed rather than escaped: C0 and C7 controls (CR and LF would split the subject
+// into forged extra lines, ESC drives a terminal), and the Unicode bidi overrides and
+// isolates, which can reorder a rendered subject so it reads as something other than
+// what was committed. Whitespace is then collapsed so the removals cannot leave a
+// subject that looks padded or empty-but-present.
+func sanitizeSubject(value string) string {
+	cleaned := strings.Map(func(r rune) rune {
+		switch {
+		case r == '\t', r == '\n', r == '\r':
+			// Whitespace, not deletion: dropping a newline outright would join the two
+			// words either side of it into one token that was never written.
+			return ' '
+		case r < 0x20 || r == 0x7f:
+			return -1
+		case r >= 0x200e && r <= 0x200f, r >= 0x202a && r <= 0x202e, r >= 0x2066 && r <= 0x2069:
+			return -1
+		default:
+			return r
+		}
+	}, value)
+	return strings.Join(strings.Fields(cleaned), " ")
 }
 
 // autoMergePendingFinding reports an admission that has not reached a terminal outcome.
