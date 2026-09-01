@@ -26,7 +26,12 @@ git_context = true
 # Leg worktrees and orchestration state are workstation-only: mirroring them
 # made rexec abort with "local source tree changed continuously" whenever a
 # dispatched worker was editing in .claude/worktrees/ (2026-08-26).
-exclude = [".claude/worktrees", ".workflow"]
+#
+# build/dist, build/release-dist, build/release-sdist are stale release
+# artifacts (289 MiB) that rexec would otherwise mirror on every sync;
+# build/wheel-runtime and build/release-wheel stay included because
+# scripts/verify.sh:133-141 needs exactly one candidate wheel there.
+exclude = [".claude/worktrees", ".workflow", "build/dist", "build/release-dist", "build/release-sdist"]
 
 [tools]
 

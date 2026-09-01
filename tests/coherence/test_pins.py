@@ -5,7 +5,7 @@ from pathlib import Path
 
 _REPO = Path(__file__).resolve().parent.parent.parent
 PRETTIER_PIN = "3.9.6"
-MARKDOWNLINT_CLI2_PIN = "0.23.2"  # Keep aligned with markdownlint-cli2-action@v24.
+MARKDOWNLINT_CLI2_PIN = "0.23.2"  # Keep aligned with markdownlint-cli2-action@v24.2.0.
 
 
 def test_package_json_pins_both_tools() -> None:
