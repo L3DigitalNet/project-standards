@@ -232,7 +232,7 @@ Run the gate locally before every commit that touches `src/project_standards/` o
 scripts/verify.sh
 ```
 
-Verification is trimmed to match the change: intermediate legs of a train run the fast gate above; the full serial battery runs only after the last content change and at release prep, where it doubles as the legacy cross-check against the coverage baseline the parallel lanes must reproduce.
+Verification is trimmed to match the change: intermediate legs of a train run the fast gate above; `--full` runs only after the last content change and at release prep, where it doubles as the cross-check against the coverage baseline the parallel lanes must reproduce — the same lane selections as the fast gate, run one at a time instead of concurrently, with the ordinary suite still at `-n 16` and the run stopping at the first red lane by default.
 
 ```bash
 scripts/verify.sh --full
