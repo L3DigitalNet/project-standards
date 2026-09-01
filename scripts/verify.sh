@@ -8,11 +8,19 @@
 #   (its assertions are timing-sensitive and must not share the machine),
 #   then `coverage combine` + `coverage report`.
 #
-#   --full runs the legacy serial sequence instead (statics, serial ordinary
-#   coverage run, compatibility, performance, report). That is the release-prep
-#   cross-check: it is the configuration the coverage baseline was established
-#   under, so a disagreement between it and the fast gate is a real signal
-#   rather than a parallelism artifact.
+#   --full runs the same lane selections one at a time (statics, ordinary
+#   coverage run, compatibility, performance, coverage combine, report). That is
+#   the release-prep cross-check: it varies the coverage core and the machine
+#   contention, not the test selection, so a disagreement between it and the fast
+#   gate is a real signal rather than a parallelism artifact.
+#
+#   Its ordinary lane runs at -n "$ORDINARY_WORKERS" like the fast gate's, not
+#   single-process (issue #236 C4, lever F of
+#   docs/research/2026-09-01-release-train-wall-clock.md, adopted 2026-09-01).
+#   The single-process form cost ~50 minutes of every train and its isolation
+#   claim was never once the thing that caught a red; the coverage-core claim it
+#   also carried is the half worth keeping, and that one only needs the lane to
+#   run under the trace core, not to run serially.
 #
 # Every command runs from `.venv/bin` rather than through `uv run`. Concurrent
 # `uv run` invocations contend on the uv cache (the 2026-07-29 failure class);
@@ -34,10 +42,10 @@
 #                 next to the data file; in-root they race the read-only digest
 #                 proofs and the wheel-source copytree.
 #   COVERAGE_CORE sysmon in the fast gate only (proved report-identical to the
-#                 serial trace core). --full keeps the default trace core so the
-#                 cross-check varies the core as well as the parallelism —
-#                 otherwise a sysmon-specific divergence would be undetectable
-#                 by the very lane documented to catch it.
+#                 trace core). --full keeps the default trace core, and that is
+#                 now the whole of what the two modes vary in their ordinary
+#                 lane — otherwise a sysmon-specific divergence would be
+#                 undetectable by the very lane documented to catch it.
 #
 # Usage:
 #   scripts/verify.sh            fast gate (default)
@@ -372,17 +380,6 @@ lane_ordinary() {
     reap_basetemp "$BASETEMP_ROOT/ordinary"
 }
 
-lane_ordinary_serial() {
-    local args=(
-        --source=project_standards -m pytest
-        -m "not performance and not compatibility"
-        --basetemp="$BASETEMP_ROOT/ordinary"
-    )
-    [[ "$SMOKE" == "1" ]] && args+=(-k test_repository_workflow)
-    "$VENV_BIN/coverage" run "${args[@]}" || return $?
-    reap_basetemp "$BASETEMP_ROOT/ordinary"
-}
-
 lane_compatibility() {
     local workers="$1"
     local args=(
@@ -457,9 +454,17 @@ if [[ "$MODE" == "fast" ]]; then
     serial_lane_unless_red coverage-combine lane_coverage_combine
 else
     serial_lane_unless_red statics lane_statics
-    serial_lane_unless_red ordinary lane_ordinary_serial
+    # The same lane the fast gate runs, deliberately: what --full varies is the
+    # coverage core (trace here, sysmon there) and the fact that nothing else is
+    # on the machine, not the selection or the worker count.
+    serial_lane_unless_red ordinary lane_ordinary
     serial_lane_unless_red compatibility lane_compatibility "$FULL_COMPAT_WORKERS"
     serial_lane_unless_red performance lane_performance
+    # Required since the ordinary lane became parallel here too: xdist workers
+    # write their own `.coverage.*` files (tests/conftest.py), so without a
+    # combine the report would see only the controller process and the fail-under
+    # would trip on a lane that actually passed.
+    serial_lane_unless_red coverage-combine lane_coverage_combine
 fi
 
 serial_lane_unless_red coverage-report lane_coverage_report
