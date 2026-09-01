@@ -11,11 +11,15 @@ on:
       - ".github/workflows/go.yml"
       # The committed binaries and their build scripts are gate inputs: a change to
       # either alone must still re-run the rebuild-and-compare verification.
+      # Every retained version is globbed, not the current one: a version-pinned filter
+      # goes stale at the next package cut and silently stops matching, so a
+      # committed-binary-only change would land with no rebuild-and-compare run.
+      # `*` matches a single path segment in GitHub path filters.
       - "scripts/build-gh-workflow.sh"
       - "scripts/build-agent-handoff-session-start.sh"
       - "scripts/lib/go-reproducible-build.sh"
-      - "standards/github-workflow/versions/1.4/skills/github-workflow/bin/gh-workflow"
-      - "standards/agent-handoff/versions/1.14/hooks/session-start/session-start"
+      - "standards/github-workflow/versions/*/skills/github-workflow/bin/gh-workflow"
+      - "standards/agent-handoff/versions/*/hooks/session-start/session-start"
   push:
     branches: ["main"]
     paths:
@@ -27,11 +31,15 @@ on:
       - ".github/workflows/go.yml"
       # The committed binaries and their build scripts are gate inputs: a change to
       # either alone must still re-run the rebuild-and-compare verification.
+      # Every retained version is globbed, not the current one: a version-pinned filter
+      # goes stale at the next package cut and silently stops matching, so a
+      # committed-binary-only change would land with no rebuild-and-compare run.
+      # `*` matches a single path segment in GitHub path filters.
       - "scripts/build-gh-workflow.sh"
       - "scripts/build-agent-handoff-session-start.sh"
       - "scripts/lib/go-reproducible-build.sh"
-      - "standards/github-workflow/versions/1.4/skills/github-workflow/bin/gh-workflow"
-      - "standards/agent-handoff/versions/1.14/hooks/session-start/session-start"
+      - "standards/github-workflow/versions/*/skills/github-workflow/bin/gh-workflow"
+      - "standards/agent-handoff/versions/*/hooks/session-start/session-start"
 
 permissions:
   contents: read
@@ -41,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.26.6"
           cache: true
