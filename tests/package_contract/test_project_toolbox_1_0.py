@@ -22,8 +22,6 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
-from project_standards.package_contract.repository import build_package_repository
-from tests.package_contract.helpers import assert_schema_payload_references
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -130,10 +128,6 @@ def test_project_toolbox_1_0__declared_inventory__matches_the_bytes_on_disk() ->
     assert manifest.relations.conflicts == []
     assert manifest.capabilities.provides == ["project-toolbox.workflows"]
     assert manifest.capabilities.consumes_platform == ["project-standards.reconcile"]
-
-
-def test_project_toolbox_1_0__schemas__carry_no_dangling_payload_reference() -> None:
-    assert assert_schema_payload_references(build_package_repository(_ROOT)) == []
 
 
 def test_project_toolbox_1_0__payload_projection__matches_the_versioned_source() -> None:

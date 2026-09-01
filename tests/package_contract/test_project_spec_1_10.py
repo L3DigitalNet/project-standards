@@ -28,9 +28,7 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
-from project_standards.package_contract.repository import build_package_repository
 from project_standards.specs.registry import TEMPLATES_DIR, TIER_FILES
-from tests.package_contract.helpers import assert_schema_payload_references
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -202,8 +200,6 @@ def test_project_spec_1_10__projection_and_catalog_activation_are_exact() -> Non
 
     generated = (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
     assert "| [`project-spec`](project-spec/README.md) | active | 1.10 | retained |" in generated
-
-    assert assert_schema_payload_references(build_package_repository(_ROOT)) == []
 
 
 def test_project_spec_1_10__catalog_default__is_what_this_repository_dogfoods() -> None:

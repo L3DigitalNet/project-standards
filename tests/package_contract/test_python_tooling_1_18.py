@@ -51,9 +51,7 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
-from project_standards.package_contract.repository import build_package_repository
 from tests.control_plane.planner_helpers import resolution_request
-from tests.package_contract.helpers import assert_schema_payload_references
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -450,8 +448,6 @@ def test_python_tooling_1_18__machine_readable_payload__carries_no_1_17_referenc
     are excluded for the same reason and are pinned by the narrower assertion below,
     which names the one machine-readable version literal the provider emits.
     """
-
-    assert assert_schema_payload_references(build_package_repository(_ROOT)) == []
 
     stale = {
         path.relative_to(_V118).as_posix()

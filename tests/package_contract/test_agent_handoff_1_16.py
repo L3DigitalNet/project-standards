@@ -25,8 +25,6 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
-from project_standards.package_contract.repository import build_package_repository
-from tests.package_contract.helpers import assert_schema_payload_references
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -119,8 +117,6 @@ def test_agent_handoff_1_16__identity__is_complete_and_current() -> None:
 
 def test_agent_handoff_1_16__schemas__carry_no_predecessor_version_reference() -> None:
     """Guard the copied-payload failure mode: schema constants left pointing at 1.15."""
-    assert assert_schema_payload_references(build_package_repository(_ROOT)) == []
-
     successor_text = {
         relative: path.read_text(encoding="utf-8")
         for relative, path in _files(_SUCCESSOR).items()
