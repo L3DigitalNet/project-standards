@@ -31,11 +31,11 @@ Exit `0` every applicable site declared, `1` at least one missing, `2` unknown f
 
 ## `verify.sh` — the repository release gate
 
-Runs the repository's own verification as three concurrent lanes (statics through the non-uv path, the ordinary suite under coverage with pytest-xdist, and the compatibility matrix), then the timing-sensitive performance lane alone, then `coverage combine` and the report. `--full` reproduces the legacy serial battery for release-prep cross-checks. Expects the candidate wheel runtime on `PYTHONPATH` prerequisites and refuses to start without them; see the script header for the environment it establishes.
+Runs the repository's own verification as three concurrent lanes (statics through the non-uv path, the ordinary suite under coverage with pytest-xdist, and the compatibility matrix), then the timing-sensitive performance lane alone, then `coverage combine` and the report. `--full` runs the same lane selections one at a time (ordinary suite still at `-n 16`) for the release-prep cross-check, and stops at the first red lane by default; `--keep-going` restores the fast gate's run-every-lane behavior for `--full`, and `--fail-fast` does the reverse for the fast gate. Expects the candidate wheel runtime on `PYTHONPATH` prerequisites and refuses to start without them; see the script header for the environment it establishes.
 
 ```bash
 scripts/verify.sh            # fast gate (default)
-scripts/verify.sh --full     # legacy serial battery
+scripts/verify.sh --full     # same lanes, one at a time (release-prep cross-check)
 ```
 
 ## `release_prep.py` — mechanical release preparation

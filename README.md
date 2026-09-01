@@ -304,7 +304,7 @@ Then run the gate:
 
 ```bash
 scripts/verify.sh                    # fast gate: statics, ordinary suite, and compatibility as concurrent lanes
-scripts/verify.sh --full             # legacy serial battery (release prep and the last content change of a train)
+scripts/verify.sh --full             # same lanes, run one at a time (release prep and the last content change of a train)
 uv run project-standards validate    # dogfood: schema, id, and references
 
 # Go gate. Install pinned repository-local tools once per checkout.
@@ -312,7 +312,7 @@ make go-tools
 make go-check
 ```
 
-The fast Python gate is the everyday verification; the serial `--full` battery runs after a train's last content change and at release preparation, where it cross-checks the parallel configuration against the baseline it was proven against. The independent Go gate runs locally and in path-filtered CI when Go-owned files change. The release path uses `build/release-wheel` with `--clear` and replaces only the generated runtime extraction, so no stale wheel can satisfy the candidate-runtime gate. Require `sync-payload-projection --check` before `uv build`: the projection is what puts the catalog and payload bytes inside the distribution, and a wheel built without it serves `validate` but fails `init`/`reconcile` with `CP-INIT-STATE`.
+The fast Python gate is the everyday verification; `--full` runs the same lane selections one at a time (ordinary suite included, still at `-n 16`) after a train's last content change and at release preparation, where it cross-checks the parallel configuration against the baseline it was proven against, and stops at the first red lane by default (`--fail-fast`; pass `--keep-going` to run every lane regardless). The independent Go gate runs locally and in path-filtered CI when Go-owned files change. The release path uses `build/release-wheel` with `--clear` and replaces only the generated runtime extraction, so no stale wheel can satisfy the candidate-runtime gate. Require `sync-payload-projection --check` before `uv build`: the projection is what puts the catalog and payload bytes inside the distribution, and a wheel built without it serves `validate` but fails `init`/`reconcile` with `CP-INIT-STATE`.
 
 The [release runbook](docs/reference/release-runbook.md) is the durable procedure for cutting a release from this checkout: every gate layer, its commands, its exit evidence, and its rollback.
 
