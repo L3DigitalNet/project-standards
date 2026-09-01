@@ -10,7 +10,7 @@ package_version = "1.9"
 # Admission model (ADR 0031). `integration_branch` empty means the two-branch
 # topology; `admission_floor` is the commit-ish where enforcement begins, so an
 # adopter is not permanently red for history it cannot rewrite.
-integration_branch = ""
-release_subject_prefix = ""
-admission_floor = ""
+integration_branch = "testing"
+release_subject_prefix = "release:"
+admission_floor = "25e0094a0b8815757d686b417f96ed8ba6b2ad20"
 handoff_admission = "agent-handoff"
