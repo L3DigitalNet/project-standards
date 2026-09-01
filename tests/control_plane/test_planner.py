@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import random
@@ -10,6 +11,8 @@ from typing import cast
 
 import pytest
 
+import project_standards.control_plane.planner as planner_module
+import project_standards.control_plane.snapshot as snapshot_module
 from project_standards.control_plane.adapters.toml import TomlAdapter
 from project_standards.control_plane.codec import parse_lock, render_lock
 from project_standards.control_plane.diagnostics import (
@@ -28,10 +31,15 @@ from project_standards.control_plane.planner import (
 from project_standards.control_plane.providers import (
     ProviderInvocation,
     ProviderResult,
+    invoke_provider,
 )
 from project_standards.control_plane.resolution import DeclaredTransition
 from project_standards.control_plane.schemas import ReconciliationPlanSchema
-from project_standards.package_contract.paths import PackageVersion, Sha256Digest
+from project_standards.package_contract.paths import (
+    PackageVersion,
+    SafeRelativePath,
+    Sha256Digest,
+)
 from project_standards.package_contract.payload import (
     ArtifactPolicy,
     JsonValue,
@@ -44,6 +52,10 @@ from tests.control_plane.planner_helpers import (
     previous_lock,
     resolution_request,
     write_payload,
+)
+from tests.control_plane.test_providers import (
+    provider_invocation,
+    write_provider_payload,
 )
 
 
@@ -2162,3 +2174,93 @@ def test_undeclared_whole_file_relinquishment_follows_created_container(
     assert _action(plan, "notes.md").kind is expected
     assert target.read_bytes() == content
     assert all(artifact.path.original != "notes.md" for artifact in plan.next_lock.artifacts)
+
+
+def _capture_counter(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    counted = [0]
+    original = snapshot_module.RepositorySnapshot.capture
+
+    def counting(
+        repo: Path,
+        targets: tuple[SafeRelativePath, ...],
+        *,
+        retain_content: bool = True,
+    ) -> snapshot_module.RepositorySnapshot:
+        counted[0] += 1
+        return original(repo, targets, retain_content=retain_content)
+
+    monkeypatch.setattr(snapshot_module.RepositorySnapshot, "capture", counting)
+    return counted
+
+
+def _chained_planner_fixture(tmp_path: Path) -> tuple[Path, PlannerRequest]:
+    """A plan whose two contributions each run one real, executable provider.
+
+    The runner ignores the planner's own invocation and dispatches the
+    executable fixture payload instead, because chaining is only observable
+    across invocations that declare the identical target set — which is what
+    the real reconcile path does, and what an inert stub runner cannot show.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    executable = write_provider_payload(tmp_path / "executable")
+    payload = write_payload(
+        tmp_path / "demo",
+        "demo",
+        contributions=[
+            {
+                "id": "first",
+                "target": "first.txt",
+                "adapter": "whole-file",
+                "scope": "$file",
+                "provider": "render-tool",
+            },
+            {
+                "id": "second",
+                "target": "second.txt",
+                "adapter": "whole-file",
+                "scope": "$file",
+                "provider": "render-tool",
+            },
+        ],
+        render_providers=["render-tool"],
+    )
+
+    def runner(_invocation: ProviderInvocation) -> ProviderResult:
+        return invoke_provider(provider_invocation(repo, executable))
+
+    return repo, _request(repo, (payload,), provider_runner=runner)
+
+
+def test_planning_shares_one_integrity_snapshot_between_consecutive_providers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, request = _chained_planner_fixture(tmp_path)
+    monkeypatch.chdir(repo)
+    chained = _capture_counter(monkeypatch)
+
+    plan = plan_reconciliation(request)
+
+    assert plan.applicable
+    # One capture for the plan's own target snapshot, then N+1 rather than 2N
+    # for the two provider invocations the contributions drive.
+    assert chained[0] == 4
+
+
+def test_planning_without_the_chain_captures_twice_per_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, request = _chained_planner_fixture(tmp_path)
+    monkeypatch.chdir(repo)
+    unchained = _capture_counter(monkeypatch)
+
+    # Removing the window is the only difference from the test above, so the
+    # saving is pinned to the window itself rather than to any other change in
+    # the planner.
+    monkeypatch.setattr(planner_module, "provider_snapshot_chain", contextlib.nullcontext)
+    plan = plan_reconciliation(request)
+
+    assert plan.applicable
+    assert unchained[0] == 5
