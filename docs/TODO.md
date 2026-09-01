@@ -81,6 +81,10 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   [#215](https://github.com/L3DigitalNet/project-standards/issues/215) (all P2) and
   [#211](https://github.com/L3DigitalNet/project-standards/issues/211) (P3, bundle with the next markdown-tooling cut).
 
+- [ ] [#218](https://github.com/L3DigitalNet/project-standards/issues/218) (P2): make the github-workflow standard
+  itself exempt Agent Handoff documents from the T0-or-PR rule; this repository's `CLAUDE.md`/`AGENTS.md` carve-out
+  (`d5792907`) is interim and comes out once the managed block carries it.
+
 - [ ] Cut python-tooling 1.18 for the three adoption reports. #204 is a real guard defect (`build_backend = "none"`
   exempts the `[project]` check `uv lock` needs, and `adopt.md` lines 21 and 23 contradict each other); #205 and
   #206 are documentation gaps over mechanisms the key-ownership invariant already provides. Evidence is on each
