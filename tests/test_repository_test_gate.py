@@ -403,6 +403,15 @@ def test_verify_gate__fast_mode__starts_parallel_lanes_before_serial_tail(tmp_pa
 
 
 def test_verify_gate__full_mode__preserves_serial_lane_order(tmp_path: Path) -> None:
+    """--full sequences the lanes one at a time, with the fast gate's selections.
+
+    The ordinary lane is parallel here too since #236 C4 (lever F of
+    docs/research/2026-09-01-release-train-wall-clock.md): what --full still
+    varies is the coverage core and the exclusive machine, not the selection.
+    The combine is load-bearing rather than cosmetic — xdist workers write their
+    own ``.coverage.*`` files, so a report without it would see only the
+    controller process.
+    """
     repo, log, environment = _gate_fixture(tmp_path, wheel_count=1)
 
     completed = _run_gate(repo, environment, "--full")
@@ -413,11 +422,13 @@ def test_verify_gate__full_mode__preserves_serial_lane_order(tmp_path: Path) -> 
     assert invocations[1] == "ruff format --check ."
     assert invocations[2] == "ruff check ."
     assert invocations[3].startswith(
-        "coverage run --source=project_standards -m pytest -m not performance and not compatibility"
+        "coverage run --source=project_standards -m pytest "
+        "-m not performance and not compatibility -n 16 --dist load"
     )
     assert invocations[4].startswith("pytest -m compatibility -n 16")
     assert invocations[5].startswith("pytest -m performance")
-    assert invocations[6] == "coverage report --fail-under=0"
+    assert invocations[6] == "coverage combine"
+    assert invocations[7] == "coverage report --fail-under=0"
 
 
 def test_verify_gate__full_mode__red_ordinary_lane__skips_the_later_lanes(
@@ -440,7 +451,7 @@ def test_verify_gate__full_mode__red_ordinary_lane__skips_the_later_lanes(
     summary = completed.stdout[completed.stdout.index("════ summary ════") :]
     assert "ordinary" in summary
     assert "FAILED (exit 13)" in summary
-    for lane in ("compatibility", "performance", "coverage-report"):
+    for lane in ("compatibility", "performance", "coverage-combine", "coverage-report"):
         assert lane in summary
         line = next(row for row in summary.splitlines() if row.strip().startswith(lane))
         assert "skipped (--fail-fast)" in line

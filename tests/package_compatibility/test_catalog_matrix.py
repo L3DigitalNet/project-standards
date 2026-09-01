@@ -55,12 +55,10 @@ _PAIRS = tuple(combinations(_DEFAULTS, 2))
 # satisfy the byte-identical re-enable assertion. The fresh rows carry the
 # catalog-5-only packages' full pair and full-set coverage.
 _LEGACY_DEFAULTS = legacy_migratable_ids()
-_LEGACY_PAIRS = tuple(combinations(_LEGACY_DEFAULTS, 2))
 _PARTIAL_MIGRATION_ROWS = tuple((standard_id,) for standard_id in _LEGACY_DEFAULTS) + tuple(
     tuple(candidate for candidate in _LEGACY_DEFAULTS if candidate != omitted)
     for omitted in _LEGACY_DEFAULTS
 )
-_PAIR_ROWS = tuple((pair, False) for pair in _PAIRS) + tuple((pair, True) for pair in _LEGACY_PAIRS)
 _MANDATORY_GROUPS = (
     ("python-tooling", "agent-handoff", "markdown-tooling"),
     ("adr", "markdown-frontmatter"),
@@ -343,27 +341,30 @@ def test_each_package_converges_alone_from_source_and_wheel(
 
 
 def _pair_row_id(value: object) -> str:
-    if isinstance(value, tuple):
-        return "+".join(cast("tuple[str, ...]", value))
-    return "migrated" if value else "fresh"
+    return "+".join(cast("tuple[str, ...]", value))
 
 
-@pytest.mark.parametrize(("standard_ids", "migrated"), _PAIR_ROWS, ids=_pair_row_id)
+@pytest.mark.parametrize("standard_ids", _PAIRS, ids=_pair_row_id)
 def test_every_unordered_pair_preserves_ownership_and_converges(
     tmp_path: Path,
     source_payload_distribution: InstalledDistribution,
-    wheel_payload_distribution: InstalledDistribution,
     standard_ids: tuple[str, str],
-    *,
-    migrated: bool,
 ) -> None:
-    _exercise_both(
-        tmp_path,
-        source_payload_distribution,
-        wheel_payload_distribution,
-        standard_ids,
-        migrated=migrated,
-    )
+    """Prove the pairwise ownership and convergence claim, source distribution only.
+
+    What each pair row is for is the interaction between two packages' managed
+    blocks, which is distribution-independent: both distributions serve the same
+    payload bytes. Dual-distribution parity is a separate claim, and it is still
+    proven for every package by the single-package rows, the two full-set rows
+    and the partial-migration rows (owner decision 2026-09-01, #227 E2#1; the
+    battery record carries no red that only the wheel arm ever produced).
+
+    The 21 migrated pair rows are gone with it (#227 E2#2): a legacy pair adds
+    nothing over the partial-migration rows, which exercise the same migration
+    against every one-package and every one-omitted subset, plus the
+    all-namespace-legacy full-set row.
+    """
+    exercise_fresh_lifecycle(tmp_path / "source", source_payload_distribution, standard_ids)
 
 
 @pytest.mark.parametrize("migrated", [False, True], ids=["fresh", "all-namespace-legacy"])
