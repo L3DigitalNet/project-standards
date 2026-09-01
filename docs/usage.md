@@ -526,7 +526,7 @@ Exit status: `0` group help displayed · `2` missing or unrecognized verb.
 Compare every previously released payload and catalog selection with a tagged baseline, then classify the proposed change under ADR 0024.
 
 ```text
-project-standards packages check-release --baseline <ref> [--root <path>] [--previous-version <version>] [--json]
+project-standards packages check-release --baseline <ref> [--root <path>] [--previous-version <version>] [--staged] [--json]
 ```
 
 Options:
@@ -534,11 +534,12 @@ Options:
 - **`--baseline <ref>`** — Released Git tag or commit to compare. Required. Option-like and unresolved refs are rejected.
 - **`--root <path>`** — Repository root. Default: the current directory.
 - **`--previous-version <version>`** — Baseline tool SemVer. Required when `<ref>` is not a `vMAJOR.MINOR.PATCH` tag; otherwise derived from the tag.
-- **`--json`** — Emit classification and stable findings as JSON.
+- **`--staged`** — Report a mid-train working tree. Exactly `PC-RELEASE-LEVEL`, `PC-RELEASE-PROJECTION`, and `PC-RELEASE-PROJECT-VERSION` are labelled expected pre-bump rather than fatal, because a landed payload cut legitimately precedes the release-prep version bump and projection refresh. Every other code — including `PC-RELEASE-PAYLOAD-MUTATED`, `PC-CATALOG-DIGEST-REPLACED`, and `PC-RELEASE-PACKAGE-CURRENT` — still fails. Expected findings are still printed, prefixed `EXPECTED-PRE-BUMP` instead of `ERROR`. Omitting the flag leaves output and exit status exactly as they were.
+- **`--json`** — Emit classification and stable findings as JSON. With `--staged`, the object additionally carries `"staged": true` and `"expected_pre_bump"`, the sorted codes that were labelled expected; `"ok"` then reports whether any other finding remains.
 
 The command reads the baseline through argument-vector Git calls and only loads catalog-declared family and payload paths. It never changes versions, catalogs, tags, or payloads.
 
-Exit status: `0` allowed `patch`, `minor`, or `major` classification · `1` forbidden transition or current package findings · `2` invalid invocation, unsafe ref/root, or unavailable baseline evidence.
+Exit status: `0` allowed `patch`, `minor`, or `major` classification, or a `--staged` run whose only findings are expected pre-bump · `1` forbidden transition or current package findings · `2` invalid invocation, unsafe ref/root, or unavailable baseline evidence.
 
 ### `spec`
 
