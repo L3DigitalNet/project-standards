@@ -1,13 +1,13 @@
 # Agent Handoff Standard
 
-This is the Catalog 5 family landing page for the active consumer package `agent-handoff@1.16`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
+This is the Catalog 5 family landing page for the active consumer package `agent-handoff@1.17`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
 
 ## Current authority
 
-- [Agent Handoff 1.16 standard](versions/1.16/README.md) — normative repository-knowledge and session-continuity contract
-- [Agent Handoff 1.16 adoption guide](versions/1.16/adopt.md) — exact profiles, outputs, ownership, migration, and troubleshooting
+- [Agent Handoff 1.17 standard](versions/1.17/README.md) — normative repository-knowledge and session-continuity contract
+- [Agent Handoff 1.17 adoption guide](versions/1.17/adopt.md) — exact profiles, outputs, ownership, migration, and troubleshooting
 - [Current family adoption guide](adopt.md) — concise enable/reconcile workflow
-- [Agent Handoff 1.16 agent summary](versions/1.16/agent-summary.md) — session startup, fact routing, and closeout rules
+- [Agent Handoff 1.17 agent summary](versions/1.17/agent-summary.md) — session startup, fact routing, and closeout rules
 - [Family index](standard.toml) — indexed payload and digest
 
 ## Use this standard when
@@ -17,7 +17,7 @@ Use Agent Handoff for repository-local project knowledge, bounded session contin
 ## Adopt
 
 ```bash
-project-standards standards enable agent-handoff --version 1.16
+project-standards standards enable agent-handoff --version 1.17
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -33,4 +33,4 @@ project-standards agent-handoff drift-check --repo .
 
 ## Legacy boundary
 
-The legacy `project-standards adopt agent-handoff` route, package-specific provenance lock, `.project-standards.yml` integration, and unversioned V1 artifacts are migration evidence only. They do not define current Catalog 5 behavior. Use the exact `versions/1.16/` payload and unified reconciliation.
+The legacy `project-standards adopt agent-handoff` route, package-specific provenance lock, `.project-standards.yml` integration, and unversioned V1 artifacts are migration evidence only. They do not define current Catalog 5 behavior. Use the exact `versions/1.17/` payload and unified reconciliation.

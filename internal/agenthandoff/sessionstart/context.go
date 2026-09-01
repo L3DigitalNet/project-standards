@@ -129,19 +129,83 @@ func readState(root string) string {
 	return truncateUTF8(data, maxStateBytes) + stateNote
 }
 
+// gitHardeningOptions precede every session-start Git subcommand.
+//
+// `-c core.fsmonitor=` is a security control, not tuning: `git status` runs the
+// configured fsmonitor hook as a child process, and that setting is reachable from the
+// target repository's own `.git/config`. Without this override, opening an untrusted
+// checkout as a session-start target executes an attacker-chosen command before the
+// operator has seen anything (issue #235). A command-line `-c` outranks every config
+// file, so this holds regardless of what system, global, or repository config says.
+//
+// SCOPE: it closes the fsmonitor vector and nothing else. Repository-level config still
+// reaches two known execution paths under a `.git/config`-write precondition —
+// `filter.<driver>.clean`/`.process` selected by `.gitattributes` during `status`, and
+// `log.showSignature` with `gpg.program` during `log`. Both are an accepted residual:
+// an attacker who can write `.git/config` in the repository that owns the installed hook
+// already has the same execution the hook would give them. Do not reach for
+// `GIT_CONFIG_NOSYSTEM` here — it suppresses only the system file, while repository-local
+// config is always read, so it would close nothing these paths use.
+//
+// `--no-optional-locks` keeps the read from taking the index lock, so session start
+// cannot fail — or make an unrelated Git command fail — by racing a concurrent write in
+// the same checkout.
+//
+// Both are global options and must stay ahead of the subcommand; Git rejects them after
+// it.
+var gitHardeningOptions = []string{"-c", "core.fsmonitor=", "--no-optional-locks"}
+
+// gitEnvironmentNames are the only parent variables the session-start Git reads inherit.
+//
+// Everything else is dropped rather than filtered, so no `GIT_*` variable exported by
+// the harness or by an enclosing shell can redirect these reads: `GIT_DIR`,
+// `GIT_WORK_TREE`, `GIT_CONFIG_GLOBAL`, and the `GIT_CONFIG_COUNT` family would all
+// otherwise let the environment choose the repository or inject configuration, which
+// would defeat the executable-path repository authority established by repositoryRoot.
+// PATH is kept because Git resolves its own subprograms through it, and HOME is kept so
+// a developer's normal identity and `~/.gitconfig` still apply. The allowlist is
+// deliberately not exhaustive: `XDG_CONFIG_HOME` is dropped, so a global config
+// relocated under XDG falls back to the `$HOME` paths and its settings do not apply to
+// these reads. That is the intended trade — the reads must not honor configuration this
+// process cannot vouch for — and it can only make the injected context thinner, never
+// wrong. The fsmonitor setting a global config could carry is already neutralized by
+// gitHardeningOptions.
+var gitEnvironmentNames = []string{"PATH", "HOME"}
+
+func gitEnvironment() []string {
+	environment := make([]string, 0, len(gitEnvironmentNames))
+	for _, name := range gitEnvironmentNames {
+		if value, ok := os.LookupEnv(name); ok {
+			environment = append(environment, name+"="+value)
+		}
+	}
+	return environment
+}
+
 // runGit executes one fixed argv inside root under a bounded timeout.
 //
 // The argument vector is always a literal from this package and the command runs without
 // a shell, so repository contents can never reach argv. A failure of any kind — missing
 // Git, timeout, non-zero status — returns ok=false and the caller degrades.
+//
+// The child gets the hardening options and the minimal environment documented above; a
+// new call site inherits both by construction, which is why every Git read in this
+// package goes through this one function.
 func runGit(root string, arguments ...string) (string, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), gitTimeout)
 	defer cancel()
 
+	argv := make([]string, 0, len(gitHardeningOptions)+len(arguments))
+	argv = append(argv, gitHardeningOptions...)
+	argv = append(argv, arguments...)
+
 	var stdout bytes.Buffer
-	command := exec.CommandContext(ctx, "git", arguments...) // #nosec G204 -- arguments
+	command := exec.CommandContext(ctx, "git", argv...) // #nosec G204 -- arguments
 	// are package literals; no caller-supplied value reaches this argv.
 	command.Dir = root
+	// A nil Env would hand the child the full parent environment; this assignment is
+	// load-bearing even when gitEnvironment returns an empty slice.
+	command.Env = gitEnvironment()
 	command.Stdout = &stdout
 	command.Stderr = nil
 	if err := command.Run(); err != nil {

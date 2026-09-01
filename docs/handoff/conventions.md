@@ -502,3 +502,17 @@ add new payload-tree test coverage there rather than re-deriving file enumeratio
 **Sources:** ADR 0031 D4; github-workflow 1.9 (#203, #218), adopted 2026-09-01.
 
 **Related:** 24.
+
+## 26. New payload binaries are stripped; published bytes are not
+
+**Applies when:** cutting a payload version that ships a Go binary, or reading a size difference between two retained versions.
+
+**Rule:** a family's `scripts/build-*.sh` pins `-s -w` in `ARTIFACT_LDFLAGS` from its first cut after 2026-09-01 — agent-handoff at 1.17 — so binaries cut from then on ship without their symbol table or DWARF. Published payload bytes are immutable and stay unstripped, so a retained version is roughly 30% larger than its stripped successor. That step is the policy working, not drift — never "fix" it by rebuilding a released payload.
+
+**Why:** `.debug*`, `.symtab`, and `.strtab` were 32.4% of the session-start binary and 30.2% of `gh-workflow` (#228 lever 1). `.gopclntab` is untouched, so panic traces still carry function names and line numbers; only `delve`/DWARF inspection of the *shipped* file is lost, and that is recovered by rebuilding from the same script without the flags.
+
+**Gotcha:** the strip changes the artifact digest, so the payload version, its digest chain, and `make go-verify-binary` all move together in the cutting commit. A cut also always re-links the binary with its own `-X main.version=` stamp even when the Go source is unchanged (bug 010), so consecutive versions may differ by the stamp alone.
+
+**Sources:** #228 (levers 2–4 recorded there as "not now"); agent-handoff 1.17 cut, 2026-09-01.
+
+**Related:** 18, 20.
