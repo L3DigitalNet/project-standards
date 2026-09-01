@@ -31,12 +31,12 @@ func TestAdmissionCommitTextIsToolOwnedAndSanitized(t *testing.T) {
 		},
 		{
 			name:      "escape sequences and bidi overrides are removed",
-			prTitle:   "feat: \x1b[31mred\x1b[0m ‮gnihton‬",
+			prTitle:   "feat: \x1b[31mred\x1b[0m \u202egnihton\u2069",
 			wantTitle: "feat: [31mred[0m gnihton (#42)",
 		},
 		{
 			name:      "a title that sanitizes to nothing falls back to tool-owned text",
-			prTitle:   "\x1b\x07  ‎",
+			prTitle:   "\x1b\x07  \u200e",
 			wantTitle: "Merge pull request #42",
 		},
 	}
