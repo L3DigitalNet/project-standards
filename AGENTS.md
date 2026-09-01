@@ -66,7 +66,7 @@ Lint additionally skips generated directories: `.pytest_cache/**`, `.ruff_cache/
 Check formatting over exactly that scope, with Git as the corpus authority:
 
 ```bash
-git ls-files -z -- ':(glob)**/*.md' ':(glob)**/*.json' ':(glob)**/*.jsonc' ':(glob)**/*.yml' ':(glob)**/*.yaml' | xargs -0 -r npx prettier --check --
+git ls-files -s -z -- ':(glob)**/*.md' ':(glob)**/*.json' ':(glob)**/*.jsonc' ':(glob)**/*.yml' ':(glob)**/*.yaml' | sed -zn '/^120000 /!s/^[^\t]*\t//p' | xargs -0 -r npx prettier --check --
 ```
 
 Without Git, bound the same scope by glob instead:
@@ -128,28 +128,27 @@ uv run ruff check src tests --fix
 <!-- markdownlint-disable MD025 -->
 # GitHub Workflow
 
-This repository's work belongs to the `L3DigitalNet` organization. Route every GitHub work-state action through the complete table below. Every row is a `gh-workflow` subcommand unless it says raw `gh`. Load the `github-workflow` skill for triage, an organization-schema audit, T0 or relationship judgment, or uncommon recovery.
+This repository's work belongs to the `L3DigitalNet` organization. Route every GitHub work-state action through the table below; every row is a `gh-workflow` subcommand unless it says raw `gh`. Load the `github-workflow` skill for triage, a schema audit, T0 or relationship judgment, or rare recovery.
 
 | Action | Command |
 | --- | --- |
 | Create a typed issue | `new --type T --title S [--field Name=Value]` |
 | Set fields or Issue Type | `set --issue N [--type T] [--field Name=Value]` |
-| Close or reopen an issue | `close --issue N --as done\|dropped` / `reopen --issue N --workflow VALUE` |
-| Check or read an issue or PR | `check --issue N` / `check --pr N [--through PHASE]` / `receipt --issue N` / `receipt --pr N` |
+| Close or reopen an issue | `close --issue N --as done\|dropped` / `reopen --issue N --workflow V` |
+| Check or read an issue or PR | `check`/`receipt --issue N` or `--pr N`; `check --pr N --through PHASE` |
 | Summary / schema audit | `summary` / `audit` |
 | Open a draft PR | raw `gh pr create --draft --body-file PATH` |
 | Ready, then merge | `ready --pr N` / `merge --pr N [--method M] [--auto]` |
 | Close an open Final unmerged | `close --pr N --as OUTCOME --reason S` |
-| Wait for CI | `gh pr checks N --watch --fail-fast` or `gh run watch ID --exit-status` |
+| Classify admission | `admission --branch B [--offline]` |
 
-All ten accept `--output human|json`. The binary is at `.agents/skills/github-workflow/bin/gh-workflow` (and its `.claude/` twin); refusals name the valid values, so invoke it rather than guessing. These rules bind even when the skill was never loaded:
+All ten accept `--output human|json`; the binary is at `.agents/skills/github-workflow/bin/gh-workflow` and its `.claude/` twin, and its refusals name valid values. These rules bind even when the skill was never loaded:
 
-- An operator instruction is sufficient authority for the action it names. You author acceptance criteria and admit work to `Ready` yourself; open state never implies `Ready`.
-- A T0 commit — trivial prose repair, no protected surface, one `Workflow-Admission: T0` trailer — is the only autonomous direct push; all other work starts as a draft PR.
-- Every PR declares `Final: #N`, `Supporting: #N`, or `Standalone` under `## Governing work`.
-- Keep terminal state paired: `Done` closes as completed, `Dropped` as not planned, and reopen returns a nonterminal `Workflow` value.
-- Never create shadow state labels, mutate organization schema through this package, or bypass live enforcement.
-- A related finding you can address this session needs no issue: fix it in place when this repository owns it, file it against the owning upstream repository, and ask the operator only when it needs its own session.
+- An operator instruction is sufficient authority for the action it names. You author acceptance criteria and admit work to `Ready`; open state never implies it.
+- Every commit on a governed branch carries one `Workflow-Admission` trailer: `T0` (trivial prose repair, no protected surface), `PR #N` (written by `merge`), `handoff` (touches only `docs/handoff/**`, `docs/STATUS.md`, `docs/TODO.md`), or `release`. A commit mixing handoff and other paths is not handoff: like all other work it starts as a draft PR declaring `Final: #N`, `Supporting: #N`, or `Standalone` under `## Governing work`.
+- Keep terminal state paired: `Done` closes as completed, `Dropped` as not planned; reopen returns a nonterminal `Workflow` value.
+- Never create shadow state labels, mutate organization schema, or bypass live enforcement.
+- A related finding you can address this session needs no issue: fix it here when this repository owns it, file it against the owning upstream repository, ask the operator only when it needs its own session.
 
 <!-- markdownlint-enable MD025 -->
 <!-- END project-standards:github-workflow -->

@@ -44,7 +44,7 @@ The server is optional and replaces nothing: the CLI and the CI gates remain the
 **The MCP server ships in every published release from v5.12.0 onward.** Install the current release from its immutable tag:
 
 ```bash
-uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.27.0"
+uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.28.0"
 ```
 
 Releases before v5.12.0 do not contain the server; on those, `project-standards mcp --help` fails as an unknown command.
@@ -57,8 +57,8 @@ Working from a checkout, the candidate-wheel procedure is the repository's own, 
 uv sync --all-groups
 uv run project-standards standards sync-payload-projection --root .
 uv build --wheel --out-dir dist
-sha256sum dist/project_standards-5.27.0-py3-none-any.whl
-uv tool install ./dist/project_standards-5.27.0-py3-none-any.whl
+sha256sum dist/project_standards-5.28.0-py3-none-any.whl
+uv tool install ./dist/project_standards-5.28.0-py3-none-any.whl
 ```
 
 Keep that SHA-256. A candidate carries no release identity, so the digest is the only thing that says which bytes your client is talking to; quote it in any bug report about server behaviour.
@@ -72,7 +72,7 @@ project-standards --version
 project-standards mcp --help
 ```
 
-The version command reports `project-standards 5.27.0`. A candidate built from a checkout reports the same number as the release it is being prepared for, so two candidates built from different commits are told apart only by the wheel digest above. The `mcp` subcommand accepts exactly one launch-time option:
+The version command reports `project-standards 5.28.0`. A candidate built from a checkout reports the same number as the release it is being prepared for, so two candidates built from different commits are told apart only by the wheel digest above. The `mcp` subcommand accepts exactly one launch-time option:
 
 ```bash
 project-standards mcp --root-boundary /home/chris/projects

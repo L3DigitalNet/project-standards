@@ -58,14 +58,22 @@ def _sha256(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_markdown_tooling_1_13__root_workflows__come_from_pinned_successor_resources() -> None:
-    """The package source must exactly match its managed root workflow outputs."""
+def test_markdown_tooling_1_13__workflow_resources__stay_pinned_and_sha_referenced() -> None:
+    """1.13's workflow resources keep their digests and full-SHA action pins.
+
+    Through the 5.27.0 activation the root workflows were byte-identical to these
+    resources, because 1.14 and 1.15 never moved the pins. Markdown Tooling 1.16
+    advances the lint action, so from the 5.28.0 reconcile the root workflows come
+    from 1.16 and `test_markdown_tooling_1_16__root_workflows__come_from_pinned_successor_resources`
+    owns that equality. What 1.13 still owes a consumer holding an exact pin is
+    that its own resources are unchanged and every action reference in them stays
+    a full SHA.
+    """
     manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
     resources = {resource.path.normalized.as_posix(): resource for resource in manifest.resources}
 
-    for resource_path, root_workflow in _WORKFLOWS.items():
+    for resource_path in _WORKFLOWS:
         source = _SUCCESSOR / resource_path
-        assert source.read_bytes() == root_workflow.read_bytes()
         assert resources[resource_path].digest.value == _sha256(source)
         references = [
             reference.strip().removeprefix("uses: ")

@@ -107,7 +107,14 @@ if [[ "${VERIFY_ASSERT_FAST_START:-0}" == "1" && "$*" == *"-m performance"* ]]; 
 fi""",
     )
 
-    environment = os.environ | {
+    # Start from the caller's environment minus every `VERIFY_*` override: the gate
+    # honours operator knobs such as `VERIFY_FULL_COMPAT_WORKERS`, and a release
+    # train exporting one (lever A, docs/research/2026-09-01-release-train-wall-clock.md)
+    # otherwise leaks into this fixture and moves the `-n` the lane-order test pins
+    # (v5.28.0 battery, 2026-09-01). The fixture sets its own knobs below.
+    environment = {
+        key: value for key, value in os.environ.items() if not key.startswith("VERIFY_")
+    } | {
         "VERIFY_FAKE_LOG": str(log),
         "VERIFY_SMOKE": "1",
         "VERIFY_TMP_PARENT": str(tmp_path),

@@ -1,10 +1,29 @@
 # Pull Request Standard
 
-The pull request is the execution record for a work contract. From package version 1.7 this reference also owns _admission_: how a change reaches the default branch at all, what a PR declares about the work it serves, and what a PR must say before it is ready. Repository rulesets, branch protection, and required checks still decide what is mechanically permitted; nothing here authorizes routing around them.
+The pull request is the execution record for a work contract. From package version 1.7 this reference also owns _admission_: how a change reaches a governed branch at all, what a PR declares about the work it serves, and what a PR must say before it is ready. Repository rulesets, branch protection, and required checks still decide what is mechanically permitted; nothing here authorizes routing around them.
 
-## Admission: T0 or a pull request
+## Admission: governed branches and four classes
 
-There are exactly two admission classes. A change is either a **T0** direct commit or it goes through a pull request. There is no third tier and no repository-configurable middle ground.
+Admission asks how a commit reaches a branch this repository governs. Two branch classes are governed and one is not.
+
+| Branch class | Declared by | Meaning |
+| --- | --- | --- |
+| Default branch | the repository's own default | The publication branch. Governed. |
+| Integration branch | the `integration_branch` option; empty means there is none | The single long-lived branch where authored work lands. Governed. |
+| Topic branch | everything else | Ungoverned while it is open. Its commits are admitted when they land on a governed branch, not when they are written. |
+
+A commit authored onto a governed branch is admitted by exactly one of four classes, and carries exactly one `Workflow-Admission` trailer declaring which. There is no fifth class and no repository-configurable middle ground.
+
+| Admission class | Trailer | Written by |
+| --- | --- | --- |
+| T0 | `Workflow-Admission: T0` | you, standing behind the predicate below |
+| Pull request | `Workflow-Admission: PR #N` | `merge --pr N`, into the merge or squash commit it creates |
+| Handoff | `Workflow-Admission: handoff` | you, for a commit that touches only the handoff paths |
+| Release | `Workflow-Admission: release`, or a subject beginning with `release_subject_prefix` | the repository's own release tooling |
+
+Promotion from the integration branch to the default branch authors no commit: it is a fast-forward, or a merge whose provenance is that every commit it introduces was already admitted upstream. The obligation therefore attaches where work is written, never where it is published: an integration branch is governed rather than exempt, and there is no moment at promotion at which a missing declaration could be supplied.
+
+### T0
 
 T0 is a conjunctive predicate: every condition must hold, and one failure disqualifies the whole change.
 
@@ -27,9 +46,35 @@ A direct T0 commit carries exactly one trailer:
 Workflow-Admission: T0
 ```
 
-A PR-mediated commit and a commit on a construction branch carry none. The trailer is a classification you apply and stand behind — no subcommand evaluates the predicate, and none can, because conditions 1, 2, and 4 are judgments about meaning. Its value is retrospective: `git log --grep 'Workflow-Admission: T0'` enumerates every direct admission for an on-demand audit, which is the only T0 review this package defines. There is no routine T0 report and no standing register of admitted commits.
+The trailer is a classification you apply and stand behind — no subcommand evaluates the predicate, and none can, because conditions 1, 2, and 4 are judgments about meaning.
 
-Everything that is not T0 begins as a draft pull request. Draft is the default because it makes Ready a real boundary: structural problems are visible before anyone is asked to review, and no reviewer is summoned by an incomplete change.
+### The handoff class
+
+A commit whose every path lies in the handoff set is admitted directly and carries `Workflow-Admission: handoff`:
+
+```text
+docs/handoff/**
+docs/STATUS.md
+docs/TODO.md
+```
+
+Those are exactly the document artifacts the `agent-handoff` standard owns. The set is fixed by this standard and `policy.toml` cannot extend it: an extensible exempt set is a live bypass surface, because an agent could widen it to cover its own change. The single knob is `handoff_admission = "none"`, which removes the class entirely for a repository that has not adopted `agent-handoff` and whose `docs/TODO.md` is an ordinary document.
+
+**A mixed commit is not a handoff commit.** Any handoff path plus any non-exempt path in the same commit is governed by the pull-request rule, however the split falls. The exemption covers closeout bookkeeping; it is never a wrapper that carries unrelated work in with it.
+
+A handoff-only commit that carries no trailer is its own finding rather than an unadmitted commit. The paths are checkable, but a declaration its author stands behind is not derivable from them.
+
+### Everything else
+
+Everything that is not T0, handoff, or release begins as a draft pull request. Draft is the default because it makes Ready a real boundary: structural problems are visible before anyone is asked to review, and no reviewer is summoned by an incomplete change. `merge --pr N` writes `Workflow-Admission: PR #N` into the commit it creates, so pull-request provenance becomes a fact a checker can read from `git log` alone and nobody has to remember to record it.
+
+### What enforces this, and what does not
+
+`gh-workflow admission --branch B [--since REF] [--offline]` classifies every commit in a range by the rules above, exits nonzero listing the commits no class admits, and names for each one the trailer or route that would have satisfied it. It verifies a `PR #N` trailer against the merged pull request when it is authenticated; `--offline` falls back to the trailer alone. `admission_floor` names the commit-ish where enforcement begins, because adoption cannot rewrite history and a permanently red control is an ignored control.
+
+The `release` class is admitted on the author's word alone: neither an explicit `Workflow-Admission: release` trailer nor a subject matching `release_subject_prefix` is checked against the paths the commit touches, the branch it lands on, or any version change. It records the release route rather than enforcing it, so keep the prefix narrow enough that ordinary work cannot match it.
+
+Nothing runs it for you. This package contributes no workflow to `.github/`, so a repository that has not wired `admission` into its own CI has the rule and no coverage — that gap is stated here rather than implied away. Retrospectively, `git log --grep 'Workflow-Admission: T0'` still enumerates every direct admission for an on-demand audit. There is no routine report and no standing register of admitted commits.
 
 ## Governing work
 

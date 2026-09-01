@@ -55,8 +55,10 @@ _FORMAT_WORKFLOW_DIGEST = "8c4e5ab82be13d028efab376b3fd3b991cddd85560b144eadd693
 # 1.13 (issues #88, #114, #119) repins both endpoints again: `runner-labels`,
 # setup-node 7.0.0, the enforced prettier 3.9.6 pin, and the bounded tracked-file
 # selection. The selection narrows rather than widens, so the parity contract
-# these digests guard is unchanged.
-_LINT_WORKFLOW_DIGEST = "d275f45dfb9afffae82f923bb823e031346e1847e40cd6b057223d084f9e8db3"
+# these digests guard is unchanged. 1.16 (issue #211) repins the lint endpoint
+# once more, `markdownlint-cli2-action` v24 -> v24.2.0, at the 5.28.0 activation;
+# the lint selection and every exclusion input are unchanged.
+_LINT_WORKFLOW_DIGEST = "8d42c7e966e16704ecb8868992bbed9bbf697a8e8d9f115d1f9bd326e8915d5c"
 
 
 def _payload(root: Path) -> InstalledPayload:
