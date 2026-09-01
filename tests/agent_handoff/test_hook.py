@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import io
 import json
 import os
@@ -15,6 +14,8 @@ from typing import TextIO, cast
 
 import pytest
 
+from tests.module_loading import load_module_from_path
+
 HOOK_SOURCE = (
     Path(__file__).parents[2]
     / "src/project_standards/bundles/agent-handoff/hooks/session-start/session_start.py"
@@ -26,10 +27,7 @@ def installed_hook(tmp_path: Path) -> tuple[ModuleType, Path]:
     hook_path = tmp_path / ".agents/hooks/agent-handoff/session_start.py"
     hook_path.parent.mkdir(parents=True)
     shutil.copyfile(HOOK_SOURCE, hook_path)
-    spec = importlib.util.spec_from_file_location(f"agent_handoff_hook_{id(tmp_path)}", hook_path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = load_module_from_path(f"agent_handoff_hook_{id(tmp_path)}", hook_path)
     return module, tmp_path
 
 

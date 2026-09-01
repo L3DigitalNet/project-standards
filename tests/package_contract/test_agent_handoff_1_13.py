@@ -15,8 +15,6 @@ wrong on its own.
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 import tomllib
 from pathlib import Path
 from types import ModuleType
@@ -25,6 +23,7 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
+from tests.module_loading import load_module_from_path
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -155,16 +154,7 @@ def test_agent_handoff_1_13__payload_projection__matches_successor() -> None:
 
 def _load_provider(name: str) -> ModuleType:
     """Import the payload provider by path, the way the control plane loads it."""
-    spec = importlib.util.spec_from_file_location(name, _SUCCESSOR / "providers/agent_handoff.py")
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    previous = sys.dont_write_bytecode
-    sys.dont_write_bytecode = True
-    try:
-        spec.loader.exec_module(module)
-    finally:
-        sys.dont_write_bytecode = previous
-    return module
+    return load_module_from_path(name, _SUCCESSOR / "providers/agent_handoff.py")
 
 
 def test_agent_handoff_1_13__provider_registries__cover_both_installed_skill_trees() -> None:

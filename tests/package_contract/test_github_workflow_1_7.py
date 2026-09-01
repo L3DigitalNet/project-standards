@@ -22,10 +22,8 @@ moved with it, so nothing here claims 1.7 is the version the repository currentl
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import re
-import sys
 import tomllib
 from pathlib import Path
 from types import ModuleType
@@ -33,6 +31,7 @@ from typing import cast
 
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
+from tests.module_loading import load_module_from_path
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -109,17 +108,7 @@ def _load_provider(name: str) -> ModuleType:
     from its declared path; importing `standards....providers.gh_workflow` would
     depend on a package layout the payload deliberately does not have.
     """
-    source = _SUCCESSOR / "providers/gh_workflow.py"
-    spec = importlib.util.spec_from_file_location(name, source)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    previous = sys.dont_write_bytecode
-    sys.dont_write_bytecode = True
-    try:
-        spec.loader.exec_module(module)
-    finally:
-        sys.dont_write_bytecode = previous
-    return module
+    return load_module_from_path(name, _SUCCESSOR / "providers/gh_workflow.py")
 
 
 def _block_body(organization: str = "ExampleOrg") -> str:

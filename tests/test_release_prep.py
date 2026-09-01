@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -11,20 +9,15 @@ from typing import Any
 import pytest
 from pytest import CaptureFixture
 
+from tests.module_loading import load_module_from_path
+
 
 def _release_prep_module() -> ModuleType:
     path = Path(__file__).resolve().parent.parent / "scripts" / "release_prep.py"
-    spec = importlib.util.spec_from_file_location("release_prep", path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    previous = sys.dont_write_bytecode
-    sys.dont_write_bytecode = True
-    try:
-        spec.loader.exec_module(module)
-    finally:
-        sys.dont_write_bytecode = previous
-    return module
+    # register=True: the script's frozen dataclasses resolve their string
+    # annotations through `sys.modules["release_prep"]` as the class bodies
+    # execute, and a missing entry aborts the load.
+    return load_module_from_path("release_prep", path, register=True)
 
 
 def _write_catalog(root: Path, packages: list[tuple[str, str, str]]) -> None:
