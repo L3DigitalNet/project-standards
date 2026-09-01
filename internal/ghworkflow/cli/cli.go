@@ -54,7 +54,7 @@ const (
 // The value tracks the payload version it ships with (NFR-005): stamp, unstamped
 // fallback, and build output path advance together, so an unstamped build never claims a
 // version the payload no longer is.
-const DefaultVersion = "1.7"
+const DefaultVersion = "1.9"
 
 // Version is the tool version `help` prints, and the only surface that reports it. It is
 // a variable so the reproducible build can stamp it (spec NFR-005); cmd/gh-workflow owns

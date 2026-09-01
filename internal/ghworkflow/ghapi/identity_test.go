@@ -135,7 +135,7 @@ func TestInvalidIdentityIsRefusedBeforeAnyRequest(t *testing.T) {
 			return err
 		},
 		"MergePullRequest": func() error {
-			_, err := client.MergePullRequest(ctx, "L3DigitalNet", "bad repo", 1, ghapi.MergeMethodSquash, "abc")
+			_, err := client.MergePullRequest(ctx, "L3DigitalNet", "bad repo", 1, ghapi.MergeMethodSquash, "abc", "")
 			return err
 		},
 		"CreateComment": func() error {

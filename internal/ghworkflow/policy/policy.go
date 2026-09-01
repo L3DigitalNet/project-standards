@@ -24,6 +24,16 @@ type Policy struct {
 	// Version is the package version stamped into the rendered file, if present.
 	// It is informational: no tool behavior depends on it.
 	Version string
+	// The admission model ADR 0031 D1 configures. All four are optional and all four
+	// default to something meaningful, because a policy rendered by payload 1.8 or
+	// earlier carries none of them and must still load: an empty IntegrationBranch is
+	// the two-branch topology, an empty AdmissionFloor classifies the whole history,
+	// an empty ReleaseSubjectPrefix means only an explicit trailer admits a release,
+	// and HandoffAdmission defaults to the class existing.
+	IntegrationBranch    string
+	ReleaseSubjectPrefix string
+	AdmissionFloor       string
+	HandoffAdmission     string
 }
 
 // Load reads and parses the policy at path.
@@ -114,8 +124,31 @@ func Parse(data []byte) (*Policy, error) {
 	if version == "" {
 		version = values["package.version"]
 	}
-	return &Policy{Organization: org, Version: version}, nil
+	handoff := values["handoff_admission"]
+	if handoff == "" {
+		handoff = HandoffAdmissionDefault
+	}
+	if handoff != HandoffAdmissionDefault && handoff != HandoffAdmissionNone {
+		return nil, fmt.Errorf("policy `handoff_admission` value %q is not %q or %q",
+			handoff, HandoffAdmissionDefault, HandoffAdmissionNone)
+	}
+	return &Policy{
+		Organization:         org,
+		Version:              version,
+		IntegrationBranch:    values["integration_branch"],
+		ReleaseSubjectPrefix: values["release_subject_prefix"],
+		AdmissionFloor:       values["admission_floor"],
+		HandoffAdmission:     handoff,
+	}, nil
 }
+
+// The two spellings `handoff_admission` accepts. An unrecognized third value is a load
+// error rather than a fallback to the default: a typo that silently keeps the exemption
+// on is the one outcome a consumer switching it off cannot detect.
+const (
+	HandoffAdmissionDefault = "agent-handoff"
+	HandoffAdmissionNone    = "none"
+)
 
 // quotedString accepts only a fully double-quoted scalar. Bare values, arrays, inline
 // tables, and multi-line strings are refused rather than guessed at.

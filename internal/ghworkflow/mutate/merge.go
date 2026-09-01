@@ -16,6 +16,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/admission"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/ghapi"
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/relation"
@@ -203,7 +204,8 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 		rec.complete(stepEnableAutoMerge, "auto-merge armed with the "+method+" method")
 	default:
 		rec.skip(stepEnableAutoMerge, "--auto was not requested")
-		result, err := client.MergePullRequest(ctx, repo.Owner, repo.Name, number, method, gate.PR.Head.SHA)
+		result, err := client.MergePullRequest(ctx, repo.Owner, repo.Name, number, method,
+			gate.PR.Head.SHA, admissionTrailer(number))
 		if err != nil {
 			rec.fail(stepMerge, "the pull request was not merged; the governing issue is untouched")
 			return err
@@ -256,6 +258,22 @@ func mergeSteps(ctx context.Context, client *ghapi.Client, gate *prGate, method 
 	}
 	rec.complete(stepConvergeIssue, outcome.Message)
 	return nil
+}
+
+// admissionTrailer is the pull-request admission evidence this command writes into the
+// commit it creates (ADR 0031 D1).
+//
+// It is written here, by the tool that already owns merging, because a trailer an author
+// has to remember is a trailer that is missing: the measured corpus behind ADR 0031 had
+// 0 trailers across 362 commits. Writing it turns pull-request provenance into a fact
+// `gh-workflow admission --offline` can read from `git log` with no API call.
+//
+// Two limits travel with it. GitHub ignores `commit_message` for a rebase merge, so a
+// rebase-admitted pull request contributes commits with no trailer. And this replaces
+// GitHub's default squash body — the list of squashed commit subjects — which the pull
+// request itself still records.
+func admissionTrailer(number int) string {
+	return fmt.Sprintf("%s: PR #%d\n", admission.TrailerKey, number)
 }
 
 // autoMergePendingFinding reports an admission that has not reached a terminal outcome.

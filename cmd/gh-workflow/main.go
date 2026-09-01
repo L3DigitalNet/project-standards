@@ -13,6 +13,7 @@ import (
 
 	"github.com/L3DigitalNet/project-standards/internal/ghworkflow/cli"
 
+	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/admission"
 	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/audit"
 	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/mutate"
 	_ "github.com/L3DigitalNet/project-standards/internal/ghworkflow/render"
