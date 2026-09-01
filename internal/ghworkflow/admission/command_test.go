@@ -20,12 +20,14 @@ func TestParseLogFramesSubjectsAndBodiesContainingControlText(t *testing.T) {
 	t.Parallel()
 
 	// A subject with a pipe and a body with blank lines and a trailer: the shape that
-	// breaks any framing built from newlines or printable delimiters.
+	// breaks any framing built from newlines or printable delimiters. The path blocks
+	// reproduce git's `-z --name-status` framing exactly — the NUL that terminates the
+	// commit header, the newline before the diff, then status/path token pairs.
 	stream := recordSeparator + "abc123" + fieldSeparator + "fix: a | b" + fieldSeparator + "p1" +
 		fieldSeparator + "fix: a | b\n\nDetail line.\n\nWorkflow-Admission: T0\n" + bodySeparator +
-		"README.md\ndocs/TODO.md\n" +
+		"\x00\nM\x00README.md\x00M\x00docs/TODO.md\x00" +
 		recordSeparator + "def456" + fieldSeparator + "merge" + fieldSeparator + "p1 p2" +
-		fieldSeparator + "merge\n" + bodySeparator + "\n"
+		fieldSeparator + "merge\n" + bodySeparator + "\x00"
 
 	commits, err := parseLog(stream)
 	if err != nil {
@@ -47,6 +49,119 @@ func TestParseLogFramesSubjectsAndBodiesContainingControlText(t *testing.T) {
 	// never apply to one.
 	if !commits[1].IsMerge || len(commits[1].Paths) != 0 {
 		t.Errorf("merge commit = %+v, want IsMerge with no paths", commits[1])
+	}
+}
+
+// The path block is where the handoff exemption is decided, so its parsing is pinned
+// case by case rather than through the classifier.
+func TestSplitPathsReadsEveryPathOfTheNameStatusBlockByExactBytes(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		tail string
+		want []string
+	}{
+		{
+			// A merge, or any commit git shows no diff for: the header's NUL is the
+			// whole block and there is no newline, because there is no diff to precede.
+			name: "no diff at all",
+			tail: "\x00",
+			want: nil,
+		},
+		{
+			// --no-renames splits a rename into its delete and its add, so a `git mv`
+			// into an exempt directory can no longer present only the destination.
+			name: "rename reported as both of its paths",
+			tail: "\x00\nD\x00src/app.py\x00A\x00docs/handoff/app.py\x00",
+			want: []string{"src/app.py", "docs/handoff/app.py"},
+		},
+		{
+			// The status letter never decides anything: a deleted non-exempt path
+			// disqualifies a handoff claim exactly as a modified one does.
+			name: "deletion of a non-handoff path",
+			tail: "\x00\nD\x00src/app.py\x00",
+			want: []string{"src/app.py"},
+		},
+		{
+			// The leading space belongs to the filename. Trimming it would produce
+			// "docs/handoff/x.md" and admit a file that is not in the exempt set.
+			name: "leading space is part of the path",
+			tail: "\x00\nM\x00 docs/handoff/x.md\x00",
+			want: []string{" docs/handoff/x.md"},
+		},
+		{
+			// -z suppresses git's C-quoting, so a non-ASCII exempt path arrives raw and
+			// still matches the prefix instead of arriving as "docs/handoff/\303\251.md".
+			name: "non-ASCII path under the exempt prefix",
+			tail: "\x00\nM\x00docs/handoff/é.md\x00",
+			want: []string{"docs/handoff/é.md"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := splitPaths(tc.tail)
+			if err != nil {
+				t.Fatalf("splitPaths(%q) error = %v", tc.tail, err)
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("splitPaths(%q) = %q, want %q", tc.tail, got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("path %d = %q, want %q", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+
+	// An unpaired token means git emitted a shape the status/path alternation does not
+	// describe. Reporting it beats silently classifying half a commit's paths.
+	if _, err := splitPaths("\x00\nM\x00a.md\x00D\x00"); err == nil {
+		t.Error("splitPaths() accepted an odd token count; a malformed block must be reported")
+	}
+}
+
+// The F1 forgery, at the layer that reads git: a commit that moves an arbitrary file
+// into `docs/handoff/` while declaring the handoff class. Under `--name-only` the log
+// collapsed the rename to its destination and the commit read as pure handoff.
+func TestAdmissionRefusesAHandoffCommitThatRenamesAFileIntoTheExemptTree(t *testing.T) {
+	repo := newGitRepo(t)
+	repo.commit("chore: seed", map[string]string{"README.md": "seed\n", "src/app.py": "x = 1\n"})
+	base := strings.TrimSpace(repo.run("rev-parse", "HEAD"))
+
+	if err := os.MkdirAll(filepath.Join(repo.dir, "docs", "handoff"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	repo.run("mv", "src/app.py", "docs/handoff/app.py")
+	repo.run("commit", "-m", "docs(handoff): note\n\nWorkflow-Admission: handoff\n")
+
+	code, stdout, _ := repo.exec(t, "admission", "--branch", "main", "--since", base, "--offline")
+	if code != cli.ExitFailure {
+		t.Fatalf("exit = %d, want 1: moving a file into the exempt tree must not be admitted\n%s", code, stdout)
+	}
+	if !strings.Contains(stdout, CodeHandoffMixed) || !strings.Contains(stdout, "src/app.py") {
+		t.Errorf("report does not name %s and the source path it left behind:\n%s", CodeHandoffMixed, stdout)
+	}
+}
+
+// The exempt prefix is matched against raw bytes, so a non-ASCII handoff document is
+// still a handoff document. With git's default C-quoting it would arrive escaped and
+// the commit would be misreported as mixed.
+func TestAdmissionAdmitsAHandoffCommitTouchingANonASCIIPath(t *testing.T) {
+	repo := newGitRepo(t)
+	repo.commit("chore: seed", map[string]string{"README.md": "seed\n"})
+	base := strings.TrimSpace(repo.run("rev-parse", "HEAD"))
+	repo.commit("docs(handoff): note\n\nWorkflow-Admission: handoff\n",
+		map[string]string{"docs/handoff/état.md": "state\n"})
+
+	code, stdout, stderr := repo.exec(t, "admission", "--branch", "main", "--since", base, "--offline")
+	if code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstdout:\n%s\nstderr:\n%s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "1 handoff") {
+		t.Errorf("report does not count the handoff commit:\n%s", stdout)
 	}
 }
 
@@ -220,10 +335,79 @@ func TestAdmissionTargetsANamedBranchThatIsNotCheckedOut(t *testing.T) {
 		t.Errorf("report does not name the branch it classified:\n%s", stdout)
 	}
 
-	// `main` at the same floor holds nothing, so the same invocation is clean there —
-	// which is what makes the branch flag meaningful rather than incidental.
-	if code, _, _ := repo.exec(t, "admission", "--branch", "main", "--since", base, "--offline"); code != cli.ExitOK {
-		t.Errorf("exit = %d on the empty range, want 0", code)
+	// `main` at the same floor holds nothing, which the classifier reports as an empty
+	// range rather than as a clean one — the branch flag decides what was examined, and
+	// examining nothing is never a verdict.
+	code, stdout, _ = repo.exec(t, "admission", "--branch", "main", "--since", base, "--offline")
+	if code != cli.ExitFailure || !strings.Contains(stdout, CodeEmptyRange) {
+		t.Errorf("exit = %d on the empty range, want 1 naming %s:\n%s", code, CodeEmptyRange, stdout)
+	}
+}
+
+// F2: "0 commits, 0 unadmitted, exit 0" is indistinguishable from compliance, so a
+// range that selects nothing is refused instead of reported clean.
+func TestAdmissionRefusesARangeThatResolvesToZeroCommits(t *testing.T) {
+	repo := newGitRepo(t)
+	repo.commit("chore: seed", map[string]string{"README.md": "seed\n"})
+	head := strings.TrimSpace(repo.run("rev-parse", "HEAD"))
+
+	code, stdout, _ := repo.exec(t, "admission", "--branch", "main", "--since", head, "--offline")
+	if code != cli.ExitFailure {
+		t.Fatalf("exit = %d for a floor at the branch tip, want 1\n%s", code, stdout)
+	}
+	if !strings.Contains(stdout, CodeEmptyRange) {
+		t.Errorf("report does not name %s:\n%s", CodeEmptyRange, stdout)
+	}
+}
+
+// F2: without the `--` pathspec terminator git reads a revision it cannot resolve as a
+// pathspec, so `--branch docs` in a repository holding a `docs/` directory logged the
+// commits that touched it and exited 0 — a verdict about a branch that does not exist.
+func TestAdmissionRefusesABranchNameThatOnlyMatchesAnExistingDirectory(t *testing.T) {
+	repo := newGitRepo(t)
+	repo.commit("docs: seed\n\nWorkflow-Admission: T0\n", map[string]string{"docs/guide.md": "seed\n"})
+
+	code, stdout, _ := repo.exec(t, "admission", "--branch", "docs", "--offline")
+	if code == cli.ExitOK {
+		t.Fatalf("exit = 0 for `docs`, which is a directory and not a branch\n%s", stdout)
+	}
+}
+
+// F3: a floor off the branch's own history bounds nothing on that branch, so the range
+// it produces is not the "everything after adoption" the option promises.
+func TestAdmissionRefusesAFloorThatIsNotAnAncestorOfTheBranch(t *testing.T) {
+	repo := newGitRepo(t)
+	repo.commit("chore: seed", map[string]string{"README.md": "seed\n"})
+	repo.run("checkout", "-q", "-b", "sidetrack")
+	repo.commit("chore: elsewhere", map[string]string{"other.md": "x\n"})
+	unrelated := strings.TrimSpace(repo.run("rev-parse", "HEAD"))
+	repo.run("checkout", "-q", "main")
+	repo.commit("feat: work\n\nWorkflow-Admission: T0\n", map[string]string{"src/app.py": "x = 1\n"})
+
+	code, stdout, stderr := repo.exec(t, "admission", "--branch", "main", "--since", unrelated, "--offline")
+	if code == cli.ExitOK {
+		t.Fatalf("exit = 0 for a floor that is not on the branch\n%s", stdout)
+	}
+	if !strings.Contains(stderr, CodeFloorUnrelated) {
+		t.Errorf("stderr does not name %s:\n%s", CodeFloorUnrelated, stderr)
+	}
+}
+
+// F3: the floor silently shrinks the attested range, so the report states how much it
+// excused rather than leaving a reader to compare counts against the branch by hand.
+func TestAdmissionReportsHowManyCommitsTheFloorExcluded(t *testing.T) {
+	repo := newGitRepo(t)
+	repo.commit("chore: seed", map[string]string{"README.md": "seed\n"})
+	repo.commit("chore: more", map[string]string{"README.md": "seed.\n"})
+	floor := strings.TrimSpace(repo.run("rev-parse", "HEAD"))
+	repo.commit("feat: work\n\nWorkflow-Admission: T0\n", map[string]string{"src/app.py": "x = 1\n"})
+
+	code, stdout, stderr := repo.exec(t, "admission", "--branch", "main", "--since", floor, "--offline")
+	if code != cli.ExitOK {
+		t.Fatalf("exit = %d, want 0\nstdout:\n%s\nstderr:\n%s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "(exclusive; 2 commits excluded)") {
+		t.Errorf("report does not state what the floor excluded:\n%s", stdout)
 	}
 }
 

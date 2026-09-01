@@ -47,6 +47,11 @@ const (
 // an operator reading the report knows which repair applies without rereading the
 // standard: a missing declaration, a declaration that does not match the paths, a
 // declaration the repository has switched off, or a spelling no class recognizes.
+//
+// The last two codes are not about a commit but about the range itself, which is the
+// other way a green verdict here can be a lie: CodeEmptyRange reports that the run
+// examined nothing at all, and CodeFloorUnrelated that the configured floor does not
+// lie on the branch it was meant to bound.
 const (
 	CodeMissing          = "GHW-ADMISSION-MISSING"
 	CodeHandoffMixed     = "GHW-ADMISSION-HANDOFF-MIXED"
@@ -55,6 +60,8 @@ const (
 	CodeTrailerInvalid   = "GHW-ADMISSION-TRAILER-INVALID"
 	CodeTrailerConflict  = "GHW-ADMISSION-TRAILER-CONFLICT"
 	CodePullRequestState = "GHW-ADMISSION-PR-NOT-MERGED"
+	CodeEmptyRange       = "GHW-ADMISSION-EMPTY-RANGE"
+	CodeFloorUnrelated   = "GHW-ADMISSION-FLOOR-UNRELATED"
 )
 
 // HandoffPrefixes and HandoffFiles are the exempt path set, fixed by the standard as
@@ -73,10 +80,15 @@ var pullRequestTrailer = regexp.MustCompile(`^PR #(\d+)$`)
 
 // Commit is one commit as the classifier sees it, with no git types in the signature.
 //
-// Paths is empty for a merge commit: `git log --name-only` reports no diff for a merge
-// unless it is asked to pick a parent, and a merge authors no content of its own. The
-// consequence is deliberate — a merge commit can never be classified as handoff, so a
-// promotion or a GitHub merge commit is admitted by its trailer or not at all.
+// Paths is every path the commit's diff names, on both sides of a rename (commits.go
+// reads the history with --no-renames precisely so a move cannot hide its source), with
+// no normalization: leading and trailing whitespace and non-ASCII bytes are part of the
+// filename and are compared as such by IsHandoffPath.
+//
+// Paths is empty for a merge commit: `git log` reports no diff for a merge unless it is
+// asked to pick a parent, and a merge authors no content of its own. The consequence is
+// deliberate — a merge commit can never be classified as handoff, so a promotion or a
+// GitHub merge commit is admitted by its trailer or not at all.
 type Commit struct {
 	SHA     string
 	Subject string

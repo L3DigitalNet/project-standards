@@ -29,17 +29,22 @@ func init() {
 
 // Report is the whole result of one run, in the shape the JSON output marshals.
 type Report struct {
-	Branch   string    `json:"branch"`
-	Since    string    `json:"since,omitempty"`
-	Offline  bool      `json:"offline"`
-	Commits  int       `json:"commits"`
+	Branch  string `json:"branch"`
+	Since   string `json:"since,omitempty"`
+	Offline bool   `json:"offline"`
+	Commits int    `json:"commits"`
+	// Excluded is how many commits the floor kept out of the range. It is reported
+	// alongside Commits so the scope of the exemption the floor grants is visible in
+	// the evidence rather than left to be inferred.
+	Excluded int       `json:"excluded"`
 	Counts   Counts    `json:"counts"`
 	Findings []Finding `json:"findings"`
 }
 
 // Counts is the per-class census. It is reported even on a clean run because the shape
-// of a repository's admissions is the evidence that the check is not vacuous: an
-// all-zero census with a zero exit means the range was empty, not that the rule holds.
+// of a repository's admissions is the evidence that the check is not vacuous. An
+// all-zero census can no longer accompany a zero exit — an empty range is refused with
+// CodeEmptyRange — but the census still shows a reader *what* was attested.
 type Counts struct {
 	T0          int `json:"t0"`
 	PullRequest int `json:"pull_request"`
@@ -84,11 +89,18 @@ func run(ctx context.Context, env *cli.Env, args []string) error {
 	if err != nil {
 		return err
 	}
+	// The floor is validated before the history is read, so an unrelated floor is
+	// reported as the configuration error it is rather than as a surprising range.
+	excluded, err := ExcludedByFloor(ctx, env.WorkDir, settings.Range)
+	if err != nil {
+		return err
+	}
 	commits, err := ReadCommits(ctx, env.WorkDir, settings.Range)
 	if err != nil {
 		return err
 	}
 	report := classifyAll(commits, settings.Rules, settings.Range, *offline)
+	report.Excluded = excluded
 	if !*offline {
 		// PR provenance is verified against live state when it can be: the trailer is
 		// written by `merge`, but a hand-written one is exactly the forgery an offline
@@ -101,6 +113,10 @@ func run(ctx context.Context, env *cli.Env, args []string) error {
 
 	if err := write(report, mode, env); err != nil {
 		return err
+	}
+	if report.Commits == 0 {
+		return fmt.Errorf("%s: the range %s resolves to zero commits, so this run attests nothing",
+			CodeEmptyRange, settings.Range.spec())
 	}
 	if report.Counts.Unadmitted > 0 {
 		return fmt.Errorf("%d of %d commits on %s are not admitted by any class",
@@ -169,6 +185,22 @@ func classifyAll(commits []Commit, rules Rules, rng Range, offline bool) *Report
 		Offline:  offline,
 		Commits:  len(commits),
 		Findings: make([]Finding, 0, len(commits)),
+	}
+	if len(commits) == 0 {
+		// An empty range is the vacuous pass this whole subcommand exists to expose: a
+		// typo in `--branch`, a floor that is already the branch tip, or a `--since`
+		// swallowed as a pathspec all produce "0 commits, 0 unadmitted", which reads as
+		// compliance. The finding carries no SHA because it is about the range itself.
+		report.Findings = append(report.Findings, Finding{
+			Subject: rng.spec(),
+			Class:   ClassUnadmitted,
+			Code:    CodeEmptyRange,
+			Message: "the range resolves to zero commits, so this run attests nothing",
+			Remediation: "Check the branch and the enforcement floor: a range that selects no commits " +
+				"cannot demonstrate that the admission rule holds.",
+		})
+		report.Counts.Unadmitted++
+		return report
 	}
 	for _, commit := range commits {
 		finding := Classify(commit, rules)
@@ -296,7 +328,7 @@ func renderHuman(report *Report) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Branch:  %s\n", report.Branch)
 	if report.Since != "" {
-		fmt.Fprintf(&b, "Since:   %s (exclusive)\n", report.Since)
+		fmt.Fprintf(&b, "Since:   %s (exclusive; %d commits excluded)\n", report.Since, report.Excluded)
 	}
 	fmt.Fprintf(&b, "Commits: %d\n", report.Commits)
 
@@ -309,6 +341,12 @@ func renderHuman(report *Report) string {
 			b.WriteString("\nUnadmitted commits\n")
 		}
 		unadmitted++
+		if finding.SHA == "" {
+			// A range-level finding (CodeEmptyRange) has no commit to identify, so the
+			// SHA/subject line would render as leading whitespace.
+			fmt.Fprintf(&b, "  %s — %s\n    %s\n", finding.Code, finding.Message, finding.Remediation)
+			continue
+		}
 		fmt.Fprintf(&b, "  %s %s\n    %s — %s\n    %s\n",
 			shortSHA(finding.SHA), finding.Subject, finding.Code, finding.Message, finding.Remediation)
 	}
