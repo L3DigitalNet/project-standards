@@ -74,13 +74,12 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   this repository or whether detail should move to a lazy document; both answers are defensible and it is a
   judgment call, not a defect.
 
-- [ ] Triage the open queue, all with Priority unset — their definitions are complete and only the priority call is
-  owed: [#207](https://github.com/L3DigitalNet/project-standards/issues/207) (release wall-clock research),
-  [#209](https://github.com/L3DigitalNet/project-standards/issues/209) (Prettier gate exits 123 on a clean tree),
-  [#210](https://github.com/L3DigitalNet/project-standards/issues/210) (command-guard `--check` grants inert),
-  [#211](https://github.com/L3DigitalNet/project-standards/issues/211) (markdownlint pin needs markdown-tooling
-  1.16), [#215](https://github.com/L3DigitalNet/project-standards/issues/215) (guarded provider-load helper plus a
-  meta-test, so an eleventh call site cannot omit the bytecode guard).
+- [ ] Fix [#209](https://github.com/L3DigitalNet/project-standards/issues/209) (P1): the `AGENTS.md` Prettier gate
+  exits 123 on a clean tree because the Git corpus hands payload symlinks to Prettier. Triaged 2026-09-01 along with
+  [#207](https://github.com/L3DigitalNet/project-standards/issues/207),
+  [#210](https://github.com/L3DigitalNet/project-standards/issues/210), and
+  [#215](https://github.com/L3DigitalNet/project-standards/issues/215) (all P2) and
+  [#211](https://github.com/L3DigitalNet/project-standards/issues/211) (P3, bundle with the next markdown-tooling cut).
 
 - [ ] Cut python-tooling 1.18 for the three adoption reports. #204 is a real guard defect (`build_backend = "none"`
   exempts the `[project]` check `uv lock` needs, and `adopt.md` lines 21 and 23 contradict each other); #205 and

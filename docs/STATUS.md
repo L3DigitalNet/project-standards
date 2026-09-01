@@ -31,11 +31,11 @@
   [#205](https://github.com/L3DigitalNet/project-standards/issues/205) and
   [#206](https://github.com/L3DigitalNet/project-standards/issues/206), both documentation gaps over mechanisms the
   package's key-ownership invariant already provides.
-- Open triage queue, all `Inbox`/`Ready` with Priority unset: #207 (release wall-clock research, including the
-  finding that `check.yml` has no path filter and is ~42x the next slowest PR check), #209 (Prettier gate exits 123
-  on a clean tree), #210 (command-guard `--check` grants inert), #211 (markdownlint pin needs markdown-tooling
-  1.16), #215 (route provider loads through a guarded helper plus a meta-test, so an eleventh call site cannot omit
-  the guard).
+- Queue triaged 2026-09-01, every issue `Ready`: #209 P1 (Prettier gate exits 123 on a clean tree — the documented
+  `AGENTS.md` authority is red on every checkout); #207 P2 (release wall-clock research, including the finding that
+  `check.yml` has no path filter and is ~42x the next slowest PR check); #210 P2 (command-guard `--check` grants
+  inert; fail-closed, so safe); #215 P2 (guarded provider-load helper plus a meta-test against an eleventh unguarded
+  call site); #211 P3 (markdownlint pin, bundle with the next markdown-tooling cut).
 - Deferred backlog: security finding 4 (total-count evidence for array-shaped list endpoints); #129
   (feature-scale); #191, re-scoped 2026-08-31 — its post-1.5 measurement window was overtaken by 1.6 and 1.7, so it
   now measures a post-1.7 window opening ~2026-09-11.
