@@ -160,6 +160,7 @@ Two figures in an earlier draft of this ADR were wrong and are corrected here. T
 - Good, because the obligation finally attaches to the branch where work lands, and the tool that merges writes the evidence the check reads.
 - Good, because the handoff exemption is owned by the standard, so the hand-written carve-out can be deleted rather than blessed.
 - Bad, because 1.9 ships a check nobody is obliged to run; until B lands, coverage depends on each consumer wiring it into CI, and `pr-standard.md` must say so rather than imply coverage.
+- Bad, because the `release` class and `release_subject_prefix` are self-admission: the classifier checks neither the paths a release commit touches, nor the branch it lands on, nor that a version actually moved, so any commit carrying `Workflow-Admission: release` — or merely opening with the configured subject prefix — is admitted. That is a documented limitation of the model, not enforcement; the release route's real guard remains `release_prep.py` and the `main`-branch hook.
 - Bad, because `admission_floor` makes the historical corpus permanently invisible to the check by design; the record of what it would have flagged lives here, not in a passing gate.
 - Neutral, because `Workflow-Admission` grows from one value to four; existing T0 commits stay valid and no published payload changes.
 

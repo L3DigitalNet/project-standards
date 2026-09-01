@@ -301,12 +301,20 @@ _ADMISSION_OPTIONS: tuple[tuple[str, str], ...] = (
 )
 
 
+# The longest admission value the policy template will carry. It is a shape guard, not
+# a git limit: `config.schema.json` pins the same bound, and this copy holds when a
+# caller hands the provider an effective config the schema never saw.
+_MAX_ADMISSION_LENGTH = 255
+
+
 def _admission_values(config: Mapping[str, object]) -> dict[str, str]:
     """Return each admission option as the string the policy template interpolates.
 
-    Refuses a value carrying a quote or a backslash rather than writing one: the
-    rendered file would parse as something else, or not at all, and the tool would
-    discover it at classification time in a consumer checkout rather than here.
+    Refuses anything but bounded, printable, single-line text. The rendered
+    `policy.toml` is a double-quoted TOML assignment, so a quote or a backslash would
+    make it parse as something else, and a newline or a control character would make it
+    not parse at all — a defect the consumer would meet on every `Load` of the file,
+    long after the render that wrote it. Refusing here fails the render instead.
     """
     values: dict[str, str] = {}
     for name, default in _ADMISSION_OPTIONS:
@@ -315,6 +323,13 @@ def _admission_values(config: Mapping[str, object]) -> dict[str, str]:
             raise ValueError(f"config.{name} must be a string")
         if '"' in raw or "\\" in raw:
             raise ValueError(f"config.{name} may not contain a quote or a backslash")
+        # `str.isprintable()` is False for every control character, including the
+        # newline and carriage return that would split the assignment, and True for the
+        # space a `release_subject_prefix` legitimately contains.
+        if not raw.isprintable():
+            raise ValueError(f"config.{name} must be printable single-line text")
+        if len(raw) > _MAX_ADMISSION_LENGTH:
+            raise ValueError(f"config.{name} may not exceed {_MAX_ADMISSION_LENGTH} characters")
         values[name] = raw
     if values["handoff_admission"] not in {"agent-handoff", "none"}:
         raise ValueError("config.handoff_admission must be `agent-handoff` or `none`")

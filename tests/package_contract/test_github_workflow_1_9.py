@@ -399,6 +399,83 @@ def test_github_workflow_1_9__rendered_policy__carries_the_options_as_quoted_sca
     assert 'package_version = "1.9"' in default_policy
 
 
+def test_github_workflow_1_9__admission_options__refuse_a_value_that_breaks_the_rendered_policy() -> (
+    None
+):
+    """A newline in a free-text option renders a `policy.toml` that never loads again.
+
+    The tool parses the rendered file with a bounded reader that accepts only comments,
+    table headers, and double-quoted assignments, so a value carrying a newline splits
+    its own assignment and every subsequent `Load` fails — the same render/load
+    asymmetry 1.9 closed for `organization`, on the three options 1.9 itself added.
+    Both boundaries are asserted: the schema a consumer actually reaches, and the
+    provider that composes the bytes.
+    """
+    schema = cast(
+        "dict[str, object]", json.loads((_V19 / "config.schema.json").read_text(encoding="utf-8"))
+    )
+    properties = cast("dict[str, dict[str, object]]", schema["properties"])
+    # `re.search` is what a JSON Schema validator applies, and the trailing-newline
+    # cases pin the reason the patterns end in `(?![\s\S])` rather than in `$`: Python's
+    # `$` also matches immediately before a final newline, which would have let exactly
+    # the value this test is about through the outer layer.
+    for option in ("integration_branch", "release_subject_prefix", "admission_floor"):
+        assert properties[option]["maxLength"] == 255
+        compiled = re.compile(cast("str", properties[option]["pattern"]))
+        for refused in ("a\nb", "a\rb", "a\x00b", 'a"b', "a\\b", "valid\n"):
+            assert not compiled.search(refused), f"the schema accepts {refused!r} for {option}"
+
+    # The ref-shaped options additionally refuse what git itself cannot name.
+    for option in ("integration_branch", "admission_floor"):
+        compiled = re.compile(cast("str", properties[option]["pattern"]))
+        for accepted in ("", "testing", "9c47907f", "release/1.9", "feature-a_b.c"):
+            assert compiled.search(accepted), f"the schema refuses the valid {option} {accepted!r}"
+        for refused in ("a b", "-a", "/a", "a/", "a~1", "a^", "a:b"):
+            assert not compiled.search(refused), f"the schema accepts {refused!r} for {option}"
+
+    # The free-text option must still admit the prose prefix it exists for.
+    prefix_pattern = re.compile(cast("str", properties["release_subject_prefix"]["pattern"]))
+    assert prefix_pattern.search("release: prepare v")
+
+    with pytest.raises(PackageContractError):
+        _options(
+            _V19,
+            {
+                "organization": "ExampleOrg",
+                "harnesses": ["codex"],
+                "integration_branch": "testing\nadmission_floor = x",
+            },
+        )
+
+    # The provider refuses independently, reached with an effective config the schema
+    # would have rejected. The control plane redacts the provider's own message and
+    # reports only the exception class.
+    with pytest.raises(ControlPlaneError, match=r"provider failed with ValueError"):
+        invoke_provider(
+            ProviderInvocation(
+                repo=_V19,
+                payload=_payload(_V19),
+                standard_id="github-workflow",
+                version=_payload(_V19).manifest.payload.version,
+                provider_id="render-semantic",
+                operation=ProviderOperation.RENDER,
+                effective_config={
+                    "organization": "ExampleOrg",
+                    "harnesses": ["codex"],
+                    "release_subject_prefix": "release: prepare v\n",
+                },
+                snapshots={
+                    "planned_contribution": {
+                        "id": "policy",
+                        "target": ".standards/packages/github-workflow/policy.toml",
+                        "adapter": AdapterKind.WHOLE_FILE.value,
+                        "scope": "$file",
+                    }
+                },
+            )
+        )
+
+
 def test_github_workflow_1_9__organization__refuses_a_login_the_shipped_tool_cannot_load() -> None:
     """Close the render/load asymmetry: `a--b` was accepted here and refused there.
 
@@ -520,18 +597,7 @@ def test_github_workflow_1_9__classifier__admits_a_clean_corpus_and_fails_when_o
     A compliance check that only ever runs against a non-compliant corpus proves it can
     say no. This proves it can say yes, and that the yes is load-bearing.
     """
-    repo = tmp_path / "corpus"
-    repo.mkdir()
-    _git(repo, "init", "--initial-branch=testing")
-    _git(repo, "config", "user.email", "fixture@example.invalid")
-    _git(repo, "config", "user.name", "Fixture")
-    _git(repo, "config", "commit.gpgsign", "false")
-    # A developer's global core.hooksPath is inherited by every `git init`; this
-    # workstation's global pre-commit hook refuses any author email but the owner's,
-    # which would fail this fixture locally and pass it on CI.
-    hooks = repo / ".empty-hooks"
-    hooks.mkdir()
-    _git(repo, "config", "core.hooksPath", str(hooks))
+    repo = _init_repo(tmp_path / "corpus")
 
     _commit(repo, "chore: seed", {"README.md": "seed\n"})
     base = _git(repo, "rev-parse", "HEAD").strip()
@@ -562,6 +628,53 @@ def test_github_workflow_1_9__classifier__admits_a_clean_corpus_and_fails_when_o
     mixed = _run_binary(["admission", "--branch", "testing", "--since", base, "--offline"], repo)
     assert mixed.returncode == 1
     assert "GHW-ADMISSION-HANDOFF-MIXED" in mixed.stdout
+
+
+@_requires_binary
+def test_github_workflow_1_9__classifier__refuses_a_handoff_commit_that_renames_into_the_exempt_tree(
+    tmp_path: Path,
+) -> None:
+    """The shipped bytes must not admit a `git mv` into `docs/handoff/`.
+
+    Reading the history with `--name-only` collapsed a rename to its destination, so a
+    commit declaring the handoff class while moving any file into the exempt tree
+    presented only handoff paths and was admitted — an arbitrary change leaving
+    governance under the one exemption the standard grants. The fix reads the history
+    with `--name-status --no-renames`, which reports the source path too.
+    """
+    repo = _init_repo(tmp_path / "rename-corpus")
+    _commit(repo, "chore: seed", {"README.md": "seed\n", "src/app.py": "x = 1\n"})
+    base = _git(repo, "rev-parse", "HEAD").strip()
+
+    (repo / "docs/handoff").mkdir(parents=True)
+    _git(repo, "mv", "src/app.py", "docs/handoff/app.py")
+    _git(repo, "commit", "-m", f"docs(handoff): note\n\n{_TRAILER_KEY}: handoff\n")
+
+    result = _run_binary(["admission", "--branch", "testing", "--since", base, "--offline"], repo)
+    assert result.returncode == 1, (
+        "the shipped classifier admitted a rename into the exempt tree; "
+        f"stdout={result.stdout} stderr={result.stderr}"
+    )
+    assert "GHW-ADMISSION-HANDOFF-MIXED" in result.stdout
+    assert "src/app.py" in result.stdout
+
+
+def _init_repo(repo: Path) -> Path:
+    """Create an empty fixture repository on `testing` with a fixed identity.
+
+    A developer's global core.hooksPath is inherited by every `git init`; this
+    workstation's global pre-commit hook refuses any author email but the owner's,
+    which would fail these fixtures locally and pass them on CI.
+    """
+    repo.mkdir(parents=True)
+    _git(repo, "init", "--initial-branch=testing")
+    _git(repo, "config", "user.email", "fixture@example.invalid")
+    _git(repo, "config", "user.name", "Fixture")
+    _git(repo, "config", "commit.gpgsign", "false")
+    hooks = repo / ".empty-hooks"
+    hooks.mkdir()
+    _git(repo, "config", "core.hooksPath", str(hooks))
+    return repo
 
 
 def _git(repo: Path, *args: str) -> str:

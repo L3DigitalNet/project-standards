@@ -72,6 +72,8 @@ Everything that is not T0, handoff, or release begins as a draft pull request. D
 
 `gh-workflow admission --branch B [--since REF] [--offline]` classifies every commit in a range by the rules above, exits nonzero listing the commits no class admits, and names for each one the trailer or route that would have satisfied it. It verifies a `PR #N` trailer against the merged pull request when it is authenticated; `--offline` falls back to the trailer alone. `admission_floor` names the commit-ish where enforcement begins, because adoption cannot rewrite history and a permanently red control is an ignored control.
 
+The `release` class is admitted on the author's word alone: neither an explicit `Workflow-Admission: release` trailer nor a subject matching `release_subject_prefix` is checked against the paths the commit touches, the branch it lands on, or any version change. It records the release route rather than enforcing it, so keep the prefix narrow enough that ordinary work cannot match it.
+
 Nothing runs it for you. This package contributes no workflow to `.github/`, so a repository that has not wired `admission` into its own CI has the rule and no coverage — that gap is stated here rather than implied away. Retrospectively, `git log --grep 'Workflow-Admission: T0'` still enumerates every direct admission for an on-demand audit. There is no routine report and no standing register of admitted commits.
 
 ## Governing work
