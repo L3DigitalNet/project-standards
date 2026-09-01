@@ -249,9 +249,9 @@ def test_markdown_tooling_1_14__catalog_role__selects_the_successor_as_default()
 def test_markdown_tooling_1_14__mutable_navigation__names_the_new_authority() -> None:
     """Family-level readers must resolve the same current payload as the index."""
     expected_links = {
-        _FAMILY / "README.md": "versions/1.15/README.md",
-        _FAMILY / "adopt.md": "versions/1.15/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.15/agent-summary.md",
+        _FAMILY / "README.md": "versions/1.16/README.md",
+        _FAMILY / "adopt.md": "versions/1.16/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.16/agent-summary.md",
     }
     for path, expected_link in expected_links.items():
         content = path.read_text(encoding="utf-8")

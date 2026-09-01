@@ -37,6 +37,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Markdown Tooling 1.16` repairs a documented Prettier gate that failed on a clean tree.** The rendered local check handed Git's whole tracked selection to Prettier, which refuses an explicitly named symbolic link with `Explicitly specified pattern "..." is a symbolic link` and a non-zero status — while still reporting every real file correctly formatted. Any repository tracking symlinks that match the selected globs therefore failed its own gate with nothing wrong ([#209](https://github.com/L3DigitalNet/project-standards/issues/209)). The recipe now lists the corpus with `git ls-files -s` and drops index mode `120000` before `xargs`, which removes only paths Prettier was already refusing to read: the set of files actually checked is unchanged. Git stays the corpus authority, so nested `.gitignore` files, `.git/info/exclude`, and the child-repository boundary are still honored. The markdownlint recipe is unchanged — `markdownlint-cli2` follows a symlinked path and lints its target — and the no-Git Prettier fallback needs no filter, because Prettier skips a symlink reached by its own glob expansion.
+
+### Changed
+
+- **`Markdown Tooling 1.16` makes the verify path tolerate an absent `runner_labels`, as the render path already did.** `_runner_label_reachability_warning` passed `config.get("runner_labels")` straight to its sequence coercion, so an effective configuration that omits the key raised a provider `ValueError` and aborted `verify-lint`, `verify-format`, and drift-check instead of returning findings — while the same configuration rendered cleanly. Absent and empty now behave alike on both paths. The shipped option schema declares `default: []`, so a configuration resolved through it always carries the key; this closes the gap for any caller that assembles the provider request itself.
+- **`Markdown Tooling 1.16` advances `DavidAnson/markdownlint-cli2-action` to `v24.2.0`** (`21c1be1b93ad9ed58fa840aacc3f279cde2a72ff`, bundling `markdownlint-cli2` 0.23.2) in the managed lint workflow ([#211](https://github.com/L3DigitalNet/project-standards/issues/211)). The `uses:` line and its version comment are the only workflow bytes that move, and only a repository in `self-hosted` mode holds them. Because 1.16 re-renders both managed instruction blocks and the lint caller, every inbound migration edge is retargeted and now relocks all three contributions. Catalog 5 promotes `markdown-tooling@1.16` and retains 1.15, so the upgrade is a version bump; no option, unit identity, or managed config changes.
+
 ## [5.27.0] — 2026-08-31
 
 ### Added
