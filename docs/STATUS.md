@@ -12,19 +12,19 @@
 - The v5.27.0 assets are byte-verified: wheel `9d1c7679d4bb…` and sdist `cc7eb7f7669d…`. They are also proven
   reproducible — a rebuild from the release commit matched both digests exactly. Evidence in
   `docs/handoff/deployed.md`.
-- **PRs are now required for every change to `testing`.** `CLAUDE.md`'s Non-Negotiables carry the admission rule
-  (draft PR declaring `Final:` / `Supporting:` / `Standalone`, then `ready`, then `merge`), with T0 the sole
-  exception and the release commit exempt by construction, since `scripts/release_prep.py` pins
-  `RELEASE_BRANCH = "main"`. Landed as [#208](https://github.com/L3DigitalNet/project-standards/pull/208), itself
-  the first change admitted under the rule.
+- **Every commit on `testing` or `main` carries a `Workflow-Admission` trailer.** github-workflow 1.9 replaced the
+  two-class rule with four classes — `T0`, `PR #N` (written by `merge --pr N`), `handoff` (a commit touching only
+  `docs/handoff/**`, `docs/STATUS.md`, `docs/TODO.md`), and `release` — and shipped the `gh-workflow admission`
+  classifier, closing both [#203](https://github.com/L3DigitalNet/project-standards/issues/203) (the enforcement gap)
+  and [#218](https://github.com/L3DigitalNet/project-standards/issues/218) (the handoff exemption) as Done. This
+  repository declares its topology in `.standards/config.toml`: `integration_branch = "testing"`,
+  `release_subject_prefix = "release:"`, and an `admission_floor` at the v5.28.0 release commit, since adoption cannot
+  rewrite history. Nothing runs the classifier for us yet — the payload ships no workflow, so CI coverage is unwired.
 - A long-standing CI defect is fixed ([#212](https://github.com/L3DigitalNet/project-standards/issues/212), Done):
   tests loaded payload providers by path from `standards/**` with `exec_module`, writing `__pycache__` into a tree
   whose bytes are meant to be immutable — 93 cache directories from one test file. That bumped directory mtimes and
   intermittently tripped the real-consumer-root seam canary. The guard already existed at two of twelve call sites
   and now covers all that load from the tracked tree. `real_tree_digest` was deliberately left unchanged.
-- Known enforcement gap, still open ([#203](https://github.com/L3DigitalNet/project-standards/issues/203), Ready,
-  P1): the _standard_ ships no mechanism behind the PR-admission rule — no `gh-workflow` subcommand, no CI workflow,
-  no hook. Verified 351 commits and 0 PRs since adoption. #208 landed the documentation half only.
 - Three adoption reports against python-tooling 1.16 are investigated with evidence and deferred to a 1.18 payload:
   [#204](https://github.com/L3DigitalNet/project-standards/issues/204) (a real guard defect — `build_backend =
   "none"` exempts the `[project]` check `uv lock` needs, and `adopt.md` lines 21/23 contradict each other), plus

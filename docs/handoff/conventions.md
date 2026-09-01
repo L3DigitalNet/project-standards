@@ -30,6 +30,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 22 | rexec v0.2 is a remote-only, root-configured execution path | Selecting or diagnosing remote CPU-intensive work |
 | 23 | Plan-authoring writes need a Prettier pass and completed plans retire via harvest | Writing or retiring a plan file |
 | 24 | `main` is a publication branch, enforced by a tracked commit hook | Committing here, or changing hook installation |
+| 25 | Every commit on a governed branch declares its admission class | Committing on `testing` or `main` |
 
 ## 1. Dogfood the standards
 
@@ -486,4 +487,18 @@ add new payload-tree test coverage there rather than re-deriving file enumeratio
 
 **Sources:** ledger 20, owner directive 2026-08-29; `tests/test_main_branch_guard.py`.
 
-**Related:** 20, 22.
+**Related:** 20, 22, 25.
+
+## 25. Every commit on a governed branch declares its admission class
+
+**Applies when:** committing on `testing` or `main`, or judging a change's route.
+
+**Rule:** both branches are governed, so every commit carries one `Workflow-Admission` trailer: `PR #N` (written by `merge --pr N`, the route for ordinary work), `handoff` (paths entirely within `docs/handoff/**`, `docs/STATUS.md`, `docs/TODO.md`), `T0` (trivial prose repair), or `release`. A commit mixing handoff paths with anything else takes the PR route.
+
+**Why:** the topology is declared once, in `.standards/config.toml` under `[standards.github-workflow].config`, and `reconcile --apply` renders it into `.standards/packages/github-workflow/policy.toml`. Restating the classes in prose is how CLAUDE.md, AGENTS.md, and STATUS.md each drifted; cite the managed block and `pr-standard.md` instead.
+
+**Gotcha:** nothing runs the classifier — `gh-workflow admission --branch testing --offline` is a check you invoke, over the range above the `admission_floor`. The `main-branch-guard` of #24 is the local half of the `release` class: its `RELEASE_MESSAGE_PREFIX` must equal the declared `release_subject_prefix`.
+
+**Sources:** ADR 0031 D4; github-workflow 1.9 (#203, #218), adopted 2026-09-01.
+
+**Related:** 24.

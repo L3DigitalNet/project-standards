@@ -3,7 +3,7 @@ schema_version = "1.1"
 catalog = "5"
 release = "5.28.0"
 catalog_digest = "sha256:2aff82f3ac95c2d4c83639a5c1854c7aaeddba10b0441f6b568bfae10e912b40"
-config_digest = "sha256:75181bdd5e27f8dac9c565666b87e8e38893a0b1bc37b5d2ce36f9ac387bc046"
+config_digest = "sha256:66212b5cbcc58392091971be9eaea61f5711e5a90c483413a8625e019aa5258c"
 
 [standards.adr]
 requested = "latest"
@@ -31,7 +31,7 @@ requested = "latest"
 resolved = "1.9"
 selection = "stable"
 payload_digest = "sha256:2c9de8845e32bf93804b40867dc7f2bdb92ab17f596750e468befe663b40e5e3"
-effective_config_digest = "sha256:75e8c38de09a92d3a0a992e60e18f3bb48871fa11b1e47a4c824eef113e9e6de"
+effective_config_digest = "sha256:9f9aa8ac337ff6ed46875d9b35a0324d8a317a3df9ff942d911e5ca3c62ec859"
 
 [standards.markdown-frontmatter]
 requested = "latest"
@@ -798,8 +798,8 @@ owners = ["github-workflow"]
 versions = { github-workflow = "1.9" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:2feb299ebdc54b6b34f056886e766c42ac0791967c04bf88ff074dcc7b4ebe63"
-content_digest = "sha256:2feb299ebdc54b6b34f056886e766c42ac0791967c04bf88ff074dcc7b4ebe63"
+semantic_digest = "sha256:8b218b04bdc80fe8af81dd8bef1e2a2625eb4ef6a74b7f577ffe30885ee9b268"
+content_digest = "sha256:8b218b04bdc80fe8af81dd8bef1e2a2625eb4ef6a74b7f577ffe30885ee9b268"
 created_container = true
 
 [[artifacts]]
