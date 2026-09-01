@@ -138,6 +138,15 @@ func readState(root string) string {
 // operator has seen anything (issue #235). A command-line `-c` outranks every config
 // file, so this holds regardless of what system, global, or repository config says.
 //
+// SCOPE: it closes the fsmonitor vector and nothing else. Repository-level config still
+// reaches two known execution paths under a `.git/config`-write precondition —
+// `filter.<driver>.clean`/`.process` selected by `.gitattributes` during `status`, and
+// `log.showSignature` with `gpg.program` during `log`. Both are an accepted residual:
+// an attacker who can write `.git/config` in the repository that owns the installed hook
+// already has the same execution the hook would give them. Do not reach for
+// `GIT_CONFIG_NOSYSTEM` here — it suppresses only the system file, while repository-local
+// config is always read, so it would close nothing these paths use.
+//
 // `--no-optional-locks` keeps the read from taking the index lock, so session start
 // cannot fail — or make an unrelated Git command fail — by racing a concurrent write in
 // the same checkout.
@@ -153,10 +162,14 @@ var gitHardeningOptions = []string{"-c", "core.fsmonitor=", "--no-optional-locks
 // `GIT_WORK_TREE`, `GIT_CONFIG_GLOBAL`, and the `GIT_CONFIG_COUNT` family would all
 // otherwise let the environment choose the repository or inject configuration, which
 // would defeat the executable-path repository authority established by repositoryRoot.
-// PATH is kept because Git resolves its own subprograms through it; HOME is kept so a
-// developer's normal identity and global configuration still apply to a read that must
-// behave exactly as it did before this hardening. The fsmonitor setting a global config
-// could carry is already neutralized by gitHardeningOptions.
+// PATH is kept because Git resolves its own subprograms through it, and HOME is kept so
+// a developer's normal identity and `~/.gitconfig` still apply. The allowlist is
+// deliberately not exhaustive: `XDG_CONFIG_HOME` is dropped, so a global config
+// relocated under XDG falls back to the `$HOME` paths and its settings do not apply to
+// these reads. That is the intended trade — the reads must not honor configuration this
+// process cannot vouch for — and it can only make the injected context thinner, never
+// wrong. The fsmonitor setting a global config could carry is already neutralized by
+// gitHardeningOptions.
 var gitEnvironmentNames = []string{"PATH", "HOME"}
 
 func gitEnvironment() []string {
