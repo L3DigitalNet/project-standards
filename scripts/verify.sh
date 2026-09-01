@@ -9,10 +9,10 @@
 #   then `coverage combine` + `coverage report`.
 #
 #   --full runs the legacy serial sequence instead (statics, serial ordinary
-#   coverage run, compatibility at -n 4, performance, report). That is the
-#   release-prep cross-check: it is the configuration the coverage baseline was
-#   established under, so a disagreement between it and the fast gate is a real
-#   signal rather than a parallelism artifact.
+#   coverage run, compatibility, performance, report). That is the release-prep
+#   cross-check: it is the configuration the coverage baseline was established
+#   under, so a disagreement between it and the fast gate is a real signal
+#   rather than a parallelism artifact.
 #
 # Every command runs from `.venv/bin` rather than through `uv run`. Concurrent
 # `uv run` invocations contend on the uv cache (the 2026-07-29 failure class);
@@ -43,6 +43,16 @@
 #   scripts/verify.sh            fast gate (default)
 #   scripts/verify.sh --full     legacy serial battery / release-prep cross-check
 #
+# --fail-fast stops the run at the first red lane and is the default for --full;
+# --keep-going restores run-every-lane and is the default for the fast gate. The
+# split follows what each mode is for: a serial battery that already knows it is
+# red spends its remaining lanes proving nothing (on the 2026-09-01 train roughly
+# 35 minutes of compatibility matrix ran after the ordinary lane had failed,
+# issue #236 C6), while the fast gate's three lanes start together, so there is
+# nothing left to save and a complete picture of every finding is worth more.
+# Lanes cut short are reported in the summary as `skipped`, never omitted: a lane
+# missing from the table would read as a lane that was never part of the mode.
+#
 # TEST-ONLY: VERIFY_SMOKE=1 shrinks every pytest lane to a token selection so
 # the lane orchestration itself can be exercised in seconds. It proves plumbing,
 # never correctness — a smoke run is not a gate run.
@@ -51,10 +61,10 @@
 # too broadly; a nested fixture using the production root would collide with the
 # parent gate whose orchestration it is validating.
 #
-# Worker counts are tuned for the 21-core workstation the spike measured and are
-# overridable while controlled-condition benchmarking is still open:
+# Worker counts are sized for the machine that actually runs this gate — the
+# 40-core / 64 GiB rexec worker — and stay overridable:
 #   VERIFY_ORDINARY_WORKERS (16), VERIFY_COMPAT_WORKERS (8),
-#   VERIFY_FULL_COMPAT_WORKERS (4)
+#   VERIFY_FULL_COMPAT_WORKERS (16)
 
 set -u
 set -o pipefail
@@ -67,10 +77,13 @@ RELEASE_WHEEL_DIR="$REPO_ROOT/build/release-wheel"
 
 ORDINARY_WORKERS="${VERIFY_ORDINARY_WORKERS:-16}"
 COMPAT_WORKERS="${VERIFY_COMPAT_WORKERS:-8}"
-FULL_COMPAT_WORKERS="${VERIFY_FULL_COMPAT_WORKERS:-4}"
+FULL_COMPAT_WORKERS="${VERIFY_FULL_COMPAT_WORKERS:-16}"
 SMOKE="${VERIFY_SMOKE:-0}"
 
 MODE="fast"
+# Empty until argument parsing finishes, so an explicit flag can be told apart
+# from the mode-derived default resolved below.
+FAIL_FAST=""
 
 die() {
     printf 'verify: %s\n' "$1" >&2
@@ -79,17 +92,22 @@ die() {
 
 usage() {
     cat <<'EOF'
-Usage: scripts/verify.sh [--full] [--help]
+Usage: scripts/verify.sh [--full] [--fail-fast | --keep-going] [--help]
 
-  (default)  fast gate: statics + ordinary + compatibility concurrently,
-             then performance alone, then coverage combine + report
-  --full     legacy serial battery (release-prep cross-check)
+  (default)     fast gate: statics + ordinary + compatibility concurrently,
+                then performance alone, then coverage combine + report
+  --full        legacy serial battery (release-prep cross-check)
+  --fail-fast   stop at the first red lane; remaining lanes report as skipped
+                (default with --full)
+  --keep-going  run every lane even after one is red (default for the fast gate)
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --full) MODE="full" ;;
+        --fail-fast) FAIL_FAST=1 ;;
+        --keep-going) FAIL_FAST=0 ;;
         -h | --help)
             usage
             exit 0
@@ -101,6 +119,14 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
+
+# --full is the release-prep cross-check, where a lane after the first red one
+# proves nothing and costs tens of minutes; the fast gate's lanes are already
+# running when the first red appears, so it defaults to the full picture. An
+# explicit flag in either direction wins over the mode.
+if [[ -z "$FAIL_FAST" ]]; then
+    if [[ "$MODE" == "full" ]]; then FAIL_FAST=1; else FAIL_FAST=0; fi
+fi
 
 # ── Preflight ─────────────────────────────────────────────────────────────
 cd "$REPO_ROOT" || die "cannot enter $REPO_ROOT"
@@ -259,6 +285,43 @@ serial_lane() {
     run_lane "$@"
 }
 
+# Answers "has any lane recorded so far come back red?" from $RESULT_DIR rather
+# than from a shell variable: concurrent lanes run in background subshells, so a
+# status set there can never reach this shell. Unrecorded counts as red, matching
+# the summary's rule — a lane that died before writing its result is a failure.
+gate_has_red() {
+    local lane status
+    for lane in "${LANE_ORDER[@]}"; do
+        status=""
+        if [[ -r "$RESULT_DIR/$lane" ]]; then
+            IFS=$'\t' read -r status _ <"$RESULT_DIR/$lane" || true
+        fi
+        [[ "$status" == "0" ]] || return 0
+    done
+    return 1
+}
+
+# Records a lane the run deliberately did not execute. It still joins LANE_ORDER
+# and still gets a log and a result file, so the summary shows it as `skipped`
+# instead of dropping it: an absent row is indistinguishable from a lane the mode
+# never had, which is exactly the confusion a fail-fast run must not create.
+skip_lane() {
+    LANE_ORDER+=("$1")
+    printf 'skipped: an earlier lane failed and --fail-fast is in effect\n' >"$LOG_DIR/$1.log"
+    printf 'skipped\t\n' >"$RESULT_DIR/$1"
+}
+
+# The fail-fast gate for every serial lane. Concurrent lanes are started before
+# any result exists and so are never guarded; under --fail-fast the cut therefore
+# begins at the first serial lane, which in fast mode is the performance tail.
+serial_lane_unless_red() {
+    if [[ "$FAIL_FAST" == "1" ]] && gate_has_red; then
+        skip_lane "$1"
+        return 0
+    fi
+    serial_lane "$@"
+}
+
 # ── Lanes ─────────────────────────────────────────────────────────────────
 # The statics lane runs every step even after one fails: a single pass should
 # surface all style findings, not just the first.
@@ -358,7 +421,7 @@ lane_coverage_report() {
 }
 
 # ── Run ───────────────────────────────────────────────────────────────────
-printf 'verify: mode=%s tmp=%s (%s)\n' "$MODE" "$TMP_ROOT" "$TMP_KIND"
+printf 'verify: mode=%s fail-fast=%s tmp=%s (%s)\n' "$MODE" "$FAIL_FAST" "$TMP_ROOT" "$TMP_KIND"
 [[ "$SMOKE" == "1" ]] && printf 'verify: VERIFY_SMOKE=1 — token selections, NOT a gate run\n'
 printf 'verify: PYTHONPATH=%s\n\n' "$PYTHONPATH"
 printf 'verify: PROJECT_STANDARDS_COMPATIBILITY_WHEEL=%s\n\n' "$PROJECT_STANDARDS_COMPATIBILITY_WHEEL"
@@ -390,16 +453,16 @@ if [[ "$MODE" == "fast" ]]; then
     wait
 
     # Timing-sensitive: never concurrent with another lane.
-    serial_lane performance lane_performance
-    serial_lane coverage-combine lane_coverage_combine
+    serial_lane_unless_red performance lane_performance
+    serial_lane_unless_red coverage-combine lane_coverage_combine
 else
-    serial_lane statics lane_statics
-    serial_lane ordinary lane_ordinary_serial
-    serial_lane compatibility lane_compatibility "$FULL_COMPAT_WORKERS"
-    serial_lane performance lane_performance
+    serial_lane_unless_red statics lane_statics
+    serial_lane_unless_red ordinary lane_ordinary_serial
+    serial_lane_unless_red compatibility lane_compatibility "$FULL_COMPAT_WORKERS"
+    serial_lane_unless_red performance lane_performance
 fi
 
-serial_lane coverage-report lane_coverage_report
+serial_lane_unless_red coverage-report lane_coverage_report
 
 GATE_SECONDS="$(($(date +%s) - GATE_START))"
 
@@ -436,6 +499,10 @@ for lane in "${LANE_ORDER[@]}"; do
     fi
     if [[ "$lane_status" == "0" ]]; then
         verdict="ok"
+    elif [[ "$lane_status" == "skipped" ]]; then
+        # Not a failure of its own: the lane that tripped --fail-fast is the one
+        # that sets the exit status, and double-counting would hide it.
+        verdict="skipped (--fail-fast)"
     elif [[ -z "$lane_status" ]]; then
         # Unrecorded is failed: the lane never reached the line that writes its
         # result, so treating it as anything else would report a green gate for
