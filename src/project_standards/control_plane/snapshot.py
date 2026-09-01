@@ -8,8 +8,8 @@ import stat
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
+from typing import Protocol
 
-from project_standards.control_plane.codec import content_digest
 from project_standards.control_plane.containment import (
     CONTAINMENT_DESTINATION_CODE,
     ContainmentError,
@@ -27,6 +27,14 @@ from project_standards.package_contract.paths import (
 _READ_SIZE = 1024 * 1024
 
 
+class _StreamingHash(Protocol):
+    """The `hashlib` surface a streaming capture needs, without a private typeshed name."""
+
+    def update(self, data: bytes, /) -> None: ...
+
+    def hexdigest(self) -> str: ...
+
+
 class EntryKind(StrEnum):
     """Filesystem states relevant to planning without following links."""
 
@@ -39,7 +47,14 @@ class EntryKind(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class SnapshotEntry:
-    """Exact bytes and metadata observed for one declared target."""
+    """Exact bytes and metadata observed for one declared target.
+
+    A snapshot captured with ``retain_content=False`` leaves ``content`` and
+    ``content_digest`` unset on a regular entry: the bytes are hashed as they
+    stream past and never retained. ``precondition_digest`` is the only field
+    that mode promises, so a caller that reads bytes or compares content
+    digests must capture in the default full mode.
+    """
 
     path: SafeRelativePath
     kind: EntryKind
@@ -50,6 +65,16 @@ class SnapshotEntry:
     precondition_digest: Sha256Digest
 
 
+def _precondition_hasher(kind: EntryKind, mode: str | None) -> _StreamingHash:
+    """Seed a precondition hash with the fixed prefix that precedes the payload."""
+    digest = hashlib.sha256()
+    digest.update(kind.value.encode("ascii"))
+    digest.update(b"\0")
+    digest.update((mode or "").encode("ascii"))
+    digest.update(b"\0")
+    return digest
+
+
 def _precondition(
     kind: EntryKind,
     *,
@@ -57,16 +82,27 @@ def _precondition(
     content: bytes | None = None,
     link_target: str | None = None,
 ) -> Sha256Digest:
-    digest = hashlib.sha256()
-    digest.update(kind.value.encode("ascii"))
-    digest.update(b"\0")
-    digest.update((mode or "").encode("ascii"))
-    digest.update(b"\0")
+    digest = _precondition_hasher(kind, mode)
     if content is not None:
         digest.update(content)
     elif link_target is not None:
         digest.update(link_target.encode("utf-8", errors="surrogateescape"))
     return Sha256Digest(f"sha256:{digest.hexdigest()}")
+
+
+def canonical_targets(targets: tuple[SafeRelativePath, ...]) -> tuple[SafeRelativePath, ...]:
+    """Reject a colliding declared collection and fix the order a snapshot reads in.
+
+    Capture applies this to its own arguments; a caller that wants to compare
+    two declared collections for identity — as the provider snapshot chain does
+    — must compare the canonical forms, because two spellings of one collection
+    are the same snapshot.
+    """
+    try:
+        normalized = validate_path_collection(targets)
+    except ValueError as exc:
+        raise ControlPlaneError("snapshot target collection contains a collision") from exc
+    return tuple(sorted(normalized, key=lambda item: item.original.encode("utf-8")))
 
 
 def safe_repository_root(repo: Path) -> Path:
@@ -193,6 +229,8 @@ def _regular_entry(
     path: SafeRelativePath,
     parent_descriptor: int,
     name: str,
+    *,
+    retain_content: bool,
 ) -> SnapshotEntry:
     try:
         descriptor = os.open(
@@ -206,9 +244,26 @@ def _regular_entry(
         before = os.fstat(descriptor)
         if not stat.S_ISREG(before.st_mode):
             raise ControlPlaneError("snapshot target changed type during capture")
-        chunks: list[bytes] = []
+        # The mode is taken from the pre-read stat because the precondition hash
+        # is seeded with it before the first chunk arrives; the stability check
+        # after the read still rejects a mode that changed mid-capture, so the
+        # digest can never describe a mode the file did not hold throughout.
+        mode = _mode(before)
+        precondition = _precondition_hasher(EntryKind.REGULAR, mode)
+        # Bytes are hashed as they stream and retained only when a caller asked
+        # for them: an integrity capture over a multi-megabyte declared target
+        # (the frozen provider binaries are ~10 MB each) otherwise holds the
+        # whole file for the length of a provider invocation. The content digest
+        # is likewise computed only when it is promised, which halves the hash
+        # work of a precondition-only capture.
+        digest = hashlib.sha256() if retain_content else None
+        chunks: list[bytes] | None = [] if retain_content else None
         while chunk := os.read(descriptor, _READ_SIZE):
-            chunks.append(chunk)
+            precondition.update(chunk)
+            if digest is not None:
+                digest.update(chunk)
+            if chunks is not None:
+                chunks.append(chunk)
         after = os.fstat(descriptor)
     except OSError as exc:
         raise ControlPlaneError("snapshot target could not be read") from exc
@@ -217,16 +272,14 @@ def _regular_entry(
     stable_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_mode")
     if any(getattr(before, field) != getattr(after, field) for field in stable_fields):
         raise ControlPlaneError("snapshot target changed while being read")
-    content = b"".join(chunks)
-    mode = _mode(after)
     return SnapshotEntry(
         path=path,
         kind=EntryKind.REGULAR,
-        content=content,
+        content=b"".join(chunks) if chunks is not None else None,
         mode=mode,
         link_target=None,
-        content_digest=content_digest(content),
-        precondition_digest=_precondition(EntryKind.REGULAR, mode=mode, content=content),
+        content_digest=Sha256Digest(f"sha256:{digest.hexdigest()}") if digest is not None else None,
+        precondition_digest=Sha256Digest(f"sha256:{precondition.hexdigest()}"),
     )
 
 
@@ -294,6 +347,8 @@ def _read_entry(
     root: Path,
     root_descriptor: int,
     path: SafeRelativePath,
+    *,
+    retain_content: bool,
 ) -> SnapshotEntry:
     parent_descriptor = _parent_descriptor(root, root_descriptor, path.normalized.parent)
     if parent_descriptor is None:
@@ -321,7 +376,7 @@ def _read_entry(
                 _precondition(EntryKind.MISSING),
             )
         if stat.S_ISREG(metadata.st_mode):
-            return _regular_entry(path, parent_descriptor, name)
+            return _regular_entry(path, parent_descriptor, name, retain_content=retain_content)
         if stat.S_ISLNK(metadata.st_mode):
             target = os.readlink(name, dir_fd=parent_descriptor)
             return SnapshotEntry(
@@ -364,13 +419,19 @@ class RepositorySnapshot:
         cls,
         repo: Path,
         targets: tuple[SafeRelativePath, ...],
+        *,
+        retain_content: bool = True,
     ) -> RepositorySnapshot:
+        """Read every declared target once, retaining bytes unless asked not to.
+
+        `retain_content=False` yields a precondition-only snapshot: every entry
+        still carries the precondition digest the integrity guard compares, but
+        regular-file bytes are hashed as they stream and then dropped, and the
+        content digest is not computed. Use it for a capture that will only be
+        compared, never read.
+        """
         root = safe_repository_root(repo)
-        try:
-            normalized = validate_path_collection(targets)
-        except ValueError as exc:
-            raise ControlPlaneError("snapshot target collection contains a collision") from exc
-        ordered = tuple(sorted(normalized, key=lambda item: item.original.encode("utf-8")))
+        ordered = canonical_targets(targets)
         flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
         try:
             root_descriptor = os.open(root, flags)
@@ -380,7 +441,10 @@ class RepositorySnapshot:
             # Preflight every ancestor before the first content read: otherwise an
             # escape discovered late could leave earlier provider inputs observable.
             _preflight_ancestors(root, root_descriptor, ordered)
-            entries = tuple(_read_entry(root, root_descriptor, target) for target in ordered)
+            entries = tuple(
+                _read_entry(root, root_descriptor, target, retain_content=retain_content)
+                for target in ordered
+            )
         finally:
             os.close(root_descriptor)
         return cls(root, ordered, entries)
@@ -393,7 +457,9 @@ class RepositorySnapshot:
 
     def assert_current(self) -> None:
         """Fail when any target no longer matches this snapshot's precondition."""
-        current = RepositorySnapshot.capture(self.root, self.targets)
+        # Only precondition digests are compared, so the re-read never retains
+        # bytes even when this snapshot itself carries them.
+        current = RepositorySnapshot.capture(self.root, self.targets, retain_content=False)
         for expected, observed in zip(self.entries, current.entries, strict=True):
             if expected.precondition_digest != observed.precondition_digest:
                 raise ControlPlaneError(f"snapshot precondition changed: {expected.path.original}")

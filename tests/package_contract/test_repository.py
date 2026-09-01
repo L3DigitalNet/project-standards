@@ -113,3 +113,34 @@ def test_selected_catalog_errors_join_package_load_findings(tmp_path: Path) -> N
         "PC-INTEGRITY",
         "PC-CATALOG-INVALID",
     }
+
+
+def test_repeated_build_is_memoized_until_a_manifest_changes(tmp_path: Path) -> None:
+    root = copy_minimal_repository(tmp_path)
+
+    first = build_package_repository(root, catalog_major=5)
+    assert build_package_repository(root, catalog_major=5) is first
+
+    # A payload manifest edit must be visible to the very next build: the memo
+    # is keyed on the source fingerprint, not on the root alone.
+    manifest = root / "standards/demo/versions/1.2/payload.toml"
+    manifest.write_text(manifest.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+    rebuilt = build_package_repository(root, catalog_major=5)
+
+    assert rebuilt is not first
+    assert {finding.code for finding in rebuilt.findings} != set()
+
+
+def test_memo_distinguishes_the_catalog_and_the_allowlist(tmp_path: Path) -> None:
+    root = copy_minimal_repository(tmp_path)
+
+    with_catalog = build_package_repository(root, catalog_major=5)
+    without_catalog = build_package_repository(root)
+    narrowed = build_package_repository(root, family_allowlist=iter(("demo",)))
+
+    assert with_catalog.catalog is not None
+    assert without_catalog.catalog is None
+    # The allowlist may arrive as a one-shot iterator; keying on it must not
+    # consume the iterator the build itself still needs.
+    assert [family.manifest.standard.id for family in narrowed.families] == ["demo"]

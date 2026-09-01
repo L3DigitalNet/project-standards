@@ -10,8 +10,9 @@ import platform
 import stat
 import sys
 import tempfile
-from collections.abc import Iterator, Mapping, Sequence
-from contextlib import redirect_stderr, redirect_stdout
+import threading
+from collections.abc import Generator, Iterator, Mapping, Sequence
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, replace
 from pathlib import Path
 from types import MappingProxyType
@@ -44,7 +45,10 @@ from project_standards.control_plane.provider_subprocess import (
     safe_failure_detail,
 )
 from project_standards.control_plane.schemas import MutationPlanSchema, ProviderInputSchema
-from project_standards.control_plane.snapshot import RepositorySnapshot
+from project_standards.control_plane.snapshot import (
+    RepositorySnapshot,
+    canonical_targets,
+)
 from project_standards.package_contract.paths import (
     PackageVersion,
     SafeRelativePath,
@@ -488,9 +492,83 @@ def _declared_snapshot_paths(snapshots: JsonObject) -> tuple[SafeRelativePath, .
         raise ControlPlaneError("provider snapshot declares an invalid repository path") from exc
 
 
+@dataclass(frozen=True, slots=True)
+class _ChainedSnapshot:
+    """The AFTER snapshot of the most recent provider, offered to the next one."""
+
+    root: Path
+    targets: tuple[SafeRelativePath, ...]
+    snapshot: RepositorySnapshot
+
+
+# Chaining state is per thread: two threads planning against one repository see
+# each other's writes, and a slot armed by one of them describes a tree the
+# other never observed.
+_chain_state = threading.local()
+
+
+def _chain_slot() -> _ChainedSnapshot | None:
+    return cast("_ChainedSnapshot | None", getattr(_chain_state, "slot", None))
+
+
+@contextmanager
+def provider_snapshot_chain() -> Generator[None]:
+    """Allow consecutive provider invocations to share one integrity snapshot.
+
+    Inside this window, the AFTER snapshot the CP-PROVIDER-INTEGRITY guard takes
+    for one provider becomes the BEFORE snapshot of the next provider that
+    declares the identical target set, so N invocations cost N+1 captures rather
+    than 2N. Every declared path is still read in full once per invocation and
+    every AFTER capture is still a fresh read, so a provider that changes a
+    declared live path is caught exactly as before.
+
+    The window carries one obligation, and it is the reason chaining is opt-in
+    rather than always on: the caller promises that nothing but the providers
+    themselves touches a declared path between two invocations. Publication,
+    recovery, a spec fix that rewrites the file it just linted, or an operator
+    editing the tree between two plans in a long-lived process would otherwise
+    be attributed to the next provider as a CP-PROVIDER-INTEGRITY violation.
+    Open the window around one planning pass — never around a pass that writes,
+    and never across a repository mutation the process performed itself.
+
+    Nested windows are permitted and share the single slot; leaving any window
+    discards it, so a chained snapshot never outlives the pass that vouched
+    for it.
+    """
+    previous = _chain_slot()
+    previous_active = getattr(_chain_state, "active", False)
+    _chain_state.active = True
+    _chain_state.slot = None
+    try:
+        yield
+    finally:
+        _chain_state.active = previous_active
+        _chain_state.slot = previous if previous_active else None
+
+
+def _arm_snapshot_chain(after: RepositorySnapshot) -> None:
+    if getattr(_chain_state, "active", False):
+        _chain_state.slot = _ChainedSnapshot(after.root, after.targets, after)
+
+
+def _capture_declared_paths(
+    root: Path,
+    targets: tuple[SafeRelativePath, ...],
+) -> RepositorySnapshot:
+    """Take this invocation's BEFORE snapshot, reusing a chained one when offered."""
+    ordered = canonical_targets(targets)
+    slot = _chain_slot()
+    # Consumed at most once: the reference for the next invocation is whatever
+    # this invocation's own AFTER capture observes, never an older reading.
+    _chain_state.slot = None
+    if slot is not None and slot.root == root and slot.targets == ordered:
+        return slot.snapshot
+    return RepositorySnapshot.capture(root, ordered, retain_content=False)
+
+
 def _assert_declared_paths_unchanged(before: RepositorySnapshot) -> None:
     try:
-        after = RepositorySnapshot.capture(before.root, before.targets)
+        after = RepositorySnapshot.capture(before.root, before.targets, retain_content=False)
     except ControlPlaneError as exc:
         raise ControlPlaneError(
             "CP-PROVIDER-INTEGRITY: provider made a declared live path unsafe"
@@ -500,6 +578,9 @@ def _assert_declared_paths_unchanged(before: RepositorySnapshot) -> None:
             raise ControlPlaneError(
                 f"CP-PROVIDER-INTEGRITY: provider changed live path {expected.path.original}"
             )
+    # Armed only after the comparison succeeded: a snapshot that already failed
+    # the guard must never become the next invocation's reference.
+    _arm_snapshot_chain(after)
 
 
 def _output_notice(stdout: _OutputSink, stderr: _OutputSink) -> str | None:
@@ -921,7 +1002,7 @@ def _invoke_command_provider(
             extensions=payload.manifest.extensions,
         ),
     )
-    before = RepositorySnapshot.capture(
+    before = _capture_declared_paths(
         root,
         _declared_snapshot_paths(effective_invocation.snapshots),
     )
@@ -1013,7 +1094,7 @@ def invoke_provider_in_child(invocation: ProviderInvocation) -> ProviderResult:
     _validate_json_schema(prepared.input_schema, input_value, kind="input")
     frozen_input = _deep_freeze(input_value)
     frozen_resources = MappingProxyType(prepared.resources)
-    before = RepositorySnapshot.capture(
+    before = _capture_declared_paths(
         root,
         _declared_snapshot_paths(effective_invocation.snapshots),
     )
@@ -1078,7 +1159,7 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
             extensions=payload.manifest.extensions,
         ),
     )
-    before = RepositorySnapshot.capture(
+    before = _capture_declared_paths(
         root,
         _declared_snapshot_paths(effective_invocation.snapshots),
     )

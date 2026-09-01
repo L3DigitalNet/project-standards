@@ -11,11 +11,13 @@ from typing import cast
 import pytest
 
 import project_standards.control_plane.providers as provider_runtime
+import project_standards.control_plane.snapshot as snapshot_module
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.providers import (
     ProviderInvocation,
     invoke_provider,
+    provider_snapshot_chain,
     resolve_referenced_inputs,
 )
 from project_standards.control_plane.schemas import control_plane_schema_documents
@@ -1280,3 +1282,94 @@ def test_provider_integrity_check_does_not_scan_undeclared_repository_paths(
     result = invoke_provider(_invocation(repo, payload))
 
     assert result.content == b"1.2:1.2:declared-data"
+
+
+def _count_captures(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """Count every snapshot capture the guard performs during one test."""
+    captured = [0]
+    original = snapshot_module.RepositorySnapshot.capture
+
+    def counting(
+        repo: Path,
+        targets: tuple[SafeRelativePath, ...],
+        *,
+        retain_content: bool = True,
+    ) -> snapshot_module.RepositorySnapshot:
+        captured[0] += 1
+        return original(repo, targets, retain_content=retain_content)
+
+    monkeypatch.setattr(snapshot_module.RepositorySnapshot, "capture", counting)
+    return captured
+
+
+def test_snapshot_chain_halves_captures_and_still_catches_a_provider_write(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    honest = _write_provider_payload(tmp_path / "honest")
+    writer = _write_provider_payload(tmp_path / "writer", behavior="write")
+    monkeypatch.chdir(repo)
+    captured = _count_captures(monkeypatch)
+
+    with provider_snapshot_chain():
+        invoke_provider(_invocation(repo, honest))
+        invoke_provider(_invocation(repo, honest))
+        # Two invocations cost three captures, not four: the first invocation's
+        # AFTER snapshot is the second invocation's BEFORE.
+        assert captured[0] == 3
+
+        with pytest.raises(ControlPlaneError, match="CP-PROVIDER-INTEGRITY"):
+            invoke_provider(_invocation(repo, writer))
+
+
+def test_snapshot_chain_never_survives_its_window(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload")
+    monkeypatch.chdir(repo)
+    captured = _count_captures(monkeypatch)
+
+    with provider_snapshot_chain():
+        invoke_provider(_invocation(repo, payload))
+    # A write between two windows is the caller's, not a provider's: outside the
+    # window the next invocation reads the tree again instead of blaming the
+    # provider for what the control plane itself published.
+    (repo / "README.md").write_bytes(b"published between two passes\n")
+    invoke_provider(_invocation(repo, payload))
+
+    assert captured[0] == 4
+
+
+def test_provider_guard_captures_do_not_retain_declared_bytes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "README.md").write_bytes(b"declared bytes\n")
+    payload = _write_provider_payload(tmp_path / "payload")
+    monkeypatch.chdir(repo)
+    seen: list[snapshot_module.RepositorySnapshot] = []
+    original = snapshot_module.RepositorySnapshot.capture
+
+    def recording(
+        repo_path: Path,
+        targets: tuple[SafeRelativePath, ...],
+        *,
+        retain_content: bool = True,
+    ) -> snapshot_module.RepositorySnapshot:
+        result = original(repo_path, targets, retain_content=retain_content)
+        seen.append(result)
+        return result
+
+    monkeypatch.setattr(snapshot_module.RepositorySnapshot, "capture", recording)
+
+    invoke_provider(_invocation(repo, payload))
+
+    assert seen
+    assert all(entry.content is None for snapshot in seen for entry in snapshot.entries)

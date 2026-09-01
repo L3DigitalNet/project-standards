@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -234,13 +236,103 @@ def _load_schema_property_scopes(
     return tuple(scopes), findings
 
 
+# The source tree a build reads: the family indexes, payload manifests, option
+# schemas and payload resources under `standards/`, plus the catalogs the
+# `catalog_major` argument selects.
+_SOURCE_DIRECTORIES = ("standards", "catalogs")
+# Bounded because a long-lived process (the MCP server) can be asked about
+# several roots; the entries are large and only the most recent few are ever
+# hit again.
+_CACHE_LIMIT = 4
+_repository_cache: dict[
+    tuple[str, int | None, tuple[str, ...] | None, tuple[tuple[str, int, int, int], ...]],
+    PackageRepository,
+] = {}
+
+
+def _source_content_key(root: Path) -> tuple[tuple[str, int, int, int], ...]:
+    """Fingerprint every file a build reads, by path, type, size and mtime.
+
+    This keys a cache over parse results, not an integrity guard, which is why
+    `stat` metadata is enough here while the control plane's snapshot guard
+    (`control_plane/snapshot.py`) insists on reading and hashing bytes: a stale
+    entry here costs one stale in-process answer about the producer's own
+    working tree, whereas a missed change there would let a provider mutate a
+    declared live path undetected. Payload bytes are proven by digest inside the
+    build itself, so this fingerprint only has to notice that the tree moved.
+    """
+    entries: list[tuple[str, int, int, int]] = []
+    for name in _SOURCE_DIRECTORIES:
+        stack = [root / name]
+        while stack:
+            current = stack.pop()
+            try:
+                with os.scandir(current) as scan:
+                    for item in scan:
+                        if item.is_dir(follow_symlinks=False):
+                            stack.append(Path(item.path))
+                            continue
+                        metadata = item.stat(follow_symlinks=False)
+                        entries.append(
+                            (
+                                str(Path(item.path).relative_to(root)),
+                                stat.S_IFMT(metadata.st_mode),
+                                metadata.st_size,
+                                metadata.st_mtime_ns,
+                            )
+                        )
+            except OSError:
+                # A directory that cannot be listed is a fact the build itself
+                # reports as a finding; the key simply records its absence, so a
+                # later repair still produces a different key.
+                entries.append((str(current.relative_to(root)), 0, -1, -1))
+    return tuple(sorted(entries))
+
+
+def clear_package_repository_cache() -> None:
+    """Drop every memoized build; the escape hatch for a test that rewrites a tree in place."""
+    _repository_cache.clear()
+
+
 def build_package_repository(
     root: Path,
     *,
     catalog_major: int | None = None,
     family_allowlist: Iterable[str] | None = None,
 ) -> PackageRepository:
-    """Load declared V2 sources without interpreting V1 manifests or unindexed trees."""
+    """Load declared V2 sources without interpreting V1 manifests or unindexed trees.
+
+    Repeated builds of an unchanged tree in one process are served from a
+    memo keyed on the source fingerprint above: one build reads 212 payload
+    manifests and 416 option schemas and hashes every payload resource
+    (~2.4 s on this repository), and a gate or a test module that asks three
+    times pays that once. The returned `PackageRepository` is immutable and is
+    therefore shared, not copied.
+    """
+    allowlist_key = None if family_allowlist is None else tuple(family_allowlist)
+    if allowlist_key is not None:
+        family_allowlist = allowlist_key
+    key = (str(root), catalog_major, allowlist_key, _source_content_key(root))
+    cached = _repository_cache.get(key)
+    if cached is not None:
+        return cached
+    built = _build_package_repository(
+        root,
+        catalog_major=catalog_major,
+        family_allowlist=family_allowlist,
+    )
+    if len(_repository_cache) >= _CACHE_LIMIT:
+        _repository_cache.pop(next(iter(_repository_cache)))
+    _repository_cache[key] = built
+    return built
+
+
+def _build_package_repository(
+    root: Path,
+    *,
+    catalog_major: int | None = None,
+    family_allowlist: Iterable[str] | None = None,
+) -> PackageRepository:
     discovery = discover_v2_families(root, family_allowlist=family_allowlist)
     findings = list(discovery.findings)
     loaded_families: list[LoadedFamily] = []
