@@ -152,9 +152,9 @@ def test_agent_handoff_1_12__launcher_and_projection__preserve_package_bytes() -
 
 def test_agent_handoff_1_12__mutable_navigation__names_the_new_authority() -> None:
     expected_links = {
-        _FAMILY / "README.md": "versions/1.16/README.md",
-        _FAMILY / "adopt.md": "versions/1.16/adopt.md",
-        _FAMILY / "agent-summary.md": "versions/1.16/agent-summary.md",
+        _FAMILY / "README.md": "versions/1.17/README.md",
+        _FAMILY / "adopt.md": "versions/1.17/adopt.md",
+        _FAMILY / "agent-summary.md": "versions/1.17/agent-summary.md",
     }
     for path, expected_link in expected_links.items():
         content = path.read_text(encoding="utf-8")

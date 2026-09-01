@@ -1197,8 +1197,10 @@ def test_selected_validate_uses_captured_bytes_if_path_changes_after_snapshot(
     def capture_then_swap(
         repo_root: Path,
         targets: tuple[SafeRelativePath, ...],
+        *,
+        retain_content: bool = True,
     ) -> RepositorySnapshot:
-        result = real_capture(repo_root, targets)
+        result = real_capture(repo_root, targets, retain_content=retain_content)
         if any(target.original == "victim.md" for target in targets):
             victim.unlink()
             victim.symlink_to(outside)
