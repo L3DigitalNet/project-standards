@@ -164,7 +164,7 @@ uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v
 project-standards --version || project-standards --version
 ```
 
-The version command must report `project-standards 5.28.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.28.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. The Git tag is the supported install path; GitHub release assets are convenience copies for browsing, not a supported install source, and carry no rebuild or byte-verify guarantee on every release (see the [release runbook](docs/reference/release-runbook.md) for the periodic checks that do cover them). V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
@@ -313,6 +313,8 @@ make go-check
 ```
 
 The fast Python gate is the everyday verification; the serial `--full` battery runs after a train's last content change and at release preparation, where it cross-checks the parallel configuration against the baseline it was proven against. The independent Go gate runs locally and in path-filtered CI when Go-owned files change. The release path uses `build/release-wheel` with `--clear` and replaces only the generated runtime extraction, so no stale wheel can satisfy the candidate-runtime gate. Require `sync-payload-projection --check` before `uv build`: the projection is what puts the catalog and payload bytes inside the distribution, and a wheel built without it serves `validate` but fails `init`/`reconcile` with `CP-INIT-STATE`.
+
+The [release runbook](docs/reference/release-runbook.md) is the durable procedure for cutting a release from this checkout: every gate layer, its commands, its exit evidence, and its rollback.
 
 ## License
 
