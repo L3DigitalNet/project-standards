@@ -6,7 +6,7 @@ package admission
 // The module takes no new dependency for this (`go mod tidy -diff` is a gate), so the
 // history is read by shelling out to `git` with a fixed argument vector rather than by
 // linking a git implementation. Every user-supplied value — the branch, the floor —
-// reaches git after `--` or as a single argv element, never through a shell.
+// reaches git as one argv element after `--end-of-options`, never through a shell.
 
 import (
 	"context"
@@ -60,7 +60,16 @@ func (r Range) spec() string {
 // admitted" for a range that does not exist is the one failure mode a compliance check
 // cannot have.
 func ReadCommits(ctx context.Context, workDir string, rng Range) ([]Commit, error) {
-	cmd := exec.CommandContext(ctx, "git", "log", "--format="+logFormat, "--name-only", rng.spec())
+	// `--end-of-options` is load-bearing, not decoration: the branch and the floor come
+	// from an operator flag or the rendered policy, and without it a value beginning
+	// with `-` would be parsed by git as an option rather than as a revision. With it,
+	// the worst a hostile value can do is name a revision that does not resolve, which
+	// this function already reports as an error.
+	//
+	// #nosec G204 -- the argv is fixed and git is executed directly with no shell; the
+	// only variable element is the revision range, contained by --end-of-options above.
+	cmd := exec.CommandContext(ctx, "git", "log",
+		"--format="+logFormat, "--name-only", "--end-of-options", rng.spec())
 	cmd.Dir = workDir
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
