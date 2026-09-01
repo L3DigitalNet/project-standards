@@ -84,6 +84,9 @@ if [[ "${VERIFY_ASSERT_FAST_START:-0}" == "1" && "$1" == "run" ]]; then
 fi
 if [[ "${VERIFY_ASSERT_FAST_START:-0}" == "1" && "$1" == "combine" ]]; then
     touch "$VERIFY_COVERAGE_COMBINE_FILE"
+fi
+if [[ "$1" == "run" ]]; then
+    exit "${VERIFY_ORDINARY_EXIT:-0}"
 fi""",
     )
     for tool in ("prettier", "markdownlint-cli2"):
@@ -412,6 +415,81 @@ def test_verify_gate__full_mode__preserves_serial_lane_order(tmp_path: Path) -> 
     assert invocations[3].startswith(
         "coverage run --source=project_standards -m pytest -m not performance and not compatibility"
     )
-    assert invocations[4].startswith("pytest -m compatibility -n 4")
+    assert invocations[4].startswith("pytest -m compatibility -n 16")
     assert invocations[5].startswith("pytest -m performance")
     assert invocations[6] == "coverage report --fail-under=0"
+
+
+def test_verify_gate__full_mode__red_ordinary_lane__skips_the_later_lanes(
+    tmp_path: Path,
+) -> None:
+    """--full is fail-fast by default, and a cut lane is reported, not dropped.
+
+    The compatibility lane is the expensive one: on the 2026-09-01 train it ran
+    for roughly 35 minutes after the ordinary lane had already gone red (#236 C6).
+    """
+    repo, log, environment = _gate_fixture(tmp_path, wheel_count=1)
+    environment["VERIFY_ORDINARY_EXIT"] = "13"
+
+    completed = _run_gate(repo, environment, "--full")
+
+    assert completed.returncode == 1
+    invocations = log.read_text(encoding="utf-8").splitlines()
+    assert not any(invocation.startswith("pytest -m compatibility") for invocation in invocations)
+    assert not any(invocation.startswith("pytest -m performance") for invocation in invocations)
+    summary = completed.stdout[completed.stdout.index("════ summary ════") :]
+    assert "ordinary" in summary
+    assert "FAILED (exit 13)" in summary
+    for lane in ("compatibility", "performance", "coverage-report"):
+        assert lane in summary
+        line = next(row for row in summary.splitlines() if row.strip().startswith(lane))
+        assert "skipped (--fail-fast)" in line
+
+
+def test_verify_gate__full_mode__keep_going__runs_every_lane_after_a_red(
+    tmp_path: Path,
+) -> None:
+    """--keep-going preserves the pre-#236 behaviour of running every lane."""
+    repo, log, environment = _gate_fixture(tmp_path, wheel_count=1)
+    environment["VERIFY_ORDINARY_EXIT"] = "13"
+
+    completed = _run_gate(repo, environment, "--full", "--keep-going")
+
+    assert completed.returncode == 1
+    invocations = log.read_text(encoding="utf-8").splitlines()
+    assert any(invocation.startswith("pytest -m compatibility") for invocation in invocations)
+    assert any(invocation.startswith("pytest -m performance") for invocation in invocations)
+    summary = completed.stdout[completed.stdout.index("════ summary ════") :]
+    assert "FAILED (exit 13)" in summary
+    assert "skipped" not in summary
+
+
+def test_verify_gate__fast_mode__fail_fast__cuts_the_serial_tail(tmp_path: Path) -> None:
+    """The fast gate keeps run-every-lane by default; --fail-fast opts in.
+
+    Its three lanes are already running when the first red appears, so the cut
+    can only begin at the serial tail.
+    """
+    repo, log, environment = _gate_fixture(tmp_path, wheel_count=1)
+    environment["VERIFY_ORDINARY_EXIT"] = "13"
+
+    kept_going = _run_gate(repo, environment)
+    fail_fast = _run_gate(repo, environment, "--fail-fast")
+
+    invocations = log.read_text(encoding="utf-8").splitlines()
+    performance_runs = [
+        invocation for invocation in invocations if invocation.startswith("pytest -m performance")
+    ]
+    assert kept_going.returncode == 1
+    assert fail_fast.returncode == 1
+    # Both runs share one log; only the default run reaches the performance lane.
+    assert len(performance_runs) == 1
+    assert "skipped" not in kept_going.stdout[kept_going.stdout.index("════ summary ════") :]
+    fail_fast_summary = fail_fast.stdout[fail_fast.stdout.index("════ summary ════") :]
+    for lane in ("performance", "coverage-combine", "coverage-report"):
+        line = next(row for row in fail_fast_summary.splitlines() if row.strip().startswith(lane))
+        assert "skipped (--fail-fast)" in line
+    # The concurrently started lanes are never cut: they are already running.
+    for lane in ("statics", "ordinary", "compatibility"):
+        line = next(row for row in fail_fast_summary.splitlines() if row.strip().startswith(lane))
+        assert "skipped" not in line
