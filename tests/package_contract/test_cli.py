@@ -14,6 +14,12 @@ from project_standards.cli import main
 from project_standards.package_contract import PackageContractError, PackageFinding
 from project_standards.package_contract import cli as package_cli
 from project_standards.package_contract.cli import run_packages, run_standards
+from project_standards.package_contract.release import (
+    CatalogDiff,
+    ReleaseClassification,
+    ReleaseSnapshot,
+    ToolVersions,
+)
 from project_standards.package_contract.repository import (
     PackageRepository,
 )
@@ -606,10 +612,13 @@ def test_packages_check_release_staged__only_expected_pre_bump_codes__exits_zero
     repository = tmp_path / "repository"
     shutil.copytree(_FIXTURE, repository)
     _create_released_fixture(repository)
-    # 5.3.0 against a 5.2.0 baseline with an unchanged catalog is the mid-train
-    # shape: no package-version advance yet, so classification is forbidden with
-    # PC-RELEASE-LEVEL — the exact red `--staged` exists to reclassify.
-    monkeypatch.setattr(package_cli, "package_version", lambda: "5.3.0")
+    # A tool version still equal to the baseline is the mid-train shape: release
+    # prep has not bumped pyproject yet, so the classifier refuses the transition
+    # with the lag producer of PC-RELEASE-LEVEL — the exact red `--staged` exists
+    # to reclassify. A bumped-but-wrong-level version (5.3.0 here) would reach the
+    # other producer of the same code and must keep failing, which is why this
+    # value is load-bearing rather than arbitrary.
+    monkeypatch.setattr(package_cli, "package_version", lambda: "5.2.0")
     monkeypatch.setattr(package_cli, "validate_release_consistency", _staged_consistency_stub)
 
     assert (
@@ -774,3 +783,79 @@ def test_packages_check_release__without_staged__output_is_unchanged(
         "PC-RELEASE-PROJECTION",
         "PC-RELEASE-PROJECT-VERSION",
     ]
+
+
+def test_packages_check_release_staged__breaking_default_promotion__still_exits_one(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`--staged` must not excuse the other producer of PC-RELEASE-LEVEL.
+
+    The classifier reports a breaking default promotion under the same code as the
+    pre-bump lag, so a code-keyed expectation would silently pass a genuinely
+    forbidden transition. The stubbed diff leaves `pre_bump_lag` empty, which is
+    exactly what `classify_catalog_diff` does for that producer.
+    """
+    repository = tmp_path / "repository"
+    shutil.copytree(_FIXTURE, repository)
+    _create_released_fixture(repository)
+    monkeypatch.setattr(package_cli, "package_version", lambda: "5.2.0")
+    monkeypatch.setattr(package_cli, "validate_release_consistency", _staged_consistency_stub)
+    promotion = PackageFinding(
+        code="PC-RELEASE-LEVEL",
+        severity="error",
+        standard_id="demo",
+        version="2.0",
+        path="catalogs",
+        identity="catalog-entry",
+        message="breaking default promotion requires an owner-designated tool and catalog major",
+        hint="preserve released payloads and follow ADR 0024 release boundaries",
+    )
+
+    def breaking_promotion(
+        _previous: ReleaseSnapshot,
+        _current: ReleaseSnapshot,
+        _tool_versions: ToolVersions,
+    ) -> CatalogDiff:
+        return CatalogDiff(ReleaseClassification.FORBIDDEN, (promotion,))
+
+    monkeypatch.setattr(package_cli, "classify_catalog_diff", breaking_promotion)
+
+    assert (
+        run_packages(
+            [
+                "check-release",
+                "--root",
+                str(repository),
+                "--baseline",
+                "v5.2.0",
+                "--staged",
+                "--json",
+            ]
+        )
+        == 1
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert payload["expected_pre_bump"] == [
+        "PC-RELEASE-PROJECT-VERSION",
+        "PC-RELEASE-PROJECTION",
+    ]
+
+    assert (
+        run_packages(
+            [
+                "check-release",
+                "--root",
+                str(repository),
+                "--baseline",
+                "v5.2.0",
+                "--staged",
+            ]
+        )
+        == 1
+    )
+    captured = capsys.readouterr()
+    assert "ERROR PC-RELEASE-LEVEL demo@2.0 catalog-entry:" in captured.err
+    assert "expected pre-bump finding(s)" not in captured.out

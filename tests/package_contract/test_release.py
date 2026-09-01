@@ -596,3 +596,62 @@ policy = "managed"
 
     with pytest.raises(PackageContractError, match="conflicting digests"):
         load_git_release_snapshot(repository, "v5.0.0", 5)
+
+
+def test_pre_bump_lag__unbumped_tool_version__is_named_as_lag() -> None:
+    """The one boundary refusal a correct mid-train tree reaches is reported as lag."""
+    snapshot = _snapshot(5, _entry("1.2", CatalogRole.DEFAULT))
+
+    result = _classify(snapshot, snapshot, current_tool="5.2.0")
+
+    assert result.classification is ReleaseClassification.FORBIDDEN
+    assert [finding.code for finding in result.pre_bump_lag] == ["PC-RELEASE-LEVEL"]
+    assert result.pre_bump_lag[0] in result.findings
+
+
+def test_pre_bump_lag__breaking_default_promotion__is_not_lag() -> None:
+    """A forbidden breaking promotion shares PC-RELEASE-LEVEL but is never lag.
+
+    This is what stops `check-release --staged` from excusing it: the CLI keys on
+    the findings named here, never on the code string the two producers share.
+    """
+    previous = _snapshot(
+        5,
+        _entry("1.2", CatalogRole.DEFAULT),
+        _entry("2.0", CatalogRole.CANDIDATE, _DIGEST_B),
+    )
+    current = _snapshot(
+        5,
+        _entry("1.2", CatalogRole.RETAINED),
+        _entry("2.0", CatalogRole.DEFAULT, _DIGEST_B),
+    )
+
+    result = _classify(previous, current)
+
+    assert result.classification is ReleaseClassification.FORBIDDEN
+    assert {finding.code for finding in result.findings} == {"PC-RELEASE-LEVEL"}
+    assert result.pre_bump_lag == ()
+
+
+@pytest.mark.parametrize(
+    ("previous_tool", "current_tool"),
+    [
+        pytest.param("5.2.0", "6.0.0", id="proposed-major-mismatch"),
+        pytest.param("5.2.0", "5.2.1", id="wrong-bump-level"),
+    ],
+)
+def test_pre_bump_lag__other_boundary_refusals__are_not_lag(
+    previous_tool: str,
+    current_tool: str,
+) -> None:
+    previous = _snapshot(5, _entry("1.2", CatalogRole.DEFAULT))
+    current = _snapshot(
+        5,
+        _entry("1.2", CatalogRole.DEFAULT),
+        _entry("1.3", CatalogRole.RETAINED, _DIGEST_B),
+    )
+
+    result = _classify(previous, current, previous_tool, current_tool)
+
+    assert result.classification is ReleaseClassification.FORBIDDEN
+    assert result.pre_bump_lag == ()
