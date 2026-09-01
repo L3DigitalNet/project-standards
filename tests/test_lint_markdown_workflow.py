@@ -38,11 +38,18 @@ def test_lint_workflow_keeps_direct_and_reusable_triggers() -> None:
     assert "workflow_call" in triggers
 
 
-def test_lint_workflow_uses_pinned_action_v24() -> None:
+def test_lint_workflow_uses_pinned_action_sha() -> None:
+    """Pins markdown-tooling 1.16's reviewed `v24.2.0` SHA (#211).
+
+    The installed workflow only carries it once the release-prep reconcile
+    re-renders this file from the selected payload, so between the payload cut
+    and that reconcile this row is expected to fail — advancing the installed
+    copy ahead of the package is CP-MODIFIED-MANAGED drift, not a repair.
+    """
     steps = _load()["jobs"]["lint"]["steps"]
     uses = {str(step.get("uses", "")) for step in steps}
 
-    assert "DavidAnson/markdownlint-cli2-action@6bf21b07787794f89a243495939cd651942aeabe" in uses
+    assert "DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff" in uses
     assert "DavidAnson/markdownlint-cli2-action@v24" not in uses
 
 

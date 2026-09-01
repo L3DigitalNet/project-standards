@@ -389,6 +389,12 @@ role = "retained"
 id = "markdown-tooling"
 version = "1.15"
 digest = "sha256:aa3e3ae249cf2720355b1b33c987af11a546be4bf456c9e977903e5f9fe00f03"
+role = "retained"
+
+[[packages]]
+id = "markdown-tooling"
+version = "1.16"
+digest = "sha256:78264cc6f3ebcc0f0aafeeb8bbe155ddb41b9c7d1c3ce902086f56893dd5b146"
 role = "default"
 
 [[packages]]
