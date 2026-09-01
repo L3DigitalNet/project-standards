@@ -94,8 +94,8 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` â€
 
 The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration. Package 1.14 includes scoped `ruff.extend_per_file_ignores` and adds the closed `vscode.task_prefix` choice for unprefixed or `"python: "` task labels. Package 1.15 adds `runner_labels` for the managed `Check` workflow's `runs-on` and `ruff.enforce_line_length` to make the declared line length a gate.
 
-- **Standard:** [`standards/python-tooling/versions/1.17/README.md`](standards/python-tooling/versions/1.17/README.md)
-- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.17/adopt.md)
+- **Standard:** [`standards/python-tooling/versions/1.18/README.md`](standards/python-tooling/versions/1.18/README.md)
+- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.18/adopt.md)
 
 ### Markdown Tooling Standard
 
@@ -192,7 +192,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | --- | --- | --- |
 | Markdown Frontmatter | `1.15` | [`standards/markdown-frontmatter/versions/1.15/adopt.md`](standards/markdown-frontmatter/versions/1.15/adopt.md) |
 | ADR | `1.6` | [`standards/adr/versions/1.6/adopt.md`](standards/adr/versions/1.6/adopt.md) |
-| Python Tooling | `1.17` | [`standards/python-tooling/versions/1.17/adopt.md`](standards/python-tooling/versions/1.17/adopt.md) |
+| Python Tooling | `1.18` | [`standards/python-tooling/versions/1.18/adopt.md`](standards/python-tooling/versions/1.18/adopt.md) |
 | Markdown Tooling | `1.16` | [`standards/markdown-tooling/versions/1.16/adopt.md`](standards/markdown-tooling/versions/1.16/adopt.md) |
 | Project Specification | `1.11` | [`standards/project-spec/versions/1.11/adopt.md`](standards/project-spec/versions/1.11/adopt.md) |
 | CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
