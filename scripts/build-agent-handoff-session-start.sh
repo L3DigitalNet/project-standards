@@ -28,7 +28,7 @@ BUILD_SCRIPT_NAME="scripts/build-agent-handoff-session-start.sh"
 # `.agents/hooks/agent-handoff/session-start` fixes the installed depth that
 # sessionstart.repositoryRoot walks up, and the Makefile reaches the file only through
 # this script. Moving it means editing all of them together.
-ARTIFACT_OUTPUT_PATH="standards/agent-handoff/versions/1.14/hooks/session-start/session-start"
+ARTIFACT_OUTPUT_PATH="standards/agent-handoff/versions/1.17/hooks/session-start/session-start"
 ARTIFACT_PACKAGE="./cmd/agent-handoff-session-start"
 
 # The version stamp is pinned to the payload version rather than a VCS describe string; a
@@ -42,7 +42,22 @@ ARTIFACT_PACKAGE="./cmd/agent-handoff-session-start"
 # released copies are verified by the release baseline comparison, not here. Pointing it
 # back at a published version would make `--build` overwrite frozen bytes, which
 # `packages check-release` classifies as a forbidden mutation.
-ARTIFACT_LDFLAGS="-buildid= -X main.version=1.14"
+#
+# Cut-time rule (issue #229): every new payload version re-links the binary with its own
+# version stamp, even when the Go source is unchanged, and both values above move
+# together in the cutting commit. Byte-copying the predecessor's binary instead — as
+# 1.15 and 1.16 did — leaves `--version` answering the version that was last *built*,
+# which defeats the stale-launcher diagnostic it exists for. So the bytes of two
+# consecutive versions may differ by the stamp alone; that is the intended outcome, not
+# an unnecessary rebuild.
+#
+# `-s -w` strips the symbol table and DWARF (issue #228). `.gopclntab` is untouched, so
+# panic traces still carry function names and line numbers; what is lost is `delve` and
+# DWARF-based inspection of the shipped binary, which is recovered by rebuilding from
+# this script without the flags. Published payload bytes stay unstripped — only versions
+# cut from agent-handoff 1.17 onward are stripped, so a size step between neighbouring
+# retained versions is expected and is not drift.
+ARTIFACT_LDFLAGS="-buildid= -s -w -X main.version=1.17"
 
 # shellcheck source=scripts/lib/go-reproducible-build.sh
 source "$REPO_ROOT/scripts/lib/go-reproducible-build.sh"

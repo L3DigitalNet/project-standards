@@ -13,3 +13,4 @@ Generated from frontmatter. Regenerate with `python3 docs/handoff/bugs/_regen_in
 | 007 | 2026-08-09 | remote gate blocked by a redirected uv environment, and .git absence misreports as ledger corruption | rexec, tests, ledger, tooling | fixed |
 | 008 | 2026-08-09 | superseded pre-format-3 checklists remained at the work-item root and were read as live executor state | execute-plan, handoff, docs | fixed |
 | 009 | 2026-08-10 | active ADRs state timestamped observations about code in decision voice, so the observations go stale invisibly | adr, docs, triage | open |
+| 010 | 2026-09-01 | agent-handoff 1.15 and 1.16 shipped the byte-identical 1.14 session-start binary, so --version answered 1.14 | agent-handoff, go, packaging, release | fixed |

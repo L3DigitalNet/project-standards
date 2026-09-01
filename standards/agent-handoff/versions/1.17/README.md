@@ -1,0 +1,156 @@
+# Agent Handoff Standard
+
+Agent Handoff package `1.17` defines repository-local project knowledge, bounded session continuity, and deterministic conformance checks for coding agents. The package supports consumer contracts `1.0` and `1.1` independently from its payload version. An adopting repository is the complete authority boundary: the standard never requires a separate checkout and never creates, reads, or stores consumer state outside that repository.
+
+## Runtime prerequisite
+
+Automatic startup requires no interpreter, runtime, or toolchain. The launcher is a statically linked `linux/amd64` executable delivered as committed payload bytes, so it starts independently of the consumer's Python policy and `PATH` composition. Consumers on another operating system or architecture select manual startup.
+
+The launcher is a shell command line, so the Claude Code registration declares `command` alone and omits `args`. In that schema `args` selects the spawn mode rather than supplying values: present — even as an empty array — it makes the harness resolve `command` as a literal executable, and the launcher then fails with `ENOENT` before the hook runs. Package versions `1.1` through `1.7` carried an inert `args: []` alongside a bare script path; `1.8` paired it with the launcher and disabled startup injection entirely. Upgrade from `1.8` to remove the field.
+
+## Goals and boundaries
+
+Agent Handoff provides:
+
+- a canonical project-knowledge layout under `docs/`;
+- a repo-local `agent-handoff` skill shared by supported agents;
+- optional automatic SessionStart context for Claude Code and Codex;
+- create-only knowledge scaffolds and refreshable standard-owned runtime files;
+- bounded instruction and harness configuration integration;
+- size, shape, drift, credential-reference, and legacy-evidence checks.
+
+It does not own workstation configuration, global skills or hooks, sibling repositories, credentials, fleet rollout, or consumer-authored knowledge after creation.
+
+## Ownership model
+
+| Surface | Owner | Lifecycle |
+| --- | --- | --- |
+| `docs/STATUS.md`, `docs/TODO.md`, and `docs/handoff/**` | Consumer | Created only when missing; never overwritten by adoption, repair, drift checking, or upgrade |
+| `.agents/skills/agent-handoff/**` and `.claude/skills/agent-handoff/**` | Standard | Installed and hash-tracked as byte-identical copies |
+| `.agents/hooks/agent-handoff/session-start` | Standard | Compiled launcher stored in the payload as executable bytes; installed only for automatic mode at the declared managed artifact mode `0755`; hash-tracked |
+| Managed blocks in selected `AGENTS.md` or `CLAUDE.md` surfaces | Standard inside markers; consumer outside | Structurally merged; outside bytes are preserved |
+| Agent Handoff entry in `.claude/settings.json` | Standard entry; consumer surrounding object | Semantically merged |
+| Agent Handoff entry in `.codex/config.toml` | Standard array-table entry; consumer surrounding tables and entries | Semantically merged by matcher identity |
+| `.standards/packages/agent-handoff/policy.toml` | Standard | Non-discovered package-local provider policy; centrally hash-tracked |
+| `.standards/lock.toml` entries | Control plane | Sole generic inventory for applied Agent Handoff artifacts and semantic units |
+
+Ambiguous markers, duplicate registrations, symlinked paths, invalid configuration, and unverified managed drift fail closed before mutation.
+
+## Independent repository tooling boundary
+
+The payload's managed-artifact declarations are the ownership authority. They install and lock these `.agents/` classes:
+
+- `.agents/hooks/agent-handoff/session-start` when automatic startup is selected;
+- `.agents/skills/agent-handoff/**` and `.claude/skills/agent-handoff/**` for the skill and its interface metadata.
+
+Reconciliation, upgrade, verification, and drift checking own the exact installed bytes. Independently configured Python or Markdown tools do not own those generated artifacts. Formatting, linting, or type-checking them can create managed drift without improving consumer source, so exclude them from any tool whose selected files would otherwise include them.
+
+The exclusion belongs to each external tool's file-selection configuration, not to Agent Handoff or its provider. Project Standards Python Tooling already excludes `.agents` by default. A consumer that replaces that default or configures Ruff, BasedPyright, Prettier, or markdownlint-cli2 independently must retain the narrower Agent Handoff exclusions shown in the [adoption guide](adopt.md#exclude-locked-artifacts-from-independent-tools).
+
+## Canonical knowledge layout
+
+```text
+docs/
+├── STATUS.md
+├── TODO.md
+└── handoff/
+    ├── state.md
+    ├── deployed.md
+    ├── architecture.md
+    ├── credentials.md
+    ├── conventions.md
+    ├── specs-plans.md
+    ├── sessions/
+    └── bugs/
+```
+
+| Path | Purpose |
+| --- | --- |
+| `docs/STATUS.md` | Small current project snapshot, not a changelog |
+| `docs/TODO.md` | User-owned and agent-owned work queues |
+| `docs/handoff/state.md` | Next-session focus and active incidents only |
+| `docs/handoff/deployed.md` | Current deployment truth |
+| `docs/handoff/architecture.md` | Stable structure, boundaries, and standing structural backlog |
+| `docs/handoff/credentials.md` | Environment-variable names, secret names, OpenBao paths, and retrieval instructions—never values |
+| `docs/handoff/conventions.md` | Stable project-specific patterns |
+| `docs/handoff/specs-plans.md` | Pointers to active specifications and plans |
+| `docs/handoff/sessions/` | Append-only compact session history |
+| `docs/handoff/bugs/` | Stable numbered bug, gotcha, cause, fix, and lesson records |
+
+Facts move out of eager state when they are completed, no longer active, or have a durable owner. History belongs in session or bug records, not in `state.md` or the current status snapshot.
+
+## Startup profiles
+
+| Profile | Configuration | Startup behavior |
+| --- | --- | --- |
+| Manual | `startup: manual`, no harnesses | The agent follows the repo-local skill, reads `state.md`, and inspects Git state |
+| Claude Code | `startup: automatic`, `claude-code` | Adaptive launcher invokes the shared hook, which emits JSON `additionalContext` |
+| Codex | `startup: automatic`, `codex` | Adaptive launcher invokes the shared hook, which emits plain stdout context |
+| Dual | Both harnesses | Both registrations invoke the same shared repo-local hook |
+
+The control plane owns one bounded unit per selected harness. Unselected hooks, instructions, and harness entries are absent; changing profiles removes only previously locked units and preserves unrelated surrounding configuration.
+
+Automatic profiles require the selected harness's normal project trust and hook review. Agent Handoff documents that prerequisite but never changes user or global trust state. The launcher is a compiled executable, so reviewing it means auditing the committed bytes against the reproducible build this package publishes rather than reading a script; `session-start --version` reports the package version that produced an installed launcher.
+
+The hook derives repository authority from its installed path. Event `cwd` and environment variables are metadata, not filesystem authority. It reads only canonical `docs/handoff/state.md`, uses fixed Git argument arrays with timeouts, and degrades to explicit unavailable markers when Git or documents cannot be read.
+
+## Context and document budgets
+
+- `docs/handoff/state.md`: hard cap 2,048 UTF-8 bytes; target 1,740 bytes.
+- Total Claude or Codex SessionStart output: hard cap 4,096 UTF-8 bytes.
+- Git context: five commits and ten working-tree lines.
+- `CLAUDE.md`: target 1,740 bytes; advisory cap 2,048 bytes.
+- `AGENTS.md`: target 3,480 bytes; advisory cap 4,096 bytes.
+
+Instruction-file budgets measure consumer-controlled bytes. Validation excludes only complete BEGIN/END and Prettier envelopes whose target, scope, and semantic digest match a selected package's central-lock Markdown unit. Unlocked, malformed, nested, duplicated, wrong-scope, or drifted lookalikes remain part of the measured size.
+
+Row and headline caps apply to table rows only. Text outside a table is not measured as a row; the paragraph and bullet rules cover it where they apply. Numbered-rule entry sizes exclude fenced examples, and each oversized section is reported by name with its measured size.
+
+Repository-derived content is wrapped as untrusted reference data. Literal `session_context` tags are neutralized before wrapping, and the inner content is clamped before the closing boundary is added.
+
+## Skill and closeout contract
+
+Reconciliation installs the skill twice, at `.agents/skills/agent-handoff/SKILL.md` and `.claude/skills/agent-handoff/SKILL.md`. Claude Code discovers project skills only under `.claude/skills/` and Codex only under `.agents/skills/`, so a single tree would leave the skill invisible to one harness. Both copies come from the same packaged source and carry the same declared digest, so they are byte-identical by construction and drift-check reports either one that is edited. They are copies rather than symlinks because a symlink checks out as a plain text file holding the link path on a Windows clone without Developer Mode. Agents use the skill at startup, when routing a durable fact, whenever handoff files are edited, and at session closeout.
+
+Closeout updates only facts changed during the session:
+
+0. survey the session with `delta --since <session-start-oid>` before editing;
+1. move current outcomes to `docs/STATUS.md`;
+2. preserve the user task section and update the agent queue in `docs/TODO.md`;
+3. keep only active work and incidents in `docs/handoff/state.md`;
+4. route stable facts to the matching lazy document;
+5. append a compact session record or durable bug lesson when useful;
+6. validate with `validate --since <session-start-oid>` and review the diff.
+
+The skill states the per-document numeric caps rather than leaving an agent to discover them by failing validation, and it marks them as physical characters and bytes so editor wrapping is never mistaken for conformance. The caps it lists are the ones this payload's `resources/policy.toml` installs, and a validation finding's reported `max N` remains authoritative over any prose restatement.
+
+Closeout validation is scoped by session boundary. `--since <ref>` suppresses warnings on lines the session did not add, so a warning introduced during the session is visible instead of buried under the pre-existing findings that append-only documents accumulate; it never suppresses errors, and the bare form still audits the whole repository. `delta --since <ref>` reports the session's commits, touched handoff documents, and issue references, which is what closeout routes instead of reconstructing the session with ad-hoc Git and text searches.
+
+Closeout is delegable. Where a harness offers a dedicated closeout subagent, the skill makes delegation the default and requires the brief to carry the session-start OID, the delta output, the facts to record, and the caps, because a subagent holds no conversation context. Review of the resulting diff stays with the delegating agent.
+
+## Credentials and repository safety
+
+Credential values are forbidden. References such as `OPENBAO_ADDR`, `bao://kv/project/path`, and `secret/data/project` are allowed. Private-key headers, high-confidence access-key forms, and literal credential assignments fail validation without echoing matched values.
+
+All planned consumer paths are validated before writes. Reconciliation and typed authoring use atomic publication, recheck content hashes immediately before replacement, preserve create-only knowledge even when managed writes are enabled, and publish the central lock last.
+
+## Conformance and maintenance
+
+Use the released package CLI:
+
+```bash
+project-standards agent-handoff validate --repo .
+project-standards agent-handoff validate --repo . --since <ref>
+project-standards agent-handoff delta --repo . --since <ref>
+project-standards agent-handoff drift-check --repo .
+project-standards agent-handoff size-report --repo .
+project-standards agent-handoff shape-check --repo .
+```
+
+A conforming repository has the required knowledge layout, closed package configuration, selected-profile bounded integrations, current standard-owned artifacts, a valid central lock, reference-only credentials, and no fatal policy findings.
+
+See [`adopt.md`](adopt.md) for installation and maintenance. Use [`resources/legacy-migration.md`](resources/legacy-migration.md) for agent-guided migration from older layouts.
+
+### What 1.17 changed
+
+1.17 re-seals the `session-start` launcher. The hook now runs its Git reads with an explicit minimal environment and with `-c core.fsmonitor=` and `--no-optional-locks` on every invocation, so a repository-local or ancestor `core.fsmonitor` setting can no longer execute an arbitrary hook while the session context is being assembled, and the read cannot take an optional lock a concurrent Git write is holding (#235). The launcher reports `agent-handoff session-start 1.17` from `--version`, so the stale-launcher diagnostic names the payload version that shipped the bytes (#229), and it is linked with debug symbols stripped (#228). Injected session context is unchanged byte for byte. No option, policy value, template, provider, contribution, or artifact target changes.
