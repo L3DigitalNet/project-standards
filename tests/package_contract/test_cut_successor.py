@@ -11,7 +11,6 @@ read by the package-contract validators, and `.git` alone doubles the cost.
 
 from __future__ import annotations
 
-import importlib.util
 import shutil
 import tomllib
 from pathlib import Path
@@ -21,6 +20,7 @@ import pytest
 from project_standards.cli import main
 from project_standards.package_contract.cut_successor import apply_cut, plan_cut
 from project_standards.package_contract.diagnostics import PackageContractError
+from tests.module_loading import load_module_from_path
 
 _ROOT = Path(__file__).resolve().parents[2]
 # python-coding is the smallest family in the repository (four payload files) and
@@ -54,10 +54,7 @@ def _next_version(repository: Path, standard_id: str) -> tuple[str, str]:
 
 def _run_module(path: Path) -> None:
     """Import one generated test module and run every test function it defines."""
-    spec = importlib.util.spec_from_file_location(path.stem, path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = load_module_from_path(path.stem, path)
     cases = [name for name in dir(module) if name.startswith("test_")]
     assert cases, f"scaffolded module defines no test: {path}"
     for name in cases:

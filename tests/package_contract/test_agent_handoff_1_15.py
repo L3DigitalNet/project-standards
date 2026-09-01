@@ -139,7 +139,7 @@ def test_agent_handoff_1_15__identity__is_complete_and_current() -> None:
     }
     assert roles["1.14"] == "retained"
     assert roles["1.15"] == "retained"
-    assert "| [`agent-handoff`](agent-handoff/README.md) | active | 1.16 | default |" in (
+    assert "| [`agent-handoff`](agent-handoff/README.md) | active | 1.17 | default |" in (
         _ROOT / "standards/catalog.md"
     ).read_text(encoding="utf-8")
 

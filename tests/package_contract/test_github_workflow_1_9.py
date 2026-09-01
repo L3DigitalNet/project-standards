@@ -556,6 +556,14 @@ def _run_binary(args: Sequence[str], cwd: Path) -> subprocess.CompletedProcess[s
     )
 
 
+# The corpus this assertion measures is frozen at the last commit before the
+# `Workflow-Admission` classes started landing on `testing` (the v5.28.0 D4 adoption
+# commit). `HEAD` would drift: every legitimate `T0` or `handoff` commit admitted after
+# the floor would flip the zero counts below, turning a fixed-epoch measurement into a
+# prohibition on classes CLAUDE.md declares valid.
+_CORPUS_TIP = "4866a9fa"
+
+
 @_requires_binary
 def test_github_workflow_1_9__classifier__flags_this_repository_own_history() -> None:
     """The non-vacuity proof #203 requires, run over the corpus that motivated it.
@@ -571,7 +579,16 @@ def test_github_workflow_1_9__classifier__flags_this_repository_own_history() ->
     network reachability.
     """
     result = _run_binary(
-        ["admission", "--branch", "HEAD", "--since", "9c47907f", "--offline", "--output", "json"],
+        [
+            "admission",
+            "--branch",
+            _CORPUS_TIP,
+            "--since",
+            "9c47907f",
+            "--offline",
+            "--output",
+            "json",
+        ],
         cwd=_ROOT,
     )
     if result.returncode == 2 and "reading commits" in result.stdout + result.stderr:

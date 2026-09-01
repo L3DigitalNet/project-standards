@@ -116,6 +116,7 @@ _POST_ANCHOR_TOOLING_EXECUTABLES = frozenset(
         "scripts/build-command-provider-fixture.sh",
         "scripts/build-gh-workflow.sh",
         "scripts/githooks/main-branch-guard",
+        "scripts/go-verify-stamp.sh",
         "scripts/install-githooks.sh",
         "scripts/wheel-runtime-stamp.sh",
     }
