@@ -1,0 +1,16 @@
+# Rendered by the project-standards control plane from consumer configuration.
+# Reconcile owns this file: change `.standards/config.toml` instead of editing here.
+#
+# The packaged `gh-workflow` tool parses this with a bounded reader that accepts
+# only comments and double-quoted `key = "value"` assignments, so every future
+# value must keep that shape.
+organization = "@organization@"
+package_version = "@package_version@"
+
+# Admission model (ADR 0031). `integration_branch` empty means the two-branch
+# topology; `admission_floor` is the commit-ish where enforcement begins, so an
+# adopter is not permanently red for history it cannot rewrite.
+integration_branch = "@integration_branch@"
+release_subject_prefix = "@release_subject_prefix@"
+admission_floor = "@admission_floor@"
+handoff_admission = "@handoff_admission@"

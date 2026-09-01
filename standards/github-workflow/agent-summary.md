@@ -1,6 +1,6 @@
 # GitHub Workflow family: Agent Summary
 
-Current authority is the Catalog 5 consumer payload [`github-workflow@1.8`](versions/1.8/agent-summary.md). Its [versioned standard](versions/1.8/README.md) and installed repo-local skill win over this mutable navigation summary.
+Current authority is the Catalog 5 consumer payload [`github-workflow@1.9`](versions/1.9/agent-summary.md). Its [versioned standard](versions/1.9/README.md) and installed repo-local skill win over this mutable navigation summary.
 
 - Load the packaged skill before creating or mutating GitHub work state, and follow its procedures rather than improvising raw `gh` calls.
 - An issue is the authorized work contract, its organization-level fields carry the typed operational metadata, and a pull request is the execution evidence.
