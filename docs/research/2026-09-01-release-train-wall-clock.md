@@ -34,7 +34,7 @@ Research for issue #207. Recommendations only: nothing in `scripts/verify.sh`, `
 | --- | --- | --- | --- | --- |
 | statics | 0 | 77 | 1% | 1 process, 6 tools serially |
 | ordinary | 1 | 3031 | 48% | **1 process** (`lane_ordinary_serial`, `scripts/verify.sh:312`) |
-| compatibility | 0 | 3178 | 50% | **4** (`FULL_COMPAT_WORKERS`, `:70`, `:393`) |
+| compatibility | 0 | 3178 | 50% | **4** (`FULL_COMPAT_WORKERS`, `:70`, `:393`; set it with the env var `VERIFY_FULL_COMPAT_WORKERS`, and through rexec as `rexec --env VERIFY_FULL_COMPAT_WORKERS=16 -- scripts/verify.sh --full`, because rexec forwards nothing from the local environment) |
 | performance | 0 | 66 | 1% | 1, deliberately alone (timing assertions) |
 | coverage-report | 0 | 2 | ~0% | 1 |
 | **total** |  | **6354** | **106 min** |  |
@@ -45,7 +45,7 @@ Battery 2 over the same tree plus a two-line test fix: 81 / 3035 / 3190 / 66 / 3
 
 `nproc` = **40**; `MemTotal` = 64 GiB; `/mnt/pytesttmp` = 16 GiB; load average 3.08 at probe time.
 
-**The battery never uses more than 4 of 40 cores.** For 3031 s it uses one. Capacity is not the constraint; the mode is. Lever 5 ("would more workers help?") is answered by that line alone, and the `rexec` workspace lock is not a battery constraint either — it serializes invocations, and only one battery is ever in flight.
+**The battery never uses more than 4 of 40 cores.** For 3031 s it uses one. Capacity is not the constraint; the mode is. Lever 5 ("would more workers help?") is answered by that line alone, and the `rexec` workspace lock does not constrain a battery that is already running — it serializes invocations, and only one battery is ever in flight. It does constrain the _start_: a concurrently running leg holding the workspace lock delays the launch (observed 2026-09-01, about 25 minutes), so check `rexec status` before launching one.
 
 ### 1c. Cost-driver attribution
 
@@ -60,14 +60,14 @@ Battery 2 over the same tree plus a two-line test fix: 81 / 3035 / 3190 / 66 / 3
 
 | Step | Duration |
 | --- | --- |
-| checkout → coverage erase (11 steps, incl. basedpyright 26 s) | 51 s |
+| checkout → coverage erase (15 steps, incl. basedpyright 26 s) | 51 s |
 | Ordinary tests with coverage (`-n 4`) | 28 m 28 s |
 | **Compatibility matrix (`-n 4`)** | **1 h 35 m 16 s (75%)** |
 | Performance gates | 1 m 46 s |
 | Coverage report + pip-audit | 6 s |
 | **job total** | **2 h 06 m 27 s** |
 
-**Correction to the issue comment.** The 32 m 37 s figure came from a run that _failed_ at the ordinary step and therefore never reached the compatibility matrix; `1957.85s` is that pytest step's own duration. A green `check` is ~4× that. The last three green runs measured 2 h 06, 1 h 58, 2 h 08. The PR critical path is therefore ~2 hours, and the compatibility matrix — not the ordinary suite — dominates it.
+**Correction to the issue comment.** The 32 m 37 s figure came from a run that _failed_ at the ordinary step and therefore never reached the compatibility matrix; `1957.85s` is that pytest step's own duration. A green `check` is ~4× that. The last three green runs measured 2 h 06, 2 h 05, 1 h 58 (runs 33467065452, 33466902333, 33459338189). The PR critical path is therefore ~2 hours, and the compatibility matrix — not the ordinary suite — dominates it.
 
 ## 2. Lever 1 verdict: has the serial cross-check ever earned its cost?
 

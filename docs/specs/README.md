@@ -24,6 +24,17 @@ This directory is the durable home for Project Specification Standard documents 
 | [SPEC-GSF3 — Durable Document References Optional Tooling](2026-07-31-durable-document-references-optional-tooling-spec.md) | draft rev 0.2; currency-audited 2026-08-27 | Optional meta-repository tooling for canonical spec/ADR references, validation, and guarded reconciliation |
 | [Usage Documentation Site](usage-documentation-site/README.md) | draft seven-spec set plus index; formal review pending | Dedicated post-v5 package program |
 
+## Active design and decision inputs
+
+These are informal design records, not Project Specification documents: they carry `doc_type: decision`, are outside the `spec validate` scope, and stay in this directory rather than `archive/` because `archive/` holds superseded and historical records only. A document moves there once its outcome is settled.
+
+| Date | Document | Status | What it covers |
+| --- | --- | --- | --- |
+| 2026-08-01 | [Project Specification conformance linting design](2026-08-01-project-spec-conformance-plan-input.md) | active | Plan input for conformance linting over the maintained specification corpus |
+| 2026-08-02 | [Usage Documentation Site V2 design](2026-08-02-usage-documentation-site-v2-design.md) | active | Design input behind the seven-spec Usage Documentation Site set above |
+| 2026-08-06 | [github-workflow standard package design](2026-08-06-github-workflow-package-design.md) | active | Design input consumed by SPEC-GHW1; supersedes the preliminary administration design in `archive/` |
+| 2026-08-16 | [project-toolbox standard package design](2026-08-16-project-toolbox-package-design.md) | active | Design record for the `project-toolbox` package family |
+
 ## Archive
 
 | Specification | Status | Reason retained |
