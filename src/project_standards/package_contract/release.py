@@ -108,10 +108,21 @@ class ReleaseSnapshot:
 
 @dataclass(frozen=True, slots=True)
 class CatalogDiff:
-    """Pure release-policy result with stable diagnostics."""
+    """Pure release-policy result with stable diagnostics.
+
+    `pre_bump_lag` is the subset of `findings` produced solely because the
+    proposed tool version has not been bumped yet — the state every working tree
+    is in between a landed payload cut and release prep. It is a separate tuple
+    rather than a distinguishing field on the finding itself so that `findings`,
+    and therefore every rendered report, stays byte-identical: callers that do
+    not know about staging see exactly what they saw before. `PC-RELEASE-LEVEL`
+    has two producers and only one of them is lag, so a consumer must never
+    infer this from the code string or the message text.
+    """
 
     classification: ReleaseClassification
     findings: tuple[PackageFinding, ...]
+    pre_bump_lag: tuple[PackageFinding, ...] = ()
 
 
 def _finding(
@@ -141,6 +152,7 @@ def classify_catalog_diff(
 ) -> CatalogDiff:
     """Classify one proposed repository/catalog transition under ADR 0024."""
     findings: list[PackageFinding] = []
+    pre_bump_lag: list[PackageFinding] = []
     forbidden = False
     package_advance = _has_package_version_advance(previous.catalog, current.catalog)
     required = ReleaseClassification.MINOR if package_advance else ReleaseClassification.PATCH
@@ -254,13 +266,20 @@ def classify_catalog_diff(
             required,
         )
         if release_error is not None:
-            findings.append(_finding("PC-RELEASE-LEVEL", release_error))
+            boundary_finding = _finding("PC-RELEASE-LEVEL", release_error.message)
+            findings.append(boundary_finding)
+            if release_error.pre_bump_lag:
+                pre_bump_lag.append(boundary_finding)
             forbidden = True
         elif _is_owner_major_designation(previous, current, previous_tool, current_tool):
             required = ReleaseClassification.MAJOR
 
     classification = ReleaseClassification.FORBIDDEN if forbidden else required
-    return CatalogDiff(classification, tuple(sort_findings(findings)))
+    return CatalogDiff(
+        classification,
+        tuple(sort_findings(findings)),
+        tuple(pre_bump_lag),
+    )
 
 
 def _has_package_version_advance(previous: CatalogSource, current: CatalogSource) -> bool:
@@ -284,6 +303,14 @@ def _has_package_version_advance(previous: CatalogSource, current: CatalogSource
     )
 
 
+@dataclass(frozen=True, slots=True)
+class _BoundaryError:
+    """One ADR 0024 release-boundary refusal, with its message and its cause class."""
+
+    message: str
+    pre_bump_lag: bool = False
+
+
 def _is_owner_major_designation(
     previous: ReleaseSnapshot,
     current: ReleaseSnapshot,
@@ -302,23 +329,33 @@ def _release_boundary_error(
     previous_tool: _ToolRelease,
     current_tool: _ToolRelease,
     required: ReleaseClassification,
-) -> str | None:
+) -> _BoundaryError | None:
     if previous.catalog.catalog_major != previous_tool.major:
-        return "released tool major does not match its catalog major"
+        return _BoundaryError("released tool major does not match its catalog major")
     if current.catalog.catalog_major != current_tool.major:
-        return "proposed tool major does not match its catalog major"
+        return _BoundaryError("proposed tool major does not match its catalog major")
+    # The only boundary error a correct mid-train tree can reach: the payload cut
+    # has landed but release prep has not bumped pyproject, so the proposed tool
+    # version still equals (or trails) the baseline. Every other branch here is a
+    # genuine misconfiguration — a wrong bump level or a catalog/tool major skew —
+    # and must keep failing even under `check-release --staged`.
     if current_tool <= previous_tool:
-        return "proposed tool release must advance beyond the released baseline"
+        return _BoundaryError(
+            "proposed tool release must advance beyond the released baseline",
+            pre_bump_lag=True,
+        )
     if _is_owner_major_designation(previous, current, previous_tool, current_tool):
         return None
     if required is ReleaseClassification.MINOR and (
         current_tool.major != previous_tool.major or current_tool.minor <= previous_tool.minor
     ):
-        return "a package-version advance requires exactly a tool minor release"
+        return _BoundaryError("a package-version advance requires exactly a tool minor release")
     if required is ReleaseClassification.PATCH and (
         current_tool.major != previous_tool.major or current_tool.minor != previous_tool.minor
     ):
-        return "a release without a package-version advance requires exactly a tool patch release"
+        return _BoundaryError(
+            "a release without a package-version advance requires exactly a tool patch release"
+        )
     return None
 
 
