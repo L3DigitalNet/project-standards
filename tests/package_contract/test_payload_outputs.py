@@ -7,6 +7,7 @@ from typing import cast
 import pytest
 from pydantic import ValidationError
 
+from project_standards.package_contract.diagnostics import validation_summary
 from project_standards.package_contract.payload import (
     AdapterKind,
     ArtifactPolicy,
@@ -376,3 +377,36 @@ def test_payload_rejects_ambiguous_duplicate_required_resource_roles() -> None:
 
     with pytest.raises(ValidationError, match="exactly one"):
         PayloadManifest.model_validate(data)
+
+
+def _artifact(mode: str) -> dict[str, object]:
+    return {
+        "id": "python-version",
+        "target": ".python-version",
+        "source": "artifacts/python-version",
+        "digest": f"sha256:{'a' * 64}",
+        "policy": "create-only",
+        "mode": mode,
+    }
+
+
+@pytest.mark.parametrize("mode", ["0755", "0644", "0700"])
+def test_whole_artifact_mode_accepts_modes_without_group_or_other_write(mode: str) -> None:
+    assert WholeArtifactDeclaration.model_validate(_artifact(mode)).mode == mode
+
+
+@pytest.mark.parametrize("mode", ["0777", "0666", "0775"])
+def test_whole_artifact_mode_refuses_group_or_other_write(mode: str) -> None:
+    # `executor.py` applies a declared mode verbatim through `fchmod`, so admitting
+    # one of these would ship a managed file every local account can rewrite
+    # (issue #230, finding 2).
+    with pytest.raises(ValidationError) as raised:
+        WholeArtifactDeclaration.model_validate(_artifact(mode))
+
+    summary = validation_summary(raised.value)
+
+    assert summary.startswith("mode: ")
+    assert "^0[0-7][0145][0145]$" in summary
+    # The diagnostic path never echoes a payload's own bytes back to the operator,
+    # and the refused mode is payload-controlled input like any other field.
+    assert mode not in summary

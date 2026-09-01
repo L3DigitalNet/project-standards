@@ -594,3 +594,80 @@ def test_run_provider_subprocess__timeout__terminates_descendant_group(tmp_path:
     assert raised.value.code == "provider-timeout"
     assert sentinel.is_file(), "the timeout expired before the fixture created its descendant"
     _assert_process_gone(int(sentinel.read_text(encoding="utf-8")))
+
+
+_ENVIRONMENT_SCRIPT = """
+import json
+import os
+import sys
+
+sys.stdin.buffer.read()
+with os.fdopen(int(sys.argv[1]), "wb") as stream:
+    stream.write(json.dumps({"status": "ok", "result": dict(os.environ)}).encode("utf-8"))
+"""
+
+
+def _child_environment() -> dict[str, str]:
+    """Return the environment a real provider child observes, read from inside it.
+
+    Asserting on `python_worker_environment()` alone would prove nothing about the
+    boundary: the spawn path is what decides what the child can read, so the fixture
+    reports `os.environ` back through the result descriptor.
+    """
+    outcome = run_provider_subprocess(
+        _python_argv(_ENVIRONMENT_SCRIPT),
+        b"{}",
+        timeout=5.0,
+        environment=python_worker_environment(),
+    )
+    frame = outcome.frame
+    assert frame["status"] == "ok"
+    result = frame["result"]
+    assert isinstance(result, dict)
+    return {key: value for key, value in result.items() if isinstance(value, str)}
+
+
+def test_python_provider_child__secret_bearing_variables__are_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The canaries are named for the two families the H8 read called out (issue #230):
+    # a token the parent legitimately holds, and the OpenBao prefix. The third name
+    # pins the rule rather than the two examples — the allowlist is closed, so an
+    # arbitrary parent variable is absent too.
+    monkeypatch.setenv("GITHUB_TOKEN", "canary-github-token")
+    monkeypatch.setenv("BAO_TOKEN", "canary-bao-token")
+    monkeypatch.setenv("PROVIDER_CANARY_230", "canary-arbitrary")
+
+    environment = _child_environment()
+
+    assert "GITHUB_TOKEN" not in environment
+    assert "BAO_TOKEN" not in environment
+    assert "PROVIDER_CANARY_230" not in environment
+    assert "canary-github-token" not in "\n".join(environment.values())
+    # PATH proves the allowlist passes what it declares rather than emptying the
+    # environment wholesale, which would be a different (and breaking) contract.
+    assert environment["PATH"] == os.environ["PATH"]
+    assert environment["PYTHONPATH"] == os.pathsep.join(entry for entry in sys.path if entry)
+
+
+def test_python_provider_child__coverage_variables__reach_the_child(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # Without this the coverage lane stops measuring provider children and the total
+    # falls with no test failing, so the allowlist's COVERAGE_ prefix is pinned here.
+    #
+    # Both files are real and inside tmp_path on purpose: coverage 7.10+ ships
+    # `a1_coverage.pth`, which auto-starts coverage in any child that sees
+    # COVERAGE_PROCESS_START, so a pointer to a missing config would abort the child
+    # here and a shared COVERAGE_FILE would let the fixture write into the gate's
+    # own data file.
+    config = tmp_path / "coveragerc"
+    config.write_text("[run]\n", encoding="utf-8")
+    data_file = tmp_path / ".coverage"
+    monkeypatch.setenv("COVERAGE_PROCESS_START", str(config))
+    monkeypatch.setenv("COVERAGE_FILE", str(data_file))
+
+    environment = _child_environment()
+
+    assert environment["COVERAGE_PROCESS_START"] == str(config)
+    assert environment["COVERAGE_FILE"] == str(data_file)

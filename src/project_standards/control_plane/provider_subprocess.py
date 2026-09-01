@@ -37,6 +37,29 @@ _TIMEOUT_REMEDIATION = (
 _PYTHON_WORKER_BOOTSTRAP = (
     "from project_standards.control_plane.provider_worker import main; raise SystemExit(main())"
 )
+# The complete allowlist for a Python provider child, each entry load-bearing:
+# PATH so the child can resolve its interpreter's neighbours, HOME because a bare
+# HOME-less process breaks tooling that resolves a user directory, the LANG/LC_*
+# trio so decoding matches the parent, TMPDIR so the child writes into the same
+# bounded scratch the parent was given, and PYTHONDONTWRITEBYTECODE so a provider
+# leaves no __pycache__ inside a payload tree. PYTHONPATH is deliberately NOT
+# inherited here: `python_worker_environment` always recomputes it from the active
+# `sys.path`, so an inherited stale value could only shadow the real import path.
+_WORKER_ENVIRONMENT_NAMES: frozenset[str] = frozenset(
+    {
+        "PATH",
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "LC_CTYPE",
+        "TMPDIR",
+        "PYTHONDONTWRITEBYTECODE",
+    }
+)
+# COVERAGE_* (COVERAGE_PROCESS_START, COVERAGE_FILE, ...) must survive the
+# allowlist or the coverage lane silently stops measuring provider children and
+# the reported total drops without any test failing.
+_WORKER_ENVIRONMENT_PREFIXES: tuple[str, ...] = ("COVERAGE_",)
 _ABSOLUTE_PATH_PATTERN = re.compile(r"(?:^|[\s'\"(])/[\w.\-/]{4,}")
 REDACTED_FAILURE_DETAIL = "the failure detail was withheld because it named a filesystem path"
 
@@ -211,8 +234,21 @@ class _Transport:
 
 
 def python_worker_environment() -> dict[str, str]:
-    """Return the caller environment plus the exact active Python import path."""
-    environment = dict(os.environ)
+    """Return the allowlisted child environment plus the exact active Python import path.
+
+    Only the names below reach a provider child. Everything else in the caller's
+    environment — `GITHUB_TOKEN`, `BAO_*`, and any other secret-bearing variable —
+    is absent by construction, so payload provider bytes cannot read a credential
+    they were never handed (issue #230, finding 1). This tightens the ADR 0025
+    execution boundary rather than reinterpreting it: command-kind providers
+    already run with `environment={}`, and this brings the Python kind to the same
+    posture.
+    """
+    environment = {
+        name: value
+        for name, value in os.environ.items()
+        if name in _WORKER_ENVIRONMENT_NAMES or name.startswith(_WORKER_ENVIRONMENT_PREFIXES)
+    }
     entries = [entry for entry in sys.path if entry]
     if entries:
         environment["PYTHONPATH"] = os.pathsep.join(entries)
