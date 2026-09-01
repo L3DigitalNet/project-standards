@@ -42,8 +42,10 @@ from typing import cast
 
 import pytest
 
+from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.providers import ProviderInvocation, invoke_provider
+from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import (
     AdapterKind,
@@ -418,8 +420,37 @@ def test_github_workflow_1_9__organization__refuses_a_login_the_shipped_tool_can
     for refused in ("a--b", "-ab", "ab-", "a_b", "a.b"):
         assert not compiled.match(refused), f"the schema accepts the invalid login {refused}"
 
-    with pytest.raises(ValueError, match="not a valid GitHub login"):
-        _render_policy(_V19, {"organization": "a--b", "harnesses": ["codex"]})
+    # The schema is the outer layer, and it is the one a consumer actually reaches:
+    # option resolution refuses `a--b` before any provider runs.
+    with pytest.raises(PackageContractError):
+        _options(_V19, {"organization": "a--b", "harnesses": ["codex"]})
+
+    # The provider is the inner layer, reached here by handing it an effective config
+    # the schema would have rejected. It must refuse independently, because it is what
+    # composes the bytes and a future caller could resolve options some other way.
+    # The control plane redacts a provider's own message and reports only the exception
+    # class, so the assertion is on the refusal and its classification; the message text
+    # itself is covered by the provider's own grammar, asserted through the schema above.
+    with pytest.raises(ControlPlaneError, match=r"provider failed with ValueError"):
+        invoke_provider(
+            ProviderInvocation(
+                repo=_V19,
+                payload=_payload(_V19),
+                standard_id="github-workflow",
+                version=_payload(_V19).manifest.payload.version,
+                provider_id="render-semantic",
+                operation=ProviderOperation.RENDER,
+                effective_config={"organization": "a--b", "harnesses": ["codex"]},
+                snapshots={
+                    "planned_contribution": {
+                        "id": "policy",
+                        "target": ".standards/packages/github-workflow/policy.toml",
+                        "adapter": AdapterKind.WHOLE_FILE.value,
+                        "scope": "$file",
+                    }
+                },
+            )
+        )
 
 
 # ---------------------------------------------------------------------------
