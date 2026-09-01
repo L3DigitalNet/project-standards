@@ -16,6 +16,11 @@ contract.
 
 Everything else in the payload is a copy of 1.16, so the second contract here is
 that exactly one rendered line and no option moved.
+
+1.17 retired to `retained` when 1.18 was cut. The family-root navigation assertion
+this module used to carry was dropped there, because it re-pinned which sibling
+currently holds `default` and so went red on that cut rather than on a regression
+of its own; `test_catalog_roles.py` owns that invariant catalog-derived.
 """
 
 from __future__ import annotations
@@ -392,10 +397,13 @@ def test_python_tooling_1_17__predecessor_tree_and_activation_stay_exact() -> No
     }
     # Withdrawing an advertised package is a catalog-major transition (ADR 0024),
     # so every predecessor stays advertised and only its role moves to `retained`.
-    assert roles == {
-        **{f"1.{minor}": "retained" for minor in range(1, 17)},
-        "1.17": "default",
-    }
+    # 1.17 itself retired to `retained` when 1.18 was activated (issue #204); a
+    # released role never moves backwards, which is the whole of what this module
+    # can still prove. Which version currently holds `default`, and the full
+    # membership of this family's catalog rows, both move on every later cut and
+    # are asserted catalog-derived in test_catalog_roles.py instead.
+    assert roles["1.16"] == "retained"
+    assert roles["1.17"] == "retained"
 
 
 def test_python_tooling_1_17__versioned_guidance__explains_the_pin_and_its_safety() -> None:
@@ -482,10 +490,3 @@ def test_python_tooling_1_17__projection_and_index__are_complete() -> None:
     assert versions["1.17"]["payload"] == "versions/1.17/payload.toml"
     assert versions["1.17"]["digest"] == _payload(_V117).integrity.aggregate_digest.value
     assert "python-tooling@1.17" in (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
-
-
-def test_python_tooling_1_17__mutable_navigation__names_the_new_authority() -> None:
-    for name in ("README.md", "adopt.md", "agent-summary.md"):
-        content = (_FAMILY / name).read_text(encoding="utf-8")
-        assert f"versions/1.17/{name}" in content
-        assert "versions/1.16/" not in content
