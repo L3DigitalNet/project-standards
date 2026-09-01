@@ -56,8 +56,8 @@ A proof that reappears in two layers is a defect in this table, not thoroughness
 | --- | --- | --- | --- |
 | R0 | Read-only pre-flight; record the rollback anchor | — | no |
 | R1 | Push `testing`; fast-forward `main` from `testing` | — | no (local `main` re-pointable) |
-| R2 | `release_prep.py $RELEASE --apply-pins` (dry run, then applied) | L2 | no |
-| R3 | Hand pin bumps the script does not own (README/UPGRADING/mcp-server/activation constants) | — | no |
+| R2 | `release_prep.py $RELEASE` (bump/relock/changelog), then `--apply-pins` (dry run, then applied) | L2 | no |
+| R3 | Hand pin bumps the allow-list deliberately excludes (judgment sites only) | — | no |
 | R4 | `make release-reconcile` (dogfooded control-plane reconcile + validate) | L1 (validators) | no |
 | R5 | `make release-golden RELEASE=$RELEASE` | L2 | no |
 | R6a | Rebuild the candidate wheel/sdist locally; record artifact digests | — | no |
@@ -111,20 +111,24 @@ ROLLBACK: `git checkout testing && git branch -f main <PRE_RELEASE_MAIN>` (nothi
 
 ## R2 — `release_prep.py`
 
+`--apply-pins` is a separate mode, not an extra step of the default run (`scripts/release_prep.py`'s own module docstring): it rewrites only the allow-listed pin sites and exits. The default run — the version bump, relock, and CHANGELOG conversion — must land and be reviewed first; only then do the pin rewrites make sense against the bumped tree.
+
 ```bash
+uv run python scripts/release_prep.py $RELEASE --dry-run           # read it; nothing is written
+uv run python scripts/release_prep.py $RELEASE
 uv run python scripts/release_prep.py $RELEASE --apply-pins --dry-run   # read it; nothing is written
 uv run python scripts/release_prep.py $RELEASE --apply-pins
 ```
 
-OBSERVABLE: `pyproject.toml` at `$RELEASE`; `uv.lock` relocked; `CHANGELOG.md` carries a new `## [$RELEASE] — <date>` section moved from `## [Unreleased]`. The script's own summary states the `check-release` baseline it used. A FAILED step naming anything other than the catalog projection or release classification (both fixed downstream, by R4 and R3 respectively) is real; stop.
+OBSERVABLE: after the default run, `pyproject.toml` is at `$RELEASE`; `uv.lock` is relocked; `CHANGELOG.md` carries a new `## [$RELEASE] — <date>` section moved from `## [Unreleased]`. The script's own summary states the `check-release` baseline it used. A FAILED step naming anything other than the catalog projection or release classification (both fixed downstream, by R4 and R3 respectively) is real; stop. After `--apply-pins`, `git diff --stat` touches only the allow-listed pin sites (`scripts/release_prep.py`'s `_RELEASE_PIN_SITES` plus `meta/versioning.md`).
 
-ROLLBACK: `git checkout -- pyproject.toml uv.lock CHANGELOG.md`.
+ROLLBACK: `git checkout -- pyproject.toml uv.lock CHANGELOG.md README.md UPGRADING.md docs/mcp-server.md tests/package_contract/test_current_catalog_activation.py meta/versioning.md`.
 
 ## R3 — hand pin bumps
 
-Re-derive line numbers from the pin-site discovery grep immediately before editing — any doc change landed since this runbook was last run can shift them. Bump only sites classified **bump**; leave sites classified **leave** untouched, including the activation-constant baseline reference (it moves in the payload-cut commit that stages a new activation, not in the release commit).
+R2's `--apply-pins` already rewrote every allow-listed site (`scripts/release_prep.py`'s `_RELEASE_PIN_SITES`: README.md's install-tag/wheel-artifact/version-report/product-prose/precommit-rev, UPGRADING.md's install-tag/version-report/upgrade-target, docs/mcp-server.md's install-tag/wheel-artifact/version-report, and tests/package_contract/test_current_catalog_activation.py's release-constant — plus `_PACKAGE_PIN_PATH`, `meta/versioning.md`'s package-contract-prose pin). This step is only the judgment sites the allow-list deliberately excludes: run the pin-site discovery grep and classify each remaining hit against R2's diff. **bump** sites still needing a hand edit are typically `ROADMAP.md`, UPGRADING.md's history section headings (never its allow-listed pin, which R2 already moved), and `_BASELINE_REF`; **leave** sites are deliberate released history (a permalink, a changelog heading, a fixture pinning the release that first shipped something) and stay untouched, including the activation-constant baseline reference (it moves in the payload-cut commit that stages a new activation, not in the release commit).
 
-OBSERVABLE: `git grep -n '<PREV-without-v>' -- README.md UPGRADING.md docs/mcp-server.md tests/package_contract/` returns only the sites classified **leave**, and nothing else. `git diff --stat` touches only the files the classification named.
+OBSERVABLE: `git grep -n '<PREV-without-v>' -- .` returns only sites classified **leave**, plus the sites R2's `--apply-pins` already rewrote (now at `$RELEASE`). `git diff --stat` (this step only) touches only the files the classification named as **bump**.
 
 ROLLBACK: `git checkout -- <each file this step touched>`.
 
