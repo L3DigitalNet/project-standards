@@ -9,7 +9,6 @@ launcher, its timeout, or the Codex registration changes.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import shutil
@@ -30,6 +29,7 @@ from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
 from tests.installed_package import copy_installed_package
+from tests.module_loading import load_module_from_path
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -62,15 +62,7 @@ _EVENT = json.dumps(
 
 def _render(version_dir: Path, target: str, adapter: str) -> str:
     source = version_dir / "providers/agent_handoff.py"
-    spec = importlib.util.spec_from_file_location(f"agent_handoff_{version_dir.name}", source)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    previous = sys.dont_write_bytecode
-    sys.dont_write_bytecode = True
-    try:
-        spec.loader.exec_module(module)
-    finally:
-        sys.dont_write_bytecode = previous
+    module = load_module_from_path(f"agent_handoff_{version_dir.name}", source)
     render = cast(
         "Callable[[dict[str, object], dict[str, bytes]], dict[str, str]]",
         module.run_render_semantic,

@@ -1,6 +1,5 @@
 """Pin the Python Tooling 1.10 gate-script argument, annotation, and exclusion contract."""
 
-import importlib.util
 import sys
 import tomllib
 import types
@@ -22,6 +21,7 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
+from tests.module_loading import load_module_from_path
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/python-tooling"
@@ -127,13 +127,11 @@ def _load_script(
 ) -> tuple[types.ModuleType, _RecordingSubprocess]:
     path = tmp_path / "check.py"
     path.write_text(_script_source(config), encoding="utf-8")
-    spec = importlib.util.spec_from_file_location("rendered_python_tooling_check", path)
-    if spec is None or spec.loader is None:
-        raise AssertionError("rendered gate script is not importable")
-    module = importlib.util.module_from_spec(spec)
     try:
-        spec.loader.exec_module(module)
+        module = load_module_from_path("rendered_python_tooling_check", path)
     finally:
+        # Each case renders a different gate script under the same name, so any
+        # entry the executed script left behind would shadow the next render.
         sys.modules.pop("rendered_python_tooling_check", None)
     recorder = _RecordingSubprocess(return_codes)
     module.subprocess = recorder  # pyright: ignore[reportAttributeAccessIssue]

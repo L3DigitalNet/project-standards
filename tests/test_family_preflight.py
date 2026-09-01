@@ -9,31 +9,25 @@ inventory honest, because a renamed binding fails it loudly.
 
 from __future__ import annotations
 
-import importlib.util
 import json
-import sys
 from pathlib import Path
 from types import ModuleType
 
 import pytest
 from pytest import CaptureFixture
 
+from tests.module_loading import load_module_from_path
+
 _REPO = Path(__file__).resolve().parent.parent
 
 
 def _module() -> ModuleType:
-    path = _REPO / "scripts" / "family_preflight.py"
-    spec = importlib.util.spec_from_file_location("family_preflight", path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    previous = sys.dont_write_bytecode
-    sys.dont_write_bytecode = True
-    try:
-        spec.loader.exec_module(module)
-    finally:
-        sys.dont_write_bytecode = previous
-    return module
+    # register=True: the script's frozen dataclasses resolve their string
+    # annotations through `sys.modules["family_preflight"]` as the class bodies
+    # execute, and a missing entry aborts the load.
+    return load_module_from_path(
+        "family_preflight", _REPO / "scripts" / "family_preflight.py", register=True
+    )
 
 
 FAMILY = "demo-family"

@@ -14,8 +14,6 @@ assertion that would catch a regression back to a duplicated on-disk copy.
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 import tomllib
 from pathlib import Path
 from types import ModuleType
@@ -24,6 +22,7 @@ from typing import cast
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
+from tests.module_loading import load_module_from_path
 from tests.payload_tree import payload_tree
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -56,17 +55,7 @@ def _load_provider(relative: str, name: str) -> ModuleType:
     control plane loads them by location too — reaching them any other way would
     test a copy the runtime never executes.
     """
-    path = _SUCCESSOR / relative
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    previous = sys.dont_write_bytecode
-    sys.dont_write_bytecode = True
-    try:
-        spec.loader.exec_module(module)
-    finally:
-        sys.dont_write_bytecode = previous
-    return module
+    return load_module_from_path(name, _SUCCESSOR / relative)
 
 
 def _files(root: Path) -> dict[str, Path]:

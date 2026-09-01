@@ -42,8 +42,6 @@ own vocabulary of artifact ids, resource ids, and harness gate tokens.
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 import tomllib
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -52,6 +50,8 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+
+from tests.module_loading import load_module_from_path
 
 _ROOT = Path(__file__).resolve().parents[2]
 _CATALOG = _ROOT / "catalogs/5.toml"
@@ -131,15 +131,7 @@ def _registries(payload_directory: Path) -> dict[str, dict[str, object]]:
     found: dict[str, dict[str, object]] = {}
     for source in sorted(provider_directory.glob("*.py")):
         slug = payload_directory.relative_to(_ROOT).as_posix().replace("/", "_").replace(".", "_")
-        spec = importlib.util.spec_from_file_location(f"{slug}_{source.stem}", source)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        previous = sys.dont_write_bytecode
-        sys.dont_write_bytecode = True
-        try:
-            spec.loader.exec_module(module)
-        finally:
-            sys.dont_write_bytecode = previous
+        module = load_module_from_path(f"{slug}_{source.stem}", source)
 
         for attribute, value in vars(module).items():
             if attribute.startswith("__") or not isinstance(value, dict):
