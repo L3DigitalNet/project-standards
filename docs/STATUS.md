@@ -31,9 +31,9 @@
 - Owner decisions 2026-09-01 for this train: D1 hosted CI main-only plus one gate; D2/D3 parallel lane and compat
   trim; D4 tag-only install, no prune, R10/R11 periodic; D5 one integrated gate; handoff docs never via PR; idle
   slots do hygiene; minimize verification.
-- Queue: only [#228](https://github.com/L3DigitalNet/project-standards/issues/228) P1 (payload-binary retention and
-  wheel size) is `Ready`; [#228](https://github.com/L3DigitalNet/project-standards/issues/228) and
-  [#236](https://github.com/L3DigitalNet/project-standards/issues/236) are being closed by a parallel triager leg.
+- Queue: all seven train issues (#227, #228, #229, #230, #234, #235, #236) are closed Done with evidence. No issue
+  is `Ready`: [#129](https://github.com/L3DigitalNet/project-standards/issues/129) still needs definition and
+  [#191](https://github.com/L3DigitalNet/project-standards/issues/191) re-measures once its window opens (~2026-09-11).
 - Follow-ups filed this train: [#253](https://github.com/L3DigitalNet/project-standards/issues/253)
   (`cut-successor` nits, P4), [#254](https://github.com/L3DigitalNet/project-standards/issues/254) (gh-workflow 1.10
   accepted residuals, P4), `remote-execution#19` (worker deletes excluded paths). Probe issue #252 was created in
