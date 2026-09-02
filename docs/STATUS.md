@@ -2,44 +2,45 @@
 
 ## Current snapshot
 
-- Project Standards 5.27.0 is published from release commit `3f322935`; signed `v5.27.0` and moving `v5` tags are
-  live, both verified `GOODSIG`, and every hosted workflow on that commit concluded `success`.
-- 5.27.0 is a four-payload correction train with no new capability: python-tooling 1.17, markdown-frontmatter 1.15,
-  and project-spec 1.11 advance the pinned `astral-sh/setup-uv` action to `v10.0.1`
-  ([#201](https://github.com/L3DigitalNet/project-standards/issues/201)); github-workflow 1.8 corrects the
-  `Change risk` example and derives the Ready gate's refusal messages from the list the gate checks
-  ([#202](https://github.com/L3DigitalNet/project-standards/issues/202), closing DEV-032).
-- The v5.27.0 assets are byte-verified: wheel `9d1c7679d4bb…` and sdist `cc7eb7f7669d…`. They are also proven
-  reproducible — a rebuild from the release commit matched both digests exactly. Evidence in
-  `docs/handoff/deployed.md`.
+- Project Standards 5.29.0 is published from release commit `14fc7f97`, fast-forwarded from `testing` `e3237c0d`;
+  signed `v5.29.0` and re-pointed `v5` tags are live, both `GOODSIG`, and all eight hosted checks on that commit
+  concluded `success` (Validate project standards, Validate Specs, Format, Lint Markdown, Validate standards graph,
+  Go, Dependency graph, Check).
+- 5.28.0 (backfilled here, never previously recorded) shipped python-tooling 1.18, markdown-tooling 1.16, and
+  github-workflow 1.9 with the ADR 0031 four-class admission model; release commit `25e0094a`, GOODSIG, Latest at
+  the time; closed [#203](https://github.com/L3DigitalNet/project-standards/issues/203) and
+  [#218](https://github.com/L3DigitalNet/project-standards/issues/218). Full details in `docs/handoff/deployed.md`.
+- 5.29.0 is an efficiency/hardening train, no new payload capability: agent-handoff 1.17
+  ([#235](https://github.com/L3DigitalNet/project-standards/issues/235),
+  [#229](https://github.com/L3DigitalNet/project-standards/issues/229)), github-workflow 1.10
+  ([#234](https://github.com/L3DigitalNet/project-standards/issues/234), `land` subcommand, request dedup), provider
+  env allowlist + `PosixMode` ([#230](https://github.com/L3DigitalNet/project-standards/issues/230)), control-plane
+  perf ([#227](https://github.com/L3DigitalNet/project-standards/issues/227), `reconcile --check` 17.5s→9.5s), and a
+  verification-pipeline cut ([#236](https://github.com/L3DigitalNet/project-standards/issues/236)): hosted `Check`
+  main-only plus dispatch, Coherence workflow deleted, dependency graph main-only, a parallel trace-core lane, compat
+  suite 150→129 rows, fail-fast, tag-only install, and a new `docs/reference/release-runbook.md`. Full battery on
+  `e3237c0d`: 29:03 total vs 106 min at v5.27.0.
+- Reproducibility and asset byte-verify were **not run** for 5.29.0 this cycle — periodic under owner decision D4,
+  not every release.
 - **Every commit on `testing` or `main` carries a `Workflow-Admission` trailer.** github-workflow 1.9 replaced the
   two-class rule with four classes — `T0`, `PR #N` (written by `merge --pr N`), `handoff` (a commit touching only
-  `docs/handoff/**`, `docs/STATUS.md`, `docs/TODO.md`), and `release` — and shipped the `gh-workflow admission`
-  classifier, closing both [#203](https://github.com/L3DigitalNet/project-standards/issues/203) (the enforcement gap)
-  and [#218](https://github.com/L3DigitalNet/project-standards/issues/218) (the handoff exemption) as Done. This
-  repository declares its topology in `.standards/config.toml`: `integration_branch = "testing"`,
-  `release_subject_prefix = "release:"`, and an `admission_floor` at the v5.28.0 release commit, since adoption cannot
-  rewrite history. Nothing runs the classifier for us yet — the payload ships no workflow, so CI coverage is unwired.
-- A long-standing CI defect is fixed ([#212](https://github.com/L3DigitalNet/project-standards/issues/212), Done):
-  tests loaded payload providers by path from `standards/**` with `exec_module`, writing `__pycache__` into a tree
-  whose bytes are meant to be immutable — 93 cache directories from one test file. That bumped directory mtimes and
-  intermittently tripped the real-consumer-root seam canary. The guard already existed at two of twelve call sites
-  and now covers all that load from the tracked tree. `real_tree_digest` was deliberately left unchanged.
-- Three adoption reports against python-tooling 1.16 are investigated with evidence and deferred to a 1.18 payload:
-  [#204](https://github.com/L3DigitalNet/project-standards/issues/204) (a real guard defect — `build_backend =
-  "none"` exempts the `[project]` check `uv lock` needs, and `adopt.md` lines 21/23 contradict each other), plus
-  [#205](https://github.com/L3DigitalNet/project-standards/issues/205) and
-  [#206](https://github.com/L3DigitalNet/project-standards/issues/206), both documentation gaps over mechanisms the
-  package's key-ownership invariant already provides.
-- Queue triaged 2026-09-01, every issue `Ready`: #209 P1 (Prettier gate exits 123 on a clean tree — the documented
-  `AGENTS.md` authority is red on every checkout); #207 P2 (release wall-clock research, including the finding that
-  `check.yml` has no path filter and is ~42x the next slowest PR check); #210 P2 (command-guard `--check` grants
-  inert; fail-closed, so safe); #215 P2 (guarded provider-load helper plus a meta-test against an eleventh unguarded
-  call site); #211 P3 (markdownlint pin, bundle with the next markdown-tooling cut).
+  `docs/handoff/**`, `docs/STATUS.md`, `docs/TODO.md`), and `release`. This repository declares its topology in
+  `.standards/config.toml`: `integration_branch = "testing"`, `release_subject_prefix = "release:"`, and an
+  `admission_floor` at the v5.28.0 release commit, since adoption cannot rewrite history. The classifier still has
+  no CI wiring in this repository — the payload ships no workflow, so nothing runs it for us automatically.
+- Owner decisions 2026-09-01 for this train: D1 hosted CI main-only plus one gate; D2/D3 parallel lane and compat
+  trim; D4 tag-only install, no prune, R10/R11 periodic; D5 one integrated gate; handoff docs never via PR; idle
+  slots do hygiene; minimize verification.
+- Queue: only [#228](https://github.com/L3DigitalNet/project-standards/issues/228) P1 (payload-binary retention and
+  wheel size) is `Ready`; [#228](https://github.com/L3DigitalNet/project-standards/issues/228) and
+  [#236](https://github.com/L3DigitalNet/project-standards/issues/236) are being closed by a parallel triager leg.
+- Follow-ups filed this train: [#253](https://github.com/L3DigitalNet/project-standards/issues/253)
+  (`cut-successor` nits, P4), [#254](https://github.com/L3DigitalNet/project-standards/issues/254) (gh-workflow 1.10
+  accepted residuals, P4), `remote-execution#19` (worker deletes excluded paths). Probe issue #252 was created in
+  error and Dropped.
 - Deferred backlog: security finding 4 (total-count evidence for array-shaped list endpoints); #129
-  (feature-scale); #191, re-scoped 2026-08-31 — its post-1.5 measurement window was overtaken by 1.6 and 1.7, so it
-  now measures a post-1.7 window opening ~2026-09-11.
-- Consumer-pin rollout for 5.27.0 has not started; `@v5` trackers inherit 5.27.0 automatically.
+  (feature-scale); #191, re-scoped 2026-08-31, now measuring a post-1.7 window opening ~2026-09-11.
+- Consumer-pin rollout has not started for 5.28.0 or 5.29.0; `@v5` trackers inherit automatically.
 - Pre-existing consumer CI reds are unrelated and left with the owner: `llm-wiki` (gitleaks license, `spec lint`,
   two specs with malformed table delimiters), `agent-configs` (ruff testdata, legacy `doc_type` keys),
   `social-ventures` (`SL-BOILERPLATE`).

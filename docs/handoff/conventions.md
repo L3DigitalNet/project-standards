@@ -79,9 +79,12 @@ uv run project-standards standards sync-payload-projection --root . --check --js
 uv build --clear --wheel --out-dir build/release-wheel
 rm -rf -- build/wheel-runtime
 uv run python -m zipfile -e build/release-wheel/project_standards-X.Y.Z-py3-none-any.whl build/wheel-runtime
-scripts/verify.sh          # fast gate: concurrent lanes, then performance alone
-scripts/verify.sh --full   # legacy serial battery / release-prep cross-check
+scripts/verify.sh          # fast gate: concurrent lanes, then performance alone (--keep-going default)
+scripts/verify.sh --full   # legacy serial battery / release-prep cross-check (--fail-fast default)
 ```
+
+`--fail-fast` (default with `--full`) and `--keep-going` (default for the fast gate) toggle whether a lane
+failure stops the run; `VERIFY_FULL_COMPAT_WORKERS` defaults to 16 for the `--full` compat lane's worker count.
 
 **Why:** `main` must stay releasable; consumers pin to tags. The isolated, cleared wheel directory and fresh runtime extraction keep the candidate wheel that the gates import identical to the release commit being proved.
 
