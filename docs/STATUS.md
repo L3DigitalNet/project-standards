@@ -31,15 +31,13 @@
 - Owner decisions 2026-09-01 for this train: D1 hosted CI main-only plus one gate; D2/D3 parallel lane and compat
   trim; D4 tag-only install, no prune, R10/R11 periodic; D5 one integrated gate; handoff docs never via PR; idle
   slots do hygiene; minimize verification.
-- Queue: all seven train issues (#227, #228, #229, #230, #234, #235, #236) are closed Done with evidence. No issue
-  is `Ready`: [#129](https://github.com/L3DigitalNet/project-standards/issues/129) still needs definition and
-  [#191](https://github.com/L3DigitalNet/project-standards/issues/191) re-measures once its window opens (~2026-09-11).
-- Follow-ups filed this train: [#253](https://github.com/L3DigitalNet/project-standards/issues/253)
-  (`cut-successor` nits, P4), [#254](https://github.com/L3DigitalNet/project-standards/issues/254) (gh-workflow 1.10
-  accepted residuals, P4), `remote-execution#19` (worker deletes excluded paths). Probe issue #252 was created in
-  error and Dropped.
+- Queue (triaged 2026-10-03): nine issues `Ready`. Next is [#261](https://github.com/L3DigitalNet/project-standards/issues/261)
+  (P2, gh-workflow picks an older failed check over a newer success on a shared SHA; can also fail open). P3: #253,
+  #257, #260, #264, #266, #267. P4: #254 (now a docs Task; residual C fixed by `0154c62f`), #265. Each carries
+  investigation findings and a dated scope amendment. #129 still needs definition.
 - Deferred backlog: security finding 4 (total-count evidence for array-shaped list endpoints); #129
-  (feature-scale); #191, re-scoped 2026-08-31, now measuring a post-1.7 window opening ~2026-09-11.
+  (feature-scale); #191, re-scoped 2026-08-31, now measuring a post-1.7 window opening ~2026-09-11;
+  `remote-execution#19` (worker deletes excluded paths).
 - Consumer-pin rollout has not started for 5.28.0 or 5.29.0; `@v5` trackers inherit automatically.
 - Pre-existing consumer CI reds are unrelated and left with the owner: `llm-wiki` (gitleaks license, `spec lint`,
   two specs with malformed table delimiters), `agent-configs` (ruff testdata, legacy `doc_type` keys),

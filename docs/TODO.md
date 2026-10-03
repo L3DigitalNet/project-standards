@@ -54,6 +54,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
+- [ ] Work the 2026-10-03 Ready queue in priority order: #261 (P2) first, then P3 #253, #257, #260, #264, #266,
+  #267, then P4 #254 and #265. Scope decisions sit in each issue's dated "Scope amendment" section.
+
 - [x] Migrate the consumer fleet to github-workflow 1.7 (MS-6 item 2). Completed 2026-08-31: all 24 locally
   cloned consumers at release 5.26.0, the five package-enabled ones at github-workflow 1.7 with byte-identical
   deployed binaries. Recorded in SPEC-GHW1 rev 1.37 and `docs/handoff/deployed.md`. Repair-on-touch of active
