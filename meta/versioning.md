@@ -188,7 +188,7 @@ Every release MUST:
    - **Confirm the release is marked "Latest"** rather than left as a draft, pre-release, or superseded by an out-of-order tag.
    - **Record the release in the handoff.** A new [`docs/handoff/deployed.md`](../docs/handoff/deployed.md) row is required — it is the definition of "Deployed" this checklist opens with — carrying the release commit, both tag objects, the byte-verified asset digests, and the classification. `docs/STATUS.md`, `docs/TODO.md`, `docs/handoff/state.md`, and a session log should follow through the repository's agent-handoff closeout convention.
    - **Decide the consumer pin rollout explicitly**, and record the decision either way. Rolling the `@vMAJOR` consumers forward and deliberately deferring are both acceptable; leaving it unstated is not, because the next release cannot tell a skipped rollout from a forgotten one.
-   - **Contribute the durable lessons to `llm-wiki`** — anything a later release cut would otherwise rediscover.
+   - **Contribute the durable lessons to the shared knowledge base** — the `knowledge` project in Basic Memory (MCP server `basic-memory`) — anything a later release cut would otherwise rediscover.
 
 ## Consuming repositories
 
