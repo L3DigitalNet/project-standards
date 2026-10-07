@@ -39,6 +39,5 @@
   (feature-scale); #191, re-scoped 2026-08-31, now measuring a post-1.7 window opening ~2026-09-11;
   `remote-execution#19` (worker deletes excluded paths).
 - Consumer-pin rollout has not started for 5.28.0 or 5.29.0; `@v5` trackers inherit automatically.
-- Pre-existing consumer CI reds are unrelated and left with the owner: `llm-wiki` (gitleaks license, `spec lint`,
-  two specs with malformed table delimiters), `agent-configs` (ruff testdata, legacy `doc_type` keys),
-  `social-ventures` (`SL-BOILERPLATE`).
+- Pre-existing consumer CI reds are unrelated and left with the owner: `agent-configs` (ruff testdata, legacy
+  `doc_type` keys), `social-ventures` (`SL-BOILERPLATE`).

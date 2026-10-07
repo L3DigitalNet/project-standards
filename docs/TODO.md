@@ -99,8 +99,8 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   brief at `docs/design/adr-conformance/2026-08-05-adr-mechanical-guardrails-v5.17-feature-proposal.md` is preserved
   as historical input, but a formal specification still needs owner decisions and current-state re-derivation.
 
-- [ ] Migrate `agent-ventures` and `llm-wiki` off `.agents`-only skill trees onto the dual-tree layout, per the
-  2026-08-26 session-corpus review's F2 finding.
+- [ ] Migrate `agent-ventures` off its `.agents`-only skill tree onto the dual-tree layout, per the 2026-08-26
+  session-corpus review's F2 finding.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
